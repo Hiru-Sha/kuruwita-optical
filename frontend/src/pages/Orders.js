@@ -1,5 +1,5 @@
 // ============================================================
-//  Orders Page — Integrated with Printing & Status Updates
+//  Orders Page — Fixed Printing Visibility
 // ============================================================
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -24,7 +24,7 @@ export default function Orders() {
   const componentRef = useRef();
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
-    documentTitle: `${selected?.order_number}_${selected?.customer_name}_Kuruwita_Optical`,
+    documentTitle: `${selected?.order_number || 'Order'}_${selected?.customer_name || 'Receipt'}_Kuruwita_Optical`,
   });
 
   const load = useCallback(() => {
@@ -61,8 +61,10 @@ export default function Orders() {
 
   return (
     <div>
-      {/* Hidden Receipt Component (This won't show on screen, only on paper) */}
-      <div style={{ display: 'none' }}>
+      {/* FIXED: Instead of display: none, we move it off-screen.
+          This allows the printer library to find the content.
+      */}
+      <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
         <OrderReceipt ref={componentRef} order={selected} />
       </div>
 
@@ -135,13 +137,11 @@ export default function Orders() {
               <button onClick={()=>setSelected(null)} style={{ background:'#f8f5ef', border:'none', borderRadius:8, padding:'5px 12px', fontSize:12, cursor:'pointer', color:'#6b7280', fontWeight:600 }}>✕ Close</button>
             </div>
 
-            {/* Print Button (Main Action) */}
             <button onClick={handlePrint}
               style={{ width:'100%', padding:'12px', background:'#0f1f3d', color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer', marginBottom:20 }}>
               🖨️ Print Receipt
             </button>
 
-            {/* Status updates */}
             <div style={{ marginBottom:20 }}>
               <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'#6b7280', marginBottom:8 }}>Update Status</div>
               <div style={{ display:'flex', gap:8 }}>
@@ -159,7 +159,6 @@ export default function Orders() {
               </div>
             </div>
 
-            {/* Lens Job Steps */}
             {selected.lens_company !== 'In-Shop' && (
               <div style={{ marginBottom:20 }}>
                 <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:'#6b7280', marginBottom:8 }}>Lens Progress ({selected.lens_company})</div>
@@ -177,7 +176,6 @@ export default function Orders() {
               </div>
             )}
 
-            {/* Details Grid */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:20 }}>
               {[
                 { l:'Frame', v: selected.frame||'—' },
@@ -192,7 +190,6 @@ export default function Orders() {
               ))}
             </div>
 
-            {/* WhatsApp & Call Logs */}
             <div style={{ display:'flex', gap:8, marginBottom:20 }}>
                <a href={`https://wa.me/94${selected.phone?.replace(/^0/,'')}?text=${encodeURIComponent(`Hello ${selected.customer_name}, this is Kuruwita Optical. Your order ${selected.order_number} is ready. Balance: Rs. ${selected.balance_amount}. Thank you!`)}`}
                 target="_blank" rel="noreferrer"
