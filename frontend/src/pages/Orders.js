@@ -1,5 +1,5 @@
 // ============================================================
-//  Orders Page — Fixed Printing Visibility
+//  Orders Page — Final Print & Visibility Fix
 // ============================================================
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -20,11 +20,13 @@ export default function Orders() {
   const [logNote, setLogNote] = useState('');
   const navigate = useNavigate();
 
-  // Reference for the printer
-  const componentRef = useRef();
+  // 1. Reference for the printer (starts as null)
+  const componentRef = useRef(null);
+
+  // 2. Updated useReactToPrint Syntax
   const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
-    documentTitle: `${selected?.order_number || 'Order'}_${selected?.customer_name || 'Receipt'}_Kuruwita_Optical`,
+    contentRef: componentRef, // Passing the ref object directly
+    documentTitle: `${selected?.order_number || 'Order'}_Kuruwita_Optical`,
   });
 
   const load = useCallback(() => {
@@ -61,10 +63,17 @@ export default function Orders() {
 
   return (
     <div>
-      {/* FIXED: Instead of display: none, we move it off-screen.
-          This allows the printer library to find the content.
+      {/* 3. VISIBILITY FIX: 
+          Instead of display: none, we use opacity 0 and position absolute.
+          This keeps the component "alive" in the DOM so the printer can find it.
       */}
-      <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
+      <div style={{ 
+        position: 'absolute', 
+        top: '-9999px', 
+        left: '-9999px', 
+        opacity: 0, 
+        pointerEvents: 'none' 
+      }}>
         <OrderReceipt ref={componentRef} order={selected} />
       </div>
 
@@ -137,6 +146,7 @@ export default function Orders() {
               <button onClick={()=>setSelected(null)} style={{ background:'#f8f5ef', border:'none', borderRadius:8, padding:'5px 12px', fontSize:12, cursor:'pointer', color:'#6b7280', fontWeight:600 }}>✕ Close</button>
             </div>
 
+            {/* 4. Trigger for printing */}
             <button onClick={handlePrint}
               style={{ width:'100%', padding:'12px', background:'#0f1f3d', color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer', marginBottom:20 }}>
               🖨️ Print Receipt
@@ -204,7 +214,6 @@ export default function Orders() {
                 🗑️ Delete Order
               </button>
             </div>
-
           </div>
         </div>
       )}
