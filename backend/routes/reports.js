@@ -125,4 +125,25 @@ router.get('/lensjobs', auth, async (req, res) => {
   }
 });
 
+// Get Today's Summary
+router.get('/today-summary', auth, async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    
+    const result = await pool.query(
+      `SELECT 
+        COUNT(*) as total_orders, 
+        SUM(total_amount) as daily_revenue 
+       FROM orders 
+       WHERE DATE(created_at) = $1`,
+      [today]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 module.exports = router;
