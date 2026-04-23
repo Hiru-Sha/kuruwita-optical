@@ -24,7 +24,7 @@ export default function Orders() {
   const componentRef = useRef();
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
-    documentTitle: `Kuruwita_Optical_${selected?.order_number || 'Receipt'}`,
+    documentTitle: `${selected?.order_number}_${selected?.customer_name}_Kuruwita_Optical`,
   });
 
   const load = useCallback(() => {
