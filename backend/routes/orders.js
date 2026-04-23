@@ -105,7 +105,6 @@ router.post('/', auth, async (req, res) => {
 
     const orderId = orderRes.rows[0].id;
 
-    // Save refraction if any values provided
     if (r_sph || l_sph) {
       await client.query(`
         INSERT INTO refractions
@@ -128,13 +127,14 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// PATCH /api/orders/:id — update order fields
+// PATCH /api/orders/:id — update order fields & recalculate balance
 router.patch('/:id', auth, async (req, res) => {
   const allowed = [
     'frame','frame_type','lens_type','lens_coating','lens_company','lens_step',
     'total_amount','advance_amount','balance_amount','deliver_date','status',
     'has_rx','rx_hospital','rx_date','rx_doctor','rx_returned','notes'
   ];
+  
   const fields = [], values = [];
   allowed.forEach(f => {
     if (req.body[f] !== undefined) {
@@ -142,20 +142,50 @@ router.patch('/:id', auth, async (req, res) => {
       values.push(req.body[f]);
     }
   });
+
   if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
-  fields.push(`updated_at = NOW()`);
+  
+  // Add ID for the WHERE clause
   values.push(req.params.id);
 
   try {
+    // 1. Update the order
     const result = await pool.query(
-      `UPDATE orders SET ${fields.join(', ')} WHERE id = $${values.length} RETURNING *`,
+      `UPDATE orders SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${values.length} RETURNING *`,
       values
     );
+
     if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
-    res.json(result.rows[0]);
+
+    // 2. Auto-recalculate balance if amounts were changed
+    const order = result.rows[0];
+    const newBalance = Math.max(0, (parseFloat(order.total_amount)||0) - (parseFloat(order.advance_amount)||0));
+    
+    const finalUpdate = await pool.query(
+      `UPDATE orders SET balance_amount = $1 WHERE id = $2 RETURNING *`,
+      [newBalance, req.params.id]
+    );
+
+    res.json(finalUpdate.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+
+// QUICK STATUS UPDATE (For the buttons on the frontend)
+router.patch('/:id/status', auth, async (req, res) => {
+  const { status } = req.body;
+  if (!status) return res.status(400).json({ error: 'Status is required' });
+  
+  try {
+    const result = await pool.query(
+      'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [status, req.params.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update status' });
   }
 });
 
