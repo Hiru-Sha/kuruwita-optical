@@ -14,7 +14,7 @@ const S = {
   kv:      { fontFamily: "'Playfair Display',serif", fontSize: 26, fontWeight: 700, color: '#0f1f3d', lineHeight: 1 },
   ks:      { fontSize: 12, color: '#6b7280', marginTop: 5 },
   card:    { background: 'white', border: '1px solid #e0ddd6', borderRadius: 12, overflow: 'hidden', marginBottom: 18 },
-  ch:      { padding: '13px 18px', borderBottom: '1px solid #e0ddd6', display: 'flex', alignItems: center, justifyContent: 'space-between' },
+  ch:      { padding: '13px 18px', borderBottom: '1px solid #e0ddd6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   cht:     { fontSize: 14, fontWeight: 700, color: '#0f1f3d' },
   cb:      { padding: '8px 18px' },
   row:     { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid #f8f5ef' },
