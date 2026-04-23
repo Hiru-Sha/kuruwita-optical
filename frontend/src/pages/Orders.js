@@ -2,6 +2,7 @@
 //  Orders Page — connects Phase 2 + Phase 3 UI to real API
 // ============================================================
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getOrders, updateOrder, deleteOrder, addCallLog } from '../api';
 
 const STATUSES = ['all','created','called','delivered','overdue'];
@@ -15,6 +16,7 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [selected,setSelected]= useState(null);
   const [logNote, setLogNote] = useState('');
+  const navigate = useNavigate();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -52,7 +54,7 @@ export default function Orders() {
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
         <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:'#0f1f3d', margin:0 }}>📋 Orders</h1>
-        <button onClick={()=>window.location.href='/orders/new'}
+        <button onClick={()=>navigate('/orders/new')}
           style={{ padding:'9px 20px', background:'#c9a84c', color:'#0f1f3d', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
           + New Order
         </button>

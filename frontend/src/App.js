@@ -10,6 +10,7 @@ import Login      from './pages/Login';
 import Layout     from './components/Layout';
 import Dashboard  from './pages/Dashboard';
 import Orders     from './pages/Orders';
+import NewOrder   from './pages/NewOrder';
 import Customers  from './pages/Customers';
 import Inventory  from './pages/Inventory';
 import Reports    from './pages/Reports';
@@ -34,7 +35,8 @@ export default function App() {
           <Route path="/" element={<Protected><Layout /></Protected>}>
             <Route index             element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard"  element={<Dashboard />} />
-            <Route path="orders"     element={<Orders />} />
+            <Route path="orders"        element={<Orders />} />
+            <Route path="orders/new"    element={<NewOrder />} />
             <Route path="customers"  element={<Customers />} />
             <Route path="inventory"  element={<Inventory />} />
             <Route path="reports"    element={<Reports />} />

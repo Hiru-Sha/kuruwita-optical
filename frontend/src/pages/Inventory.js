@@ -13,7 +13,32 @@ export default function Inventory() {
   const [selected, setSelected]= useState(null);
   const [showAdd,  setShowAdd] = useState(false);
   const [loading,  setLoading] = useState(true);
+  const [newImgData, setNewImgData] = useState(null);
   const [newItem,  setNewItem] = useState({ name:'', brand:'', category:'Frames', dealer:'', sell_price:'', cost_price:'', quantity:'', min_quantity:'2' });
+
+  // Convert image file to base64
+  const toBase64 = (file) => new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+
+  const handleImagePick = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const b64 = await toBase64(file);
+    setNewImgData(b64);
+  };
+
+  const handlePanelImagePick = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !selected) return;
+    const b64 = await toBase64(file);
+    await updateItem(selected.id, { image_url: b64 });
+    setSelected(s => ({ ...s, image_url: b64 }));
+    load();
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -26,8 +51,9 @@ export default function Inventory() {
 
   const handleAdd = async () => {
     if (!newItem.name) return alert('Item name required');
-    await createItem({ ...newItem, sell_price: parseFloat(newItem.sell_price)||0, cost_price: parseFloat(newItem.cost_price)||0, quantity: parseInt(newItem.quantity)||0, min_quantity: parseInt(newItem.min_quantity)||2 });
+    await createItem({ ...newItem, sell_price: parseFloat(newItem.sell_price)||0, cost_price: parseFloat(newItem.cost_price)||0, quantity: parseInt(newItem.quantity)||0, min_quantity: parseInt(newItem.min_quantity)||2, image_url: newImgData||null });
     setShowAdd(false);
+    setNewImgData(null);
     setNewItem({ name:'', brand:'', category:'Frames', dealer:'', sell_price:'', cost_price:'', quantity:'', min_quantity:'2' });
     load();
   };
@@ -85,6 +111,28 @@ export default function Inventory() {
         <div style={{ background:'white', border:'1px solid #e0ddd6', borderRadius:14, padding:22, marginBottom:20 }}>
           <h3 style={{ fontSize:15, fontWeight:700, color:'#0f1f3d', marginBottom:16 }}>➕ Add New Item</h3>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 }}>
+            {/* Image upload */}
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={lbl}>Frame Photo</label>
+              <div style={{ marginTop:6, display:'flex', alignItems:'center', gap:12 }}>
+                <label style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', width:120, height:100, border:`2px dashed ${newImgData?'#c9a84c':'#e0ddd6'}`, borderRadius:10, cursor:'pointer', background: newImgData?'#fdf9f0':'#f8f5ef', overflow:'hidden', position:'relative' }}>
+                  {newImgData
+                    ? <img src={newImgData} alt="preview" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                    : <>
+                        <span style={{ fontSize:24, marginBottom:4 }}>📷</span>
+                        <span style={{ fontSize:11, color:'#9ca3af', fontWeight:600 }}>Tap to upload</span>
+                      </>
+                  }
+                  <input type="file" accept="image/*" onChange={handleImagePick} style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}/>
+                </label>
+                {newImgData && (
+                  <button onClick={()=>setNewImgData(null)} style={{ padding:'6px 12px', background:'#fee2e2', color:'#c0392b', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                    ✕ Remove photo
+                  </button>
+                )}
+                {!newImgData && <span style={{ fontSize:12, color:'#9ca3af' }}>JPG or PNG — any size.<br/>Optional but recommended for frames.</span>}
+              </div>
+            </div>
             {[
               { l:'Item Name *', k:'name', placeholder:'e.g. Rayban RB3025 Gold' },
               { l:'Brand',       k:'brand', placeholder:'e.g. Rayban' },
@@ -174,6 +222,11 @@ export default function Inventory() {
                 ? <img src={selected.image_url} alt={selected.name} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
                 : <div style={{ fontSize:48, opacity:.2 }}>🕶️</div>
               }
+              {/* Change photo button */}
+              <label style={{ position:'absolute', bottom:10, right:10, background:'rgba(15,31,61,.75)', color:'white', borderRadius:20, padding:'5px 14px', fontSize:12, fontWeight:600, cursor:'pointer', zIndex:2 }}>
+                📷 Change Photo
+                <input type="file" accept="image/*" onChange={handlePanelImagePick} style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}/>
+              </label>
               <button onClick={()=>setSelected(null)} style={{ position:'absolute', top:12, right:12, background:'rgba(0,0,0,.5)', border:'none', borderRadius:8, padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', fontWeight:600, color:'white' }}>✕</button>
             </div>
 
