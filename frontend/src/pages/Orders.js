@@ -23,9 +23,10 @@ export default function Orders() {
   // 1. Reference for the printer (starts as null)
   const componentRef = useRef(null);
 
-  // 2. Updated useReactToPrint Syntax
+  // 2. Updated useReactToPrint Syntax for v3.0+
+  // We pass the ref object directly to 'contentRef'
   const handlePrint = useReactToPrint({
-    contentRef: componentRef, // Passing the ref object directly
+    contentRef: componentRef, 
     documentTitle: `${selected?.order_number || 'Order'}_Kuruwita_Optical`,
   });
 
@@ -64,8 +65,8 @@ export default function Orders() {
   return (
     <div>
       {/* 3. VISIBILITY FIX: 
-          Instead of display: none, we use opacity 0 and position absolute.
-          This keeps the component "alive" in the DOM so the printer can find it.
+          Keeps component in DOM but hides it from view.
+          Crucial for 'react-to-print' to find the element.
       */}
       <div style={{ 
         position: 'absolute', 
@@ -146,8 +147,8 @@ export default function Orders() {
               <button onClick={()=>setSelected(null)} style={{ background:'#f8f5ef', border:'none', borderRadius:8, padding:'5px 12px', fontSize:12, cursor:'pointer', color:'#6b7280', fontWeight:600 }}>✕ Close</button>
             </div>
 
-            {/* 4. Trigger for printing */}
-            <button onClick={handlePrint}
+            {/* 4. Trigger for printing — must be called as a function */}
+            <button onClick={() => handlePrint()}
               style={{ width:'100%', padding:'12px', background:'#0f1f3d', color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer', marginBottom:20 }}>
               🖨️ Print Receipt
             </button>
