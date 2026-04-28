@@ -1,5 +1,5 @@
 // ============================================================
-//  Orders Routes — Integrated with Inventory Management
+//  Orders Routes — Integrated Inventory & Lab Progress
 // ============================================================
 const router = require('express').Router();
 const pool   = require('../db/pool');
@@ -74,11 +74,10 @@ router.get('/:id', auth, async (req, res) => {
 // POST /api/orders — create new order & decrement inventory
 router.post('/', auth, async (req, res) => {
   const {
-    customer_id, inventory_id, // Added inventory_id
+    customer_id, inventory_id,
     frame, frame_type, lens_type, lens_coating,
     lens_company, total_amount, advance_amount, deliver_date,
     status, has_rx, rx_hospital, rx_date, rx_doctor, notes,
-    // refraction
     r_sph, r_cyl, r_axis, r_add, r_va, r_pd,
     l_sph, l_cyl, l_axis, l_add, l_va, l_pd,
     ref_notes
@@ -91,7 +90,6 @@ router.post('/', auth, async (req, res) => {
     const orderNum   = await nextOrderNumber();
     const balance    = (parseFloat(total_amount)||0) - (parseFloat(advance_amount)||0);
 
-    // 1. Insert Order (including inventory_id)
     const orderRes = await client.query(`
       INSERT INTO orders
         (order_number, customer_id, inventory_id, frame, frame_type, lens_type, lens_coating,
@@ -107,18 +105,14 @@ router.post('/', auth, async (req, res) => {
 
     const orderId = orderRes.rows[0].id;
 
-    // 2. Decrement Inventory if a frame was selected
     if (inventory_id) {
       const stockCheck = await client.query(
         'UPDATE inventory SET quantity = quantity - 1 WHERE id = $1 AND quantity > 0 RETURNING name',
         [inventory_id]
       );
-      if (stockCheck.rowCount === 0) {
-        throw new Error('Selected frame is out of stock.');
-      }
+      if (stockCheck.rowCount === 0) throw new Error('Selected frame is out of stock.');
     }
 
-    // 3. Insert Refraction
     if (r_sph || l_sph) {
       await client.query(`
         INSERT INTO refractions
@@ -134,14 +128,13 @@ router.post('/', auth, async (req, res) => {
     res.status(201).json({ ...orderRes.rows[0], order_number: orderNum });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error(err);
     res.status(500).json({ error: err.message || 'Failed to create order' });
   } finally {
     client.release();
   }
 });
 
-// PATCH /api/orders/:id — update order fields & recalculate balance
+// PATCH /api/orders/:id — update fields & auto-recalculate balance
 router.patch('/:id', auth, async (req, res) => {
   const allowed = [
     'frame','frame_type','lens_type','lens_coating','lens_company','lens_step',
@@ -152,13 +145,12 @@ router.patch('/:id', auth, async (req, res) => {
   const fields = [], values = [];
   allowed.forEach(f => {
     if (req.body[f] !== undefined) {
-      fields.push(`${f} = $${fields.length+1}`);
+      fields.push(`${f} = $${fields.length + 1}`);
       values.push(req.body[f]);
     }
   });
 
   if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
-  
   values.push(req.params.id);
 
   try {
@@ -179,8 +171,33 @@ router.patch('/:id', auth, async (req, res) => {
 
     res.json(finalUpdate.rows[0]);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+
+// NEW: Lab Progress Step Update Route (Phase 3)
+router.patch('/:id/step', auth, async (req, res) => {
+  const { step } = req.body; // 1: Sent, 2: Processing, 3: Ready
+  if (step === undefined) return res.status(400).json({ error: 'Step is required' });
+  
+  try {
+    let query = 'UPDATE orders SET lens_step = $1';
+    const params = [step, req.params.id];
+
+    // If marking as Ready (Step 3), set the received date
+    if (parseInt(step) === 3) {
+      query += ', lab_received_date = NOW()';
+    } 
+    // If marking as Sent (Step 1), set the sent date
+    else if (parseInt(step) === 1) {
+      query += ', lab_sent_date = NOW()';
+    }
+
+    query += ' WHERE id = $2 RETURNING *';
+    const result = await pool.query(query, params);
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update lab step' });
   }
 });
 
@@ -210,10 +227,10 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// POST /api/orders/:id/calllogs — add call log
+// POST /api/orders/:id/calllogs
 router.post('/:id/calllogs', auth, async (req, res) => {
   const { note } = req.body;
-  if (!note) return res.status(400).json({ error: 'Note is required' });
+  if (!note) return res.status(400).json({ note: 'Note is required' });
   try {
     const result = await pool.query(
       'INSERT INTO call_logs (order_id, note, logged_by) VALUES ($1,$2,$3) RETURNING *',
