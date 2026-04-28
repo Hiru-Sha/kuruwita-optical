@@ -1,5 +1,5 @@
 // ============================================================
-//  Orders Routes — /api/orders
+//  Orders Routes — Integrated with Inventory Management
 // ============================================================
 const router = require('express').Router();
 const pool   = require('../db/pool');
@@ -71,10 +71,11 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// POST /api/orders — create new order
+// POST /api/orders — create new order & decrement inventory
 router.post('/', auth, async (req, res) => {
   const {
-    customer_id, frame, frame_type, lens_type, lens_coating,
+    customer_id, inventory_id, // Added inventory_id
+    frame, frame_type, lens_type, lens_coating,
     lens_company, total_amount, advance_amount, deliver_date,
     status, has_rx, rx_hospital, rx_date, rx_doctor, notes,
     // refraction
@@ -90,14 +91,15 @@ router.post('/', auth, async (req, res) => {
     const orderNum   = await nextOrderNumber();
     const balance    = (parseFloat(total_amount)||0) - (parseFloat(advance_amount)||0);
 
+    // 1. Insert Order (including inventory_id)
     const orderRes = await client.query(`
       INSERT INTO orders
-        (order_number, customer_id, frame, frame_type, lens_type, lens_coating,
+        (order_number, customer_id, inventory_id, frame, frame_type, lens_type, lens_coating,
          lens_company, total_amount, advance_amount, balance_amount,
          deliver_date, status, has_rx, rx_hospital, rx_date, rx_doctor, notes)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
       RETURNING *`,
-      [orderNum, customer_id, frame, frame_type, lens_type, lens_coating,
+      [orderNum, customer_id, inventory_id || null, frame, frame_type, lens_type, lens_coating,
        lens_company, total_amount||0, advance_amount||0, Math.max(0,balance),
        deliver_date, status||'created', has_rx||false,
        rx_hospital||null, rx_date||null, rx_doctor||null, notes||null]
@@ -105,6 +107,18 @@ router.post('/', auth, async (req, res) => {
 
     const orderId = orderRes.rows[0].id;
 
+    // 2. Decrement Inventory if a frame was selected
+    if (inventory_id) {
+      const stockCheck = await client.query(
+        'UPDATE inventory SET quantity = quantity - 1 WHERE id = $1 AND quantity > 0 RETURNING name',
+        [inventory_id]
+      );
+      if (stockCheck.rowCount === 0) {
+        throw new Error('Selected frame is out of stock.');
+      }
+    }
+
+    // 3. Insert Refraction
     if (r_sph || l_sph) {
       await client.query(`
         INSERT INTO refractions
@@ -121,7 +135,7 @@ router.post('/', auth, async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(err);
-    res.status(500).json({ error: 'Failed to create order' });
+    res.status(500).json({ error: err.message || 'Failed to create order' });
   } finally {
     client.release();
   }
@@ -132,7 +146,7 @@ router.patch('/:id', auth, async (req, res) => {
   const allowed = [
     'frame','frame_type','lens_type','lens_coating','lens_company','lens_step',
     'total_amount','advance_amount','balance_amount','deliver_date','status',
-    'has_rx','rx_hospital','rx_date','rx_doctor','rx_returned','notes'
+    'has_rx','rx_hospital','rx_date','rx_doctor','rx_returned','notes', 'inventory_id'
   ];
   
   const fields = [], values = [];
@@ -145,11 +159,9 @@ router.patch('/:id', auth, async (req, res) => {
 
   if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
   
-  // Add ID for the WHERE clause
   values.push(req.params.id);
 
   try {
-    // 1. Update the order
     const result = await pool.query(
       `UPDATE orders SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${values.length} RETURNING *`,
       values
@@ -157,7 +169,6 @@ router.patch('/:id', auth, async (req, res) => {
 
     if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
 
-    // 2. Auto-recalculate balance if amounts were changed
     const order = result.rows[0];
     const newBalance = Math.max(0, (parseFloat(order.total_amount)||0) - (parseFloat(order.advance_amount)||0));
     
@@ -173,7 +184,7 @@ router.patch('/:id', auth, async (req, res) => {
   }
 });
 
-// QUICK STATUS UPDATE (For the buttons on the frontend)
+// QUICK STATUS UPDATE
 router.patch('/:id/status', auth, async (req, res) => {
   const { status } = req.body;
   if (!status) return res.status(400).json({ error: 'Status is required' });
