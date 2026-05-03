@@ -124,21 +124,31 @@ export default function NewOrder() {
         </div>
       )}
 
-      {step === 4 && (
-        <div style={S.section}>
-          <div style={S.sh}>💰 <span style={S.sht}>Payment</span></div>
-          <div style={S.grid2}>
-             <input style={S.inp} placeholder="Discount (Rs)" onChange={e=>setDiscount(e.target.value)}/>
-             <input style={S.inp} placeholder="Adjustment (Rs)" onChange={e=>setManualAdj(e.target.value)}/>
-             <input style={S.inp} placeholder="Advance (Rs)" onChange={e=>setOrder({...order, advance_amount:e.target.value})}/>
-          </div>
-          <div style={{background:'#0f1f3d', color:'#c9a84c', padding:15, textAlign:'center', marginTop:20, borderRadius:9}}>
-             <div style={{fontSize:20, fontWeight:800}}>Final Total: Rs. {finalTotal.toLocaleString()}</div>
-             <div style={{fontSize:16}}>Balance: Rs. {balance.toLocaleString()}</div>
-          </div>
-          <button onClick={handleSave} style={{ width:'100%', marginTop:20, padding:14, background:'#0f1f3d', color:'white', borderRadius:9 }}>💾 Save Order</button>
-        </div>
-      )}
+      {/* STEP 4: PAYMENT */}
+{step === 4 && (
+  <div style={S.section}>
+    <div style={S.sh}><span style={S.shico}>💰</span><span style={S.sht}>Payment</span></div>
+    <div style={S.grid3}>
+       <div style={S.field}>
+          <label style={S.lbl}>Total (Rs.)</label>
+          <input type="number" style={S.inp} value={order.total_amount} 
+                 onChange={e => setOrder({...order, total_amount: e.target.value})} placeholder="0"/>
+       </div>
+       <div style={S.field}>
+          <label style={S.lbl}>Advance (Rs.)</label>
+          <input type="number" style={S.inp} value={order.advance_amount} 
+                 onChange={e => setOrder({...order, advance_amount: e.target.value})} placeholder="0"/>
+       </div>
+       <div style={{background:'#0f1f3d', color:'#c9a84c', borderRadius:9, padding:10, textAlign:'center'}}>
+          <div style={{fontSize:10}}>BALANCE</div>
+          <div style={{fontSize:18, fontWeight:800}}>Rs. {balance.toLocaleString()}</div>
+       </div>
+    </div>
+    <button onClick={handleSave} disabled={saving} style={{ width:'100%', marginTop:20, padding:14, background:'#0f1f3d', color:'white', fontWeight:800, borderRadius:9 }}>
+      {saving ? '⏳ Saving...' : '💾 Save Order'}
+    </button>
+  </div>
+)}
     </div>
   );
 }
