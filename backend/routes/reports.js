@@ -36,7 +36,13 @@ router.get('/dashboard', auth, async (req, res) => {
           COUNT(*)                        AS order_count
         FROM orders
         WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())`),
+
+      pool.query(`
+    SELECT COALESCE(SUM(total_amount),0) AS total 
+    FROM orders 
+    WHERE created_at::date = CURRENT_DATE`),  
     ]);
+
 
     res.json({
       active_orders:  parseInt(orders.rows[0].count),
@@ -44,6 +50,7 @@ router.get('/dashboard', auth, async (req, res) => {
       lens_jobs_out:  parseInt(lensJobs.rows[0].count),
       reminders:      reminders.rows,
       month_revenue:  monthRev.rows[0],
+      daily_revenue: parseFloat(dailyRev.rows[0].total),
     });
   } catch (err) {
     console.error(err);
@@ -83,6 +90,7 @@ router.get('/revenue', auth, async (req, res) => {
         GROUP BY DATE_TRUNC('month', created_at)
         ORDER BY DATE_TRUNC('month', created_at)`),
     ]);
+
 
     res.json({ summary: summary.rows[0], orders: orders.rows, trend: trend.rows });
   } catch (err) {

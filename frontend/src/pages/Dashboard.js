@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 const S = {
   title:  { fontFamily:"'Playfair Display',serif", fontSize:24, color:'#0f1f3d', margin:0 },
   sub:    { fontSize:13, color:'#6b7280', margin:'4px 0 24px' },
-  kpiGrid:{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:24 },
+  kpiGrid:{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:12, marginBottom:24 },
   kpi:    { background:'white', border:'1px solid #e0ddd6', borderRadius:12, padding:'16px 18px' },
   kl:     { fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:'#6b7280', marginBottom:6 },
   kv:     { fontFamily:"'Playfair Display',serif", fontSize:26, fontWeight:700, color:'#0f1f3d', lineHeight:1 },
@@ -33,9 +33,6 @@ export default function Dashboard() {
       .finally(()=> setLoading(false));
   }, []);
 
-  const statusColor = s => ({ overdue:'#c0392b', created:'#2563eb', called:'#854d0e', delivered:'#2d7a4f' }[s] || '#6b7280');
-  const statusBg    = s => ({ overdue:'#fee2e2', created:'#dbeafe', called:'#fef9c3', delivered:'#dcfce7' }[s] || '#f3f4f6');
-
   if (loading) return <div style={{ padding:40, color:'#6b7280', textAlign:'center' }}>Loading dashboard...</div>;
 
   const mr = data?.month_revenue || {};
@@ -46,11 +43,16 @@ export default function Dashboard() {
       <p style={S.sub}>{today} — Kuruwita Optical</p>
 
       {/* KPIs */}
-      <div style={{ ...S.kpiGrid, gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))' }}>
+      <div style={S.kpiGrid}>
         <div style={{ ...S.kpi, background:'#0f1f3d', borderColor:'#0f1f3d' }}>
           <div style={{ ...S.kl, color:'#c9a84c' }}>This Month</div>
           <div style={{ ...S.kv, color:'white' }}>Rs. {Math.round((mr.total||0)/1000)}K</div>
           <div style={{ ...S.ks, color:'#ede9e0' }}>{mr.order_count||0} orders</div>
+        </div>
+        <div style={S.kpi}>
+          <div style={S.kl}>Today's Sale</div>
+          <div style={{ ...S.kv, color:'#2d7a4f' }}>Rs. {Math.round(data?.daily_revenue||0).toLocaleString()}</div>
+          <div style={S.ks}>Daily Total</div>
         </div>
         <div style={{ ...S.kpi, '--c':'#c0392b' }}>
           <div style={S.kl}>Balance Due</div>
