@@ -49,11 +49,14 @@ export default function Dashboard() {
           <div style={{ ...S.kv, color:'white' }}>Rs. {Math.round((mr.total||0)/1000)}K</div>
           <div style={{ ...S.ks, color:'#ede9e0' }}>{mr.order_count||0} orders</div>
         </div>
-        <div style={S.kpi,background:'#bb9716', borderColor:'#978b0476' }>
+        
+        {/* FIXED: Corrected style object syntax */}
+        <div style={{ ...S.kpi, background:'#bb9716', borderColor:'#978b0476' }}>
           <div style={S.kl}>Today's Sale</div>
           <div style={{ ...S.kv, color:'#2d7a4f' }}>Rs. {Math.round(data?.daily_revenue||0).toLocaleString()}</div>
           <div style={S.ks}>Daily Total</div>
         </div>
+        
         <div style={{ ...S.kpi, '--c':'#c0392b' }}>
           <div style={S.kl}>Balance Due</div>
           <div style={{ ...S.kv, color:'#c0392b' }}>Rs. {Math.round((data?.total_balance||0)/1000)}K</div>
