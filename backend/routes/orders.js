@@ -242,4 +242,21 @@ router.post('/:id/calllogs', auth, async (req, res) => {
   }
 });
 
+// GET /api/orders/lab-queue
+router.get('/lab-queue', auth, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT o.*, c.name AS customer_name, c.phone 
+      FROM orders o 
+      JOIN customers c ON o.customer_id = c.id
+      WHERE o.lens_company IN ('Negombo Optical', 'Solex Optical') 
+      AND o.lens_step = 0 
+      ORDER BY o.lens_company, o.created_at ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch lab queue' });
+  }
+});
+
 module.exports = router;
