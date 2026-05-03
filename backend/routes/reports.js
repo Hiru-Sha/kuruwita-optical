@@ -8,7 +8,7 @@ const auth   = require('../middleware/auth');
 // GET /api/reports/dashboard — all stats for home screen
 router.get('/dashboard', auth, async (req, res) => {
   try {
-    const [orders, balances, lensJobs, reminders, monthRev] = await Promise.all([
+    const [orders, balances, lensJobs, reminders, monthRev,dailyRev] = await Promise.all([
 
       // Active orders count
       pool.query(`SELECT COUNT(*) FROM orders WHERE status NOT IN ('delivered')`),
