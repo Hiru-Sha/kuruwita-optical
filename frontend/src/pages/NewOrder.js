@@ -1,5 +1,5 @@
 // ============================================================
-//  NewOrder.js — Full Integrated Smart Order Form (Phase 2)
+//  NewOrder.js — Updated with Standardized Inputs, Signs, & Sync
 // ============================================================
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -22,16 +22,19 @@ const S = {
   suggest:  { position:'absolute', top:'100%', left:0, right:0, background:'white', border:'1px solid #e0ddd6', borderRadius:10, boxShadow:'0 4px 20px rgba(0,0,0,.1)', zIndex:50, overflow:'hidden' }
 };
 
-const LENS_TYPES = ['Single vision — CR39','Single vision — Hi-index 1.60','Single vision — Hi-index 1.67','Bifocal','Progressive','Photochromic (Transition)','Anti-reflective coating','Polarized','Reading glasses (ready)'];
-const COATINGS = ['None','Anti-reflective (AR)','UV400','Blue light filter','Hard coat','Mirror coat'];
-const FRAME_TYPES = ['Full rim','Half rim','Rimless','Supra','Sunglasses frame'];
-const LENS_COS = ['Negombo Optical','Solex Optical','In-Shop'];
+// Standardized Constant Values
+const TITLES = ['Mr', 'Mrs', 'Ms', 'Rev', 'Baby', 'Master', 'Dr'];
+const AGES = Array.from({ length: 100 }, (_, i) => i + 1);
+const VA_VALS = ['6/60', '6/36', '6/24', '6/18', '6/12', '6/9', '6/6'];
+const AXIS_VALS = Array.from({ length: 181 }, (_, i) => i);
+const LENS_TYPES = ['Single Vision', 'Hi-Index 1.60', 'Hi-Index 1.67', 'Bifocal', 'Progressive', 'Reading Glasses', 'Sunglasses'];
+const LENS_OPTIONS = ['CR39 White', 'Blue Filter', 'Photochromic', 'Blue Filter + Photochromic'];
 
 export default function NewOrder() {
   const navigate = useNavigate();
-  const [saving,  setSaving]  = useState(false);
-  const [error,   setError]   = useState('');
-  const [step,    setStep]    = useState(1); 
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [step, setStep] = useState(1); 
 
   // --- SMART DATA STATES ---
   const [inventory, setInventory] = useState([]);
@@ -39,31 +42,54 @@ export default function NewOrder() {
   const [frameResults, setFrameResults] = useState([]);
 
   // Customer
-  const [custSearch,   setCustSearch]   = useState('');
-  const [custResults,  setCustResults]  = useState([]);
+  const [custSearch, setCustSearch] = useState('');
+  const [custResults, setCustResults] = useState([]);
   const [selectedCust, setSelectedCust] = useState(null);
-  const [newCust,      setNewCust]      = useState({ name:'', age:'', phone:'', address:'' });
-  const [isNewCust,    setIsNewCust]    = useState(true);
+  const [newCust, setNewCust] = useState({ title: 'Mr', name:'', age: '25', phone:'', address:'' });
+  const [isNewCust, setIsNewCust] = useState(true);
 
-  // Refraction
+  // Refraction State
   const [ref, setRef] = useState({
-    r_sph:'',r_cyl:'',r_axis:'',r_add:'',r_va:'',r_pd:'',
-    l_sph:'',l_cyl:'',l_axis:'',l_add:'',l_va:'',l_pd:'',
+    r_sph:'', r_cyl:'', r_axis:'', r_add:'', r_va_std:'', r_pd:'',
+    l_sph:'', l_cyl:'', l_axis:'', l_add:'', l_va_std:'', l_pd:'',
     notes:''
   });
 
+  // Helper: Copy Right Eye data to Left Eye
+  const copyRightToLeft = () => {
+    setRef(prev => ({
+      ...prev,
+      l_sph: prev.r_sph, l_cyl: prev.r_cyl, l_axis: prev.r_axis, 
+      l_add: prev.r_add, l_va_std: prev.r_va_std, l_pd: prev.r_pd
+    }));
+  };
+
+  // Helper: SPH/CYL/AXIS native up/down input
+  const NativeRefInput = ({ p, field, title, stepVal }) => (
+    <div style={S.field}>
+      <label style={S.lbl}>{title}</label>
+      <input type="number" step={stepVal || "0.25"} style={{...S.inp, textAlign:'center'}} 
+             value={ref[`${p}_${field}`]} onChange={e=>setRef({...ref, [`${p}_${field}`]:e.target.value})}/>
+    </div>
+  );
+
+  // Helper: Datalist for Axis 0-180
+  const AxisInput = ({ p }) => (
+    <div style={S.field}>
+      <label style={S.lbl}>Axis</label>
+      <input list={`axis-list-${p}`} style={S.inp} 
+             value={ref[`${p}_axis`]} onChange={e=>setRef({...ref, [`${p}_axis`]:e.target.value})} placeholder="0-180"/>
+      <datalist id={`axis-list-${p}`}>
+        {AXIS_VALS.map(v => <option key={v} value={v} />)}
+      </datalist>
+    </div>
+  );
+
   // Frame & Lens
   const [order, setOrder] = useState({
-    inventory_id: null,
-    frame:'', frame_type:'Full rim', lens_type:'', lens_coating:'None',
-    lens_company:'Negombo Optical', deliver_date:'', status:'created',
-    total_amount:'', advance_amount:'', notes:''
+    inventory_id: null, frame:'', frame_type:'', lens_type:'', lens_coating:'None', 
+    deliver_date:'', status:'created', total_amount:'', advance_amount:'', notes:''
   });
-
-  const [hasRx, setHasRx] = useState(false);
-  const [rxHospital, setRxHospital] = useState('');
-  const [rxDate,     setRxDate]     = useState('');
-  const [rxDoctor,   setRxDoctor]   = useState('');
 
   const balance = Math.max(0, (parseFloat(order.total_amount)||0) - (parseFloat(order.advance_amount)||0));
 
@@ -89,8 +115,7 @@ export default function NewOrder() {
   };
 
   const handleSave = async () => {
-    setError('');
-    setSaving(true);
+    setError(''); setSaving(true);
     try {
       let customerId = selectedCust?.id;
       if (isNewCust) {
@@ -99,30 +124,19 @@ export default function NewOrder() {
       }
 
       await createOrder({
-        customer_id: customerId,
-        ...order,
-        has_rx: hasRx,
-        rx_hospital: hasRx ? rxHospital : '',
-        rx_date: hasRx ? rxDate : '',
-        rx_doctor: hasRx ? rxDoctor : '',
-        balance_amount: balance,
-        ...ref,
-        ref_notes: ref.notes,
+        customer_id: customerId, ...order, balance_amount: balance, ...ref, ref_notes: ref.notes,
       });
 
       navigate('/orders');
     } catch (err) {
       setError(err.response?.data?.error || 'Order failed. Is the frame out of stock?');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  const inp = (val, onChange, placeholder, type='text') => (
-    <input type={type} value={val} placeholder={placeholder}
-      onChange={e => onChange(e.target.value)}
-      style={S.inp}
-    />
+  // Payment type-in input component
+  const PaymentInput = ({ val, onChange, placeholder }) => (
+    <input type="text" value={val} placeholder={placeholder}
+      onChange={e => onChange(e.target.value)} style={S.inp} />
   );
 
   return (
@@ -135,10 +149,12 @@ export default function NewOrder() {
         <div style={S.section}>
           <div style={S.sh}><span style={S.shico}>👤</span><span style={S.sht}>Customer Info</span></div>
           <div style={{ position:'relative', marginBottom:20 }}>
-            {inp(custSearch, (q) => {
-                setCustSearch(q);
-                if(q.length > 1) getCustomers({search:q}).then(r => setCustResults(r.data.slice(0,5)));
-            }, 'Search existing customer...')}
+            {/* Native Search Input */}
+            <input type="text" value={custSearch} placeholder="Search existing customer..."
+               onChange={e => {
+                  const q = e.target.value; setCustSearch(q);
+                  if(q.length > 1) getCustomers({search:q}).then(r => setCustResults(r.data.slice(0,5)));
+               }} style={S.inp} />
             {custResults.length > 0 && (
               <div style={S.suggest}>
                 {custResults.map(c => (
@@ -148,9 +164,23 @@ export default function NewOrder() {
             )}
           </div>
           {isNewCust && (
-            <div style={S.grid2}>
-                <div style={S.field}><label style={S.lbl}>Name</label>{inp(newCust.name, v=>setNewCust({...newCust, name:v}))}</div>
-                <div style={S.field}><label style={S.lbl}>Phone</label>{inp(newCust.phone, v=>setNewCust({...newCust, phone:v}))}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 100px 1fr', gap: 12 }}>
+                {/* Standardized Title Dropdown */}
+                <div style={S.field}>
+                  <label style={S.lbl}>Title</label>
+                  <select style={S.inp} value={newCust.title} onChange={e=>setNewCust({...newCust, title:e.target.value})}>
+                    {TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div style={S.field}><label style={S.lbl}>Name</label><input style={S.inp} value={newCust.name} onChange={e=>setNewCust({...newCust, name:e.target.value})}/></div>
+                {/* Standardized Age Dropdown */}
+                <div style={S.field}>
+                  <label style={S.lbl}>Age</label>
+                  <select style={S.inp} value={newCust.age} onChange={e=>setNewCust({...newCust, age:e.target.value})}>
+                    {AGES.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+                <div style={S.field}><label style={S.lbl}>Phone</label><input style={S.inp} value={newCust.phone} onChange={e=>setNewCust({...newCust, phone:e.target.value})}/></div>
             </div>
           )}
           <button onClick={()=>setStep(2)} style={{ marginTop:20, padding:'10px 20px', background:'#0f1f3d', color:'white', borderRadius:9 }}>Next →</button>
@@ -160,23 +190,32 @@ export default function NewOrder() {
       {/* STEP 2: REFRACTION */}
       {step === 2 && (
         <div style={S.section}>
-          <div style={S.sh}><span style={S.shico}>🔭</span><span style={S.sht}>Refraction Results</span></div>
-          <div style={{ overflowX:'auto' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse', minWidth:500 }}>
-              <thead>
-                <tr>{['Eye','SPH','CYL','AXIS','ADD','VA','PD'].map(h=><th key={h} style={{background:'#f8f5ef', padding:8, fontSize:11}}>{h}</th>)}</tr>
-              </thead>
-              <tbody>
-                {[{l:'Right', p:'r'}, {l:'Left', p:'l'}].map(eye => (
-                  <tr key={eye.p}>
-                    <td style={{padding:8, fontWeight:700}}>{eye.l}</td>
-                    {['sph','cyl','axis','add','va','pd'].map(f => (
-                      <td key={f}><input style={{...S.inp, width:'60px', textAlign:'center'}} value={ref[`${eye.p}_${f}`]} onChange={e=>setRef({...ref, [`${eye.p}_${f}`]:e.target.value})}/></td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={S.sh}>
+            <span style={S.shico}>🔭</span><span style={S.sht}>Refraction Results</span>
+            <button onClick={copyRightToLeft} style={{ marginLeft:'auto', fontSize:12, padding:'6px 12px', background:'#c9a84c', color:'#0f1f3d', borderRadius:8, fontWeight:600, border:'none', cursor:'pointer' }}>Copy Right → Left</button>
+          </div>
+          
+          <div style={{ display:'grid', gap: 16 }}>
+            {[{label:'Right Eye', prefix:'r'}, {label:'Left Eye', prefix:'l'}].map(eye => (
+              <div key={eye.prefix}>
+                <div style={{fontSize:14, fontWeight:700, color:'#0f1f3d', marginBottom:8, borderBottom:'1px solid #f8f5ef', paddingBottom:4 }}>{eye.label}</div>
+                <div style={{ display:'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
+                  <NativeRefInput p={eye.prefix} field="sph" title="SPH" />
+                  <NativeRefInput p={eye.prefix} field="cyl" title="CYL" />
+                  <AxisInput p={eye.prefix} />
+                  <NativeRefInput p={eye.prefix} field="add" title="ADD" />
+                  {/* VA Dropdown */}
+                  <div style={S.field}>
+                    <label style={S.lbl}>VA</label>
+                    <select style={S.inp} value={ref[`${eye.prefix}_va_std`]} onChange={e=>setRef({...ref, [`${eye.prefix}_va_std`]:e.target.value})}>
+                      <option value="">Select</option>
+                      {VA_VALS.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div style={S.field}><label style={S.lbl}>PD</label><input style={S.inp} value={ref[`${eye.prefix}_pd`]} onChange={e=>setRef({...ref, [`${eye.prefix}_pd`]:e.target.value})}/></div>
+                </div>
+              </div>
+            ))}
           </div>
           <button onClick={()=>setStep(3)} style={{ marginTop:20, padding:'10px 20px', background:'#0f1f3d', color:'white', borderRadius:9 }}>Next →</button>
         </div>
@@ -186,9 +225,11 @@ export default function NewOrder() {
       {step === 3 && (
         <div style={S.section}>
           <div style={S.sh}><span style={S.shico}>🕶️</span><span style={S.sht}>Frame & Lens Selection</span></div>
+          {/* Native Search Input */}
           <div style={{position:'relative', marginBottom:20}}>
             <label style={S.lbl}>Search Frame Inventory</label>
-            {inp(frameSearch, searchFrames, 'Search Brand/Model...')}
+            <input type="text" value={frameSearch} placeholder="Search Brand/Model..."
+                   onChange={e => searchFrames(e.target.value)} style={S.inp} />
             {frameResults.length > 0 && (
               <div style={S.suggest}>
                 {frameResults.map(i => (
@@ -199,18 +240,20 @@ export default function NewOrder() {
               </div>
             )}
           </div>
-          <div style={S.grid2}>
+          {/* New Lens Grid */}
+          <div style={S.grid3}>
               <div style={S.field}><label style={S.lbl}>Lens Type</label>
                 <select style={S.inp} value={order.lens_type} onChange={e=>setOrder({...order, lens_type:e.target.value})}>
                     <option value="">Select...</option>
                     {LENS_TYPES.map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
               </div>
-              <div style={S.field}><label style={S.lbl}>Send To</label>
-                <select style={S.inp} value={order.lens_company} onChange={e=>setOrder({...order, lens_company:e.target.value})}>
-                    {LENS_COS.map(c => <option key={c} value={c}>{c}</option>)}
+              <div style={S.field}><label style={S.lbl}>Lens Options</label>
+                <select style={S.inp} value={order.lens_coating} onChange={e=>setOrder({...order, lens_coating:e.target.value})}>
+                    {LENS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+              <div style={S.field}><label style={S.lbl}>Deliver Date</label><input type="date" style={S.inp} value={order.deliver_date} onChange={e=>setOrder({...order, deliver_date:e.target.value})}/></div>
           </div>
           <button onClick={()=>setStep(4)} style={{ marginTop:20, padding:'10px 20px', background:'#0f1f3d', color:'white', borderRadius:9 }}>Next →</button>
         </div>
@@ -221,8 +264,9 @@ export default function NewOrder() {
         <div style={S.section}>
           <div style={S.sh}><span style={S.shico}>💰</span><span style={S.sht}>Payment</span></div>
           <div style={S.grid3}>
-             <div style={S.field}><label style={S.lbl}>Total</label>{inp(order.total_amount, v=>setOrder({...order, total_amount:v}), '0', 'number')}</div>
-             <div style={S.field}><label style={S.lbl}>Advance</label>{inp(order.advance_amount, v=>setOrder({...order, advance_amount:v}), '0', 'number')}</div>
+              {/* Type-in pricing inputs */}
+             <div style={S.field}><label style={S.lbl}>Total (Rs.)</label><PaymentInput val={order.total_amount} onChange={v=>setOrder({...order, total_amount:v})} placeholder="0"/></div>
+             <div style={S.field}><label style={S.lbl}>Advance (Rs.)</label><PaymentInput val={order.advance_amount} onChange={v=>setOrder({...order, advance_amount:v})} placeholder="0"/></div>
              <div style={{background:'#0f1f3d', color:'#c9a84c', borderRadius:9, padding:10, textAlign:'center'}}>
                 <div style={{fontSize:10}}>BALANCE</div>
                 <div style={{fontSize:18, fontWeight:800}}>Rs. {balance.toLocaleString()}</div>
