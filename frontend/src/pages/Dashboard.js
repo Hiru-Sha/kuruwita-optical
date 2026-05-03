@@ -44,7 +44,7 @@ export default function Dashboard() {
 
       {/* KPIs */}
       <div style={S.kpiGrid}>
-        <div style={{ ...S.kpi, background:'#f1f2f5', borderColor:'#0f1f3d' }}>
+        <div style={{ ...S.kpi, background:'#0f1f3d', borderColor:'#0f1f3d' }}>
           <div style={{ ...S.kl, color:'#c9a84c' }}>This Month</div>
           <div style={{ ...S.kv, color:'white' }}>Rs. {Math.round((mr.total||0)/1000)}K</div>
           <div style={{ ...S.ks, color:'#ede9e0' }}>{mr.order_count||0} orders</div>
