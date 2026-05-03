@@ -1,5 +1,5 @@
 // ============================================================
-//  NewOrder.js — Fully Updated Professional Flow
+//  NewOrder.js — Final Integrated Professional Flow
 // ============================================================
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -33,7 +33,6 @@ export default function NewOrder() {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   
-  // Price States
   const [framePrice, setFramePrice] = useState(0);
   const [lensPrice, setLensPrice] = useState(0);
   const [manualAdj, setManualAdj] = useState(0);
@@ -58,22 +57,20 @@ export default function NewOrder() {
     setRef(prev => ({ ...prev, l_sph: prev.r_sph, l_cyl: prev.r_cyl, l_axis: prev.r_axis, l_add: prev.r_add, l_va_std: prev.r_va_std, l_pd: prev.r_pd }));
   };
 
-  const NativeRefInput = ({ p, field, title }) => (
-    <div style={S.field}>
-      <label style={S.lbl}>{title}</label>
-      <div style={{ display:'flex', gap:2 }}>
-        <select style={{...S.inp, padding:'0 2px'}} onChange={e=>setRef({...ref, [`${p}_${field}_sign`]:e.target.value})}>
-          <option>+</option><option>-</option>
-        </select>
-        <input type="number" step="0.25" style={{...S.inp, width:'60px', textAlign:'center'}} 
-               value={ref[`${p}_${field}`]} onChange={e=>setRef({...ref, [`${p}_${field}`]:e.target.value})}/>
-      </div>
-    </div>
-  );
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await createOrder({ customer_id: selectedCust?.id, ...order, total_amount: finalTotal, balance_amount: balance, ...ref });
+      navigate('/orders');
+    } catch (err) { alert('Save failed'); } finally { setSaving(false); }
+  };
 
   return (
     <div style={S.page}>
       <h1 style={S.title}>➕ New Order</h1>
+      <p style={S.sub}>Step {step} of 4</p>
+
+      {/* STEP 1: CUSTOMER */}
       {step === 1 && (
         <div style={S.section}>
           <div style={S.sh}>👤 <span style={S.sht}>Customer Info</span></div>
@@ -91,14 +88,23 @@ export default function NewOrder() {
         </div>
       )}
 
+      {/* STEP 2: REFRACTION */}
       {step === 2 && (
         <div style={S.section}>
           <div style={S.sh}>🔭 <span style={S.sht}>Refraction</span> <button onClick={copyRightToLeft} style={{marginLeft:'auto', fontSize:11}}>Copy R → L</button></div>
           {['r', 'l'].map(p => (
-            <div key={p} style={{ display:'grid', gridTemplateColumns: '40px repeat(5, 1fr)', gap: 8, marginBottom:10 }}>
+            <div key={p} style={{ display:'grid', gridTemplateColumns: '50px 100px 100px 80px 80px 80px 80px', gap: 8, marginBottom:10 }}>
               <div style={{fontWeight:700, paddingTop:25}}>{p.toUpperCase()}</div>
-              <NativeRefInput p={p} field="sph" title="SPH" /><NativeRefInput p={p} field="cyl" title="CYL" />
+              {['sph','cyl'].map(f => (
+                <div style={S.field} key={f}><label style={S.lbl}>{f.toUpperCase()}</label>
+                  <div style={{display:'flex', gap:2}}>
+                    <select style={{...S.inp, width:40}} onChange={e=>setRef({...ref, [`${p}_${f}_sign`]:e.target.value})}><option>+</option><option>-</option></select>
+                    <input type="number" step="0.25" style={{...S.inp, width:60}} value={ref[`${p}_${f}`]} onChange={e=>setRef({...ref, [`${p}_${f}`]:e.target.value})}/>
+                  </div>
+                </div>
+              ))}
               <div style={S.field}><label style={S.lbl}>Axis</label><input list="axis-list" style={S.inp} value={ref[`${p}_axis`]} onChange={e=>setRef({...ref, [`${p}_axis`]:e.target.value})}/></div>
+              <div style={S.field}><label style={S.lbl}>ADD</label><input type="number" step="0.25" style={S.inp} value={ref[`${p}_add`]} onChange={e=>setRef({...ref, [`${p}_add`]:e.target.value})}/></div>
               <div style={S.field}><label style={S.lbl}>VA</label><select style={S.inp} value={ref[`${p}_va_std`]} onChange={e=>setRef({...ref, [`${p}_va_std`]:e.target.value})}>{VA_VALS.map(v=><option key={v}>{v}</option>)}</select></div>
               <div style={S.field}><label style={S.lbl}>PD</label><input style={S.inp} value={ref[`${p}_pd`]} onChange={e=>setRef({...ref, [`${p}_pd`]:e.target.value})}/></div>
             </div>
@@ -108,6 +114,7 @@ export default function NewOrder() {
         </div>
       )}
 
+      {/* STEP 3: FRAME & LENS */}
       {step === 3 && (
         <div style={S.section}>
           <div style={S.sh}>🕶️ <span style={S.sht}>Frame & Lens</span></div>
@@ -125,30 +132,20 @@ export default function NewOrder() {
       )}
 
       {/* STEP 4: PAYMENT */}
-{step === 4 && (
-  <div style={S.section}>
-    <div style={S.sh}><span style={S.shico}>💰</span><span style={S.sht}>Payment</span></div>
-    <div style={S.grid3}>
-       <div style={S.field}>
-          <label style={S.lbl}>Total (Rs.)</label>
-          <input type="number" style={S.inp} value={order.total_amount} 
-                 onChange={e => setOrder({...order, total_amount: e.target.value})} placeholder="0"/>
-       </div>
-       <div style={S.field}>
-          <label style={S.lbl}>Advance (Rs.)</label>
-          <input type="number" style={S.inp} value={order.advance_amount} 
-                 onChange={e => setOrder({...order, advance_amount: e.target.value})} placeholder="0"/>
-       </div>
-       <div style={{background:'#0f1f3d', color:'#c9a84c', borderRadius:9, padding:10, textAlign:'center'}}>
-          <div style={{fontSize:10}}>BALANCE</div>
-          <div style={{fontSize:18, fontWeight:800}}>Rs. {balance.toLocaleString()}</div>
-       </div>
-    </div>
-    <button onClick={handleSave} disabled={saving} style={{ width:'100%', marginTop:20, padding:14, background:'#0f1f3d', color:'white', fontWeight:800, borderRadius:9 }}>
-      {saving ? '⏳ Saving...' : '💾 Save Order'}
-    </button>
-  </div>
-)}
+      {step === 4 && (
+        <div style={S.section}>
+          <div style={S.grid3}>
+             <input style={S.inp} placeholder="Discount (Rs)" onChange={e=>setDiscount(e.target.value)}/>
+             <input style={S.inp} placeholder="Adjustment (Rs)" onChange={e=>setManualAdj(e.target.value)}/>
+             <input style={S.inp} placeholder="Advance (Rs)" onChange={e=>setOrder({...order, advance_amount:e.target.value})}/>
+          </div>
+          <div style={{background:'#0f1f3d', color:'#c9a84c', padding:15, textAlign:'center', marginTop:20, borderRadius:9}}>
+             <div style={{fontSize:20, fontWeight:800}}>Final Total: Rs. {finalTotal.toLocaleString()}</div>
+             <div style={{fontSize:16}}>Balance: Rs. {balance.toLocaleString()}</div>
+          </div>
+          <button onClick={handleSave} style={{ width:'100%', marginTop:20, padding:14, background:'#0f1f3d', color:'white', borderRadius:9 }}>💾 Save Order</button>
+        </div>
+      )}
     </div>
   );
 }
