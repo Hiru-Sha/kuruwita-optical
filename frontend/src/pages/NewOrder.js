@@ -69,77 +69,18 @@ export default function NewOrder() {
     <div style={S.page}>
       <h1 style={S.title}>➕ New Order</h1>
 
-      {/* STEP 1: CUSTOMER */}
-{step === 1 && (
-  <div style={S.section}>
-    <div style={S.sh}>👤 <span style={S.sht}>Customer Info</span></div>
-
-    {/* 1. SEARCH EXISTING CUSTOMER */}
-    <div style={{ position:'relative', marginBottom:20 }}>
-      <input 
-        type="text" 
-        style={{...S.inp, width:'100%'}} 
-        placeholder="Search existing customer (Name or Phone)..." 
-        value={custSearch}
-        onChange={e => {
-          const q = e.target.value; 
-          setCustSearch(q);
-          if(q.length > 1) getCustomers({search:q}).then(r => setCustResults(r.data.slice(0,5)));
-        }} 
-      />
-      {custResults.length > 0 && (
-        <div style={S.suggest}>
-          {custResults.map(c => (
-            <div key={c.id} onClick={()=>{
-              setSelectedCust(c); 
-              setIsNewCust(false); 
-              setCustSearch(c.name); 
-              setCustResults([]);
-            }} style={{ padding:10, cursor:'pointer' }}>
-              {c.name} - {c.phone}
-            </div>
-          ))}
+      {step === 1 && (
+        <div style={S.section}>
+          <h3 style={S.sht}>👤 Customer Details</h3>
+          <div style={{...S.grid2, gap:15}}>
+            <div style={S.field}><label style={S.lbl}>Title</label><select value={cust.title} onChange={e=>setCust(c=>({...c,title:e.target.value}))} style={S.inp}>{TITLES.map(t=><option key={t}>{t}</option>)}</select></div>
+            <div style={S.field}><label style={S.lbl}>Full Name</label><input value={cust.name} onChange={e=>setCust(c=>({...c,name:e.target.value}))} style={S.inp}/></div>
+            <div style={S.field}><label style={S.lbl}>Phone</label><input value={cust.phone} onChange={e=>setCust(c=>({...c,phone:e.target.value}))} style={S.inp}/></div>
+            <div style={S.field}><label style={S.lbl}>Age</label><input value={cust.age} onChange={e=>setCust(c=>({...c,age:e.target.value}))} style={S.inp}/></div>
+          </div>
+          <button onClick={()=>setStep(2)} style={{marginTop:20, padding:'10px 20px', background:'#0f1f3d', color:'white', borderRadius:9, border:'none', cursor:'pointer'}}>Next: Refraction →</button>
         </div>
       )}
-    </div>
-
-    {/* 2. NEW CUSTOMER DETAILS (Visible if no customer selected) */}
-    {isNewCust && (
-      <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 80px 1fr', gap: 10 }}>
-        <div style={S.field}>
-          <label style={S.lbl}>Title</label>
-          <select style={S.inp} value={newCust.title} onChange={e=>setNewCust({...newCust, title:e.target.value})}>
-            {TITLES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
-        <div style={S.field}>
-          <label style={S.lbl}>Name</label>
-          <input style={S.inp} value={newCust.name} onChange={e=>setNewCust({...newCust, name:e.target.value})}/>
-        </div>
-        <div style={S.field}>
-          <label style={S.lbl}>Age</label>
-          <select style={S.inp} value={newCust.age} onChange={e=>setNewCust({...newCust, age:e.target.value})}>
-            {AGES.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-        </div>
-        <div style={S.field}>
-          <label style={S.lbl}>Phone</label>
-          <input style={S.inp} value={newCust.phone} onChange={e=>setNewCust({...newCust, phone:e.target.value})}/>
-        </div>
-      </div>
-    )}
-
-    {/* Clear selection button if user wants to reset */}
-    {!isNewCust && (
-      <button onClick={() => { setIsNewCust(true); setSelectedCust(null); setCustSearch(''); }} 
-              style={{ marginTop:10, background:'none', border:'none', color:'#c0392b', fontSize:12, cursor:'pointer' }}>
-        ✕ Clear Selected Customer
-      </button>
-    )}
-
-    <button onClick={()=>setStep(2)} style={{ marginTop:20, padding:'10px 20px', background:'#0f1f3d', color:'white', borderRadius:9 }}>Next →</button>
-  </div>
-)}
 
       {step === 2 && (
         <div style={S.section}>
