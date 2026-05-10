@@ -1,67 +1,125 @@
 // ============================================================
-//  NewOrder.js — Complete rebuild, all bugs fixed
-//  Fixes: duplicate customer, frame blank, SPH signs,
-//         lens_company missing, S.sht crash, balance calc
+//  NewOrder.js — Full rebuild with all fixes:
+//  ✅ Typing bug fixed (no onFocus/onBlur on every keystroke)
+//  ✅ No address field
+//  ✅ Lens price list with buy/sell by power + type + coating
+//  ✅ Frame price + Lens price shown separately
+//  ✅ Individual price adjust + discount per item
+//  ✅ Grinding removed from here (goes to Grinding tab later)
+//  ✅ Only "Created" status on new order
+//  ✅ Duplicate customer handled gracefully
 // ============================================================
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createCustomer, createOrder, getCustomers, getInventory } from '../api';
 
-// ── Constants ────────────────────────────────────────────────
-const TITLES        = ['Mr.', 'Mrs.', 'Miss', 'Master', 'Baby', 'Rev.', 'Dr.'];
-const DIOPTERS      = ['0.00', ...Array.from({ length: 80 }, (_, i) => ((i + 1) * 0.25).toFixed(2))];
-const AXES          = Array.from({ length: 181 }, (_, i) => String(i));
-const VA_OPTIONS    = ['6/6', '6/9', '6/12', '6/18', '6/24', '6/36', '6/60', 'CF', 'HM', 'PL'];
-const FRAME_TYPES   = ['Full rim', 'Half rim', 'Rimless', 'Sunglass'];
-const FRAME_MATS    = ['Plastic', 'Metal', 'TR90', 'Titanium', 'Acetate'];
-const LENS_TYPES    = ['Single Vision', 'Bifocal', 'Progressive', 'Office Lens', 'Reading (ready)'];
-const LENS_COATINGS = ['Hard Coat', 'HMC', 'Blue Filter', 'Photochromic', 'Blue + Photochromic', 'AR Coat'];
-const LENS_COS      = ['Negombo Optical', 'Solex Optical', 'In-Shop'];
-
-// ── Style helpers ────────────────────────────────────────────
-const navy  = '#0f1f3d';
-const gold  = '#c9a84c';
-const cream = '#f8f5ef';
-const border= '#e0ddd6';
-const muted = '#6b7280';
-const danger= '#c0392b';
-const success='#2d7a4f';
-
-const css = {
-  section: { background: 'white', border: `1px solid ${border}`, borderRadius: 14, padding: '20px 22px', marginBottom: 16 },
-  sHead:   { fontSize: 16, fontWeight: 700, color: navy, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 },
-  grid2:   { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
-  grid3:   { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 },
-  field:   { display: 'flex', flexDirection: 'column', gap: 5 },
-  lbl:     { fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.9px', color: muted },
-  inp:     { padding: '10px 13px', border: `1.5px solid ${border}`, borderRadius: 9, fontSize: 14, fontFamily: "'DM Sans',sans-serif", outline: 'none', background: cream, color: navy, transition: 'border-color .2s' },
-  btnPrimary: { padding: '11px 28px', background: navy, color: 'white', border: 'none', borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'background .15s' },
-  btnSecondary: { padding: '11px 20px', background: cream, color: muted, border: `1.5px solid ${border}`, borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+// ── Design tokens ────────────────────────────────────────────
+const C = {
+  navy:    '#0f1f3d',
+  gold:    '#c9a84c',
+  cream:   '#f8f5ef',
+  border:  '#e0ddd6',
+  muted:   '#6b7280',
+  success: '#2d7a4f',
+  danger:  '#c0392b',
+  white:   '#ffffff',
 };
 
-// ── Step indicator ───────────────────────────────────────────
+// ── Lens price list ──────────────────────────────────────────
+// Format: { type, coating, powerRange, buyPrice, sellPrice }
+// Power ranges: '0.00-2.00', '2.25-4.00', '4.25-6.00', '6.25+'
+const LENS_PRICES = [
+  // Single Vision — HMC
+  { type:'Single Vision', coating:'HMC',               range:'0.00–2.00', buy:350,  sell:700  },
+  { type:'Single Vision', coating:'HMC',               range:'2.25–4.00', buy:450,  sell:900  },
+  { type:'Single Vision', coating:'HMC',               range:'4.25–6.00', buy:600,  sell:1200 },
+  { type:'Single Vision', coating:'HMC',               range:'6.25+',     buy:800,  sell:1600 },
+  // Single Vision — Hard Coat
+  { type:'Single Vision', coating:'Hard Coat',          range:'0.00–2.00', buy:200,  sell:400  },
+  { type:'Single Vision', coating:'Hard Coat',          range:'2.25–4.00', buy:280,  sell:560  },
+  { type:'Single Vision', coating:'Hard Coat',          range:'4.25–6.00', buy:380,  sell:760  },
+  { type:'Single Vision', coating:'Hard Coat',          range:'6.25+',     buy:500,  sell:1000 },
+  // Single Vision — Blue Filter
+  { type:'Single Vision', coating:'Blue Filter',        range:'0.00–2.00', buy:550,  sell:1100 },
+  { type:'Single Vision', coating:'Blue Filter',        range:'2.25–4.00', buy:650,  sell:1300 },
+  { type:'Single Vision', coating:'Blue Filter',        range:'4.25–6.00', buy:800,  sell:1600 },
+  { type:'Single Vision', coating:'Blue Filter',        range:'6.25+',     buy:1000, sell:2000 },
+  // Single Vision — Photochromic
+  { type:'Single Vision', coating:'Photochromic',       range:'0.00–2.00', buy:900,  sell:1800 },
+  { type:'Single Vision', coating:'Photochromic',       range:'2.25–4.00', buy:1100, sell:2200 },
+  { type:'Single Vision', coating:'Photochromic',       range:'4.25–6.00', buy:1300, sell:2600 },
+  { type:'Single Vision', coating:'Photochromic',       range:'6.25+',     buy:1600, sell:3200 },
+  // Single Vision — Blue + Photochromic
+  { type:'Single Vision', coating:'Blue + Photochromic',range:'0.00–2.00', buy:1100, sell:2200 },
+  { type:'Single Vision', coating:'Blue + Photochromic',range:'2.25–4.00', buy:1300, sell:2600 },
+  { type:'Single Vision', coating:'Blue + Photochromic',range:'4.25–6.00', buy:1600, sell:3200 },
+  { type:'Single Vision', coating:'Blue + Photochromic',range:'6.25+',     buy:2000, sell:4000 },
+  // Bifocal — HMC
+  { type:'Bifocal',       coating:'HMC',               range:'0.00–2.00', buy:600,  sell:1200 },
+  { type:'Bifocal',       coating:'HMC',               range:'2.25–4.00', buy:750,  sell:1500 },
+  { type:'Bifocal',       coating:'HMC',               range:'4.25–6.00', buy:900,  sell:1800 },
+  { type:'Bifocal',       coating:'Hard Coat',          range:'0.00–2.00', buy:400,  sell:800  },
+  { type:'Bifocal',       coating:'Hard Coat',          range:'2.25–4.00', buy:500,  sell:1000 },
+  // Progressive — all coatings
+  { type:'Progressive',   coating:'HMC',               range:'0.00–2.00', buy:1200, sell:2400 },
+  { type:'Progressive',   coating:'HMC',               range:'2.25–4.00', buy:1500, sell:3000 },
+  { type:'Progressive',   coating:'HMC',               range:'4.25–6.00', buy:1800, sell:3600 },
+  { type:'Progressive',   coating:'Blue Filter',        range:'0.00–2.00', buy:1600, sell:3200 },
+  { type:'Progressive',   coating:'Blue Filter',        range:'2.25–4.00', buy:1900, sell:3800 },
+  { type:'Progressive',   coating:'Photochromic',       range:'0.00–2.00', buy:2000, sell:4000 },
+  { type:'Progressive',   coating:'Photochromic',       range:'2.25–4.00', buy:2400, sell:4800 },
+  // Office Lens
+  { type:'Office Lens',   coating:'HMC',               range:'0.00–2.00', buy:800,  sell:1600 },
+  { type:'Office Lens',   coating:'Blue Filter',        range:'0.00–2.00', buy:1000, sell:2000 },
+  // Reading glasses
+  { type:'Reading (ready)',coating:'Hard Coat',          range:'0.00–2.00', buy:150,  sell:300  },
+  { type:'Reading (ready)',coating:'Hard Coat',          range:'2.25–4.00', buy:200,  sell:400  },
+];
+
+// Get power range from SPH value
+const getPowerRange = (sphStr) => {
+  if (!sphStr || sphStr === 'Plano' || sphStr === '0.00') return '0.00–2.00';
+  const val = Math.abs(parseFloat(sphStr.replace(/[+-]/g, '')) || 0);
+  if (val <= 2.00) return '0.00–2.00';
+  if (val <= 4.00) return '2.25–4.00';
+  if (val <= 6.00) return '4.25–6.00';
+  return '6.25+';
+};
+
+// Find matching lens price
+const findLensPrice = (type, coating, sphStr) => {
+  const range = getPowerRange(sphStr);
+  return LENS_PRICES.find(p => p.type === type && p.coating === coating && p.range === range) || null;
+};
+
+// Constants
+const TITLES      = ['Mr.', 'Mrs.', 'Miss', 'Master', 'Baby', 'Rev.', 'Dr.'];
+const DIOPTERS    = ['0.00', ...Array.from({ length: 80 }, (_, i) => ((i + 1) * 0.25).toFixed(2))];
+const AXES        = Array.from({ length: 181 }, (_, i) => String(i));
+const VA_OPTIONS  = ['6/6', '6/9', '6/12', '6/18', '6/24', '6/36', '6/60', 'CF', 'HM', 'PL'];
+const FRAME_TYPES = ['Full rim', 'Half rim', 'Rimless', 'Sunglass'];
+const FRAME_MATS  = ['Plastic', 'Metal', 'TR90', 'Titanium', 'Acetate'];
+const LENS_TYPES  = ['Single Vision', 'Bifocal', 'Progressive', 'Office Lens', 'Reading (ready)'];
+const LENS_COATINGS = ['HMC', 'Hard Coat', 'Blue Filter', 'Photochromic', 'Blue + Photochromic', 'AR Coat'];
+
+const fmtMoney = (n) => 'Rs. ' + parseFloat(n || 0).toLocaleString('en-LK', { minimumFractionDigits: 0 });
+
+// ── Step bar ─────────────────────────────────────────────────
 function StepBar({ step }) {
   const steps = ['Customer', 'Refraction', 'Frame & Lens', 'Payment'];
   return (
-    <div style={{ display: 'flex', gap: 0, background: 'white', border: `1px solid ${border}`, borderRadius: 12, padding: '12px 20px', marginBottom: 20, overflowX: 'auto' }}>
+    <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 20px', marginBottom: 20, overflowX: 'auto' }}>
       {steps.map((s, i) => {
-        const n = i + 1;
-        const done = step > n, active = step === n;
+        const n = i + 1; const done = step > n; const active = step === n;
         return (
           <React.Fragment key={s}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
-              <div style={{
-                width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12, fontWeight: 700, flexShrink: 0,
-                background: done ? success : active ? navy : cream,
-                color: done || active ? 'white' : muted,
-                border: `2px solid ${done ? success : active ? navy : border}`,
-              }}>
+              <div style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0, background: done ? C.success : active ? C.navy : C.cream, color: done || active ? 'white' : C.muted, border: `2px solid ${done ? C.success : active ? C.navy : C.border}` }}>
                 {done ? '✓' : n}
               </div>
-              <span style={{ fontSize: 13, fontWeight: active ? 700 : 500, color: active ? navy : done ? success : muted }}>{s}</span>
+              <span style={{ fontSize: 13, fontWeight: active ? 700 : 500, color: active ? C.navy : done ? C.success : C.muted }}>{s}</span>
             </div>
-            {i < steps.length - 1 && <div style={{ flex: 1, height: 2, background: done ? success : border, margin: '12px 10px', minWidth: 20 }} />}
+            {i < steps.length - 1 && <div style={{ flex: 1, height: 2, background: step > n ? C.success : C.border, margin: '0 10px', minWidth: 20 }} />}
           </React.Fragment>
         );
       })}
@@ -69,112 +127,159 @@ function StepBar({ step }) {
   );
 }
 
-// ── Main Component ───────────────────────────────────────────
+// ── Reusable field wrapper ────────────────────────────────────
+// KEY FIX: No onFocus/onBlur that causes re-renders and blocks typing
+const Field = ({ label, children }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+    <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.9px', color: C.muted }}>{label}</label>
+    {children}
+  </div>
+);
+
+// Base input style — static, no dynamic style changes on focus
+const INP = {
+  padding: '10px 13px', border: `1.5px solid ${C.border}`, borderRadius: 9,
+  fontSize: 14, fontFamily: "'DM Sans',sans-serif", outline: 'none',
+  background: C.cream, color: C.navy, width: '100%',
+};
+const SEL = { ...INP, cursor: 'pointer' };
+
+// ── Main component ────────────────────────────────────────────
 export default function NewOrder() {
   const navigate = useNavigate();
   const [step,   setStep]   = useState(1);
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState('');
 
-  // Customer state
-  const [custMode,     setCustMode]     = useState('search'); // 'search' | 'new'
+  // ── Customer ─────────────────────────────────────────────
+  const [custMode,     setCustMode]     = useState('search');
   const [custSearch,   setCustSearch]   = useState('');
   const [custResults,  setCustResults]  = useState([]);
   const [selectedCust, setSelectedCust] = useState(null);
-  const [newCust, setNewCust] = useState({ title: 'Mr.', name: '', phone: '', age: '', address: '' });
+  const [newCust, setNewCust] = useState({ title: 'Mr.', name: '', phone: '', age: '' });
   const searchTimer = useRef(null);
 
-  // Refraction state — signs stored separately, combined on save
+  // ── Refraction ───────────────────────────────────────────
   const [ref, setRef] = useState({
-    r_sph_s: '-', r_sph: '0.00', r_cyl_s: '-', r_cyl: '0.00', r_axis: '0', r_add: '0.00', r_va: '6/6', r_pd: '',
-    l_sph_s: '-', l_sph: '0.00', l_cyl_s: '-', l_cyl: '0.00', l_axis: '0', l_add: '0.00', l_va: '6/6', l_pd: '',
-    notes: '',
+    r_sph_s:'-', r_sph:'0.00', r_cyl_s:'-', r_cyl:'0.00', r_axis:'0', r_add:'0.00', r_va:'6/6', r_pd:'',
+    l_sph_s:'-', l_sph:'0.00', l_cyl_s:'-', l_cyl:'0.00', l_axis:'0', l_add:'0.00', l_va:'6/6', l_pd:'',
+    notes:'',
   });
-  const [hasRx,      setHasRx]      = useState(false);
+  const [hasRx, setHasRx] = useState(false);
   const [rxHospital, setRxHospital] = useState('');
-  const [rxDate,     setRxDate]     = useState('');
-  const [rxDoctor,   setRxDoctor]   = useState('');
+  const [rxDate, setRxDate] = useState('');
+  const [rxDoctor, setRxDoctor] = useState('');
 
-  // Frame & Lens state
+  // ── Frame ────────────────────────────────────────────────
   const [frameSearch,   setFrameSearch]   = useState('');
   const [frameResults,  setFrameResults]  = useState([]);
   const [selectedFrame, setSelectedFrame] = useState(null);
-  const [order, setOrder] = useState({
-    frame: '', frame_type: 'Full rim', frame_material: 'Plastic',
-    lens_type: 'Single Vision', lens_coating: 'HMC',
-    lens_company: 'Negombo Optical',
-    total_amount: '', advance_amount: '',
-    deliver_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-    status: 'created', notes: '',
+  const frameTimer = useRef(null);
+
+  const [frameDetails, setFrameDetails] = useState({
+    name: '', type: 'Full rim', material: 'Plastic',
+    buyPrice: 0, sellPrice: 0, frameDiscount: 0,
   });
 
-  const balance = Math.max(0, (parseFloat(order.total_amount) || 0) - (parseFloat(order.advance_amount) || 0));
+  // ── Lens ─────────────────────────────────────────────────
+  const [lensDetails, setLensDetails] = useState({
+    type: 'Single Vision', coating: 'HMC',
+    buyPrice: 0, sellPrice: 0, lensDiscount: 0,
+    matchedRange: '', matched: false,
+  });
 
-  // ── Customer search ─────────────────────────────────────────
-  const handleCustSearch = (q) => {
-    setCustSearch(q);
+  // ── Payment ──────────────────────────────────────────────
+  const [advance, setAdvance] = useState('');
+  const [deliverDate, setDeliverDate] = useState(
+    new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
+  );
+  const [notes, setNotes] = useState('');
+
+  // ── Computed totals ──────────────────────────────────────
+  const frameFinal = Math.max(0, (frameDetails.sellPrice || 0) - (frameDetails.frameDiscount || 0));
+  const lensFinal  = Math.max(0, (lensDetails.sellPrice  || 0) - (lensDetails.lensDiscount  || 0));
+  const totalAmount = frameFinal + lensFinal;
+  const balanceAmount = Math.max(0, totalAmount - (parseFloat(advance) || 0));
+
+  // ── Auto-lookup lens price when type/coating/sph changes ─
+  const lookupLens = useCallback((type, coating, sphStr) => {
+    const match = findLensPrice(type, coating, sphStr);
+    setLensDetails(l => ({
+      ...l, type, coating,
+      buyPrice:     match ? match.buy  : 0,
+      sellPrice:    match ? match.sell : 0,
+      matchedRange: match ? match.range : '',
+      matched:      !!match,
+      lensDiscount: 0, // reset discount when lens changes
+    }));
+  }, []);
+
+  // ── Customer search ──────────────────────────────────────
+  // FIX: debounced, no blocking
+  const handleCustSearch = (v) => {
+    setCustSearch(v);
     setSelectedCust(null);
     clearTimeout(searchTimer.current);
-    if (q.length < 2) return setCustResults([]);
+    if (v.length < 2) return setCustResults([]);
     searchTimer.current = setTimeout(async () => {
       try {
-        const res = await getCustomers({ search: q });
+        const res = await getCustomers({ search: v });
         setCustResults(res.data.slice(0, 6));
       } catch { setCustResults([]); }
-    }, 300);
+    }, 400);
   };
 
   const pickCustomer = (c) => {
     setSelectedCust(c);
     setCustSearch(c.name);
     setCustResults([]);
-    setCustMode('search');
   };
 
-  // ── Frame search ────────────────────────────────────────────
-  const handleFrameSearch = async (q) => {
-    setFrameSearch(q);
-    setOrder(o => ({ ...o, frame: q }));
+  // ── Frame search ─────────────────────────────────────────
+  const handleFrameSearch = (v) => {
+    setFrameSearch(v);
+    setFrameDetails(f => ({ ...f, name: v }));
     setSelectedFrame(null);
-    if (q.length < 2) return setFrameResults([]);
-    try {
-      const res = await getInventory({ search: q, category: 'Frames' });
-      setFrameResults(res.data.filter(i => i.quantity > 0).slice(0, 6));
-    } catch { setFrameResults([]); }
+    clearTimeout(frameTimer.current);
+    if (v.length < 2) return setFrameResults([]);
+    frameTimer.current = setTimeout(async () => {
+      try {
+        const res = await getInventory({ search: v, category: 'Frames' });
+        setFrameResults(res.data.filter(i => i.quantity > 0).slice(0, 6));
+      } catch { setFrameResults([]); }
+    }, 400);
   };
 
   const pickFrame = (item) => {
     setSelectedFrame(item);
     setFrameSearch(item.name);
-    setOrder(o => ({ ...o, frame: item.name, total_amount: String(parseFloat(item.sell_price) || '') }));
     setFrameResults([]);
+    const buy  = parseFloat(item.cost_price)  || 0;
+    const sell = parseFloat(item.sell_price)  || 0;
+    setFrameDetails({ name: item.name, type: frameDetails.type, material: frameDetails.material, buyPrice: buy, sellPrice: sell, frameDiscount: 0 });
   };
 
-  // ── Copy right eye to left ──────────────────────────────────
+  // ── Copy right eye to left ───────────────────────────────
   const copyEye = () => setRef(r => ({
-    ...r,
-    l_sph_s: r.r_sph_s, l_sph: r.r_sph,
-    l_cyl_s: r.r_cyl_s, l_cyl: r.r_cyl,
+    ...r, l_sph_s: r.r_sph_s, l_sph: r.r_sph, l_cyl_s: r.r_cyl_s, l_cyl: r.r_cyl,
     l_axis: r.r_axis, l_add: r.r_add, l_va: r.r_va, l_pd: r.r_pd,
   }));
 
-  // ── Validation ──────────────────────────────────────────────
-  const validate = (currentStep) => {
-    if (currentStep === 1) {
+  // ── Validation ───────────────────────────────────────────
+  const validate = (s) => {
+    if (s === 1) {
       if (custMode === 'search' && !selectedCust) return 'Please select an existing customer or switch to add new';
-      if (custMode === 'new' && !newCust.name.trim()) return 'Please enter customer name';
-      if (custMode === 'new' && !newCust.phone.trim()) return 'Please enter phone number';
+      if (custMode === 'new'    && !newCust.name.trim())  return 'Please enter customer name';
+      if (custMode === 'new'    && !newCust.phone.trim()) return 'Please enter phone number';
     }
-    if (currentStep === 3) {
-      if (!order.frame.trim()) return 'Please enter or select a frame';
-      if (!order.lens_company) return 'Please select where the lens will be ground';
+    if (s === 3) {
+      if (!frameDetails.name.trim()) return 'Please enter or select a frame';
     }
-    if (currentStep === 4) {
-      if (!order.total_amount || parseFloat(order.total_amount) <= 0) return 'Please enter total amount';
-      if (!order.deliver_date) return 'Please set a delivery date';
-      const adv = parseFloat(order.advance_amount) || 0;
-      const tot = parseFloat(order.total_amount) || 0;
-      if (adv > tot) return 'Advance cannot be more than total amount';
+    if (s === 4) {
+      if (totalAmount <= 0) return 'Total amount must be greater than 0';
+      if (!deliverDate)     return 'Please set a delivery date';
+      const adv = parseFloat(advance) || 0;
+      if (adv > totalAmount) return 'Advance cannot be more than total amount';
     }
     return null;
   };
@@ -183,10 +288,14 @@ export default function NewOrder() {
     const err = validate(step);
     if (err) return setError(err);
     setError('');
+    // Auto-lookup lens price when moving from refraction to frame
+    if (step === 2) {
+      lookupLens(lensDetails.type, lensDetails.coating, ref.r_sph_s + ref.r_sph);
+    }
     setStep(s => s + 1);
   };
 
-  // ── Save order ──────────────────────────────────────────────
+  // ── Save order ───────────────────────────────────────────
   const handleSave = async () => {
     const err = validate(4);
     if (err) return setError(err);
@@ -197,76 +306,60 @@ export default function NewOrder() {
       let customerId;
 
       if (custMode === 'search' && selectedCust) {
-        // Use existing customer
         customerId = selectedCust.id;
       } else {
-        // Create new customer — handle duplicate phone gracefully
         try {
           const res = await createCustomer({
-            name: `${newCust.title} ${newCust.name}`.trim(),
+            name:  `${newCust.title} ${newCust.name}`.trim(),
             phone: newCust.phone.trim(),
-            age: newCust.age || null,
-            address: newCust.address || null,
+            age:   newCust.age || null,
           });
           customerId = res.data.id;
-        } catch (custErr) {
-          // 409 = phone already exists → use that customer's ID
-          if (custErr.response?.status === 409) {
-            customerId = custErr.response.data.id;
-          } else {
-            throw custErr;
-          }
+        } catch (e) {
+          if (e.response?.status === 409) {
+            customerId = e.response.data.id;
+          } else throw e;
         }
       }
 
-      // ── Combine SPH/CYL signs with values ──────────────────
-      const combineSph = (sign, val) => {
-        if (!val || val === '0.00') return 'Plano';
-        return sign + val;
-      };
-      const combineCyl = (sign, val) => {
-        if (!val || val === '0.00') return '0.00';
-        return sign + val;
-      };
+      // Combine SPH/CYL signs
+      const combineSph = (s, v) => (!v || v === '0.00') ? 'Plano' : s + v;
+      const combineCyl = (s, v) => (!v || v === '0.00') ? '0.00' : s + v;
 
-      // ── Build order payload — all field names match backend ─
-      const payload = {
+      await createOrder({
         customer_id:    customerId,
-        frame:          order.frame.trim(),           // FIX: was frame_name
-        frame_type:     order.frame_type,
-        frame_material: order.frame_material,
-        lens_type:      order.lens_type,
-        lens_coating:   order.lens_coating,
-        lens_company:   order.lens_company,           // FIX: was missing
-        total_amount:   parseFloat(order.total_amount) || 0,
-        advance_amount: parseFloat(order.advance_amount) || 0,
-        balance_amount: balance,
-        deliver_date:   order.deliver_date,
-        status:         order.status,
-        notes:          order.notes || null,
-        has_rx:         hasRx,
-        rx_hospital:    hasRx ? rxHospital : null,
-        rx_date:        hasRx ? rxDate : null,
-        rx_doctor:      hasRx ? rxDoctor : null,
-        // ── Refraction — signs combined ──────────────────────
-        r_sph:  combineSph(ref.r_sph_s, ref.r_sph),  // FIX: was unsigned
+        frame:          frameDetails.name,
+        frame_type:     frameDetails.type,
+        frame_material: frameDetails.material,
+        lens_type:      lensDetails.type,
+        lens_coating:   lensDetails.coating,
+        lens_company:   null, // Grinding assigned later in Grinding tab
+        frame_buy_price:  frameDetails.buyPrice,
+        frame_sell_price: frameFinal,
+        lens_buy_price:   lensDetails.buyPrice,
+        lens_sell_price:  lensFinal,
+        total_amount:     totalAmount,
+        advance_amount:   parseFloat(advance) || 0,
+        balance_amount:   balanceAmount,
+        deliver_date:     deliverDate,
+        status:           'created',
+        notes:            notes || null,
+        has_rx:           hasRx,
+        rx_hospital:      hasRx ? rxHospital : null,
+        rx_date:          hasRx ? rxDate     : null,
+        rx_doctor:        hasRx ? rxDoctor   : null,
+        r_sph:  combineSph(ref.r_sph_s, ref.r_sph),
         r_cyl:  combineCyl(ref.r_cyl_s, ref.r_cyl),
-        r_axis: ref.r_axis,
-        r_add:  ref.r_add !== '0.00' ? '+' + ref.r_add : null,
-        r_va:   ref.r_va,
-        r_pd:   ref.r_pd || null,
+        r_axis: ref.r_axis, r_add: ref.r_add !== '0.00' ? '+'+ref.r_add : null,
+        r_va:   ref.r_va,   r_pd:  ref.r_pd || null,
         l_sph:  combineSph(ref.l_sph_s, ref.l_sph),
         l_cyl:  combineCyl(ref.l_cyl_s, ref.l_cyl),
-        l_axis: ref.l_axis,
-        l_add:  ref.l_add !== '0.00' ? '+' + ref.l_add : null,
-        l_va:   ref.l_va,
-        l_pd:   ref.l_pd || null,
+        l_axis: ref.l_axis, l_add: ref.l_add !== '0.00' ? '+'+ref.l_add : null,
+        l_va:   ref.l_va,   l_pd:  ref.l_pd || null,
         ref_notes: ref.notes || null,
-      };
+      });
 
-      await createOrder(payload);
       navigate('/orders');
-
     } catch (e) {
       console.error(e);
       setError(e.response?.data?.error || 'Failed to save order. Please try again.');
@@ -275,65 +368,38 @@ export default function NewOrder() {
     }
   };
 
-  // ── Shared input focus/blur ──────────────────────────────────
-  const focusInp = e => e.target.style.borderColor = gold;
-  const blurInp  = e => e.target.style.borderColor = border;
-
-  const Inp = ({ value, onChange, placeholder, type = 'text', style = {} }) => (
-    <input type={type} value={value} placeholder={placeholder}
-      onChange={e => onChange(e.target.value)}
-      style={{ ...css.inp, ...style }}
-      onFocus={focusInp} onBlur={blurInp}
-    />
-  );
-
-  const Sel = ({ value, onChange, options }) => (
-    <select value={value} onChange={e => onChange(e.target.value)}
-      style={{ ...css.inp, cursor: 'pointer' }}
-      onFocus={focusInp} onBlur={blurInp}>
-      {options.map(o => <option key={o}>{o}</option>)}
-    </select>
-  );
-
-  const FieldRow = ({ label, children }) => (
-    <div style={css.field}>
-      <label style={css.lbl}>{label}</label>
-      {children}
-    </div>
-  );
-
   // ═══════════════════════════════════════════════════════════
   return (
-    <div style={{ fontFamily: "'DM Sans',sans-serif", maxWidth: 720, margin: '0 auto' }}>
-
-      {/* Header */}
+    <div style={{ fontFamily: "'DM Sans',sans-serif", maxWidth: 740, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
-        <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, color: navy, margin: 0 }}>➕ New Order</h1>
-        <button onClick={() => navigate('/orders')} style={css.btnSecondary}>← Back</button>
+        <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, color: C.navy, margin: 0 }}>➕ New Order</h1>
+        <button onClick={() => navigate('/orders')}
+          style={{ padding: '8px 18px', background: C.cream, border: `1.5px solid ${C.border}`, borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: C.muted }}>
+          ← Back
+        </button>
       </div>
-      <p style={{ fontSize: 13, color: muted, marginBottom: 20 }}>Fill all 4 steps to create an order</p>
+      <p style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Fill all 4 steps to create an order</p>
 
       <StepBar step={step} />
 
-      {/* Error banner */}
       {error && (
-        <div style={{ background: '#fef2f2', border: `1px solid #fca5a5`, color: danger, borderRadius: 10, padding: '11px 16px', fontSize: 13, marginBottom: 16 }}>
+        <div style={{ background: '#fef2f2', border: `1px solid #fca5a5`, color: C.danger, borderRadius: 10, padding: '11px 16px', fontSize: 13, marginBottom: 16 }}>
           ⚠️ {error}
         </div>
       )}
 
       {/* ══════════════════════════════════════════════════════
-          STEP 1 — CUSTOMER
+          STEP 1 — CUSTOMER (no address)
       ══════════════════════════════════════════════════════ */}
       {step === 1 && (
-        <div style={css.section}>
-          <div style={css.sHead}>👤 Customer Details</div>
+        <div style={{ background: 'white', border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 22px', marginBottom: 16 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.navy, marginBottom: 18 }}>👤 Customer Details</div>
 
           {/* Mode toggle */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
-            {[['search', '🔍 Existing customer'], ['new', '➕ New customer']].map(([mode, label]) => (
+            {[['search','🔍 Existing customer'],['new','➕ New customer']].map(([mode, label]) => (
               <button key={mode} onClick={() => { setCustMode(mode); setError(''); }}
-                style={{ padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${custMode === mode ? navy : border}`, background: custMode === mode ? navy : 'white', color: custMode === mode ? 'white' : muted }}>
+                style={{ padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${custMode === mode ? C.navy : C.border}`, background: custMode === mode ? C.navy : 'white', color: custMode === mode ? 'white' : C.muted }}>
                 {label}
               </button>
             ))}
@@ -342,21 +408,23 @@ export default function NewOrder() {
           {/* Search existing */}
           {custMode === 'search' && (
             <div style={{ position: 'relative' }}>
-              <FieldRow label="Search by name or phone">
-                <Inp value={custSearch} onChange={handleCustSearch} placeholder="Type name or phone number..." />
-              </FieldRow>
+              <Field label="Search by name or phone">
+                {/* FIX: plain onChange, no onFocus/onBlur style changes */}
+                <input
+                  value={custSearch}
+                  onChange={e => handleCustSearch(e.target.value)}
+                  placeholder="Type name or phone number..."
+                  style={INP}
+                />
+              </Field>
               {custResults.length > 0 && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: `1px solid ${border}`, borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,.12)', zIndex: 50, overflow: 'hidden', marginTop: 4 }}>
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: `1px solid ${C.border}`, borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,.12)', zIndex: 50, overflow: 'hidden', marginTop: 4 }}>
                   {custResults.map(c => (
-                    <div key={c.id} onClick={() => pickCustomer(c)}
-                      style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: `1px solid ${cream}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                      onMouseEnter={e => e.currentTarget.style.background = cream}
-                      onMouseLeave={e => e.currentTarget.style.background = 'white'}>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: navy }}>{c.name}</div>
-                        <div style={{ fontSize: 12, color: muted }}>📞 {c.phone} · Age {c.age} · {c.total_orders} order{c.total_orders !== '1' ? 's' : ''}</div>
-                      </div>
-                      <span style={{ fontSize: 11, color: success, fontWeight: 700 }}>Select →</span>
+                    <div key={c.id}
+                      onMouseDown={() => pickCustomer(c)} // onMouseDown prevents blur before click
+                      style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: `1px solid ${C.cream}` }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{c.name}</div>
+                      <div style={{ fontSize: 12, color: C.muted }}>📞 {c.phone} · Age {c.age} · {c.total_orders} orders</div>
                     </div>
                   ))}
                 </div>
@@ -364,46 +432,50 @@ export default function NewOrder() {
               {selectedCust && (
                 <div style={{ marginTop: 10, background: '#dcfce7', border: `1px solid #86efac`, borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: navy }}>✅ {selectedCust.name}</div>
-                    <div style={{ fontSize: 12, color: muted }}>📞 {selectedCust.phone} · {selectedCust.total_orders} previous orders</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>✅ {selectedCust.name}</div>
+                    <div style={{ fontSize: 12, color: C.muted }}>📞 {selectedCust.phone} · {selectedCust.total_orders} previous orders</div>
                   </div>
-                  <button onClick={() => { setSelectedCust(null); setCustSearch(''); }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: muted, fontSize: 13 }}>✕</button>
+                  <button onMouseDown={() => { setSelectedCust(null); setCustSearch(''); setCustResults([]); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.muted, fontSize: 16 }}>✕</button>
                 </div>
               )}
               {!selectedCust && !custResults.length && custSearch.length > 1 && (
-                <div style={{ marginTop: 8, fontSize: 13, color: muted }}>
-                  No customer found — <button onClick={() => setCustMode('new')} style={{ background: 'none', border: 'none', color: navy, cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit', textDecoration: 'underline' }}>add as new customer</button>
+                <div style={{ marginTop: 8, fontSize: 13, color: C.muted }}>
+                  Not found —{' '}
+                  <button onMouseDown={() => setCustMode('new')}
+                    style={{ background: 'none', border: 'none', color: C.navy, cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit', textDecoration: 'underline' }}>
+                    add as new customer
+                  </button>
                 </div>
               )}
             </div>
           )}
 
-          {/* New customer form */}
+          {/* New customer — NO address field */}
           {custMode === 'new' && (
-            <div style={css.grid2}>
-              <FieldRow label="Title">
-                <Sel value={newCust.title} onChange={v => setNewCust(c => ({ ...c, title: v }))} options={TITLES} />
-              </FieldRow>
-              <FieldRow label="Full Name *">
-                <Inp value={newCust.name} onChange={v => setNewCust(c => ({ ...c, name: v }))} placeholder="e.g. Nuwan Perera" />
-              </FieldRow>
-              <FieldRow label="Phone *">
-                <Inp value={newCust.phone} onChange={v => setNewCust(c => ({ ...c, phone: v }))} placeholder="077-123-4567" type="tel" />
-              </FieldRow>
-              <FieldRow label="Age">
-                <Inp value={newCust.age} onChange={v => setNewCust(c => ({ ...c, age: v }))} placeholder="e.g. 34" type="number" />
-              </FieldRow>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <FieldRow label="Address (optional)">
-                  <Inp value={newCust.address} onChange={v => setNewCust(c => ({ ...c, address: v }))} placeholder="e.g. 45, Main Street, Kuruwita" />
-                </FieldRow>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Field label="Title">
+                <select value={newCust.title} onChange={e => setNewCust(c => ({ ...c, title: e.target.value }))} style={SEL}>
+                  {TITLES.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </Field>
+              <Field label="Full Name *">
+                <input value={newCust.name} onChange={e => setNewCust(c => ({ ...c, name: e.target.value }))} placeholder="e.g. Nuwan Perera" style={INP} />
+              </Field>
+              <Field label="Phone *">
+                <input value={newCust.phone} onChange={e => setNewCust(c => ({ ...c, phone: e.target.value }))} placeholder="077-123-4567" type="tel" style={INP} />
+              </Field>
+              <Field label="Age">
+                <input value={newCust.age} onChange={e => setNewCust(c => ({ ...c, age: e.target.value }))} placeholder="e.g. 34" type="number" style={INP} />
+              </Field>
             </div>
           )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-            <button onClick={goNext} style={css.btnPrimary}>Next: Refraction →</button>
+            <button onClick={goNext}
+              style={{ padding: '11px 28px', background: C.navy, color: 'white', border: 'none', borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Next: Refraction →
+            </button>
           </div>
         </div>
       )}
@@ -412,280 +484,341 @@ export default function NewOrder() {
           STEP 2 — REFRACTION
       ══════════════════════════════════════════════════════ */}
       {step === 2 && (
-        <div style={css.section}>
-          <div style={css.sHead}>🔭 Refraction Results</div>
+        <div style={{ background: 'white', border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 22px', marginBottom: 16 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.navy, marginBottom: 18 }}>🔭 Refraction Results</div>
 
-          {/* Eye table */}
-          {[
-            { label: 'Right Eye (R)', p: 'r' },
-            { label: 'Left Eye (L)',  p: 'l' },
-          ].map(eye => (
-            <div key={eye.p} style={{ background: cream, borderRadius: 10, padding: 14, marginBottom: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: navy, marginBottom: 10 }}>{eye.label}</div>
+          {[{ label: 'Right Eye (R)', p: 'r' }, { label: 'Left Eye (L)', p: 'l' }].map(eye => (
+            <div key={eye.p} style={{ background: C.cream, borderRadius: 10, padding: 14, marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 10 }}>{eye.label}</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
 
                 {/* SPH */}
-                <div style={css.field}>
-                  <label style={css.lbl}>SPH</label>
+                <Field label="SPH">
                   <div style={{ display: 'flex', gap: 4 }}>
-                    <select value={ref[`${eye.p}_sph_s`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_sph_s`]: e.target.value }))}
-                      style={{ ...css.inp, width: 56, padding: '10px 6px', textAlign: 'center' }}>
+                    <select value={ref[`${eye.p}_sph_s`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_sph_s`]: e.target.value }))} style={{ ...SEL, width: 56, padding: '10px 6px' }}>
                       <option>-</option><option>+</option>
                     </select>
-                    <select value={ref[`${eye.p}_sph`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_sph`]: e.target.value }))}
-                      style={{ ...css.inp, width: 90 }}>
+                    <select value={ref[`${eye.p}_sph`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_sph`]: e.target.value }))} style={{ ...SEL, width: 90 }}>
                       {DIOPTERS.map(v => <option key={v}>{v}</option>)}
                     </select>
                   </div>
-                </div>
+                </Field>
 
                 {/* CYL */}
-                <div style={css.field}>
-                  <label style={css.lbl}>CYL</label>
+                <Field label="CYL">
                   <div style={{ display: 'flex', gap: 4 }}>
-                    <select value={ref[`${eye.p}_cyl_s`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_cyl_s`]: e.target.value }))}
-                      style={{ ...css.inp, width: 56, padding: '10px 6px', textAlign: 'center' }}>
+                    <select value={ref[`${eye.p}_cyl_s`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_cyl_s`]: e.target.value }))} style={{ ...SEL, width: 56, padding: '10px 6px' }}>
                       <option>-</option><option>+</option>
                     </select>
-                    <select value={ref[`${eye.p}_cyl`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_cyl`]: e.target.value }))}
-                      style={{ ...css.inp, width: 90 }}>
+                    <select value={ref[`${eye.p}_cyl`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_cyl`]: e.target.value }))} style={{ ...SEL, width: 90 }}>
                       {DIOPTERS.map(v => <option key={v}>{v}</option>)}
                     </select>
                   </div>
-                </div>
+                </Field>
 
                 {/* AXIS */}
-                <div style={css.field}>
-                  <label style={css.lbl}>AXIS</label>
-                  <select value={ref[`${eye.p}_axis`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_axis`]: e.target.value }))}
-                    style={{ ...css.inp, width: 80 }}>
+                <Field label="AXIS">
+                  <select value={ref[`${eye.p}_axis`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_axis`]: e.target.value }))} style={{ ...SEL, width: 80 }}>
                     {AXES.map(v => <option key={v}>{v}</option>)}
                   </select>
-                </div>
+                </Field>
 
                 {/* ADD */}
-                <div style={css.field}>
-                  <label style={css.lbl}>ADD</label>
-                  <select value={ref[`${eye.p}_add`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_add`]: e.target.value }))}
-                    style={{ ...css.inp, width: 90 }}>
+                <Field label="ADD">
+                  <select value={ref[`${eye.p}_add`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_add`]: e.target.value }))} style={{ ...SEL, width: 90 }}>
                     {DIOPTERS.map(v => <option key={v}>{v}</option>)}
                   </select>
-                </div>
+                </Field>
 
                 {/* VA */}
-                <div style={css.field}>
-                  <label style={css.lbl}>V/A</label>
-                  <select value={ref[`${eye.p}_va`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_va`]: e.target.value }))}
-                    style={{ ...css.inp, width: 84 }}>
+                <Field label="V/A">
+                  <select value={ref[`${eye.p}_va`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_va`]: e.target.value }))} style={{ ...SEL, width: 84 }}>
                     {VA_OPTIONS.map(v => <option key={v}>{v}</option>)}
                   </select>
-                </div>
+                </Field>
 
                 {/* PD */}
-                <div style={css.field}>
-                  <label style={css.lbl}>PD</label>
-                  <Inp value={ref[`${eye.p}_pd`]} onChange={v => setRef(r => ({ ...r, [`${eye.p}_pd`]: v }))}
-                    placeholder="32" style={{ width: 72 }} />
-                </div>
+                <Field label="PD">
+                  <input value={ref[`${eye.p}_pd`]} onChange={e => setRef(r => ({ ...r, [`${eye.p}_pd`]: e.target.value }))} placeholder="32" style={{ ...INP, width: 72 }} />
+                </Field>
 
               </div>
             </div>
           ))}
 
-          <button onClick={copyEye} style={{ background: cream, border: `1px solid ${border}`, borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: muted, marginBottom: 14 }}>
+          <button onClick={copyEye}
+            style={{ background: C.cream, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: C.muted, marginBottom: 14 }}>
             ↓ Copy Right Eye to Left Eye
           </button>
 
-          {/* Refraction notes */}
-          <FieldRow label="Remarks / Clinical Notes">
+          <Field label="Remarks / Clinical Notes">
             <textarea value={ref.notes} onChange={e => setRef(r => ({ ...r, notes: e.target.value }))}
               placeholder="e.g. Presbyopia, recommend progressive lenses..."
-              style={{ ...css.inp, resize: 'vertical', minHeight: 72, lineHeight: 1.6 }} />
-          </FieldRow>
+              style={{ ...INP, resize: 'vertical', minHeight: 72, lineHeight: 1.6 }} />
+          </Field>
 
-          {/* Prescription toggle */}
+          {/* Prescription */}
           <div style={{ background: '#f0f9ff', borderRadius: 10, padding: '14px 16px', marginTop: 14 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: hasRx ? 14 : 0 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
               <div onClick={() => setHasRx(h => !h)}
-                style={{ width: 44, height: 24, borderRadius: 12, background: hasRx ? navy : border, position: 'relative', cursor: 'pointer', transition: 'background .2s', flexShrink: 0 }}>
+                style={{ width: 44, height: 24, borderRadius: 12, background: hasRx ? C.navy : C.border, position: 'relative', cursor: 'pointer', transition: 'background .2s', flexShrink: 0 }}>
                 <div style={{ position: 'absolute', top: 3, left: hasRx ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: 'white', transition: 'left .2s' }} />
               </div>
-              <span style={{ fontSize: 14, fontWeight: 500, color: navy }}>Customer brought a prescription (Rx)</span>
+              <span style={{ fontSize: 14, fontWeight: 500, color: C.navy }}>Customer brought a prescription (Rx)</span>
             </label>
             {hasRx && (
-              <div style={css.grid2}>
-                <FieldRow label="Hospital / Clinic *">
-                  <Inp value={rxHospital} onChange={setRxHospital} placeholder="e.g. Colombo National Hospital" />
-                </FieldRow>
-                <FieldRow label="Prescription Date">
-                  <input type="date" value={rxDate} onChange={e => setRxDate(e.target.value)} style={css.inp} onFocus={focusInp} onBlur={blurInp} />
-                </FieldRow>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 14 }}>
+                <Field label="Hospital / Clinic">
+                  <input value={rxHospital} onChange={e => setRxHospital(e.target.value)} placeholder="e.g. Colombo National Hospital" style={INP} />
+                </Field>
+                <Field label="Prescription Date">
+                  <input type="date" value={rxDate} onChange={e => setRxDate(e.target.value)} style={INP} />
+                </Field>
                 <div style={{ gridColumn: '1/-1' }}>
-                  <FieldRow label="Doctor's Name (optional)">
-                    <Inp value={rxDoctor} onChange={setRxDoctor} placeholder="e.g. Dr. Perera" />
-                  </FieldRow>
+                  <Field label="Doctor's Name (optional)">
+                    <input value={rxDoctor} onChange={e => setRxDoctor(e.target.value)} placeholder="e.g. Dr. Perera" style={INP} />
+                  </Field>
                 </div>
               </div>
             )}
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
-            <button onClick={() => setStep(1)} style={css.btnSecondary}>← Back</button>
-            <button onClick={goNext} style={css.btnPrimary}>Next: Frame & Lens →</button>
+            <button onClick={() => setStep(1)} style={{ padding: '11px 20px', background: C.cream, border: `1.5px solid ${C.border}`, borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: C.muted }}>← Back</button>
+            <button onClick={goNext} style={{ padding: '11px 28px', background: C.navy, color: 'white', border: 'none', borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Next: Frame & Lens →</button>
           </div>
         </div>
       )}
 
       {/* ══════════════════════════════════════════════════════
-          STEP 3 — FRAME & LENS
+          STEP 3 — FRAME & LENS (no grinding section)
       ══════════════════════════════════════════════════════ */}
       {step === 3 && (
-        <div style={css.section}>
-          <div style={css.sHead}>🕶️ Frame & Lens</div>
+        <div style={{ background: 'white', border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 22px', marginBottom: 16 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.navy, marginBottom: 18 }}>🕶️ Frame & Lens</div>
 
-          {/* Frame search from inventory */}
-          <div style={{ position: 'relative', marginBottom: 16 }}>
-            <FieldRow label="Search Frame from Stock">
-              <Inp value={frameSearch} onChange={handleFrameSearch} placeholder="Type frame name to search stock..." />
-            </FieldRow>
-            {frameResults.length > 0 && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: `1px solid ${border}`, borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,.12)', zIndex: 50, overflow: 'hidden', marginTop: 4 }}>
-                {frameResults.map(i => (
-                  <div key={i.id} onClick={() => pickFrame(i)}
-                    style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: `1px solid ${cream}`, display: 'flex', alignItems: 'center', gap: 10 }}
-                    onMouseEnter={e => e.currentTarget.style.background = cream}
-                    onMouseLeave={e => e.currentTarget.style.background = 'white'}>
-                    {i.image_url && <img src={i.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6 }} />}
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: navy }}>{i.name}</div>
-                      <div style={{ fontSize: 11, color: muted }}>{i.brand} · {i.quantity} in stock</div>
+          {/* Frame section */}
+          <div style={{ background: C.cream, borderRadius: 10, padding: 16, marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 12 }}>Frame</div>
+
+            {/* Frame search */}
+            <div style={{ position: 'relative', marginBottom: 12 }}>
+              <Field label="Search Frame from Stock">
+                <input value={frameSearch} onChange={e => handleFrameSearch(e.target.value)} placeholder="Type frame name to search stock..." style={INP} />
+              </Field>
+              {frameResults.length > 0 && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: `1px solid ${C.border}`, borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,.12)', zIndex: 50, overflow: 'hidden', marginTop: 4 }}>
+                  {frameResults.map(i => (
+                    <div key={i.id} onMouseDown={() => pickFrame(i)}
+                      style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: `1px solid ${C.cream}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {i.image_url && <img src={i.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6 }} />}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>{i.name}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>Buy: {fmtMoney(i.cost_price)} · Sell: {fmtMoney(i.sell_price)} · {i.quantity} in stock</div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: success }}>Rs. {parseFloat(i.sell_price).toLocaleString()}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {selectedFrame && (
-              <div style={{ marginTop: 8, background: '#dcfce7', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: success, fontWeight: 600 }}>
-                ✅ Selected from stock: {selectedFrame.name}
-              </div>
-            )}
-            {!selectedFrame && frameSearch.length > 1 && !frameResults.length && (
-              <div style={{ marginTop: 6, fontSize: 12, color: muted }}>Not in stock — you can still type the frame name manually above</div>
-            )}
-          </div>
-
-          <div style={css.grid2}>
-            <FieldRow label="Frame Type">
-              <Sel value={order.frame_type} onChange={v => setOrder(o => ({ ...o, frame_type: v }))} options={FRAME_TYPES} />
-            </FieldRow>
-            <FieldRow label="Frame Material">
-              <Sel value={order.frame_material} onChange={v => setOrder(o => ({ ...o, frame_material: v }))} options={FRAME_MATS} />
-            </FieldRow>
-            <FieldRow label="Lens Type">
-              <Sel value={order.lens_type} onChange={v => setOrder(o => ({ ...o, lens_type: v }))} options={LENS_TYPES} />
-            </FieldRow>
-            <FieldRow label="Lens Coating">
-              <Sel value={order.lens_coating} onChange={v => setOrder(o => ({ ...o, lens_coating: v }))} options={LENS_COATINGS} />
-            </FieldRow>
-          </div>
-
-          {/* Lens company — 3 cards */}
-          <div style={{ marginTop: 16 }}>
-            <label style={css.lbl}>Send Lens For Grinding To *</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginTop: 8 }}>
-              {LENS_COS.map(lc => (
-                <div key={lc} onClick={() => setOrder(o => ({ ...o, lens_company: lc }))}
-                  style={{ border: `2px solid ${order.lens_company === lc ? navy : border}`, borderRadius: 10, padding: '12px 8px', textAlign: 'center', cursor: 'pointer', background: order.lens_company === lc ? navy : 'white', transition: 'all .15s' }}>
-                  <div style={{ fontSize: 22, marginBottom: 4 }}>{lc === 'In-Shop' ? '🏠' : lc === 'Negombo Optical' ? '🏪' : '🔬'}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: order.lens_company === lc ? 'white' : navy }}>{lc}</div>
+                  ))}
                 </div>
-              ))}
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <Field label="Frame Type">
+                <select value={frameDetails.type} onChange={e => setFrameDetails(f => ({ ...f, type: e.target.value }))} style={SEL}>
+                  {FRAME_TYPES.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </Field>
+              <Field label="Frame Material">
+                <select value={frameDetails.material} onChange={e => setFrameDetails(f => ({ ...f, material: e.target.value }))} style={SEL}>
+                  {FRAME_MATS.map(m => <option key={m}>{m}</option>)}
+                </select>
+              </Field>
+              <Field label="Frame Buying Price (Rs.)">
+                <input type="number" value={frameDetails.buyPrice} onChange={e => setFrameDetails(f => ({ ...f, buyPrice: parseFloat(e.target.value) || 0 }))} style={INP} />
+              </Field>
+              <Field label="Frame Selling Price (Rs.)">
+                <input type="number" value={frameDetails.sellPrice} onChange={e => setFrameDetails(f => ({ ...f, sellPrice: parseFloat(e.target.value) || 0 }))} style={INP} />
+              </Field>
             </div>
           </div>
 
+          {/* Lens section */}
+          <div style={{ background: '#f0f9ff', borderRadius: 10, padding: 16, marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 12 }}>Lens</div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+              <Field label="Lens Type">
+                <select value={lensDetails.type} onChange={e => { const t = e.target.value; lookupLens(t, lensDetails.coating, ref.r_sph_s + ref.r_sph); }} style={SEL}>
+                  {LENS_TYPES.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </Field>
+              <Field label="Lens Coating">
+                <select value={lensDetails.coating} onChange={e => { const c = e.target.value; lookupLens(lensDetails.type, c, ref.r_sph_s + ref.r_sph); }} style={SEL}>
+                  {LENS_COATINGS.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </Field>
+            </div>
+
+            {/* Lens price display */}
+            {lensDetails.matched ? (
+              <div style={{ background: '#dbeafe', borderRadius: 9, padding: '12px 14px', marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.8px', color: '#1e40af', marginBottom: 6 }}>
+                  Auto-matched lens price · Power range: {lensDetails.matchedRange}
+                </div>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, color: '#1e40af' }}>Buy: <b>{fmtMoney(lensDetails.buyPrice)}</b></span>
+                  <span style={{ fontSize: 13, color: '#1e40af' }}>Sell: <b>{fmtMoney(lensDetails.sellPrice)}</b></span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: '#fef9c3', borderRadius: 9, padding: '10px 14px', marginBottom: 10, fontSize: 12, color: '#854d0e' }}>
+                ⚠️ No price match found — enter manually below
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <Field label="Lens Buying Price (Rs.)">
+                <input type="number" value={lensDetails.buyPrice} onChange={e => setLensDetails(l => ({ ...l, buyPrice: parseFloat(e.target.value) || 0 }))} style={INP} />
+              </Field>
+              <Field label="Lens Selling Price (Rs.)">
+                <input type="number" value={lensDetails.sellPrice} onChange={e => setLensDetails(l => ({ ...l, sellPrice: parseFloat(e.target.value) || 0 }))} style={INP} />
+              </Field>
+            </div>
+          </div>
+
+          {/* Note about grinding */}
+          <div style={{ background: '#fef9c3', border: `1px solid #fde68a`, borderRadius: 9, padding: '10px 14px', fontSize: 12, color: '#854d0e' }}>
+            🔬 Grinding lab will be assigned tomorrow from the <b>Grinding</b> tab
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
-            <button onClick={() => setStep(2)} style={css.btnSecondary}>← Back</button>
-            <button onClick={goNext} style={css.btnPrimary}>Next: Payment →</button>
+            <button onClick={() => setStep(2)} style={{ padding: '11px 20px', background: C.cream, border: `1.5px solid ${C.border}`, borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: C.muted }}>← Back</button>
+            <button onClick={goNext} style={{ padding: '11px 28px', background: C.navy, color: 'white', border: 'none', borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Next: Payment →</button>
           </div>
         </div>
       )}
 
       {/* ══════════════════════════════════════════════════════
-          STEP 4 — PAYMENT & DELIVERY
+          STEP 4 — PAYMENT (frame + lens breakdown, discounts)
       ══════════════════════════════════════════════════════ */}
       {step === 4 && (
-        <div style={css.section}>
-          <div style={css.sHead}>💰 Payment & Delivery</div>
+        <div style={{ background: 'white', border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 22px', marginBottom: 16 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.navy, marginBottom: 18 }}>💰 Payment & Delivery</div>
 
-          {/* Amount row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <FieldRow label="Total Amount (Rs.) *">
-              <Inp value={order.total_amount} onChange={v => setOrder(o => ({ ...o, total_amount: v }))} placeholder="e.g. 8500" type="number" />
-            </FieldRow>
-            <FieldRow label="Advance Paid (Rs.)">
-              <Inp value={order.advance_amount} onChange={v => setOrder(o => ({ ...o, advance_amount: v }))} placeholder="e.g. 3000" type="number" />
-            </FieldRow>
-            <div style={{ background: navy, borderRadius: 10, padding: '12px 14px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: gold, marginBottom: 4 }}>Balance Due</div>
-              <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700, color: 'white' }}>Rs. {balance.toLocaleString()}</div>
+          {/* Price breakdown */}
+          <div style={{ background: C.cream, borderRadius: 12, padding: 16, marginBottom: 18 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 12 }}>Price Breakdown</div>
+
+            {/* Frame row */}
+            <div style={{ background: 'white', borderRadius: 9, padding: '12px 14px', marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.navy }}>🕶️ Frame — {frameDetails.name || '—'}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{fmtMoney(frameFinal)}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, color: C.muted }}>Sell price:</span>
+                <input type="number" value={frameDetails.sellPrice}
+                  onChange={e => setFrameDetails(f => ({ ...f, sellPrice: parseFloat(e.target.value) || 0 }))}
+                  style={{ ...INP, width: 110, padding: '6px 10px', fontSize: 13 }} />
+                <span style={{ fontSize: 11, color: C.muted }}>Discount:</span>
+                <input type="number" value={frameDetails.frameDiscount}
+                  onChange={e => setFrameDetails(f => ({ ...f, frameDiscount: parseFloat(e.target.value) || 0 }))}
+                  placeholder="0"
+                  style={{ ...INP, width: 100, padding: '6px 10px', fontSize: 13 }} />
+                {frameDetails.frameDiscount > 0 && (
+                  <span style={{ fontSize: 11, color: C.success, fontWeight: 700 }}>-{fmtMoney(frameDetails.frameDiscount)}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Lens row */}
+            <div style={{ background: 'white', borderRadius: 9, padding: '12px 14px', marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.navy }}>🔬 Lens — {lensDetails.type} · {lensDetails.coating}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{fmtMoney(lensFinal)}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, color: C.muted }}>Sell price:</span>
+                <input type="number" value={lensDetails.sellPrice}
+                  onChange={e => setLensDetails(l => ({ ...l, sellPrice: parseFloat(e.target.value) || 0 }))}
+                  style={{ ...INP, width: 110, padding: '6px 10px', fontSize: 13 }} />
+                <span style={{ fontSize: 11, color: C.muted }}>Discount:</span>
+                <input type="number" value={lensDetails.lensDiscount}
+                  onChange={e => setLensDetails(l => ({ ...l, lensDiscount: parseFloat(e.target.value) || 0 }))}
+                  placeholder="0"
+                  style={{ ...INP, width: 100, padding: '6px 10px', fontSize: 13 }} />
+                {lensDetails.lensDiscount > 0 && (
+                  <span style={{ fontSize: 11, color: C.success, fontWeight: 700 }}>-{fmtMoney(lensDetails.lensDiscount)}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Total line */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `2px solid ${C.border}`, paddingTop: 12 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>Total</span>
+              <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700, color: C.navy }}>{fmtMoney(totalAmount)}</span>
             </div>
           </div>
 
-          <div style={css.grid2}>
-            <FieldRow label="Delivery Date *">
-              <input type="date" value={order.deliver_date} onChange={e => setOrder(o => ({ ...o, deliver_date: e.target.value }))} style={css.inp} onFocus={focusInp} onBlur={blurInp} />
-            </FieldRow>
-            <FieldRow label="Order Status">
-              <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
-                {['created', 'called'].map(s => (
-                  <button key={s} onClick={() => setOrder(o => ({ ...o, status: s }))}
-                    style={{ flex: 1, padding: '10px 4px', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                      border: `2px solid ${order.status === s ? navy : border}`,
-                      background: order.status === s ? ({ created: '#dbeafe', called: '#fef9c3' }[s]) : 'white',
-                      color: { created: '#1e40af', called: '#854d0e' }[s],
-                      outline: order.status === s ? `3px solid ${navy}` : 'none', outlineOffset: 2 }}>
-                    {s === 'created' ? '📝 Created' : '📞 Called'}
-                  </button>
-                ))}
+          {/* Advance + balance */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <Field label="Advance Paid (Rs.)">
+              <input type="number" value={advance} onChange={e => setAdvance(e.target.value)} placeholder="e.g. 3000" style={INP} />
+            </Field>
+            <div />
+            <div style={{ background: C.navy, borderRadius: 10, padding: '12px 14px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: C.gold, marginBottom: 4 }}>Balance Due</div>
+              <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700, color: 'white' }}>{fmtMoney(balanceAmount)}</div>
+            </div>
+          </div>
+
+          {/* Delivery date */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+            <Field label="Delivery Date *">
+              <input type="date" value={deliverDate} onChange={e => setDeliverDate(e.target.value)} style={INP} />
+            </Field>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.9px', color: C.muted }}>Status</label>
+              {/* Only Created — no Called on new orders */}
+              <div style={{ padding: '10px 16px', background: '#dbeafe', border: `2px solid #93c5fd`, borderRadius: 9, fontSize: 13, fontWeight: 600, color: '#1e40af', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                📝 Created
               </div>
-            </FieldRow>
+            </div>
           </div>
 
-          <div style={{ marginTop: 14 }}>
-            <FieldRow label="Internal Notes (optional)">
-              <textarea value={order.notes} onChange={e => setOrder(o => ({ ...o, notes: e.target.value }))}
-                placeholder="Any notes about this order..."
-                style={{ ...css.inp, resize: 'vertical', minHeight: 72, lineHeight: 1.6 }} />
-            </FieldRow>
-          </div>
+          {/* Notes */}
+          <Field label="Internal Notes (optional)">
+            <textarea value={notes} onChange={e => setNotes(e.target.value)}
+              placeholder="Any notes about this order..."
+              style={{ ...INP, resize: 'vertical', minHeight: 72, lineHeight: 1.6 }} />
+          </Field>
 
-          {/* Order summary */}
-          <div style={{ background: cream, borderRadius: 12, padding: 16, marginTop: 18 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: navy, marginBottom: 10 }}>📋 Order Summary</div>
+          {/* Summary */}
+          <div style={{ background: C.cream, borderRadius: 12, padding: 16, marginTop: 18 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 10 }}>📋 Order Summary</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
               {[
-                { l: 'Customer',  v: custMode === 'new' ? `${newCust.title} ${newCust.name}` : selectedCust?.name },
-                { l: 'Phone',     v: custMode === 'new' ? newCust.phone : selectedCust?.phone },
-                { l: 'Frame',     v: order.frame || '—' },
-                { l: 'Lens',      v: order.lens_type },
-                { l: 'Grinding',  v: order.lens_company },
-                { l: 'Deliver',   v: order.deliver_date },
-                { l: 'Total',     v: `Rs. ${parseFloat(order.total_amount || 0).toLocaleString()}` },
-                { l: 'Balance',   v: `Rs. ${balance.toLocaleString()}`, red: balance > 0 },
+                { l: 'Customer', v: custMode === 'new' ? `${newCust.title} ${newCust.name}` : selectedCust?.name },
+                { l: 'Phone',    v: custMode === 'new' ? newCust.phone : selectedCust?.phone },
+                { l: 'Frame',    v: frameDetails.name || '—' },
+                { l: 'Lens',     v: `${lensDetails.type} · ${lensDetails.coating}` },
+                { l: 'Frame price', v: fmtMoney(frameFinal) },
+                { l: 'Lens price',  v: fmtMoney(lensFinal)  },
+                { l: 'Total',    v: fmtMoney(totalAmount), bold: true },
+                { l: 'Balance',  v: fmtMoney(balanceAmount), red: balanceAmount > 0 },
               ].map(item => (
                 <div key={item.l} style={{ fontSize: 13 }}>
-                  <span style={{ color: muted }}>{item.l}: </span>
-                  <b style={{ color: item.red ? danger : navy }}>{item.v || '—'}</b>
+                  <span style={{ color: C.muted }}>{item.l}: </span>
+                  <b style={{ color: item.red ? C.danger : item.bold ? C.navy : '#1a1a2e' }}>{item.v || '—'}</b>
                 </div>
               ))}
             </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 20 }}>
-            <button onClick={() => setStep(3)} style={css.btnSecondary}>← Back</button>
+            <button onClick={() => setStep(3)} style={{ padding: '11px 20px', background: C.cream, border: `1.5px solid ${C.border}`, borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: C.muted }}>← Back</button>
             <button onClick={handleSave} disabled={saving}
-              style={{ ...css.btnPrimary, padding: '12px 36px', fontSize: 15, background: saving ? muted : navy, cursor: saving ? 'not-allowed' : 'pointer' }}>
+              style={{ padding: '12px 36px', background: saving ? C.muted : C.navy, color: 'white', border: 'none', borderRadius: 9, fontSize: 15, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
               {saving ? '⏳ Saving...' : '💾 Save Order'}
             </button>
           </div>
