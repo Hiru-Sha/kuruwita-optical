@@ -1,10 +1,6 @@
-// ============================================================
-//  App.js — Updated with Lens Prices route
-// ============================================================
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-
 import Login      from './pages/Login';
 import Layout     from './components/Layout';
 import Dashboard  from './pages/Dashboard';
@@ -13,17 +9,13 @@ import NewOrder   from './pages/NewOrder';
 import Customers  from './pages/Customers';
 import Inventory  from './pages/Inventory';
 import LensPrices from './pages/LensPrices';
+import QuickSale  from './pages/QuickSale';
 import Reports    from './pages/Reports';
 import Settings   from './pages/Settings';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:"'DM Sans',sans-serif", color:'#6b7280', flexDirection:'column', gap:12 }}>
-      <div style={{ fontSize:32 }}>👁️</div>
-      <div>Loading Kuruwita Optical...</div>
-    </div>
-  );
+  if (loading) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:"'DM Sans',sans-serif", color:'#6b7280', flexDirection:'column', gap:12 }}><div style={{ fontSize:32 }}>👁️</div><div>Loading...</div></div>;
   return user ? children : <Navigate to="/login" replace />;
 }
 
@@ -41,6 +33,7 @@ export default function App() {
             <Route path="customers"       element={<Customers />} />
             <Route path="inventory"       element={<Inventory />} />
             <Route path="lens-prices"     element={<LensPrices />} />
+            <Route path="quick-sale"      element={<QuickSale />} />
             <Route path="reports"         element={<Reports />} />
             <Route path="settings"        element={<Settings />} />
           </Route>
