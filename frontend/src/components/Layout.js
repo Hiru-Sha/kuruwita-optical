@@ -1,3 +1,6 @@
+// ============================================================
+//  Layout.js — Updated with Grinding tab in sidebar
+// ============================================================
 import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -6,9 +9,10 @@ const NAV = [
   { to:'/dashboard',  icon:'🏠', label:'Dashboard',  section:'main'      },
   { to:'/orders',     icon:'📋', label:'Orders',      section:'main'      },
   { to:'/quick-sale', icon:'🛍️', label:'Quick Sale',  section:'main'      },
+  { to:'/grinding',   icon:'🔬', label:'Grinding',    section:'main'      },
   { to:'/customers',  icon:'👥', label:'Customers',   section:'main'      },
   { to:'/inventory',  icon:'📦', label:'Inventory',   section:'inventory' },
-  { to:'/lens-prices',icon:'🔬', label:'Lens Prices', section:'inventory' },
+  { to:'/lens-prices',icon:'🧪', label:'Lens Prices', section:'inventory' },
   { to:'/reports',    icon:'📊', label:'Reports',     section:'reports'   },
   { to:'/settings',   icon:'⚙️', label:'Settings',    section:'account'   },
 ];
@@ -18,6 +22,7 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+
   return (
     <div style={{ display:'flex', flexDirection:'column', minHeight:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#f8f5ef' }}>
       <header style={{ background:'#0f1f3d', height:56, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 16px', position:'sticky', top:0, zIndex:100 }}>
@@ -34,11 +39,12 @@ export default function Layout() {
           <button onClick={()=>{ logout(); navigate('/login'); }} style={{ background:'rgba(201,168,76,0.2)', color:'#e8c96a', border:'1px solid rgba(201,168,76,0.3)', borderRadius:8, padding:'5px 14px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Logout</button>
         </div>
       </header>
+
       <div style={{ display:'flex', flex:1 }}>
         {open && <div onClick={()=>setOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:40 }}/>}
         <nav style={{ width:230, background:'white', borderRight:'1px solid #ede9e0', position:'fixed', top:56, left:0, bottom:0, overflowY:'auto', zIndex:50, transform:open?'translateX(0)':'translateX(-100%)', transition:'transform .25s ease', boxShadow:open?'4px 0 20px rgba(0,0,0,.1)':'none' }}>
-          {Object.entries(SECTIONS).map(([sk,sl]) => {
-            const items = NAV.filter(n=>n.section===sk);
+          {Object.entries(SECTIONS).map(([sk,sl])=>{
+            const items=NAV.filter(n=>n.section===sk);
             if (!items.length) return null;
             return (
               <div key={sk}>
