@@ -1,95 +1,349 @@
 // ============================================================
-//  PrintReceipt.js
-//  Customer receipt + Lab job card — both printable
-//  Usage: import PrintReceipt from '../components/PrintReceipt'
-//         <PrintReceipt order={order} onClose={() => setShowPrint(false)} />
+//  PrintReceipt.js — Clean bills + simplified lab job card
+//  Customer bill: advance version & balance version
+//  Lab card: date, patient, prescription, frame, lens, PD, seg height only
 // ============================================================
-import React, { useRef } from 'react';
-
-// ── Shared helpers ────────────────────────────────────────────
-const fmtDate = (d) => {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-GB', {
-    day: '2-digit', month: 'long', year: 'numeric'
-  });
-};
+import React, { useState } from 'react';
 
 const fmtMoney = (n) =>
-  'Rs. ' + parseFloat(n || 0).toLocaleString('en-LK', {
-    minimumFractionDigits: 2, maximumFractionDigits: 2
-  });
+  'Rs. ' + parseFloat(n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const lensStepLabel = (step) =>
-  ['Sent to lab', 'Grinding in progress', 'Lens ready', 'Received'][step] || '—';
+const fmtDate = (d) => {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+};
 
-// ── Print styles injected into the document ──────────────────
-const PRINT_STYLES = `
+const today = () => new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+
+// ── Print trigger ─────────────────────────────────────────────
+const PRINT_CSS = `
   @media print {
     body * { visibility: hidden !important; }
     #ko-print-root, #ko-print-root * { visibility: visible !important; }
-    #ko-print-root { position: fixed; inset: 0; z-index: 99999; background: white; }
-    @page { margin: 10mm; size: A4; }
+    #ko-print-root { position: fixed; inset: 0; background: white; z-index: 99999; padding: 12mm; }
+    @page { margin: 8mm; size: A5; }
   }
 `;
 
-// ── Main component ────────────────────────────────────────────
+function injectPrintCss() {
+  if (!document.getElementById('ko-print-css')) {
+    const s = document.createElement('style');
+    s.id = 'ko-print-css';
+    s.textContent = PRINT_CSS;
+    document.head.appendChild(s);
+  }
+}
+
+// ── Shared colours ────────────────────────────────────────────
+const navy  = '#0f1f3d';
+const gold  = '#c9a84c';
+const cream = '#f8f5ef';
+const border= '#e0ddd6';
+const muted = '#6b7280';
+const danger= '#c0392b';
+const success='#2d7a4f';
+
+// ═══════════════════════════════════════════════════════════════
+//  CUSTOMER BILL — used for both advance and balance receipts
+// ═══════════════════════════════════════════════════════════════
+function CustomerBill({ order, billType }) {
+  // billType: 'advance' | 'balance'
+  const total    = parseFloat(order.total_amount   || 0);
+  const advance  = parseFloat(order.advance_amount || 0);
+  const balance  = parseFloat(order.balance_amount || 0);
+  const discount = parseFloat(order.discount_amount || 0);
+
+  // What is being paid on THIS bill
+  const amountPaid = billType === 'advance' ? advance : balance;
+  const billLabel  = billType === 'advance' ? 'Advance Receipt' : 'Final Receipt — Balance Paid';
+  const remainingAfter = billType === 'advance' ? balance : 0;
+
+  // Discount percentage
+  const originalTotal = total + discount;
+  const discPct = discount > 0 && originalTotal > 0
+    ? Math.round(discount / originalTotal * 100)
+    : 0;
+
+  return (
+    <div style={{ maxWidth: 480, margin: '0 auto', fontFamily: "'DM Sans', sans-serif", color: navy }}>
+
+      {/* Shop header */}
+      <div style={{ background: navy, borderRadius: 12, padding: '18px 22px', marginBottom: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: 'white', marginBottom: 2 }}>
+            👁️ Kuruwita Optical
+          </div>
+          <div style={{ fontSize: 10, color: gold, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 4 }}>
+            {billLabel}
+          </div>
+          <div style={{ fontSize: 11, color: '#ede9e0' }}>Kuruwita, Ratnapura District, Sri Lanka</div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ background: gold, color: navy, fontWeight: 700, fontSize: 14, padding: '5px 12px', borderRadius: 7, marginBottom: 5 }}>
+            {order.order_number}
+          </div>
+          <div style={{ fontSize: 11, color: '#ede9e0' }}>Date: {today()}</div>
+        </div>
+      </div>
+
+      {/* Customer details */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: muted, marginBottom: 8, paddingBottom: 5, borderBottom: `1px solid ${border}` }}>
+          Customer
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {[
+            { l: 'Name',  v: order.customer_name },
+            { l: 'Phone', v: order.phone          },
+            { l: 'Age',   v: order.age ? order.age + ' years' : '—' },
+          ].map(i => (
+            <div key={i.l} style={{ background: cream, borderRadius: 8, padding: '8px 12px' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.8px', color: muted, marginBottom: 2 }}>{i.l}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: navy }}>{i.v || '—'}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Spectacle details */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: muted, marginBottom: 8, paddingBottom: 5, borderBottom: `1px solid ${border}` }}>
+          Spectacle Details
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {[
+            { l: 'Frame',        v: order.frame         },
+            { l: 'Frame Type',   v: order.frame_type    },
+            { l: 'Frame Color',  v: order.frame_color || '—' },
+            { l: 'Lens Type',    v: order.lens_type     },
+            { l: 'Lens Coating', v: order.lens_coating  },
+          ].map(i => (
+            <div key={i.l} style={{ background: cream, borderRadius: 8, padding: '8px 12px' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.8px', color: muted, marginBottom: 2 }}>{i.l}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: navy }}>{i.v || '—'}</div>
+            </div>
+          ))}
+          <div style={{ background: '#dcfce7', borderRadius: 8, padding: '8px 12px' }}>
+            <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.8px', color: success, marginBottom: 2 }}>Expected Delivery</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: success }}>{fmtDate(order.deliver_date)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment summary */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: muted, marginBottom: 8, paddingBottom: 5, borderBottom: `1px solid ${border}` }}>
+          Payment
+        </div>
+        <div style={{ background: cream, borderRadius: 10, padding: '14px 16px' }}>
+
+          {/* Frame price */}
+          {parseFloat(order.frame_sell_price) > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', color: muted }}>
+              <span>Frame</span>
+              <span>{fmtMoney(order.frame_sell_price)}</span>
+            </div>
+          )}
+
+          {/* Lens price */}
+          {parseFloat(order.lens_sell_price) > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', color: muted }}>
+              <span>Lens ({order.lens_type})</span>
+              <span>{fmtMoney(order.lens_sell_price)}</span>
+            </div>
+          )}
+
+          {/* Discount */}
+          {discount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', color: success }}>
+              <span>Discount{discPct > 0 ? ` (${discPct}%)` : ''}</span>
+              <span>- {fmtMoney(discount)}</span>
+            </div>
+          )}
+
+          {/* Divider */}
+          <div style={{ borderTop: `1.5px solid ${border}`, margin: '10px 0' }} />
+
+          {/* Total */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700, color: navy, marginBottom: 6 }}>
+            <span>Total Amount</span>
+            <span>{fmtMoney(total)}</span>
+          </div>
+
+          {/* This payment */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700, padding: '8px 12px', background: billType === 'advance' ? '#dbeafe' : '#dcfce7', borderRadius: 8, marginBottom: 6, color: billType === 'advance' ? '#1e40af' : success }}>
+            <span>{billType === 'advance' ? '✅ Advance Paid' : '✅ Balance Paid'}</span>
+            <span>{fmtMoney(amountPaid)}</span>
+          </div>
+
+          {/* Remaining */}
+          {remainingAfter > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700, color: danger }}>
+              <span>Balance Remaining</span>
+              <span>{fmtMoney(remainingAfter)}</span>
+            </div>
+          )}
+          {remainingAfter <= 0 && billType === 'balance' && (
+            <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: success, marginTop: 6 }}>
+              ✅ Fully Paid — Thank You!
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ borderTop: `2px solid ${navy}`, paddingTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div style={{ fontSize: 12, color: muted }}>
+          <div style={{ fontWeight: 600, color: navy, marginBottom: 2 }}>Kuruwita Optical</div>
+          <div>Thank you for your trust. 🙏</div>
+          {billType === 'advance' && <div style={{ fontSize: 11, marginTop: 4, color: danger }}>Please keep this receipt — bring it on collection.</div>}
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 10, color: muted }}>Expected delivery</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: navy }}>{fmtDate(order.deliver_date)}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LAB JOB CARD — date, patient, prescription, frame, lens, PD, seg height only
+// ═══════════════════════════════════════════════════════════════
+function LabJobCard({ order }) {
+  const ref = order.refraction || order;
+
+  const Box = ({ label, value, wide }) => (
+    <div style={{ gridColumn: wide ? '1 / -1' : undefined, border: `1.5px solid ${border}`, borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ background: navy, color: gold, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', padding: '4px 10px' }}>{label}</div>
+      <div style={{ padding: '8px 10px', fontSize: 14, fontWeight: 700, color: navy, minHeight: 34, background: 'white' }}>{value || '—'}</div>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth: 480, margin: '0 auto', fontFamily: "'DM Sans', sans-serif" }}>
+
+      {/* Header */}
+      <div style={{ background: navy, borderRadius: 10, padding: '14px 18px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 700, color: 'white' }}>👁️ Kuruwita Optical — Lab Job Card</div>
+          <div style={{ fontSize: 10, color: gold, letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 2 }}>Send this with the frame to the lab</div>
+        </div>
+        <div style={{ background: gold, color: navy, fontWeight: 700, fontSize: 16, padding: '6px 14px', borderRadius: 7 }}>{order.order_number}</div>
+      </div>
+
+      {/* Date + Patient */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+        <Box label="Date" value={today()} />
+        <Box label="Deliver By" value={fmtDate(order.deliver_date)} />
+        <Box label="Patient Name" value={order.customer_name} wide />
+      </div>
+
+      {/* Frame & Lens */}
+      <div style={{ border: `2px solid ${navy}`, borderRadius: 10, overflow: 'hidden', marginBottom: 12 }}>
+        <div style={{ background: navy, color: gold, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', padding: '6px 14px' }}>Frame & Lens</div>
+        <div style={{ padding: 12, background: 'white', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <Box label="Frame"        value={order.frame}            />
+          <Box label="Frame Type"   value={order.frame_type}       />
+          <Box label="Frame Color"  value={order.frame_color || '—'} />
+          <Box label="Lens Type"    value={order.lens_type}        />
+          <Box label="Lens Coating" value={order.lens_coating}     />
+        </div>
+      </div>
+
+      {/* Prescription */}
+      <div style={{ border: `2px solid ${navy}`, borderRadius: 10, overflow: 'hidden', marginBottom: 12 }}>
+        <div style={{ background: navy, color: gold, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', padding: '6px 14px' }}>Prescription</div>
+        <div style={{ padding: 12, background: 'white' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr>
+                {['Eye', 'SPH', 'CYL', 'AXIS', 'ADD', 'VA'].map(h => (
+                  <th key={h} style={{ background: cream, padding: '7px 8px', textAlign: 'center', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', border: `1px solid ${border}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { eye: 'Right (R)', sph: ref.r_sph, cyl: ref.r_cyl, axis: ref.r_axis, add: ref.r_add, va: ref.r_va },
+                { eye: 'Left (L)',  sph: ref.l_sph, cyl: ref.l_cyl, axis: ref.l_axis, add: ref.l_add, va: ref.l_va },
+              ].map(row => (
+                <tr key={row.eye}>
+                  <td style={{ background: cream, padding: '8px 10px', fontWeight: 700, fontSize: 13, border: `1px solid ${border}`, whiteSpace: 'nowrap' }}>{row.eye}</td>
+                  {[row.sph, row.cyl, row.axis, row.add, row.va].map((v, i) => (
+                    <td key={i} style={{ padding: '8px 8px', textAlign: 'center', border: `1px solid ${border}`, fontSize: 14, fontWeight: 700, color: navy }}>{v || '—'}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Refraction notes */}
+          {(ref.notes || ref.ref_notes) && (
+            <div style={{ marginTop: 8, fontSize: 12, color: muted, fontStyle: 'italic', background: '#fef9f0', borderRadius: 6, padding: '6px 10px' }}>
+              ⚠️ {ref.notes || ref.ref_notes}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* PD and Segment Height */}
+      <div style={{ border: `2px solid ${navy}`, borderRadius: 10, overflow: 'hidden', marginBottom: 12 }}>
+        <div style={{ background: navy, color: gold, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', padding: '6px 14px' }}>Measurements</div>
+        <div style={{ padding: 12, background: 'white', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+          <Box label="PD Right"       value={ref.r_pd || '—'} />
+          <Box label="PD Left"        value={ref.l_pd || '—'} />
+          <Box label="Seg Height R"   value={order.seg_height_r || '—'} />
+          <Box label="Seg Height L"   value={order.seg_height_l || '—'} />
+        </div>
+      </div>
+
+      {/* Special instructions */}
+      {order.notes && (
+        <div style={{ border: `1.5px solid ${border}`, borderRadius: 9, overflow: 'hidden', marginBottom: 12 }}>
+          <div style={{ background: navy, color: gold, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', padding: '5px 12px' }}>Special Instructions</div>
+          <div style={{ padding: '10px 14px', background: 'white', fontSize: 13, color: navy }}>{order.notes}</div>
+        </div>
+      )}
+
+      {/* Footer line */}
+      <div style={{ borderTop: `2px solid ${navy}`, paddingTop: 10, fontSize: 11, color: muted, textAlign: 'center' }}>
+        Kuruwita Optical · Kuruwita, Ratnapura · {today()}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MAIN MODAL
+// ═══════════════════════════════════════════════════════════════
 export default function PrintReceipt({ order, onClose }) {
-  const [activeTab, setActiveTab] = React.useState('receipt');
-  const printRef = useRef();
+  const [activeTab, setActiveTab] = useState('advance');
 
   const handlePrint = () => {
-    // Inject print styles once
-    if (!document.getElementById('ko-print-styles')) {
-      const s = document.createElement('style');
-      s.id = 'ko-print-styles';
-      s.textContent = PRINT_STYLES;
-      document.head.appendChild(s);
-    }
+    injectPrintCss();
     window.print();
   };
 
-  // Shared CSS vars
-  const navy   = '#0f1f3d';
-  const gold   = '#c9a84c';
-  const cream  = '#f8f5ef';
-  const border = '#e0ddd6';
-  const muted  = '#6b7280';
-  const success= '#2d7a4f';
-  const danger = '#c0392b';
+  const tabs = [
+    { key: 'advance', label: '🧾 Advance Bill'  },
+    { key: 'balance', label: '✅ Balance Bill'   },
+    { key: 'lab',     label: '🔬 Lab Job Card'   },
+  ];
 
-  // ── overlay ──────────────────────────────────────────────────
+  const balance = parseFloat(order.balance_amount || 0);
+
   return (
-    <div style={{
-      position: 'fixed', inset: 0,
-      background: 'rgba(15,31,61,.6)',
-      zIndex: 1000,
-      display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-      overflowY: 'auto', padding: '24px 16px',
-      fontFamily: "'DM Sans', sans-serif",
-    }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div style={{
-        background: 'white', borderRadius: 16,
-        width: '100%', maxWidth: 680,
-        boxShadow: '0 24px 80px rgba(0,0,0,.35)',
-      }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,31,61,.6)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '24px 16px', fontFamily: "'DM Sans',sans-serif" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: 'white', borderRadius: 16, width: '100%', maxWidth: 620, boxShadow: '0 24px 80px rgba(0,0,0,.35)' }}>
 
-        {/* ── Modal header ── */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 20px', borderBottom: `1px solid ${border}`,
-        }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {[
-              { key: 'receipt', label: '🧾 Customer Receipt' },
-              { key: 'labcard', label: '🔬 Lab Job Card'     },
-            ].map(t => (
+        {/* Modal header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: `1px solid ${border}` }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {tabs.map(t => (
               <button key={t.key} onClick={() => setActiveTab(t.key)}
-                style={{
-                  padding: '7px 16px', borderRadius: 8, fontSize: 13,
-                  fontWeight: 600, cursor: 'pointer', border: '1.5px solid',
-                  fontFamily: 'inherit', transition: 'all .15s',
+                style={{ padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1.5px solid', fontFamily: 'inherit', transition: 'all .15s',
                   background:   activeTab === t.key ? navy   : 'white',
                   color:        activeTab === t.key ? 'white' : muted,
                   borderColor:  activeTab === t.key ? navy   : border,
@@ -100,524 +354,29 @@ export default function PrintReceipt({ order, onClose }) {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handlePrint}
-              style={{
-                padding: '7px 18px', background: gold, color: navy,
-                border: 'none', borderRadius: 8, fontSize: 13,
-                fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-              }}>
+              style={{ padding: '7px 18px', background: gold, color: navy, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               🖨️ Print
             </button>
             <button onClick={onClose}
-              style={{
-                padding: '7px 14px', background: cream, color: muted,
-                border: `1.5px solid ${border}`, borderRadius: 8,
-                fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}>
-              ✕ Close
+              style={{ padding: '7px 14px', background: cream, color: muted, border: `1.5px solid ${border}`, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              ✕
             </button>
           </div>
         </div>
 
-        {/* ── Printable area ── */}
-        <div id="ko-print-root" ref={printRef}
-          style={{ padding: '24px 28px', background: 'white' }}>
-
-          {activeTab === 'receipt'
-            ? <CustomerReceipt  order={order} navy={navy} gold={gold} cream={cream} border={border} muted={muted} success={success} danger={danger} />
-            : <LabJobCard       order={order} navy={navy} gold={gold} cream={cream} border={border} muted={muted} />
-          }
+        {/* Printable content */}
+        <div id="ko-print-root" style={{ padding: '24px 28px', background: 'white' }}>
+          {activeTab === 'advance' && <CustomerBill order={order} billType="advance" />}
+          {activeTab === 'balance' && <CustomerBill order={order} billType="balance" />}
+          {activeTab === 'lab'     && <LabJobCard   order={order} />}
         </div>
-      </div>
-    </div>
-  );
-}
 
-
-// ════════════════════════════════════════════════════════════
-//  CUSTOMER RECEIPT
-// ════════════════════════════════════════════════════════════
-function CustomerReceipt({ order, navy, gold, cream, border, muted, success, danger }) {
-  const balance = parseFloat(order.balance_amount || 0);
-  const advance = parseFloat(order.advance_amount || 0);
-  const total   = parseFloat(order.total_amount   || 0);
-
-  const Section = ({ title, children }) => (
-    <div style={{ marginBottom: 18 }}>
-      <div style={{
-        fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-        letterSpacing: '1.2px', color: muted,
-        paddingBottom: 5, marginBottom: 10,
-        borderBottom: `1px solid ${border}`,
-      }}>{title}</div>
-      {children}
-    </div>
-  );
-
-  const Row = ({ label, value, bold, color }) => (
-    <div style={{
-      display: 'flex', justifyContent: 'space-between',
-      padding: '4px 0', fontSize: 13,
-    }}>
-      <span style={{ color: muted }}>{label}</span>
-      <span style={{ fontWeight: bold ? 700 : 500, color: color || navy }}>{value || '—'}</span>
-    </div>
-  );
-
-  return (
-    <div style={{ maxWidth: 580, margin: '0 auto' }}>
-
-      {/* Shop header */}
-      <div style={{
-        background: navy, borderRadius: 12, padding: '20px 24px',
-        marginBottom: 20, display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <div>
-          <div style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: 22, fontWeight: 700, color: 'white', marginBottom: 2,
-          }}>
-            👁️ Kuruwita Optical
-          </div>
-          <div style={{ fontSize: 11, color: gold, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            Order Receipt
-          </div>
-          <div style={{ fontSize: 12, color: '#ede9e0', marginTop: 6 }}>
-            Kuruwita, Ratnapura District, Sri Lanka
-          </div>
+        {/* Helper note */}
+        <div style={{ padding: '10px 20px', borderTop: `1px solid ${border}`, fontSize: 12, color: muted, textAlign: 'center' }}>
+          {activeTab === 'advance' && '📄 Print this when customer pays the advance amount'}
+          {activeTab === 'balance' && balance > 0 ? '📄 Print this when customer pays the remaining balance' : activeTab === 'balance' ? '✅ Order is fully paid' : ''}
+          {activeTab === 'lab'     && '🔬 Print this and send it with the frame to the grinding lab'}
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{
-            background: gold, color: navy,
-            fontWeight: 700, fontSize: 15,
-            padding: '6px 14px', borderRadius: 8,
-            letterSpacing: '0.5px', marginBottom: 6,
-          }}>
-            {order.order_number}
-          </div>
-          <div style={{ fontSize: 11, color: '#ede9e0' }}>
-            {fmtDate(order.created_at || new Date())}
-          </div>
-        </div>
-      </div>
-
-      {/* Customer details */}
-      <Section title="Customer">
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
-        }}>
-          {[
-            { l: 'Name',     v: order.customer_name },
-            { l: 'Phone',    v: order.phone          },
-            { l: 'Age',      v: order.age ? `${order.age} years` : '—' },
-            { l: 'Address',  v: order.address        },
-          ].map(({ l, v }) => (
-            <div key={l} style={{
-              background: cream, borderRadius: 8, padding: '9px 12px',
-            }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.8px', color: muted, marginBottom: 3 }}>{l}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: navy }}>{v || '—'}</div>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* Order details */}
-      <Section title="Order Details">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-          {[
-            { l: 'Frame',        v: order.frame       },
-            { l: 'Frame type',   v: order.frame_type  },
-            { l: 'Lens type',    v: order.lens_type   },
-            { l: 'Lens coating', v: order.lens_coating },
-            { l: 'Grinding at',  v: order.lens_company },
-            { l: 'Deliver by',   v: fmtDate(order.deliver_date) },
-          ].map(({ l, v }) => (
-            <div key={l} style={{
-              background: cream, borderRadius: 8, padding: '9px 12px',
-            }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.8px', color: muted, marginBottom: 3 }}>{l}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: navy }}>{v || '—'}</div>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* Refraction */}
-      {(order.refraction || order.r_sph || order.l_sph) && (
-        <Section title="Prescription (Refraction)">
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr>
-                  {['Eye', 'SPH', 'CYL', 'AXIS', 'ADD', 'VA', 'PD'].map(h => (
-                    <th key={h} style={{
-                      background: cream, padding: '7px 10px', textAlign: 'center',
-                      fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                      letterSpacing: '.7px', color: muted,
-                      border: `1px solid ${border}`,
-                    }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  {
-                    eye: 'Right (R)',
-                    sph:  order.refraction?.r_sph  || order.r_sph,
-                    cyl:  order.refraction?.r_cyl  || order.r_cyl,
-                    axis: order.refraction?.r_axis || order.r_axis,
-                    add:  order.refraction?.r_add  || order.r_add,
-                    va:   order.refraction?.r_va   || order.r_va,
-                    pd:   order.refraction?.r_pd   || order.r_pd,
-                  },
-                  {
-                    eye: 'Left (L)',
-                    sph:  order.refraction?.l_sph  || order.l_sph,
-                    cyl:  order.refraction?.l_cyl  || order.l_cyl,
-                    axis: order.refraction?.l_axis || order.l_axis,
-                    add:  order.refraction?.l_add  || order.l_add,
-                    va:   order.refraction?.l_va   || order.l_va,
-                    pd:   order.refraction?.l_pd   || order.l_pd,
-                  },
-                ].map(row => (
-                  <tr key={row.eye}>
-                    <td style={{ background: cream, padding: '7px 10px', fontWeight: 700, color: navy, border: `1px solid ${border}`, whiteSpace: 'nowrap' }}>{row.eye}</td>
-                    {[row.sph, row.cyl, row.axis, row.add, row.va, row.pd].map((v, i) => (
-                      <td key={i} style={{ padding: '7px 10px', textAlign: 'center', border: `1px solid ${border}`, color: navy }}>{v || '—'}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {(order.refraction?.notes || order.ref_notes) && (
-            <div style={{ marginTop: 8, fontSize: 12, color: muted, fontStyle: 'italic' }}>
-              Note: {order.refraction?.notes || order.ref_notes}
-            </div>
-          )}
-        </Section>
-      )}
-
-      {/* Payment summary */}
-      <Section title="Payment">
-        <div style={{
-          background: cream, borderRadius: 10, padding: '14px 16px',
-        }}>
-          <Row label="Total amount"   value={fmtMoney(total)}   />
-          <Row label="Advance paid"   value={fmtMoney(advance)} />
-          <div style={{ borderTop: `1px dashed ${border}`, margin: '8px 0' }} />
-          <div style={{
-            display: 'flex', justifyContent: 'space-between',
-            fontSize: 16, fontWeight: 700, padding: '4px 0',
-          }}>
-            <span style={{ color: balance > 0 ? danger : success }}>
-              {balance > 0 ? 'Balance due' : 'Fully paid ✓'}
-            </span>
-            <span style={{ color: balance > 0 ? danger : success }}>
-              {fmtMoney(balance)}
-            </span>
-          </div>
-        </div>
-      </Section>
-
-      {/* Prescription held */}
-      {order.has_rx && (
-        <div style={{
-          background: '#e0f2fe', border: '1px solid #bae6fd',
-          borderRadius: 10, padding: '11px 14px', marginBottom: 18,
-          fontSize: 13, color: '#0369a1',
-        }}>
-          📄 <strong>Prescription held</strong> from {order.rx_hospital || 'hospital'}.
-          {' '}Will be returned when the order is delivered.
-        </div>
-      )}
-
-      {/* Footer */}
-      <div style={{
-        borderTop: `2px solid ${navy}`, paddingTop: 14,
-        display: 'flex', justifyContent: 'space-between',
-        alignItems: 'flex-end', marginTop: 8,
-      }}>
-        <div style={{ fontSize: 12, color: muted }}>
-          <div style={{ fontWeight: 600, color: navy, marginBottom: 2 }}>Kuruwita Optical</div>
-          <div>Thank you for your trust. 🙏</div>
-          <div>Please keep this receipt for your records.</div>
-        </div>
-        <div style={{ textAlign: 'right', fontSize: 12, color: muted }}>
-          <div style={{ fontWeight: 600, color: navy, marginBottom: 2 }}>Expected delivery</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: navy }}>
-            {fmtDate(order.deliver_date)}
-          </div>
-        </div>
-      </div>
-
-      {/* Signature line */}
-      <div style={{
-        marginTop: 28,
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20,
-      }}>
-        {['Customer signature', 'Shop signature'].map(label => (
-          <div key={label} style={{ textAlign: 'center' }}>
-            <div style={{ borderTop: `1px solid ${border}`, paddingTop: 6, fontSize: 11, color: muted }}>
-              {label}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-
-// ════════════════════════════════════════════════════════════
-//  LAB JOB CARD
-// ════════════════════════════════════════════════════════════
-function LabJobCard({ order, navy, gold, cream, border, muted }) {
-
-  const Box = ({ label, value, span }) => (
-    <div style={{
-      gridColumn: span ? `span ${span}` : undefined,
-      border: `1.5px solid ${border}`,
-      borderRadius: 8, overflow: 'hidden',
-    }}>
-      <div style={{
-        background: navy, color: gold,
-        fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
-        letterSpacing: '1px', padding: '5px 10px',
-      }}>{label}</div>
-      <div style={{
-        padding: '9px 10px', fontSize: 14,
-        fontWeight: 700, color: navy, minHeight: 36,
-        background: 'white',
-      }}>{value || '—'}</div>
-    </div>
-  );
-
-  const EyeRow = ({ label, sph, cyl, axis, add, va, pd }) => (
-    <tr>
-      <td style={{ background: cream, padding: '8px 10px', fontWeight: 700, fontSize: 13, color: navy, border: `1.5px solid ${border}`, whiteSpace: 'nowrap' }}>{label}</td>
-      {[sph, cyl, axis, add, va, pd].map((v, i) => (
-        <td key={i} style={{
-          padding: '8px 10px', textAlign: 'center', fontSize: 14,
-          fontWeight: 700, border: `1.5px solid ${border}`, color: navy,
-          minWidth: 56, background: 'white',
-        }}>{v || '—'}</td>
-      ))}
-    </tr>
-  );
-
-  const ref = order.refraction || order;
-
-  return (
-    <div style={{ maxWidth: 580, margin: '0 auto' }}>
-
-      {/* Header strip */}
-      <div style={{
-        background: navy, borderRadius: 12,
-        padding: '16px 20px', marginBottom: 18,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <div>
-          <div style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: 18, fontWeight: 700, color: 'white', marginBottom: 2,
-          }}>
-            👁️ Kuruwita Optical — Lab Job Card
-          </div>
-          <div style={{ fontSize: 11, color: gold, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            Send this card with the frame to the grinding lab
-          </div>
-        </div>
-        <div style={{
-          background: gold, color: navy,
-          fontWeight: 700, fontSize: 18,
-          padding: '8px 16px', borderRadius: 8,
-          letterSpacing: '0.5px',
-        }}>
-          {order.order_number}
-        </div>
-      </div>
-
-      {/* Urgency + date row */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-        gap: 8, marginBottom: 14,
-      }}>
-        <Box label="Lab / Company"   value={order.lens_company} />
-        <Box label="Date sent"       value={fmtDate(new Date())} />
-        <Box label="Deliver by"      value={fmtDate(order.deliver_date)} />
-      </div>
-
-      {/* Patient + frame section */}
-      <div style={{
-        border: `2px solid ${navy}`, borderRadius: 10,
-        overflow: 'hidden', marginBottom: 14,
-      }}>
-        <div style={{
-          background: navy, color: gold,
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-          letterSpacing: '1px', padding: '7px 14px',
-        }}>Patient & Frame Details</div>
-        <div style={{
-          padding: 12,
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
-          background: 'white',
-        }}>
-          <Box label="Patient name"   value={order.customer_name} />
-          <Box label="Phone"          value={order.phone} />
-          <Box label="Frame"          value={order.frame} />
-          <Box label="Frame type"     value={order.frame_type} />
-          <Box label="Lens type"      value={order.lens_type} />
-          <Box label="Lens coating"   value={order.lens_coating} />
-        </div>
-      </div>
-
-      {/* Refraction — BIG and clear */}
-      <div style={{
-        border: `2px solid ${navy}`, borderRadius: 10,
-        overflow: 'hidden', marginBottom: 14,
-      }}>
-        <div style={{
-          background: navy, color: gold,
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-          letterSpacing: '1px', padding: '7px 14px',
-        }}>Prescription (Refraction)</div>
-        <div style={{ padding: 12, background: 'white' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  {['Eye', 'SPH', 'CYL', 'AXIS', 'ADD', 'VA', 'PD'].map(h => (
-                    <th key={h} style={{
-                      background: cream, padding: '8px 10px', textAlign: 'center',
-                      fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-                      letterSpacing: '.7px', color: muted,
-                      border: `1.5px solid ${border}`,
-                    }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <EyeRow
-                  label="Right (R)"
-                  sph={ref.r_sph} cyl={ref.r_cyl} axis={ref.r_axis}
-                  add={ref.r_add} va={ref.r_va}   pd={ref.r_pd}
-                />
-                <EyeRow
-                  label="Left (L)"
-                  sph={ref.l_sph} cyl={ref.l_cyl} axis={ref.l_axis}
-                  add={ref.l_add} va={ref.l_va}   pd={ref.l_pd}
-                />
-              </tbody>
-            </table>
-          </div>
-          {(ref.notes || ref.ref_notes) && (
-            <div style={{
-              marginTop: 10, fontSize: 13, color: navy,
-              background: '#fef9f0', borderRadius: 7,
-              padding: '8px 12px', fontWeight: 500,
-            }}>
-              ⚠️ Note: {ref.notes || ref.ref_notes}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Special instructions */}
-      <div style={{
-        border: `2px solid ${navy}`, borderRadius: 10,
-        overflow: 'hidden', marginBottom: 14,
-      }}>
-        <div style={{
-          background: navy, color: gold,
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-          letterSpacing: '1px', padding: '7px 14px',
-        }}>Special Instructions</div>
-        <div style={{
-          padding: 14, background: 'white',
-          minHeight: 60, fontSize: 13, color: navy,
-        }}>
-          {order.notes || <span style={{ color: muted, fontStyle: 'italic' }}>No special instructions</span>}
-        </div>
-      </div>
-
-      {/* Checklist */}
-      <div style={{
-        border: `2px solid ${navy}`, borderRadius: 10,
-        overflow: 'hidden', marginBottom: 18,
-      }}>
-        <div style={{
-          background: navy, color: gold,
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-          letterSpacing: '1px', padding: '7px 14px',
-        }}>Lab Checklist</div>
-        <div style={{
-          padding: 14, background: 'white',
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
-        }}>
-          {[
-            'Lens cut to correct shape',
-            'Coating applied correctly',
-            'Power verified before fitting',
-            'Both lenses checked — R and L',
-            'Frame not scratched or damaged',
-            'Ready for collection notification sent',
-          ].map((item, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              fontSize: 12, color: navy,
-            }}>
-              <div style={{
-                width: 16, height: 16, border: `1.5px solid ${navy}`,
-                borderRadius: 3, flexShrink: 0,
-              }} />
-              {item}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Lens step tracker */}
-      <div style={{
-        background: cream, borderRadius: 10,
-        padding: '12px 14px', marginBottom: 18,
-      }}>
-        <div style={{
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-          letterSpacing: '1px', color: muted, marginBottom: 10,
-        }}>Job Progress</div>
-        <div style={{ display: 'flex', gap: 0 }}>
-          {['📤 Sent', '⚙️ Grinding', '📦 Ready', '✅ Received'].map((label, i) => {
-            const done    = i <  (order.lens_step || 0);
-            const current = i === (order.lens_step || 0);
-            return (
-              <div key={i} style={{
-                flex: 1, textAlign: 'center', padding: '8px 4px',
-                fontSize: 11, fontWeight: 600,
-                color: done ? '#2d7a4f' : current ? navy : muted,
-                borderBottom: `3px solid ${done ? '#2d7a4f' : current ? gold : border}`,
-              }}>
-                {label}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Sign-off row */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16,
-        borderTop: `2px solid ${navy}`, paddingTop: 16,
-      }}>
-        {['Sent by (Kuruwita Optical)', 'Received by (Lab)', 'Returned by (Lab)'].map(label => (
-          <div key={label} style={{ textAlign: 'center' }}>
-            <div style={{ height: 32, borderBottom: `1px solid ${border}`, marginBottom: 5 }} />
-            <div style={{ fontSize: 10, color: muted, fontWeight: 600 }}>{label}</div>
-            <div style={{ fontSize: 10, color: muted, marginTop: 3 }}>Date: ___________</div>
-          </div>
-        ))}
       </div>
     </div>
   );
