@@ -1,6 +1,4 @@
-// ============================================================
-//  App.js — Updated with Grinding + Reports routes
-// ============================================================
+/* eslint-disable */
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -15,17 +13,24 @@ import LensPrices from './pages/LensPrices';
 import QuickSale  from './pages/QuickSale';
 import Grinding   from './pages/Grinding';
 import Reports    from './pages/Reports';
+import Expenses   from './pages/Expenses';
 import Settings   from './pages/Settings';
-import Expenses from './pages/Expenses';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:"'DM Sans',sans-serif", color:'#6b7280', flexDirection:'column', gap:12 }}>
-      <div style={{ fontSize:32 }}>👁️</div><div>Loading Kuruwita Optical...</div>
+      <div style={{ fontSize:32 }}>👁️</div><div>Loading...</div>
     </div>
   );
   return user ? children : <Navigate to="/login" replace />;
+}
+
+// Admin-only route — redirects staff to dashboard
+function AdminOnly({ children }) {
+  const { user } = useAuth();
+  if (user?.role === 'admin') return children;
+  return <Navigate to="/dashboard" replace />;
 }
 
 export default function App() {
@@ -43,11 +48,11 @@ export default function App() {
             <Route path="inventory"       element={<Inventory />} />
             <Route path="lens-prices"     element={<LensPrices />} />
             <Route path="quick-sale"      element={<QuickSale />} />
-            <Route path="grinding"        element={<Grinding />} />
-            <Route path="reports"         element={<Reports />} />
             <Route path="settings"        element={<Settings />} />
-  <Route path="expenses" element={<Expenses />} />
-  
+            {/* Admin-only routes */}
+            <Route path="grinding"  element={<AdminOnly><Grinding /></AdminOnly>} />
+            <Route path="reports"   element={<AdminOnly><Reports  /></AdminOnly>} />
+            <Route path="expenses"  element={<AdminOnly><Expenses /></AdminOnly>} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
