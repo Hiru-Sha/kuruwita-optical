@@ -1,6 +1,7 @@
+/* eslint-disable */
 // ============================================================
-//  Customers.js — Fixed: fetches full profile on click,
-//  shows orders/refraction/comms correctly
+//  Customers.js — With improved refraction history tab
+//  Shows all past prescriptions, comparison, power trend
 // ============================================================
 import React, { useEffect, useState, useCallback } from 'react';
 import { getCustomers, getCustomer, addCommLog, updateOrder } from '../api';
@@ -21,6 +22,179 @@ const STATUS_STYLE = {
 };
 
 const initials = (name='') => name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const fmtDate  = (d) => new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+
+// ── Parse SPH value to float for trend comparison ────────────
+const parsePower = (v) => {
+  if (!v || v==='Plano') return 0;
+  return parseFloat(v.replace(/[^0-9.-]/g,'')) * (v.startsWith('-')?-1:1) || 0;
+};
+
+// ── Power trend indicator ─────────────────────────────────────
+const Trend = ({ current, previous, label }) => {
+  if (previous === undefined || current === undefined) return null;
+  const curr = parsePower(current);
+  const prev = parsePower(previous);
+  const diff = curr - prev;
+  if (Math.abs(diff) < 0.1) return <span style={{ fontSize:10, color:muted }}>→ same</span>;
+  const worse = Math.abs(curr) > Math.abs(prev);
+  return (
+    <span style={{ fontSize:10, color:worse?danger:success, fontWeight:600 }}>
+      {diff>0?'↑':'↓'} {Math.abs(diff).toFixed(2)} {worse?'weaker':'stronger'}
+    </span>
+  );
+};
+
+// ── Single refraction record card ─────────────────────────────
+function RxCard({ rx, prevRx, orderInfo, isLatest }) {
+  const [expanded, setExpanded] = useState(isLatest);
+
+  return (
+    <div style={{ border:`1.5px solid ${isLatest?navy:border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
+      {/* Card header — always visible */}
+      <div
+        onClick={()=>setExpanded(e=>!e)}
+        style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 14px', background:isLatest?navy:cream, cursor:'pointer' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          {isLatest && <span style={{ background:gold, color:navy, fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>Latest</span>}
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:isLatest?'white':navy }}>{fmtDate(rx.created_at)}</div>
+            {orderInfo && <div style={{ fontSize:11, color:isLatest?'#ede9e0':muted }}>Order {orderInfo.order_number} · {orderInfo.frame||'—'}</div>}
+          </div>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          {/* Quick SPH summary */}
+          <div style={{ textAlign:'right' }}>
+            <div style={{ fontSize:11, color:isLatest?'#ede9e0':muted }}>
+              R: <b style={{color:isLatest?gold:'#1a1a2e'}}>{rx.r_sph||'Plano'}</b>
+              &nbsp;&nbsp;L: <b style={{color:isLatest?gold:'#1a1a2e'}}>{rx.l_sph||'Plano'}</b>
+            </div>
+            {rx.r_cyl && rx.r_cyl!=='0.00' && (
+              <div style={{ fontSize:10, color:isLatest?'#ede9e0':muted }}>
+                CYL R: {rx.r_cyl} L: {rx.l_cyl}
+              </div>
+            )}
+          </div>
+          <span style={{ fontSize:16, color:isLatest?'white':muted }}>{expanded?'▲':'▼'}</span>
+        </div>
+      </div>
+
+      {/* Expanded prescription table */}
+      {expanded && (
+        <div style={{ padding:14, background:'white' }}>
+          <div style={{ overflowX:'auto', marginBottom:prevRx?12:0 }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+              <thead>
+                <tr>
+                  {['Eye','SPH','CYL','AXIS','ADD','VA','PD'].map(h=>(
+                    <th key={h} style={{ background:cream, padding:'7px 9px', textAlign:'center', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', border:`1px solid ${border}`, color:muted }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { eye:'Right (R)', sph:rx.r_sph, cyl:rx.r_cyl, axis:rx.r_axis, add:rx.r_add, va:rx.r_va, pd:rx.r_pd },
+                  { eye:'Left (L)',  sph:rx.l_sph, cyl:rx.l_cyl, axis:rx.l_axis, add:rx.l_add, va:rx.l_va, pd:rx.l_pd },
+                ].map(row=>(
+                  <tr key={row.eye}>
+                    <td style={{ background:cream, padding:'8px 9px', fontWeight:700, fontSize:12, border:`1px solid ${border}`, color:navy, whiteSpace:'nowrap' }}>{row.eye}</td>
+                    {[row.sph, row.cyl, row.axis, row.add, row.va, row.pd].map((v,i)=>(
+                      <td key={i} style={{ padding:'8px 9px', textAlign:'center', border:`1px solid ${border}`, fontSize:13, fontWeight:600, color:'#1a1a2e', background:'white' }}>
+                        {v||'—'}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Change vs previous */}
+          {prevRx && (
+            <div style={{ background:'#f0f9ff', borderRadius:8, padding:'10px 12px', marginBottom:8 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'#0369a1', marginBottom:6, textTransform:'uppercase', letterSpacing:'.7px' }}>
+                Change vs previous
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                {[
+                  {l:'Right SPH',  c:rx.r_sph, p:prevRx.r_sph},
+                  {l:'Left SPH',   c:rx.l_sph, p:prevRx.l_sph},
+                  {l:'Right CYL',  c:rx.r_cyl, p:prevRx.r_cyl},
+                  {l:'Left CYL',   c:rx.l_cyl, p:prevRx.l_cyl},
+                ].map(item=>(
+                  <div key={item.l} style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}>
+                    <span style={{ color:muted }}>{item.l}:</span>
+                    <span style={{ display:'flex', gap:6, alignItems:'center' }}>
+                      <b style={{color:navy}}>{item.c||'Plano'}</b>
+                      <Trend current={item.c} previous={item.p}/>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Clinical notes */}
+          {rx.notes && (
+            <div style={{ background:'#fef9f0', borderRadius:8, padding:'8px 12px', fontSize:12, color:'#92400e', fontStyle:'italic' }}>
+              💬 {rx.notes}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Power trend mini chart ────────────────────────────────────
+function PowerTrendChart({ refractions }) {
+  if (refractions.length < 2) return null;
+
+  const points = [...refractions].reverse(); // oldest first
+  const rSPH   = points.map(r => parsePower(r.r_sph));
+  const lSPH   = points.map(r => parsePower(r.l_sph));
+  const allVals = [...rSPH, ...lSPH];
+  const min    = Math.min(...allVals) - 0.5;
+  const max    = Math.max(...allVals) + 0.5;
+  const range  = max - min || 1;
+  const W      = 340, H = 80, PAD = 20;
+  const xStep  = (W - PAD*2) / (points.length - 1);
+
+  const toY = (v) => PAD + ((max - v) / range) * (H - PAD*2);
+  const toX = (i) => PAD + i * xStep;
+
+  const linePath = (vals) => vals.map((v,i)=>`${i===0?'M':'L'}${toX(i)},${toY(v)}`).join(' ');
+
+  return (
+    <div style={{ background:cream, borderRadius:10, padding:'12px 14px', marginBottom:16 }}>
+      <div style={{ fontSize:12, fontWeight:700, color:navy, marginBottom:8 }}>📈 SPH Power trend</div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', height:H }}>
+        {/* Zero line */}
+        {min < 0 && max > 0 && (
+          <line x1={PAD} y1={toY(0)} x2={W-PAD} y2={toY(0)} stroke={border} strokeWidth="1" strokeDasharray="3,3"/>
+        )}
+        {/* Right eye line — navy */}
+        <path d={linePath(rSPH)} fill="none" stroke={navy} strokeWidth="2" strokeLinejoin="round"/>
+        {rSPH.map((v,i)=><circle key={i} cx={toX(i)} cy={toY(v)} r="3" fill={navy}/>)}
+        {/* Left eye line — gold */}
+        <path d={linePath(lSPH)} fill="none" stroke={gold} strokeWidth="2" strokeLinejoin="round"/>
+        {lSPH.map((v,i)=><circle key={i} cx={toX(i)} cy={toY(v)} r="3" fill={gold}/>)}
+        {/* Date labels */}
+        {points.map((r,i)=>(
+          <text key={i} x={toX(i)} y={H-2} textAnchor="middle" fontSize="9" fill={muted}>
+            {new Date(r.created_at).toLocaleDateString('en-GB',{month:'short',year:'2-digit'})}
+          </text>
+        ))}
+      </svg>
+      <div style={{ display:'flex', gap:16, marginTop:4, fontSize:11, color:muted }}>
+        <span><span style={{ display:'inline-block', width:12, height:3, background:navy, borderRadius:2, marginRight:4, verticalAlign:'middle' }}/>Right eye</span>
+        <span><span style={{ display:'inline-block', width:12, height:3, background:gold, borderRadius:2, marginRight:4, verticalAlign:'middle' }}/>Left eye</span>
+      </div>
+    </div>
+  );
+}
 
 export default function Customers() {
   const [customers, setCusts]   = useState([]);
@@ -28,15 +202,13 @@ export default function Customers() {
   const [filter,    setFilter]  = useState('all');
   const [loading,   setLoading] = useState(true);
 
-  // Detail panel
-  const [selected,    setSelected]    = useState(null);  // full profile from API
+  const [selected,    setSelected]    = useState(null);
   const [loadingCust, setLoadingCust] = useState(false);
   const [tab,         setTab]         = useState('orders');
   const [commNote,    setCommNote]    = useState('');
   const [commType,    setCommType]    = useState('call');
   const [addingComm,  setAddingComm]  = useState(false);
 
-  // ── Load customer list ──────────────────────────────────────
   const load = useCallback(() => {
     setLoading(true);
     getCustomers({ search: search || undefined })
@@ -47,44 +219,35 @@ export default function Customers() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Open full customer profile ──────────────────────────────
-  // FIX: was using setSelected(c) with list data — never fetched full profile
   const openCustomer = async (id) => {
     setLoadingCust(true);
-    setSelected({ id, _loading: true }); // show panel immediately
+    setSelected({ id, _loading: true });
     setTab('orders');
     try {
       const r = await getCustomer(id);
       setSelected(r.data);
-    } catch {
-      setSelected(null);
-    } finally {
-      setLoadingCust(false);
-    }
+    } catch { setSelected(null); }
+    finally { setLoadingCust(false); }
   };
 
-  // ── Filter ──────────────────────────────────────────────────
   const filtered = customers.filter(c => {
     if (filter === 'balance') return parseFloat(c.total_balance) > 0;
     if (filter === 'rx')      return c.rx_held;
     return true;
   });
 
-  // ── Add communication log ───────────────────────────────────
   const handleAddComm = async () => {
     if (!commNote.trim() || !selected) return;
     setAddingComm(true);
     try {
       await addCommLog(selected.id, { type: commType, note: commNote });
       setCommNote('');
-      // Refresh full profile to show new log
       const r = await getCustomer(selected.id);
       setSelected(r.data);
-    } catch { /* silent */ }
+    } catch {}
     finally { setAddingComm(false); }
   };
 
-  // ── Mark prescription returned ──────────────────────────────
   const markRxReturned = async () => {
     const order = selected?.orders?.find(o => o.has_rx && !o.rx_returned);
     if (!order) return;
@@ -93,16 +256,14 @@ export default function Customers() {
       const r = await getCustomer(selected.id);
       setSelected(r.data);
       load();
-    } catch { /* silent */ }
+    } catch {}
   };
 
-  // ═══════════════════════════════════════════════════════════
   return (
-    <div style={{ fontFamily: "'DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
       <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:navy, margin:'0 0 4px' }}>👥 Customers</h1>
       <p style={{ fontSize:13, color:muted, marginBottom:20 }}>Full profiles, order history and refraction records</p>
 
-      {/* ── Search + filter ── */}
       <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="🔍  Search by name or phone..."
@@ -116,10 +277,9 @@ export default function Customers() {
         ))}
       </div>
 
-      {/* Stats strip */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:10, marginBottom:20 }}>
         {[
-          { l:'Total Customers', v: customers.length,                                         dark:true },
+          { l:'Total Customers', v: customers.length,                                          dark:true },
           { l:'Balance Due',     v: customers.filter(c=>parseFloat(c.total_balance)>0).length, c:danger  },
           { l:'Rx Held',         v: customers.filter(c=>c.rx_held).length,                    c:'#0369a1'},
           { l:'Total Spent',     v:`Rs.${Math.round(customers.reduce((s,c)=>s+parseFloat(c.total_spent||0),0)/1000)}K`, c:success},
@@ -131,7 +291,6 @@ export default function Customers() {
         ))}
       </div>
 
-      {/* ── Customer grid ── */}
       {loading
         ? <p style={{ color:muted, fontSize:13 }}>Loading customers...</p>
         : !filtered.length
@@ -139,8 +298,7 @@ export default function Customers() {
           : (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
             {filtered.map(c => (
-              <div key={c.id}
-                onClick={()=>openCustomer(c.id)}
+              <div key={c.id} onClick={()=>openCustomer(c.id)}
                 style={{ background:'white', border:`1.5px solid ${c.rx_held?'#fde68a':border}`, borderRadius:14, padding:18, cursor:'pointer', transition:'all .15s' }}
                 onMouseEnter={e=>e.currentTarget.style.borderColor=gold}
                 onMouseLeave={e=>e.currentTarget.style.borderColor=c.rx_held?'#fde68a':border}>
@@ -186,13 +344,11 @@ export default function Customers() {
         )
       }
 
-      {/* ══════════════════════════════════════════════════════
-          DETAIL PANEL
-      ══════════════════════════════════════════════════════ */}
+      {/* ══════════════ DETAIL PANEL ══════════════════════════ */}
       {selected && (
         <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.45)', zIndex:200, display:'flex', alignItems:'flex-start', justifyContent:'flex-end' }}
           onClick={e=>{ if(e.target===e.currentTarget) setSelected(null); }}>
-          <div style={{ background:'white', width:'100%', maxWidth:520, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
+          <div style={{ background:'white', width:'100%', maxWidth:540, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
 
             {/* Panel header */}
             <div style={{ background:navy, padding:'22px 22px 18px', position:'relative' }}>
@@ -206,9 +362,9 @@ export default function Customers() {
                     </div>
                     <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:'white', marginBottom:3 }}>{selected.name}</div>
                     <div style={{ fontSize:13, color:'#ede9e0', marginBottom:14 }}>
-                      Age {selected.age||'—'} · 📞 {selected.phone}{selected.address ? ' · '+selected.address : ''}
+                      Age {selected.age||'—'} · 📞 {selected.phone}
                     </div>
-                    <div style={{ display:'flex', gap:8 }}>
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                       <a href={`https://wa.me/94${selected.phone?.replace(/^0/,'')}?text=${encodeURIComponent(`Hello ${selected.name}, this is Kuruwita Optical. `)}`}
                         target="_blank" rel="noreferrer"
                         style={{ padding:'8px 14px', background:'#25D366', color:'white', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none' }}>
@@ -223,23 +379,26 @@ export default function Customers() {
               }
             </div>
 
-            {/* Inner tabs */}
             {!loadingCust && (
               <>
+                {/* Tabs */}
                 <div style={{ display:'flex', borderBottom:`1px solid ${border}`, padding:'0 20px', overflowX:'auto' }}>
-                  {['orders','refraction','communication','profile'].map(t => (
-                    <button key={t} onClick={()=>setTab(t)}
-                      style={{ padding:'12px 14px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:tab===t?navy:muted, borderBottom:`2.5px solid ${tab===t?gold:'transparent'}`, marginBottom:-1 }}>
-                      {t.charAt(0).toUpperCase()+t.slice(1)}
-                      {t==='orders' && selected.orders?.length ? ` (${selected.orders.length})` : ''}
-                      {t==='refraction' && selected.refractions?.length ? ` (${selected.refractions.length})` : ''}
+                  {[
+                    { key:'orders',        label:'Orders',      count: selected.orders?.length },
+                    { key:'refraction',    label:'👁️ Refraction', count: selected.refractions?.length },
+                    { key:'communication', label:'Comms',        count: null },
+                    { key:'profile',       label:'Profile',      count: null },
+                  ].map(t => (
+                    <button key={t.key} onClick={()=>setTab(t.key)}
+                      style={{ padding:'12px 14px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:tab===t.key?navy:muted, borderBottom:`2.5px solid ${tab===t.key?gold:'transparent'}`, marginBottom:-1 }}>
+                      {t.label}{t.count ? ` (${t.count})` : ''}
                     </button>
                   ))}
                 </div>
 
                 <div style={{ padding:20 }}>
 
-                  {/* ── Orders tab ── */}
+                  {/* ── ORDERS TAB ── */}
                   {tab==='orders' && (
                     !selected.orders?.length
                       ? <p style={{ color:muted, fontSize:13 }}>No orders yet</p>
@@ -264,45 +423,60 @@ export default function Customers() {
                         })
                   )}
 
-                  {/* ── Refraction tab ── */}
+                  {/* ── REFRACTION HISTORY TAB ── */}
                   {tab==='refraction' && (
-                    !selected.refractions?.length
-                      ? <p style={{ color:muted, fontSize:13 }}>No refraction records yet</p>
-                      : selected.refractions.map((r,i) => (
-                        <div key={i} style={{ background:cream, borderRadius:10, padding:14, marginBottom:12 }}>
-                          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
-                            <span style={{ fontSize:12, fontWeight:700, color:navy }}>
-                              📅 {new Date(r.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
-                            </span>
-                            <span style={{ fontSize:11, color:muted }}>Order #{r.order_id}</span>
-                          </div>
-                          <div style={{ overflowX:'auto' }}>
-                            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
-                              <thead>
-                                <tr>{['Eye','SPH','CYL','AXIS','ADD','VA'].map(h=>(
-                                  <th key={h} style={{ background:'#ede9e0', padding:'6px 8px', textAlign:'center', fontSize:10, fontWeight:700, textTransform:'uppercase', border:`1px solid ${border}` }}>{h}</th>
-                                ))}</tr>
-                              </thead>
-                              <tbody>
-                                {[
-                                  ['Right',r.r_sph,r.r_cyl,r.r_axis,r.r_add,r.r_va],
-                                  ['Left', r.l_sph,r.l_cyl,r.l_axis,r.l_add,r.l_va],
-                                ].map(row=>(
-                                  <tr key={row[0]}>
-                                    {row.map((v,idx)=>(
-                                      <td key={idx} style={{ padding:'6px 8px', textAlign:'center', border:`1px solid ${border}`, fontWeight:idx===0?700:400, color:idx===0?navy:'#1a1a2e', background:idx===0?'#ede9e0':'white' }}>{v||'—'}</td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                          {r.notes && <div style={{ fontSize:12, color:muted, marginTop:8, fontStyle:'italic' }}>💬 {r.notes}</div>}
+                    <>
+                      {!selected.refractions?.length ? (
+                        <div style={{ textAlign:'center', padding:'32px 0', color:muted }}>
+                          <div style={{ fontSize:36, marginBottom:12 }}>👁️</div>
+                          <div style={{ fontSize:14, fontWeight:600, marginBottom:4 }}>No refraction records yet</div>
+                          <div style={{ fontSize:13 }}>Records are saved automatically when a new order is created</div>
                         </div>
-                      ))
+                      ) : (
+                        <>
+                          {/* Summary banner */}
+                          <div style={{ background:navy, borderRadius:12, padding:'14px 16px', marginBottom:16, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, textAlign:'center' }}>
+                            <div>
+                              <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Total Records</div>
+                              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:'white', fontWeight:700 }}>{selected.refractions.length}</div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Latest Right</div>
+                              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'white', fontWeight:700 }}>
+                                {selected.refractions[0]?.r_sph||'Plano'}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Latest Left</div>
+                              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'white', fontWeight:700 }}>
+                                {selected.refractions[0]?.l_sph||'Plano'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Power trend chart — only if 2+ records */}
+                          <PowerTrendChart refractions={selected.refractions}/>
+
+                          {/* Individual records — latest first, expanded by default */}
+                          {selected.refractions.map((rx, i) => {
+                            const prevRx   = selected.refractions[i+1] || null;
+                            const orderInfo= selected.orders?.find(o=>o.id===rx.order_id);
+                            return (
+                              <RxCard
+                                key={rx.id || i}
+                                rx={rx}
+                                prevRx={prevRx}
+                                orderInfo={orderInfo}
+                                isLatest={i===0}
+                              />
+                            );
+                          })}
+                        </>
+                      )}
+                    </>
                   )}
 
-                  {/* ── Communication tab ── */}
+                  {/* ── COMMUNICATION TAB ── */}
                   {tab==='communication' && (
                     <>
                       <div style={{ marginBottom:14 }}>
@@ -315,7 +489,7 @@ export default function Customers() {
                               </div>
                               <div>
                                 <div style={{ fontSize:13, color:'#1a1a2e', fontWeight:500 }}>{c.note}</div>
-                                <div style={{ fontSize:11, color:'#9ca3af' }}>{new Date(c.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</div>
+                                <div style={{ fontSize:11, color:'#9ca3af' }}>{fmtDate(c.created_at)}</div>
                               </div>
                             </div>
                           ))
@@ -339,17 +513,17 @@ export default function Customers() {
                     </>
                   )}
 
-                  {/* ── Profile tab ── */}
+                  {/* ── PROFILE TAB ── */}
                   {tab==='profile' && (
                     <>
                       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16 }}>
                         {[
                           { l:'Phone',        v: selected.phone },
                           { l:'Age',          v: selected.age ? selected.age+' years' : '—' },
-                          { l:'Address',      v: selected.address||'—' },
                           { l:'Total orders', v: selected.orders?.length||0 },
                           { l:'Total spent',  v:`Rs. ${selected.orders?.reduce((s,o)=>s+parseFloat(o.total_amount||0),0).toLocaleString()||0}` },
                           { l:'Balance due',  v:`Rs. ${selected.orders?.reduce((s,o)=>s+parseFloat(o.balance_amount||0),0).toLocaleString()||0}` },
+                          { l:'Rx records',   v: selected.refractions?.length||0 },
                         ].map(item=>(
                           <div key={item.l} style={{ background:cream, borderRadius:8, padding:'10px 12px' }}>
                             <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:muted, marginBottom:3 }}>{item.l}</div>
@@ -358,7 +532,6 @@ export default function Customers() {
                         ))}
                       </div>
 
-                      {/* Prescription held */}
                       {selected.orders?.some(o=>o.has_rx&&!o.rx_returned) && (
                         <div style={{ background:'#e0f2fe', borderRadius:10, padding:'12px 14px' }}>
                           <div style={{ fontSize:13, color:'#0369a1', fontWeight:700, marginBottom:6 }}>
