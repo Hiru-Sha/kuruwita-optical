@@ -5,7 +5,7 @@
 const router = require('express').Router();
 const pool   = require('../db/pool');
 const jwt    = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const auth   = require('../middleware/auth');
 
 const SECRET = process.env.JWT_SECRET || 'kuruwita-optical-secret';
