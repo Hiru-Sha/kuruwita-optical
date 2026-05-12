@@ -14,7 +14,8 @@ import QuickSale  from './pages/QuickSale';
 import Grinding   from './pages/Grinding';
 import Reports    from './pages/Reports';
 import Expenses   from './pages/Expenses';
-import Settings   from './pages/Settings';
+import Settings        from './pages/Settings';
+import BalanceFollowUp from './pages/BalanceFollowUp';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="lens-prices"     element={<LensPrices />} />
             <Route path="quick-sale"      element={<QuickSale />} />
             <Route path="settings"        element={<Settings />} />
+            <Route path="balance"         element={<BalanceFollowUp />} />
             {/* Admin-only routes */}
             <Route path="grinding"  element={<AdminOnly><Grinding /></AdminOnly>} />
             <Route path="reports"   element={<AdminOnly><Reports  /></AdminOnly>} />
