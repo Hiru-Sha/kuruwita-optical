@@ -268,48 +268,51 @@ ${order.notes ? `
 
 // ── Download as PDF using html2pdf.js ────────────────────────
 function downloadPDF(htmlContent, filename) {
-  // Create a hidden iframe, load html2pdf, then generate PDF
+  // Extract <style> from <head> and keep it — this is what was missing before
+  const styleMatch = htmlContent.match(/<style[\s\S]*?<\/style>/i);
+  const styles = styleMatch ? styleMatch[0] : '';
+
+  // Extract <body> content only (no scripts)
+  const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const bodyContent = bodyMatch ? bodyMatch[1].replace(/<script[\s\S]*?<\/script>/gi, '') : '';
+
+  // Build a clean div with styles + content
   const container = document.createElement('div');
-  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:148mm;background:white;';
-  container.innerHTML = htmlContent
-    .replace(/<script[\s\S]*?<\/script>/gi, '')  // strip scripts
-    .replace(/<\!DOCTYPE[^>]*>/i, '')
-    .replace(/<\/?html[^>]*>/gi, '')
-    .replace(/<head>[\s\S]*?<\/head>/i, '')
-    .replace(/<\/?body[^>]*>/gi, '')
-    .trim();
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:148mm;background:white;padding:0;margin:0;';
+  container.innerHTML = styles + bodyContent;
   document.body.appendChild(container);
 
-  // Load html2pdf dynamically
+  // Load html2pdf dynamically if not already loaded
+  const doGenerate = () => generatePDF(container, filename);
   if (!window.html2pdf) {
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    script.onload = () => { generatePDF(container, filename); };
+    script.onload = doGenerate;
     script.onerror = () => {
       document.body.removeChild(container);
-      alert('Could not load PDF library. Please use Print and save as PDF from the print dialog.');
+      alert('Could not load PDF library. Please use Print → Save as PDF instead.');
     };
     document.head.appendChild(script);
   } else {
-    generatePDF(container, filename);
+    doGenerate();
   }
 }
 
 function generatePDF(container, filename) {
   const opt = {
-    margin:       [8, 8, 8, 8],
-    filename:     filename,
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true, logging: false },
-    jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' },
-    pagebreak:    { mode: 'avoid-all' },
+    margin:      [8, 8, 8, 8],
+    filename:    filename,
+    image:       { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
+    jsPDF:       { unit: 'mm', format: 'a5', orientation: 'portrait' },
+    pagebreak:   { mode: 'avoid-all' },
   };
-  window.html2pdf().set(opt).from(container).save().then(() => {
-    document.body.removeChild(container);
-  }).catch(() => {
-    document.body.removeChild(container);
-    alert('PDF generation failed. Please use Print and save as PDF instead.');
-  });
+  window.html2pdf().set(opt).from(container).save()
+    .then(() => { document.body.removeChild(container); })
+    .catch(() => {
+      document.body.removeChild(container);
+      alert('PDF generation failed. Please use Print → Save as PDF instead.');
+    });
 }
 
 function openPrintWindow(htmlContent) {
