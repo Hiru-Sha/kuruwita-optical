@@ -15,7 +15,6 @@ const NAV = [
   { to:'/reports',    icon:'📊', label:'Reports',     section:'reports'   },
   { to:'/inventory',  icon:'📦', label:'Inventory',   section:'inventory' },
   { to:'/lens-prices',icon:'🧪', label:'Lens Prices', section:'inventory' },
-  { to:'/reports',    icon:'📊', label:'Reports',     section:'reports'   },
   { to:'/settings',   icon:'⚙️', label:'Settings',    section:'account'   },
   
 ];

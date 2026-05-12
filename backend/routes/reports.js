@@ -1,10 +1,10 @@
 // ============================================================
 //  Reports Routes — /api/reports
-//  Added: /profit endpoint with revenue vs cost vs expenses
+//  Fixed: Promise.all destructuring order was wrong
 // ============================================================
 const router = require('express').Router();
-const pool   = require('../db/pool');
-const auth   = require('../middleware/auth');
+const pool = require('../db/pool');
+const auth = require('../middleware/auth');
 
 // ── Dashboard ─────────────────────────────────────────────────
 router.get('/dashboard', auth, async (req, res) => {
@@ -22,7 +22,7 @@ router.get('/dashboard', auth, async (req, res) => {
       total_balance: balance.rows[0].total,
       active_orders: active.rows[0].count,
       lens_jobs_out: lensOut.rows[0].count,
-      reminders:     reminders.rows,
+      reminders: reminders.rows,
       daily_revenue: daily.rows[0].total,
     });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
@@ -30,7 +30,7 @@ router.get('/dashboard', auth, async (req, res) => {
 
 // ── Revenue ───────────────────────────────────────────────────
 router.get('/revenue', auth, async (req, res) => {
-  const month = req.query.month || new Date().toISOString().slice(0,7);
+  const month = req.query.month || new Date().toISOString().slice(0, 7);
   try {
     const [summary, trend, orders] = await Promise.all([
       pool.query(`SELECT COALESCE(SUM(total_amount),0) AS total, COALESCE(SUM(advance_amount),0) AS collected, COALESCE(SUM(balance_amount),0) AS owed, COUNT(*) AS order_count FROM orders WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [month]),
@@ -44,26 +44,27 @@ router.get('/revenue', auth, async (req, res) => {
 // ── Profit report ─────────────────────────────────────────────
 router.get('/profit', auth, async (req, res) => {
   try {
-    // 6-month profit breakdown
-    const [monthly, byCat, topMargin, recentOrders] = await Promise.all([
 
-      // Month by month: revenue, cost, gross profit, expenses, net profit
+    // ── FIXED: variable names match the query order ──────────
+    const [monthly, qsSales, expByMonth, topMargin] = await Promise.all([
+
+      // 1. Month by month orders: revenue, cost, gross profit
       pool.query(`
         SELECT
-          TO_CHAR(DATE_TRUNC('month', o.created_at), 'Mon YY')   AS month,
-          TO_CHAR(DATE_TRUNC('month', o.created_at), 'YYYY-MM')  AS month_key,
-          DATE_TRUNC('month', o.created_at)                       AS month_date,
-          COALESCE(SUM(o.total_amount), 0)                        AS revenue,
-          COALESCE(SUM(o.frame_buy_price + o.lens_buy_price), 0)  AS cost_of_goods,
+          TO_CHAR(DATE_TRUNC('month', o.created_at), 'Mon YY')  AS month,
+          TO_CHAR(DATE_TRUNC('month', o.created_at), 'YYYY-MM') AS month_key,
+          DATE_TRUNC('month', o.created_at)                      AS month_date,
+          COALESCE(SUM(o.total_amount), 0)                       AS revenue,
+          COALESCE(SUM(o.frame_buy_price + o.lens_buy_price), 0) AS cost_of_goods,
           COALESCE(SUM(o.total_amount) - SUM(o.frame_buy_price + o.lens_buy_price), 0) AS gross_profit,
-          COUNT(*)                                                 AS order_count
+          COUNT(*)                                                AS order_count
         FROM orders o
         WHERE o.created_at >= NOW() - INTERVAL '6 months'
         GROUP BY DATE_TRUNC('month', o.created_at)
         ORDER BY DATE_TRUNC('month', o.created_at)
       `),
 
-      // Quick sale revenue for same period
+      // 2. Quick sale revenue per month
       pool.query(`
         SELECT
           TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month_key,
@@ -73,17 +74,17 @@ router.get('/profit', auth, async (req, res) => {
         GROUP BY DATE_TRUNC('month', created_at)
       `),
 
-      // Expenses per month
+      // 3. Expenses per month — FIXED query
       pool.query(`
         SELECT
-          TO_CHAR(DATE_TRUNC('month', date::timestamp), 'YYYY-MM') AS month_key,
+          TO_CHAR(date, 'YYYY-MM') AS month_key,
           COALESCE(SUM(amount), 0) AS total_expenses
         FROM expenses
-        WHERE date >= (CURRENT_DATE - INTERVAL '6 months')::date
-        GROUP BY DATE_TRUNC('month', date::timestamp)
+        WHERE date >= CURRENT_DATE - INTERVAL '6 months'
+        GROUP BY TO_CHAR(date, 'YYYY-MM')
       `),
 
-      // Best margin frames (top 5)
+      // 4. Best margin frames (top 8)
       pool.query(`
         SELECT
           frame,
@@ -101,51 +102,58 @@ router.get('/profit', auth, async (req, res) => {
       `),
     ]);
 
-    // Merge monthly data
-    const qsMap  = {};
-    byCat.rows.forEach(r => { qsMap[r.month_key] = parseFloat(r.qs_revenue||0); });
+    // ── Build lookup maps ─────────────────────────────────────
+    const qsMap = {};
+    qsSales.rows.forEach(r => {
+      qsMap[r.month_key] = parseFloat(r.qs_revenue || 0);
+    });
 
+    // FIXED: now correctly reads from expByMonth not recentOrders
     const expMap = {};
-    recentOrders.rows.forEach(r => { expMap[r.month_key] = parseFloat(r.total_expenses||0); });
+    expByMonth.rows.forEach(r => {
+      expMap[r.month_key] = parseFloat(r.total_expenses || 0);
+    });
 
+    // ── Merge into final monthly data ─────────────────────────
     const merged = monthly.rows.map(m => {
-      const revenue       = parseFloat(m.revenue)        || 0;
-      const qsRevenue     = qsMap[m.month_key]           || 0;
-      const totalRevenue  = revenue + qsRevenue;
-      const costOfGoods   = parseFloat(m.cost_of_goods)  || 0;
-      const grossProfit   = totalRevenue - costOfGoods;
-      const expenses      = expMap[m.month_key]          || 0;
-      const netProfit     = grossProfit - expenses;
-      const grossMargin   = totalRevenue > 0 ? Math.round(grossProfit / totalRevenue * 100) : 0;
-      const netMargin     = totalRevenue > 0 ? Math.round(netProfit   / totalRevenue * 100) : 0;
+      const revenue      = parseFloat(m.revenue)       || 0;
+      const qsRevenue    = qsMap[m.month_key]          || 0;
+      const totalRevenue = revenue + qsRevenue;
+      const costOfGoods  = parseFloat(m.cost_of_goods) || 0;
+      const grossProfit  = totalRevenue - costOfGoods;
+      const expenses     = expMap[m.month_key]         || 0;
+      const netProfit    = grossProfit - expenses;
+      const grossMargin  = totalRevenue > 0 ? Math.round(grossProfit / totalRevenue * 100) : 0;
+      const netMargin    = totalRevenue > 0 ? Math.round(netProfit   / totalRevenue * 100) : 0;
       return {
-        month:        m.month,
-        month_key:    m.month_key,
-        order_count:  m.order_count,
-        revenue:      totalRevenue,
+        month:         m.month,
+        month_key:     m.month_key,
+        order_count:   m.order_count,
+        revenue:       totalRevenue,
         cost_of_goods: costOfGoods,
-        gross_profit: grossProfit,
+        gross_profit:  grossProfit,
         expenses,
-        net_profit:   netProfit,
-        gross_margin: grossMargin,
-        net_margin:   netMargin,
+        net_profit:    netProfit,
+        gross_margin:  grossMargin,
+        net_margin:    netMargin,
       };
     });
 
-    // Overall totals
+    // ── 6-month totals ────────────────────────────────────────
     const totals = merged.reduce((acc, m) => ({
-      revenue:      acc.revenue      + m.revenue,
-      cost_of_goods:acc.cost_of_goods+ m.cost_of_goods,
-      gross_profit: acc.gross_profit + m.gross_profit,
-      expenses:     acc.expenses     + m.expenses,
-      net_profit:   acc.net_profit   + m.net_profit,
+      revenue:       acc.revenue       + m.revenue,
+      cost_of_goods: acc.cost_of_goods + m.cost_of_goods,
+      gross_profit:  acc.gross_profit  + m.gross_profit,
+      expenses:      acc.expenses      + m.expenses,
+      net_profit:    acc.net_profit    + m.net_profit,
     }), { revenue:0, cost_of_goods:0, gross_profit:0, expenses:0, net_profit:0 });
 
     res.json({
-      monthly: merged,
+      monthly:           merged,
       totals,
       top_margin_frames: topMargin.rows,
     });
+
   } catch (err) {
     console.error('Profit report error:', err);
     res.status(500).json({ error: 'Failed: ' + err.message });
@@ -155,7 +163,12 @@ router.get('/profit', auth, async (req, res) => {
 // ── Lens jobs ─────────────────────────────────────────────────
 router.get('/lensjobs', auth, async (req, res) => {
   try {
-    const result = await pool.query(`SELECT o.*, c.name AS customer_name, c.phone FROM orders o JOIN customers c ON o.customer_id=c.id WHERE o.lens_company IS NOT NULL AND o.lens_step < 3 ORDER BY o.deliver_date ASC LIMIT 50`);
+    const result = await pool.query(`
+      SELECT o.*, c.name AS customer_name, c.phone
+      FROM orders o JOIN customers c ON o.customer_id=c.id
+      WHERE o.lens_company IS NOT NULL AND o.lens_step < 3
+      ORDER BY o.deliver_date ASC LIMIT 50
+    `);
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
 });
