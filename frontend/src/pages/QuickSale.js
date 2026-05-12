@@ -1,6 +1,6 @@
 // ============================================================
 //  QuickSale.js — Walk-in quick sale
-//  Search any stock item → cart → payment → receipt + stock update
+//  Fixed: prints single copy using window.open()
 // ============================================================
 import React, { useState, useRef } from 'react';
 import { getInventory } from '../api';
@@ -11,49 +11,111 @@ const fmtI = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFra
 const ICON = { Frames:'🕶️', Sunglasses:'😎', 'Reading Glasses':'👓', Boxes:'📦', 'Sunglass Pouches':'👜', 'Glass Cleaner':'🧴', Chains:'⛓️', 'Ear Tips':'🔧' };
 const INP  = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%' };
 
+// ── Print in new blank window — always 1 copy ─────────────────
+const printReceipt = (sale, items) => {
+  const fmtM2 = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2});
+  const fmtI2 = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
+  const today = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+  const discount = parseFloat(sale.discount||0);
+  const paid     = parseFloat(sale.amount_paid||0);
+  const change   = parseFloat(sale.change_given||0);
 
-const PRINT_CSS = `
-  @media print {
-    @page {
-      size: A5 portrait;
-      margin: 8mm;
-    }
-    html, body {
-      margin: 0 !important;
-      padding: 0 !important;
-      height: auto !important;
-    }
-    body > * {
-      display: none !important;
-    }
-    #qs-print-root {
-      display: block !important;
-      position: static !important;
-      width: 100% !important;
-      height: auto !important;
-      overflow: visible !important;
-      page-break-after: avoid !important;
-      page-break-inside: avoid !important;
-    }
-    #qs-print-root * {
-      visibility: visible !important;
-    }
-    #qs-print-root > div {
-      page-break-after: avoid !important;
-    }
-  }
-`;
+  const itemsHTML = items.map(item => {
+    const ln = (parseFloat(item.price)||0)*(parseInt(item.qty)||1)-(parseFloat(item.item_discount)||0);
+    return `
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f8f5ef;">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#0f1f3d;">${item.name}</div>
+          <div style="font-size:11px;color:#6b7280;">
+            ${fmtI2(item.price)} × ${item.qty}
+            ${parseFloat(item.item_discount)>0 ? `<span style="color:#2d7a4f;"> − disc. ${fmtI2(item.item_discount)}</span>` : ''}
+          </div>
+        </div>
+        <div style="font-weight:700;color:#0f1f3d;font-size:13px;">${fmtM2(ln)}</div>
+      </div>`;
+  }).join('');
 
-const injectPrint = () => {
-  let style = document.getElementById('qs-print-css');
-  if (!style) {
-    style = document.createElement('style');
-    style.id = 'qs-print-css';
-    document.head.appendChild(style);
-  }
-  // Always update the content (in case it was overwritten)
-  style.textContent = PRINT_CSS;
+  const customerHTML = (sale.customer_name || sale.customer_phone) ? `
+    <div style="background:#f8f5ef;border-radius:9px;padding:10px 14px;margin-bottom:14px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:5px;">Customer</div>
+      <div style="font-size:13px;color:#0f1f3d;">
+        ${sale.customer_name ? `<b>${sale.customer_name}</b>` : ''}
+        ${sale.customer_phone ? `<span style="color:#6b7280;margin-left:12px;">📞 ${sale.customer_phone}</span>` : ''}
+      </div>
+    </div>` : '';
+
+  const discountHTML = discount > 0 ? `
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#6b7280;margin-bottom:4px;"><span>Subtotal</span><span>${fmtM2(sale.subtotal)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#2d7a4f;margin-bottom:4px;"><span>Discount</span><span>− ${fmtM2(discount)}</span></div>
+    <div style="border-top:1px dashed #e0ddd6;margin:6px 0;"></div>` : '';
+
+  const changeHTML = change > 0 ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:#6b7280;"><span>Change</span><span>${fmtM2(change)}</span></div>` : '';
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>${sale.sale_number} — Receipt</title>
+<style>
+  @page { size: A5 portrait; margin: 8mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; color: #0f1f3d; background: white; }
+</style>
+</head>
+<body>
+<div style="max-width:440px;margin:0 auto;">
+
+  <div style="background:#0f1f3d;border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;">
+    <div>
+      <div style="font-family:Georgia,serif;font-size:19px;font-weight:700;color:white;margin-bottom:2px;">👁️ Kuruwita Optical</div>
+      <div style="font-size:10px;color:#c9a84c;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">Sales Receipt</div>
+      <div style="font-size:11px;color:#ede9e0;">Kuruwita, Ratnapura District, Sri Lanka</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="background:#c9a84c;color:#0f1f3d;font-weight:700;font-size:13px;padding:5px 12px;border-radius:7px;margin-bottom:4px;">${sale.sale_number}</div>
+      <div style="font-size:11px;color:#ede9e0;">${today}</div>
+    </div>
+  </div>
+
+  ${customerHTML}
+
+  <div style="margin-bottom:14px;">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #e0ddd6;">Items Purchased</div>
+    ${itemsHTML}
+  </div>
+
+  <div style="background:#f8f5ef;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+    ${discountHTML}
+    <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:#0f1f3d;margin-bottom:6px;"><span>Total</span><span>${fmtM2(sale.total)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#6b7280;margin-bottom:2px;">
+      <span>Paid (${sale.payment_method})</span>
+      <span style="color:#2d7a4f;font-weight:600;">${fmtM2(paid)}</span>
+    </div>
+    ${changeHTML}
+  </div>
+
+  <div style="border-top:2px solid #0f1f3d;padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:12px;color:#6b7280;">
+      <div style="font-weight:600;color:#0f1f3d;margin-bottom:2px;">Kuruwita Optical</div>
+      <div>Thank you for your purchase! 🙏</div>
+    </div>
+    <div style="font-size:22px;">👁️</div>
+  </div>
+
+</div>
+<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};}<\/script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=700,height=900');
+  if (!win) { alert('Please allow popups for this site to print receipts.'); return; }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
 };
+
+// ── Receipt preview (shown inside the page, not printed directly) ─
+function Receipt({ sale, items }) {
   const discount = parseFloat(sale.discount||0);
   const paid     = parseFloat(sale.amount_paid||0);
   const change   = parseFloat(sale.change_given||0);
@@ -115,6 +177,7 @@ const injectPrint = () => {
   );
 }
 
+// ══════════════════════════════════════════════════════════════
 export default function QuickSale() {
   const [query,     setQuery]    = useState('');
   const [results,   setResults]  = useState([]);
@@ -152,11 +215,11 @@ export default function QuickSale() {
   const upd = (id,f,v) => setCart(c=>c.map(x=>x.inventory_id===id?{...x,[f]:v}:x));
   const rem = (id)      => setCart(c=>c.filter(x=>x.inventory_id!==id));
 
-  const subtotal  = cart.reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1)-(parseFloat(i.item_discount)||0),0);
-  const discAmt   = parseFloat(overDisc)||0;
-  const total     = Math.max(0,subtotal-discAmt);
-  const paid      = parseFloat(amtPaid)||0;
-  const change    = Math.max(0,paid-total);
+  const subtotal = cart.reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1)-(parseFloat(i.item_discount)||0),0);
+  const discAmt  = parseFloat(overDisc)||0;
+  const total    = Math.max(0,subtotal-discAmt);
+  const paid     = parseFloat(amtPaid)||0;
+  const change   = Math.max(0,paid-total);
 
   const complete = async () => {
     if (!cart.length)  return setError('Add at least one item');
@@ -178,9 +241,13 @@ export default function QuickSale() {
     finally { setSaving(false); }
   };
 
-  const reset = () => { setCart([]); setCustName(''); setCustPhone(''); setOverDisc(''); setAmtPaid(''); setPayMethod('cash'); setError(''); setDone(null); setDoneItems([]); };
+  const reset = () => {
+    setCart([]); setCustName(''); setCustPhone(''); setOverDisc('');
+    setAmtPaid(''); setPayMethod('cash'); setError('');
+    setDone(null); setDoneItems([]);
+  };
 
-  // ── Done screen ──────────────────────────────────────────
+  // ── Done screen ────────────────────────────────────────────
   if (done) return (
     <div style={{ fontFamily:"'DM Sans',sans-serif", maxWidth:580, margin:'0 auto' }}>
       <div style={{ textAlign:'center', padding:'24px 0 16px' }}>
@@ -188,17 +255,25 @@ export default function QuickSale() {
         <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy }}>Sale Complete!</div>
         <div style={{ fontSize:14, color:C.muted, marginTop:4 }}>{done.sale_number} · {fmtM(done.total)}</div>
       </div>
-      <div id="qs-print-root" style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:24, marginBottom:16 }}>
+      {/* Preview only — not used for printing */}
+      <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:24, marginBottom:16 }}>
         <Receipt sale={done} items={doneItems}/>
       </div>
       <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
-        <button onClick={()=>{ injectPrint(); window.print(); }} style={{ padding:'11px 24px', background:C.gold, color:C.navy, border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>🖨️ Print Receipt</button>
-        <button onClick={reset} style={{ padding:'11px 24px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>+ New Sale</button>
+        {/* Print button — opens new blank window with just the receipt */}
+        <button
+          onClick={() => printReceipt(done, doneItems)}
+          style={{ padding:'11px 24px', background:C.gold, color:C.navy, border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+          🖨️ Print Receipt
+        </button>
+        <button onClick={reset} style={{ padding:'11px 24px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+          + New Sale
+        </button>
       </div>
     </div>
   );
 
-  // ── Sale screen ──────────────────────────────────────────
+  // ── Sale screen ────────────────────────────────────────────
   return (
     <div style={{ fontFamily:"'DM Sans',sans-serif", maxWidth:720, margin:'0 auto' }}>
       <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, margin:'0 0 4px' }}>🛍️ Quick Sale</h1>
@@ -210,7 +285,7 @@ export default function QuickSale() {
 
         {/* LEFT */}
         <div>
-          {/* Search box */}
+          {/* Search */}
           <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'16px 18px', marginBottom:14 }}>
             <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:10 }}>🔍 Add Items</div>
             <div style={{ position:'relative' }}>
@@ -240,7 +315,7 @@ export default function QuickSale() {
             </div>
           </div>
 
-          {/* Cart items */}
+          {/* Cart */}
           {cart.length>0 && (
             <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'16px 18px', marginBottom:14 }}>
               <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:12 }}>🛒 Cart ({cart.length})</div>
@@ -293,7 +368,7 @@ export default function QuickSale() {
 
           {/* Customer (optional) */}
           <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'14px 18px' }}>
-            <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:2 }}>👤 Customer <span style={{ fontWeight:400, color:C.muted, fontSize:12 }}>(optional — for receipt only)</span></div>
+            <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:2 }}>👤 Customer <span style={{ fontWeight:400, color:C.muted, fontSize:12 }}>(optional)</span></div>
             <p style={{ fontSize:12, color:C.muted, marginBottom:10, marginTop:4 }}>Leave blank for walk-in anonymous sale</p>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
               <input value={custName}  onChange={e=>setCustName(e.target.value)}  placeholder="Name (optional)"  style={INP}/>
@@ -352,6 +427,7 @@ export default function QuickSale() {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
