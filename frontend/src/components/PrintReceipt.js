@@ -268,52 +268,55 @@ ${order.notes ? `
 
 // ── Download as PDF using html2pdf.js ────────────────────────
 function downloadPDF(htmlContent, filename) {
-  // Extract <style> from <head> and keep it — this is what was missing before
-  const styleMatch = htmlContent.match(/<style[\s\S]*?<\/style>/i);
-  const styles = styleMatch ? styleMatch[0] : '';
+  // Use iframe approach — loads full HTML doc so CSS classes work correctly
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:148mm;height:210mm;border:none;';
+  document.body.appendChild(iframe);
 
-  // Extract <body> content only (no scripts)
-  const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  const bodyContent = bodyMatch ? bodyMatch[1].replace(/<script[\s\S]*?<\/script>/gi, '') : '';
-
-  // Build a clean div with styles + content
-  const container = document.createElement('div');
-  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:148mm;background:white;padding:0;margin:0;';
-  container.innerHTML = styles + bodyContent;
-  document.body.appendChild(container);
-
-  // Load html2pdf dynamically if not already loaded
-  const doGenerate = () => generatePDF(container, filename);
-  if (!window.html2pdf) {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    script.onload = doGenerate;
-    script.onerror = () => {
-      document.body.removeChild(container);
-      alert('Could not load PDF library. Please use Print → Save as PDF instead.');
+  iframe.onload = function() {
+    // Load html2pdf into the main page (not iframe) then capture iframe content
+    const doGen = () => {
+      const opt = {
+        margin:      [8, 8, 8, 8],
+        filename:    filename,
+        image:       { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false,
+                       backgroundColor: '#ffffff',
+                       windowWidth: 560 },
+        jsPDF:       { unit: 'mm', format: 'a5', orientation: 'portrait' },
+        pagebreak:   { mode: 'avoid-all' },
+      };
+      // Capture the iframe body content
+      const body = iframe.contentDocument.body;
+      window.html2pdf().set(opt).from(body).save()
+        .then(() => { document.body.removeChild(iframe); })
+        .catch((e) => {
+          console.error('PDF error:', e);
+          document.body.removeChild(iframe);
+          alert('PDF generation failed. Use Print → Save as PDF instead.');
+        });
     };
-    document.head.appendChild(script);
-  } else {
-    doGenerate();
-  }
+
+    if (!window.html2pdf) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      script.onload = doGen;
+      script.onerror = () => {
+        document.body.removeChild(iframe);
+        alert('Could not load PDF library. Use Print → Save as PDF instead.');
+      };
+      document.head.appendChild(script);
+    } else {
+      doGen();
+    }
+  };
+
+  // Write full HTML into iframe — CSS classes work because it's a full document
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(htmlContent.replace(/<script[\s\S]*?<\/script>/gi, ''));
+  iframe.contentDocument.close();
 }
 
-function generatePDF(container, filename) {
-  const opt = {
-    margin:      [8, 8, 8, 8],
-    filename:    filename,
-    image:       { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
-    jsPDF:       { unit: 'mm', format: 'a5', orientation: 'portrait' },
-    pagebreak:   { mode: 'avoid-all' },
-  };
-  window.html2pdf().set(opt).from(container).save()
-    .then(() => { document.body.removeChild(container); })
-    .catch(() => {
-      document.body.removeChild(container);
-      alert('PDF generation failed. Please use Print → Save as PDF instead.');
-    });
-}
 
 function openPrintWindow(htmlContent) {
   const win = window.open('', '_blank', 'width=700,height=900');
