@@ -11,12 +11,15 @@ const NAV = [
   { to:'/quick-sale', icon:'🛍️', label:'Quick Sale',  section:'main'      },
   { to:'/grinding',   icon:'🔬', label:'Grinding',    section:'main'      },
   { to:'/customers',  icon:'👥', label:'Customers',   section:'main'      },
+  { to:'/expenses',   icon:'💸', label:'Expenses',    section:'reports'   },
+  { to:'/reports',    icon:'📊', label:'Reports',     section:'reports'   },
   { to:'/inventory',  icon:'📦', label:'Inventory',   section:'inventory' },
   { to:'/lens-prices',icon:'🧪', label:'Lens Prices', section:'inventory' },
   { to:'/reports',    icon:'📊', label:'Reports',     section:'reports'   },
   { to:'/settings',   icon:'⚙️', label:'Settings',    section:'account'   },
+  
 ];
-const SECTIONS = { main:'Main', inventory:'Inventory', reports:'Reports', account:'Account' };
+const SECTIONS = { main:'Main', inventory:'Inventory', reports:'Reports & Finance', account:'Account' };
 
 export default function Layout() {
   const { user, logout } = useAuth();
