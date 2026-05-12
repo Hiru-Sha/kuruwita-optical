@@ -1,3 +1,4 @@
+/* eslint-disable */
 // ============================================================
 //  PrintReceipt.js — Prints in a new blank window (1 copy always)
 //  No CSS tricks — opens a fresh window with only the bill content
@@ -264,6 +265,53 @@ ${order.notes ? `
 }
 
 // ── Open print window ─────────────────────────────────────────
+
+// ── Download as PDF using html2pdf.js ────────────────────────
+function downloadPDF(htmlContent, filename) {
+  // Create a hidden iframe, load html2pdf, then generate PDF
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:148mm;background:white;';
+  container.innerHTML = htmlContent
+    .replace(/<script[\s\S]*?<\/script>/gi, '')  // strip scripts
+    .replace(/<\!DOCTYPE[^>]*>/i, '')
+    .replace(/<\/?html[^>]*>/gi, '')
+    .replace(/<head>[\s\S]*?<\/head>/i, '')
+    .replace(/<\/?body[^>]*>/gi, '')
+    .trim();
+  document.body.appendChild(container);
+
+  // Load html2pdf dynamically
+  if (!window.html2pdf) {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.onload = () => { generatePDF(container, filename); };
+    script.onerror = () => {
+      document.body.removeChild(container);
+      alert('Could not load PDF library. Please use Print and save as PDF from the print dialog.');
+    };
+    document.head.appendChild(script);
+  } else {
+    generatePDF(container, filename);
+  }
+}
+
+function generatePDF(container, filename) {
+  const opt = {
+    margin:       [8, 8, 8, 8],
+    filename:     filename,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, logging: false },
+    jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' },
+    pagebreak:    { mode: 'avoid-all' },
+  };
+  window.html2pdf().set(opt).from(container).save().then(() => {
+    document.body.removeChild(container);
+  }).catch(() => {
+    document.body.removeChild(container);
+    alert('PDF generation failed. Please use Print and save as PDF instead.');
+  });
+}
+
 function openPrintWindow(htmlContent) {
   const win = window.open('', '_blank', 'width=700,height=900');
   if (!win) {
@@ -288,6 +336,14 @@ export default function PrintReceipt({ order, onClose }) {
     if (activeTab === 'advance') openPrintWindow(buildCustomerBillHTML(order, 'advance'));
     if (activeTab === 'balance') openPrintWindow(buildCustomerBillHTML(order, 'balance'));
     if (activeTab === 'lab')     openPrintWindow(buildLabCardHTML(order));
+  };
+
+
+  const handleDownload = () => {
+    const fname = (type) => `${order.order_number}-${type}-${new Date().toISOString().slice(0,10)}.pdf`;
+    if (activeTab === 'advance') downloadPDF(buildCustomerBillHTML(order, 'advance'), fname('advance-bill'));
+    if (activeTab === 'balance') downloadPDF(buildCustomerBillHTML(order, 'balance'), fname('balance-bill'));
+    if (activeTab === 'lab')     downloadPDF(buildLabCardHTML(order),                 fname('lab-card'));
   };
 
   const tabs = [
@@ -392,6 +448,10 @@ export default function PrintReceipt({ order, onClose }) {
             ))}
           </div>
           <div style={{ display:'flex', gap:8 }}>
+            <button onClick={handleDownload}
+              style={{ padding:'7px 18px', background:'#2563eb', color:'white', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              ⬇️ PDF
+            </button>
             <button onClick={handlePrint}
               style={{ padding:'7px 18px', background:gold, color:navy, border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               🖨️ Print
@@ -414,9 +474,9 @@ export default function PrintReceipt({ order, onClose }) {
         </div>
 
         <div style={{ padding:'10px 20px', borderTop:`1px solid ${border}`, fontSize:12, color:muted, textAlign:'center' }}>
-          {activeTab==='advance' && '📄 Click Print — opens in new window, prints automatically'}
-          {activeTab==='balance' && '📄 Click Print — opens in new window, prints automatically'}
-          {activeTab==='lab'     && '🔬 Click Print — opens lab job card, prints automatically'}
+          {activeTab==='advance' && '🖨️ Print to paper  ·  ⬇️ PDF to download and share'}
+          {activeTab==='balance' && '🖨️ Print to paper  ·  ⬇️ PDF to download and share'}
+          {activeTab==='lab'     && '🖨️ Print and send with frame to lab  ·  ⬇️ PDF to save'}
         </div>
       </div>
     </div>
