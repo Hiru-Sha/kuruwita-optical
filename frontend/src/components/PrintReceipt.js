@@ -270,7 +270,7 @@ ${order.notes ? `
 function downloadPDF(htmlContent, filename) {
   // Use iframe approach — loads full HTML doc so CSS classes work correctly
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:148mm;height:210mm;border:none;';
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:600px;height:900px;border:none;background:white;';
   document.body.appendChild(iframe);
 
   iframe.onload = function() {
@@ -282,8 +282,8 @@ function downloadPDF(htmlContent, filename) {
         image:       { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false,
                        backgroundColor: '#ffffff',
-                       windowWidth: 560 },
-        jsPDF:       { unit: 'mm', format: 'a5', orientation: 'portrait' },
+                       windowWidth: 600, scrollX: 0, scrollY: 0 },
+        jsPDF:       { unit: 'mm', format: 'a5', orientation: 'portrait', compress: true },
         pagebreak:   { mode: 'avoid-all' },
       };
       // Capture the iframe body content
@@ -312,8 +312,14 @@ function downloadPDF(htmlContent, filename) {
   };
 
   // Write full HTML into iframe — CSS classes work because it's a full document
+  // Add body padding so content doesn't clip at edges
+  const paddedHtml = htmlContent
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace('body {', 'body { padding: 8px !important; ')
+    .replace('body{',  'body{ padding: 8px !important; ');
+
   iframe.contentDocument.open();
-  iframe.contentDocument.write(htmlContent.replace(/<script[\s\S]*?<\/script>/gi, ''));
+  iframe.contentDocument.write(paddedHtml);
   iframe.contentDocument.close();
 }
 
