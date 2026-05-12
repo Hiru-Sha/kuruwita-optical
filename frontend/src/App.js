@@ -16,6 +16,7 @@ import QuickSale  from './pages/QuickSale';
 import Grinding   from './pages/Grinding';
 import Reports    from './pages/Reports';
 import Settings   from './pages/Settings';
+import Expenses from './pages/Expenses';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -45,6 +46,8 @@ export default function App() {
             <Route path="grinding"        element={<Grinding />} />
             <Route path="reports"         element={<Reports />} />
             <Route path="settings"        element={<Settings />} />
+  <Route path="expenses" element={<Expenses />} />
+  
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
