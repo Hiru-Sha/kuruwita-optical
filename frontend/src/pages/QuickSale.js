@@ -11,10 +11,49 @@ const fmtI = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFra
 const ICON = { Frames:'🕶️', Sunglasses:'😎', 'Reading Glasses':'👓', Boxes:'📦', 'Sunglass Pouches':'👜', 'Glass Cleaner':'🧴', Chains:'⛓️', 'Ear Tips':'🔧' };
 const INP  = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%' };
 
-const PRINT_CSS = `@media print{body *{visibility:hidden!important}#qs-print-root,#qs-print-root *{visibility:visible!important}#qs-print-root{position:fixed;inset:0;background:white;z-index:99999;padding:10mm}@page{margin:8mm;size:A5}}`;
-const injectPrint = () => { if(!document.getElementById('qs-css')){const s=document.createElement('style');s.id='qs-css';s.textContent=PRINT_CSS;document.head.appendChild(s);} };
 
-function Receipt({ sale, items }) {
+const PRINT_CSS = `
+  @media print {
+    @page {
+      size: A5 portrait;
+      margin: 8mm;
+    }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      height: auto !important;
+    }
+    body > * {
+      display: none !important;
+    }
+    #qs-print-root {
+      display: block !important;
+      position: static !important;
+      width: 100% !important;
+      height: auto !important;
+      overflow: visible !important;
+      page-break-after: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    #qs-print-root * {
+      visibility: visible !important;
+    }
+    #qs-print-root > div {
+      page-break-after: avoid !important;
+    }
+  }
+`;
+
+const injectPrint = () => {
+  let style = document.getElementById('qs-print-css');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'qs-print-css';
+    document.head.appendChild(style);
+  }
+  // Always update the content (in case it was overwritten)
+  style.textContent = PRINT_CSS;
+};
   const discount = parseFloat(sale.discount||0);
   const paid     = parseFloat(sale.amount_paid||0);
   const change   = parseFloat(sale.change_given||0);
