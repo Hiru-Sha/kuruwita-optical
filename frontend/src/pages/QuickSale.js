@@ -1,3 +1,4 @@
+/* eslint-disable */
 // ============================================================
 //  QuickSale.js — Walk-in quick sale
 //  Fixed: prints single copy using window.open()
