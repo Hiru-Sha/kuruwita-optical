@@ -111,6 +111,10 @@ export default function NewOrder() {
   const [segHeightR, setSegHeightR] = useState('');
   const [segHeightL, setSegHeightL] = useState('');
 
+  // ── Past record mode ────────────────────────────────────────
+  const [pastMode,   setPastMode]   = useState(false);
+  const [orderDate,  setOrderDate]  = useState('');  // override created_at
+
   // ── Payment ──────────────────────────────────────────────
   const [advance,        setAdvance]       = useState('');
   const [payMethod,      setPayMethod]     = useState('cash'); // cash | bank | card
@@ -252,6 +256,7 @@ export default function NewOrder() {
     }
     if (s===3 && !frameDetails.name.trim()) return 'Please enter or select a frame';
     if (s===4) {
+      if (pastMode && !orderDate) return 'Please set the date this order was originally made';
       if (totalAmount<=0) return 'Total amount must be greater than 0';
       if (!deliverDate)   return 'Please set a delivery date';
       if ((parseFloat(advance)||0) > totalAmount) return 'Advance cannot be more than total amount';
@@ -311,7 +316,8 @@ export default function NewOrder() {
         payment_method:       payMethod,
         customer_own_frame:   customerOwnFrame,
         deliver_date:         deliverDate,
-        status:               'created',
+        status:               pastMode ? 'delivered' : 'created',
+        import_date:          pastMode ? orderDate : null,
         notes:                notes || null,
         has_rx:               hasRx,
         rx_hospital:          hasRx ? rxHospital : null,
@@ -710,7 +716,30 @@ export default function NewOrder() {
       {/* ══════════════ STEP 4 — PAYMENT ═══════════════════ */}
       {step===4 && (
         <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 22px', marginBottom:16 }}>
-          <div style={{ fontSize:16, fontWeight:700, color:C.navy, marginBottom:18 }}>💰 Payment & Delivery</div>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, flexWrap:'wrap', gap:8 }}>
+            <div style={{ fontSize:16, fontWeight:700, color:C.navy }}>💰 Payment & Delivery</div>
+            {/* Past order toggle */}
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <button onClick={()=>{ setPastMode(p=>!p); setOrderDate(''); }}
+                style={{ padding:'7px 14px', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${pastMode?'#b45309':C.border}`, background:pastMode?'#fffbeb':'white', color:pastMode?'#b45309':C.muted }}>
+                📅 {pastMode ? 'Backdating ON ✓' : 'Entering a past order?'}
+              </button>
+              {pastMode && (
+                <input type="date" value={orderDate} onChange={e=>setOrderDate(e.target.value)}
+                  style={{ padding:'7px 12px', border:`1.5px solid #f59e0b`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'#fffbeb', color:'#92400e', fontWeight:700 }}/>
+              )}
+              {pastMode && orderDate && (
+                <span style={{ fontSize:12, color:'#92400e', background:'#fef3c7', padding:'3px 9px', borderRadius:20, fontWeight:600 }}>
+                  {new Date(orderDate+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}
+                </span>
+              )}
+            </div>
+          </div>
+          {pastMode && !orderDate && (
+            <div style={{ background:'#fef3c7', border:`1px solid #fde68a`, borderRadius:9, padding:'9px 14px', marginBottom:14, fontSize:13, color:'#92400e' }}>
+              ⬆️ Set the date this order was originally made before saving
+            </div>
+          )}
 
           {/* ── Price Breakdown ── */}
           <div style={{ background:C.cream, borderRadius:12, padding:16, marginBottom:18 }}>
@@ -835,6 +864,7 @@ export default function NewOrder() {
             <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:10 }}>📋 Order Summary</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, fontSize:13 }}>
               {[
+                ...(pastMode && orderDate ? [{l:'📅 Order Date', v:new Date(orderDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}), bold:true}] : []),
                 {l:'Customer',    v:custMode==='new'?`${newCust.title} ${newCust.name}`:selectedCust?.name},
                 {l:'Phone',       v:custMode==='new'?newCust.phone:selectedCust?.phone},
                 {l:'Frame',       v:customerOwnFrame?`${frameDetails.name||'Customer Frame'} (Own)`:`${frameDetails.name||'—'} (${frameDetails.color})`},
