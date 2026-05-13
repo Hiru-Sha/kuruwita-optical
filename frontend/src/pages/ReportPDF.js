@@ -240,6 +240,44 @@ ${o.list.length > 0 ? `
   <div class="kpi"><div class="kpi-label">Discounts Given</div><div class="kpi-value" style="color:#c0392b">${fmtR(qs.total_discount)}</div></div>
 </div>
 
+${qs.list && qs.list.length > 0 ? `
+<h3>Quick Sales List</h3>
+<table>
+  <tr>
+    <th>Sale No.</th>
+    <th>Date</th>
+    <th>Time</th>
+    <th>Customer</th>
+    <th>Items</th>
+    <th class="r">Discount</th>
+    <th class="r">Total</th>
+    <th class="c">Payment</th>
+  </tr>
+  ${qs.list.map(s => {
+    let items = [];
+    try { items = typeof s.items === 'string' ? JSON.parse(s.items) : s.items || []; } catch(e) {}
+    const itemSummary = items.slice(0,2).map(i => i.name).join(', ') + (items.length > 2 ? ` +${items.length-2} more` : '');
+    return `
+    <tr>
+      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${s.sale_number}</td>
+      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${new Date(s.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</td>
+      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${s.time||'—'}</td>
+      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${(s.customer_name||'Walk-in').slice(0,18)}</td>
+      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:10px;color:#6b7280;">${itemSummary||'—'}</td>
+      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;text-align:right;color:#c0392b;">${parseFloat(s.discount||0)>0?fmtR(s.discount):'—'}</td>
+      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;text-align:right;font-weight:600;">${fmtR(s.total)}</td>
+      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;text-align:center;">
+        <span style="background:${s.payment_method==='cash'?'#dcfce7':'#dbeafe'};color:${s.payment_method==='cash'?'#2d7a4f':'#1e40af'};padding:1px 6px;border-radius:10px;font-size:10px;">${s.payment_method}</span>
+      </td>
+    </tr>`;
+  }).join('')}
+  <tr style="background:#f8f5ef;font-weight:700;">
+    <td colspan="6" style="padding:6px 8px;border:1px solid #e0ddd6;">TOTAL (${qs.list.length} sales)</td>
+    <td style="padding:6px 8px;border:1px solid #e0ddd6;text-align:right;color:#2d7a4f;">${fmtR(qs.revenue)}</td>
+    <td style="padding:6px 8px;border:1px solid #e0ddd6;"></td>
+  </tr>
+</table>` : ''}
+
 <!-- ══ REPAIRS ════════════════════════════════════════════ -->
 <h2>Repairs</h2>
 <div class="grid3">

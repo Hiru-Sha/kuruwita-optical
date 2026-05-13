@@ -16,6 +16,7 @@ router.get('/', auth, async (req, res) => {
       orderStats,
       orderList,
       qsStats,
+      qsList,
       repairStats,
       repairTypes,
       expenseStats,
@@ -63,6 +64,22 @@ router.get('/', auth, async (req, res) => {
           COALESCE(SUM(discount), 0)     AS total_discount
         FROM quick_sales
         WHERE created_at::date BETWEEN $1 AND $2
+      `, [from, to]),
+
+      // ── Quick sales list ─────────────────────────────────────
+      pool.query(`
+        SELECT
+          sale_number,
+          created_at::date              AS date,
+          TO_CHAR(created_at,'HH24:MI') AS time,
+          customer_name,
+          items,
+          total,
+          discount,
+          payment_method
+        FROM quick_sales
+        WHERE created_at::date BETWEEN $1 AND $2
+        ORDER BY created_at DESC
       `, [from, to]),
 
       // ── Repairs summary ─────────────────────────────────────
@@ -217,7 +234,7 @@ router.get('/', auth, async (req, res) => {
       period:     { from, to },
       summary:    { totalRevenue, totalExpenses, totalCOGS, grossProfit, netProfit, profitMargin },
       orders:     { ...os, list: orderList.rows },
-      quickSales: qs,
+      quickSales: { ...qs, list: qsList.rows },
       repairs:    { ...rs, types: repairTypes.rows },
       expenses:   { ...ex, byCategory: expenseList.rows },
       deposits:   dep,
