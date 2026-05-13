@@ -172,28 +172,28 @@ router.get('/', auth, async (req, res) => {
       // ── Daily revenue trend ─────────────────────────────────
       pool.query(`
         SELECT
-          d::date AS date,
+          gs::date AS date,
           COALESCE(o.order_rev, 0) AS order_revenue,
           COALESCE(q.qs_rev,    0) AS qs_revenue,
           COALESCE(r.rep_rev,   0) AS repair_revenue
-        FROM generate_series($1::date, $2::date, '1 day') d
+        FROM generate_series($1::date, $2::date, '1 day') AS gs
         LEFT JOIN (
-          SELECT created_at::date AS d, SUM(total_amount) AS order_rev
+          SELECT created_at::date AS ord_date, SUM(total_amount) AS order_rev
           FROM orders WHERE created_at::date BETWEEN $1 AND $2
           GROUP BY created_at::date
-        ) o ON o.d = d
+        ) o ON o.ord_date = gs::date
         LEFT JOIN (
-          SELECT created_at::date AS d, SUM(total) AS qs_rev
+          SELECT created_at::date AS qs_date, SUM(total) AS qs_rev
           FROM quick_sales WHERE created_at::date BETWEEN $1 AND $2
           GROUP BY created_at::date
-        ) q ON q.d = d
+        ) q ON q.qs_date = gs::date
         LEFT JOIN (
-          SELECT created_at::date AS d, SUM(charge) AS rep_rev
+          SELECT created_at::date AS rep_date, SUM(charge) AS rep_rev
           FROM repairs WHERE created_at::date BETWEEN $1 AND $2
             AND payment_method != 'free'
           GROUP BY created_at::date
-        ) r ON r.d = d
-        ORDER BY d
+        ) r ON r.rep_date = gs::date
+        ORDER BY gs
       `, [from, to]),
     ]);
 
