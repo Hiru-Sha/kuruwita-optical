@@ -12,13 +12,36 @@ async function nextSaleNumber() {
   return 'QS-' + String(last + 1).padStart(4, '0');
 }
 
+// GET /api/quick-sales — list with item_count
 router.get('/', auth, async (req, res) => {
+  const { limit = 100 } = req.query;
   try {
-    const result = await pool.query('SELECT * FROM quick_sales ORDER BY created_at DESC LIMIT 100');
+    const result = await pool.query(`
+      SELECT *,
+        jsonb_array_length(items::jsonb) AS item_count
+      FROM quick_sales
+      ORDER BY created_at DESC
+      LIMIT $1
+    `, [parseInt(limit)]);
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
 });
 
+// GET /api/quick-sales/:id — single sale with items
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM quick_sales WHERE id = $1', [req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
+    const sale = result.rows[0];
+    // Parse items from JSON column
+    let items = [];
+    try { items = typeof sale.items === 'string' ? JSON.parse(sale.items) : sale.items || []; }
+    catch(e) { items = []; }
+    res.json({ ...sale, items });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+
+// POST /api/quick-sales — create sale
 router.post('/', auth, async (req, res) => {
   const { customer_name, customer_phone, items, subtotal, discount, total, payment_method, amount_paid, change_given, notes } = req.body;
   if (!items || !items.length) return res.status(400).json({ error: 'No items in sale' });
@@ -48,6 +71,7 @@ router.post('/', auth, async (req, res) => {
   } finally { client.release(); }
 });
 
+// GET /api/quick-sales/stats
 router.get('/stats', auth, async (req, res) => {
   try {
     const [today, month] = await Promise.all([

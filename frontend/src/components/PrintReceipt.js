@@ -68,9 +68,9 @@ function buildCustomerBillHTML(order, billType) {
 <body>
 <div class="header">
   <div>
-    <div class="shop-name">👁️ Kuruwita Optical</div>
+    <div class="shop-name">👁️ Wickramakalutota Opticals</div>
     <div class="bill-label">${billLabel}</div>
-    <div class="shop-addr">Kuruwita, Ratnapura District, Sri Lanka</div>
+    <div class="shop-addr">No.57 Kurunegala Road, Chilaw</div>
   </div>
   <div>
     <div class="order-badge">${order.order_number}</div>
@@ -111,7 +111,7 @@ function buildCustomerBillHTML(order, billType) {
 
 <div class="footer">
   <div class="footer-left">
-    <div class="footer-shopname">Kuruwita Optical</div>
+    <div class="footer-shopname">Wickramakalutota Opticals</div>
     <div>Thank you for your trust. 🙏</div>
     ${billType==='advance' ? '<div class="footer-note">Please bring this receipt on collection.</div>' : ''}
   </div>
@@ -164,7 +164,7 @@ function buildLabCardHTML(order) {
 
 <div style="background:${navy};border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
   <div>
-    <div style="font-family:Georgia,serif;font-size:15px;font-weight:700;color:white;">👁️ Kuruwita Optical — Lab Job Card</div>
+    <div style="font-family:Georgia,serif;font-size:15px;font-weight:700;color:white;">👁️ Wickramakalutota Opticals — Lab Job Card</div>
     <div style="font-size:9px;color:${gold};letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;">Send with the frame to the lab</div>
   </div>
   <div style="background:${gold};color:${navy};font-weight:700;font-size:15px;padding:5px 12px;border-radius:7px;">${order.order_number}</div>
@@ -256,7 +256,7 @@ ${order.notes ? `
 </div>` : ''}
 
 <div style="border-top:2px solid ${navy};padding-top:9px;font-size:10px;color:${muted};text-align:center;">
-  Kuruwita Optical · Kuruwita, Ratnapura · ${today}
+  Wickramakalutota Opticals · No.57 Kurunegala Road, Chilaw · ${today}
 </div>
 
 <script>window.onload = function(){ window.print(); window.onafterprint = function(){ window.close(); }; }</script>
@@ -379,9 +379,9 @@ export default function PrintReceipt({ order, onClose }) {
       <div style={{ maxWidth:480, margin:'0 auto', fontFamily:"'DM Sans',sans-serif", color:navy }}>
         <div style={{ background:navy, borderRadius:12, padding:'16px 20px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
           <div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:19, fontWeight:700, color:'white', marginBottom:2 }}>👁️ Kuruwita Optical</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:19, fontWeight:700, color:'white', marginBottom:2 }}>👁️ Wickramakalutota Opticals</div>
             <div style={{ fontSize:10, color:gold, letterSpacing:'1.5px', textTransform:'uppercase', marginBottom:3 }}>{billLabel}</div>
-            <div style={{ fontSize:11, color:'#ede9e0' }}>Kuruwita, Ratnapura District, Sri Lanka</div>
+            <div style={{ fontSize:11, color:'#ede9e0' }}>No.57 Kurunegala Road, Chilaw | 032 222 1211</div>
           </div>
           <div style={{ textAlign:'right' }}>
             <div style={{ background:gold, color:navy, fontWeight:700, fontSize:13, padding:'5px 12px', borderRadius:7, marginBottom:4 }}>{order.order_number}</div>
@@ -435,7 +435,7 @@ export default function PrintReceipt({ order, onClose }) {
 
         <div style={{ borderTop:`2px solid ${navy}`, paddingTop:10, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div style={{ fontSize:11, color:muted }}>
-            <div style={{ fontWeight:600, color:navy, marginBottom:2 }}>Kuruwita Optical</div>
+            <div style={{ fontWeight:600, color:navy, marginBottom:2 }}>Wickramakalutota Opticals</div>
             <div>Thank you for your trust. 🙏</div>
             {billType==='advance' && <div style={{ fontSize:10, marginTop:3, color:'#c0392b' }}>Please bring this receipt on collection.</div>}
           </div>

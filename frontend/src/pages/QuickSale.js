@@ -39,9 +39,9 @@ const printReceipt = (sale, items) => {
 <div style="max-width:440px;margin:0 auto;">
   <div style="background:#0f1f3d;border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;">
     <div>
-      <div style="font-family:Georgia,serif;font-size:19px;font-weight:700;color:white;margin-bottom:2px;">👁️ Kuruwita Optical</div>
+      <div style="font-family:Georgia,serif;font-size:19px;font-weight:700;color:white;margin-bottom:2px;">👁️ Wickramakalutota Opticals</div>
       <div style="font-size:10px;color:#c9a84c;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">Sales Receipt</div>
-      <div style="font-size:11px;color:#ede9e0;">Kuruwita, Ratnapura District</div>
+      <div style="font-size:11px;color:#ede9e0;">No.57 Kurunegala Road, Chilaw | 032 222 1211</div>
     </div>
     <div style="text-align:right;">
       <div style="background:#c9a84c;color:#0f1f3d;font-weight:700;font-size:13px;padding:5px 12px;border-radius:7px;margin-bottom:4px;">${sale.sale_number}</div>
@@ -60,7 +60,7 @@ const printReceipt = (sale, items) => {
     ${change>0?`<div style="display:flex;justify-content:space-between;font-size:13px;color:#6b7280;"><span>Change</span><span>${fmtM2(change)}</span></div>`:''}
   </div>
   <div style="border-top:2px solid #0f1f3d;padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-size:12px;color:#6b7280;"><div style="font-weight:600;color:#0f1f3d;margin-bottom:2px;">Kuruwita Optical</div><div>Thank you! 🙏</div></div>
+    <div style="font-size:12px;color:#6b7280;"><div style="font-weight:600;color:#0f1f3d;margin-bottom:2px;">Wickramakalutota Opticals</div><div>Thank you! 🙏</div></div>
     <div style="font-size:22px;">👁️</div>
   </div>
 </div>
@@ -81,7 +81,7 @@ function Receipt({ sale, items }) {
     <div style={{ maxWidth:440, margin:'0 auto', fontFamily:"'DM Sans',sans-serif" }}>
       <div style={{ background:C.navy, borderRadius:12, padding:'14px 18px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:'white', marginBottom:2 }}>👁️ Kuruwita Optical</div>
+          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:'white', marginBottom:2 }}>👁️ Wickramakalutota Opticals</div>
           <div style={{ fontSize:10, color:C.gold, letterSpacing:'1.5px', textTransform:'uppercase', marginBottom:3 }}>Sales Receipt</div>
         </div>
         <div style={{ textAlign:'right' }}>
@@ -134,6 +134,9 @@ export default function QuickSale() {
   const [done,     setDone]    = useState(null);
   const [doneItems,setDoneItems]=useState([]);
   const [mob,      setMob]     = useState(window.innerWidth < 640);
+  const [activeTab,setActiveTab]= useState('sale');   // 'sale' | 'history'
+  const [history,  setHistory]  = useState([]);
+  const [histLoad, setHistLoad] = useState(false);
   const timer = useRef(null);
 
   useEffect(()=>{
@@ -141,6 +144,18 @@ export default function QuickSale() {
     window.addEventListener('resize', fn);
     return () => window.removeEventListener('resize', fn);
   },[]);
+
+  const loadHistory = async () => {
+    setHistLoad(true);
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/quick-sales?limit=50`, { headers:{ Authorization:`Bearer ${token}` } });
+      const data  = await res.json();
+      setHistory(Array.isArray(data)?data:[]);
+    } catch(e) { console.error(e); }
+    finally { setHistLoad(false); }
+  };
 
   const search = (v) => {
     setQuery(v);
@@ -213,8 +228,20 @@ export default function QuickSale() {
   // ── Sale screen — single column on mobile ──────────────────
   return (
     <div style={{fontFamily:"'DM Sans',sans-serif",maxWidth:mob?'100%':720,margin:'0 auto',paddingBottom:mob?120:0}}>
-      <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:22,color:C.navy,margin:'0 0 4px'}}>🛍️ Quick Sale</h1>
-      <p style={{fontSize:12,color:C.muted,marginBottom:14}}>Walk-in customers — frames, sunglasses, accessories</p>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:8}}>
+        <div>
+          <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:22,color:C.navy,margin:'0 0 2px'}}>🛍️ Quick Sale</h1>
+          <p style={{fontSize:12,color:C.muted,margin:0}}>Walk-in customers — frames, sunglasses, accessories</p>
+        </div>
+        <div style={{display:'flex',gap:6}}>
+          {[['sale','🛍️ New Sale'],['history','📋 Sales History']].map(([k,l])=>(
+            <button key={k} onClick={()=>{ setActiveTab(k); if(k==='history') loadHistory(); }}
+              style={{padding:'8px 14px',borderRadius:9,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',border:`1.5px solid ${activeTab===k?C.navy:C.border}`,background:activeTab===k?C.navy:'white',color:activeTab===k?'white':C.muted}}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {error&&<div style={{background:'#fef2f2',border:`1px solid #fca5a5`,color:C.danger,borderRadius:10,padding:'10px 14px',fontSize:13,marginBottom:14}}>⚠️ {error}</div>}
 
@@ -472,6 +499,80 @@ export default function QuickSale() {
           </div>
         </div>
       )}
+    {/* ── HISTORY TAB ── */}
+    {activeTab==='history' && (
+      <div>
+        {histLoad
+          ? <div style={{textAlign:'center',padding:32,color:C.muted,background:'white',borderRadius:14,border:`1px solid ${C.border}`}}>⏳ Loading...</div>
+          : !history.length
+            ? <div style={{textAlign:'center',padding:48,color:C.muted,background:'white',borderRadius:14,border:`1px solid ${C.border}`}}>
+                <div style={{fontSize:36,marginBottom:12}}>🛍️</div>
+                <div style={{fontSize:14,fontWeight:600,color:C.navy}}>No sales yet</div>
+              </div>
+            : <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden'}}>
+                {/* Table header */}
+                <div style={{display:'grid',gridTemplateColumns:mob?'1fr 80px 70px':'1fr 140px 100px 80px 70px',gap:0,padding:'10px 16px',background:C.cream,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.7px',color:C.muted,borderBottom:`1px solid ${C.border}`}}>
+                  <span>Sale / Customer</span>
+                  {!mob&&<span>Items</span>}
+                  {!mob&&<span>Payment</span>}
+                  <span style={{textAlign:'right'}}>Total</span>
+                  <span style={{textAlign:'center'}}>Print</span>
+                </div>
+                {history.map((sale,i)=>{
+                  const prev = history[i-1];
+                  const saleDate = sale.created_at?.slice(0,10);
+                  const prevDate = prev?.created_at?.slice(0,10);
+                  const showDate = saleDate !== prevDate;
+                  return (
+                    <React.Fragment key={sale.id}>
+                      {showDate && (
+                        <div style={{padding:'6px 16px',background:'#f8f5ef',fontSize:11,fontWeight:700,color:C.muted,textTransform:'uppercase',letterSpacing:'1px',borderBottom:`1px solid ${C.border}`}}>
+                          {new Date(sale.created_at).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long',year:'numeric'})}
+                        </div>
+                      )}
+                      <div style={{display:'grid',gridTemplateColumns:mob?'1fr 80px 70px':'1fr 140px 100px 80px 70px',gap:0,padding:'11px 16px',borderBottom:`1px solid ${C.cream}`,alignItems:'center'}}>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:600,color:C.navy}}>{sale.sale_number}</div>
+                          <div style={{fontSize:11,color:C.muted}}>
+                            {sale.customer_name&&<span>👤 {sale.customer_name} · </span>}
+                            {new Date(sale.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}
+                          </div>
+                        </div>
+                        {!mob&&<div style={{fontSize:12,color:C.muted}}>{sale.item_count||'—'} item{sale.item_count!==1?'s':''}</div>}
+                        {!mob&&<div style={{fontSize:12}}>
+                          <span style={{background:sale.payment_method==='cash'?'#dcfce7':'#dbeafe',color:sale.payment_method==='cash'?C.success:'#1e40af',padding:'2px 8px',borderRadius:20,fontSize:11,fontWeight:600}}>
+                            {sale.payment_method==='cash'?'💵 Cash':'🏦 Bank'}
+                          </span>
+                        </div>}
+                        <div style={{textAlign:'right',fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:C.navy}}>{fmtM(sale.total)}</div>
+                        <div style={{textAlign:'center'}}>
+                          <button onClick={async()=>{
+                            try {
+                              const BASE=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
+                              const token=localStorage.getItem('ko_token');
+                              const res=await fetch(`${BASE}/quick-sales/${sale.id}`,{headers:{Authorization:`Bearer ${token}`}});
+                              const full=await res.json();
+                              printReceipt(sale, full.items||[]);
+                            } catch(e){ printReceipt(sale,[]); }
+                          }}
+                            style={{background:C.gold+'30',color:'#92400e',border:`1px solid ${C.gold}`,borderRadius:7,padding:'5px 10px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                            🖨️
+                          </button>
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+                {/* Month total */}
+                <div style={{padding:'11px 16px',background:C.cream,display:'flex',justifyContent:'space-between',fontSize:13,fontWeight:700,borderTop:`1px solid ${C.border}`}}>
+                  <span style={{color:C.muted}}>Total ({history.length} sales)</span>
+                  <span style={{color:C.navy}}>{fmtM(history.reduce((s,q)=>s+parseFloat(q.total||0),0))}</span>
+                </div>
+              </div>
+        }
+      </div>
+    )}
+
     </div>
   );
 }

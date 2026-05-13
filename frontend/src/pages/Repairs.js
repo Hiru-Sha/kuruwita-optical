@@ -48,9 +48,9 @@ const printRepairReceipt = (repair) => {
 <div style="max-width:340px;margin:0 auto">
   <div style="background:#0f1f3d;border-radius:10px;padding:14px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start">
     <div>
-      <div style="font-family:Georgia,serif;font-size:17px;font-weight:700;color:white;margin-bottom:2px">👁️ Kuruwita Optical</div>
+      <div style="font-family:Georgia,serif;font-size:17px;font-weight:700;color:white;margin-bottom:2px">👁️ Wickramakalutota Opticals</div>
       <div style="font-size:9px;color:#c9a84c;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px">Repair Receipt</div>
-      <div style="font-size:10px;color:#ede9e0">Kuruwita, Ratnapura</div>
+      <div style="font-size:10px;color:#ede9e0">No.57 Kurunegala Road, Chilaw | 032 222 1211</div>
     </div>
     <div style="text-align:right">
       <div style="background:#c9a84c;color:#0f1f3d;font-weight:700;font-size:13px;padding:4px 10px;border-radius:7px;margin-bottom:4px">${repair.repair_number}</div>
@@ -82,7 +82,7 @@ const printRepairReceipt = (repair) => {
 
   <div style="border-top:2px solid #0f1f3d;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
     <div style="font-size:11px;color:#6b7280">
-      <div style="font-weight:700;color:#0f1f3d;margin-bottom:2px">Kuruwita Optical</div>
+      <div style="font-weight:700;color:#0f1f3d;margin-bottom:2px">Wickramakalutota Opticals</div>
       <div>Thank you for your trust! 🙏</div>
     </div>
     <div style="font-size:20px">👁️</div>

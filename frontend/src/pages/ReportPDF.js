@@ -109,7 +109,7 @@ function buildReportHTML(data, from, to) {
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Kuruwita Optical — Business Report ${from} to ${to}</title>
+<title>Wickramakalutota Opticals — Business Report ${from} to ${to}</title>
 <style>
   @page { size: A4 portrait; margin: 12mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -149,14 +149,14 @@ function buildReportHTML(data, from, to) {
 <!-- ══ COVER / HEADER ═════════════════════════════════════ -->
 <div style="background:#0f1f3d;border-radius:12px;padding:20px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;">
   <div>
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:white;margin-bottom:4px;">👁️ Kuruwita Optical</div>
+    <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:white;margin-bottom:4px;">👁️ Wickramakalutota Opticals</div>
     <div style="font-size:11px;color:#c9a84c;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Business Report</div>
     <div style="font-size:14px;color:#ede9e0;font-weight:600;">${fmtDate(from)} — ${fmtDate(to)}</div>
   </div>
   <div style="text-align:right;">
     <div style="font-size:10px;color:#ede9e0;">Generated on</div>
     <div style="font-size:11px;color:white;font-weight:600;">${now}</div>
-    <div style="font-size:10px;color:#ede9e0;margin-top:8px;">Kuruwita, Ratnapura District</div>
+    <div style="font-size:10px;color:#ede9e0;margin-top:8px;">No.57 Kurunegala Road, Chilaw</div>
   </div>
 </div>
 
@@ -360,7 +360,7 @@ ${data.lensJobs.length > 0 ? `
 
 <!-- ══ FOOTER ════════════════════════════════════════════ -->
 <div class="footer">
-  <div>Kuruwita Optical · Kuruwita, Ratnapura District, Sri Lanka</div>
+  <div>Wickramakalutota Opticals · No.57 Kurunegala Road, Chilaw · Tel: 032 222 1211</div>
   <div>Report period: ${fmtDate(from)} — ${fmtDate(to)} · Generated: ${now}</div>
 </div>
 
