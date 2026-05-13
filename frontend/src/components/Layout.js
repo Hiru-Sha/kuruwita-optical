@@ -16,6 +16,7 @@ const NAV = [
   { to:'/inventory',  icon:'📦', label:'Inventory',   section:'inventory' },
   { to:'/lens-prices',icon:'🧪', label:'Lens Prices', section:'inventory' },
   { to:'/reports',    icon:'📊', label:'Reports',     section:'reports',  roles:['admin'] },
+  { to:'/report-pdf',  icon:'📄', label:'PDF Report',   section:'reports',  roles:['admin'] },
   { to:'/expenses',   icon:'💸', label:'Expenses',    section:'reports',  roles:['admin'] },
   { to:'/settings',   icon:'⚙️', label:'Settings',    section:'account'   },
 ];

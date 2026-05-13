@@ -19,6 +19,7 @@ import BalanceFollowUp from './pages/BalanceFollowUp';
 import RxTracker       from './pages/RxTracker';
 import DealerPurchases from './pages/DealerPurchases';
 import Repairs         from './pages/Repairs';
+import ReportPDF       from './pages/ReportPDF';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -57,6 +58,7 @@ export default function App() {
             <Route path="rx-tracker"      element={<RxTracker />} />
             <Route path="dealers"          element={<DealerPurchases />} />
             <Route path="repairs"          element={<Repairs />} />
+            <Route path="report-pdf"       element={<ReportPDF />} />
             {/* Admin-only routes */}
             <Route path="grinding"  element={<AdminOnly><Grinding /></AdminOnly>} />
             <Route path="reports"   element={<AdminOnly><Reports  /></AdminOnly>} />
