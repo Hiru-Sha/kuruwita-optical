@@ -112,11 +112,16 @@ export default function NewOrder() {
   const [segHeightL, setSegHeightL] = useState('');
 
   // ── Payment ──────────────────────────────────────────────
-  const [advance,     setAdvance]     = useState('');
-  const [deliverDate, setDeliverDate] = useState(
+  const [advance,        setAdvance]       = useState('');
+  const [payMethod,      setPayMethod]     = useState('cash'); // cash | bank | card
+  const [overallDiscount,setOverallDiscount] = useState(0);
+  const [deliverDate,    setDeliverDate]   = useState(
     new Date(Date.now()+7*86400000).toISOString().split('T')[0]
   );
   const [notes, setNotes] = useState('');
+
+  // ── Customer own frame ────────────────────────────────────
+  const [customerOwnFrame, setCustomerOwnFrame] = useState(false);
 
   // ── QR Scanner ───────────────────────────────────────────
   const [showScanner, setShowScanner] = useState(false);
@@ -124,7 +129,8 @@ export default function NewOrder() {
   // ── Computed totals ──────────────────────────────────────
   const frameFinal    = Math.max(0,(frameDetails.sellPrice||0)-(frameDetails.frameDiscount||0));
   const lensFinal     = Math.max(0,(lensDetails.sellPrice||0)-(lensDetails.lensDiscount||0));
-  const totalAmount   = frameFinal + lensFinal;
+  const subTotal      = frameFinal + lensFinal;
+  const totalAmount   = Math.max(0, subTotal - (parseFloat(overallDiscount)||0));
   const balanceAmount = Math.max(0,totalAmount-(parseFloat(advance)||0));
 
   // ── Lens price lookup from DB ────────────────────────────
@@ -284,32 +290,35 @@ export default function NewOrder() {
       const combineCyl = (s,v) => (!v||v==='0.00') ? '0.00'  : s+v;
 
       await createOrder({
-        customer_id:        customerId,
-        frame:              frameDetails.name,
-        frame_type:         frameDetails.type,
-        frame_material:     frameDetails.material,
-        frame_color:        frameDetails.color,
-        lens_type:          lensDetails.type,
-        lens_coating:       lensDetails.coating,
-        lens_company:       null,
-        frame_inventory_id: frameDetails.inventoryId || null,
-        lens_index:         lensDetails.lens_index !== 'Default' ? lensDetails.lens_index : null,
-        frame_buy_price:    frameDetails.buyPrice,
-        frame_sell_price:   frameFinal,
-        lens_buy_price:     lensDetails.buyPrice,
-        lens_sell_price:    lensFinal,
-        total_amount:       totalAmount,
-        advance_amount:     parseFloat(advance) || 0,
-        balance_amount:     balanceAmount,
-        deliver_date:       deliverDate,
-        status:             'created',
-        notes:              notes || null,
-        has_rx:             hasRx,
-        rx_hospital:        hasRx ? rxHospital : null,
-        rx_date:            hasRx ? rxDate     : null,
-        rx_doctor:          hasRx ? rxDoctor   : null,
-        seg_height_r:       segHeightR || null,
-        seg_height_l:       segHeightL || null,
+        customer_id:          customerId,
+        frame:                customerOwnFrame ? (frameDetails.name || 'Customer Frame') : frameDetails.name,
+        frame_type:           frameDetails.type,
+        frame_material:       frameDetails.material,
+        frame_color:          frameDetails.color,
+        lens_type:            lensDetails.type,
+        lens_coating:         lensDetails.coating,
+        lens_company:         null,
+        frame_inventory_id:   customerOwnFrame ? null : (frameDetails.inventoryId || null),
+        lens_index:           lensDetails.lens_index !== 'Default' ? lensDetails.lens_index : null,
+        frame_buy_price:      customerOwnFrame ? 0 : frameDetails.buyPrice,
+        frame_sell_price:     customerOwnFrame ? 0 : frameFinal,
+        lens_buy_price:       lensDetails.buyPrice,
+        lens_sell_price:      lensFinal,
+        total_amount:         totalAmount,
+        advance_amount:       parseFloat(advance) || 0,
+        balance_amount:       balanceAmount,
+        discount_amount:      (parseFloat(overallDiscount)||0) + (frameDetails.frameDiscount||0) + (lensDetails.lensDiscount||0),
+        payment_method:       payMethod,
+        customer_own_frame:   customerOwnFrame,
+        deliver_date:         deliverDate,
+        status:               'created',
+        notes:                notes || null,
+        has_rx:               hasRx,
+        rx_hospital:          hasRx ? rxHospital : null,
+        rx_date:              hasRx ? rxDate     : null,
+        rx_doctor:            hasRx ? rxDoctor   : null,
+        seg_height_r:         segHeightR || null,
+        seg_height_l:         segHeightL || null,
         r_sph:  combineSph(ref.r_sph_s, ref.r_sph),
         r_cyl:  combineCyl(ref.r_cyl_s, ref.r_cyl),
         r_axis: ref.r_axis, r_add: ref.r_add!=='0.00' ? '+'+ref.r_add : null,
@@ -523,20 +532,45 @@ export default function NewOrder() {
       {/* ══════════════ STEP 3 — FRAME & LENS ══════════════ */}
       {step===3 && (
         <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 22px', marginBottom:16 }}>
-          <div style={{ fontSize:16, fontWeight:700, color:C.navy, marginBottom:18 }}>🕶️ Frame & Lens</div>
+          <div style={{ fontSize:16, fontWeight:700, color:C.navy, marginBottom:14 }}>🕶️ Frame & Lens</div>
+
+          {/* ── Customer own frame toggle ── */}
+          <div style={{ marginBottom:18 }}>
+            <div style={{ fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:8 }}>Frame Source</div>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={()=>{ setCustomerOwnFrame(false); }}
+                style={{ flex:1, padding:'12px 8px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`2px solid ${!customerOwnFrame?C.navy:C.border}`, background:!customerOwnFrame?C.navy:'white', color:!customerOwnFrame?'white':C.muted, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                <span style={{ fontSize:22 }}>🏪</span>
+                <span>From our stock</span>
+                <span style={{ fontSize:11, opacity:.7 }}>Select frame from inventory</span>
+              </button>
+              <button onClick={()=>{ setCustomerOwnFrame(true); setFrameDetails(f=>({...f, inventoryId:null, buyPrice:0})); }}
+                style={{ flex:1, padding:'12px 8px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`2px solid ${customerOwnFrame?'#2563eb':C.border}`, background:customerOwnFrame?'#eff6ff':'white', color:customerOwnFrame?'#1e40af':C.muted, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                <span style={{ fontSize:22 }}>👤</span>
+                <span>Customer's own frame</span>
+                <span style={{ fontSize:11, opacity:.7 }}>Lens fitting only</span>
+              </button>
+            </div>
+            {customerOwnFrame && (
+              <div style={{ background:'#eff6ff', border:`1px solid #93c5fd`, borderRadius:10, padding:'10px 14px', marginTop:10, fontSize:13, color:'#1e40af' }}>
+                <b>Lens fitting only</b> — customer brought their own frame. Enter frame details manually below for the lab job card.
+              </div>
+            )}
+          </div>
 
           {/* Frame section */}
           <div style={{ background:C.cream, borderRadius:10, padding:16, marginBottom:16 }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Frame</div>
-              {/* QR Scan button */}
-              <button onClick={()=>setShowScanner(true)}
+              <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Frame {customerOwnFrame && <span style={{ background:'#dbeafe', color:'#1e40af', fontSize:11, fontWeight:600, padding:'2px 8px', borderRadius:20, marginLeft:6 }}>Customer's Own</span>}</div>
+              {/* QR Scan button — only show if using our stock */}
+              {!customerOwnFrame && <button onClick={()=>setShowScanner(true)}
                 style={{ padding:'7px 14px', background:C.navy, color:'white', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:5 }}>
                 📷 Scan QR Sticker
-              </button>
+              </button>}
             </div>
 
-            {/* Frame search */}
+            {/* Frame search — only for our stock */}
+            {!customerOwnFrame ? (
             <div style={{ position:'relative', marginBottom:12 }}>
               <Field label="Search Frame from Stock">
                 <input value={frameSearch} onChange={e=>handleFrameSearch(e.target.value)} placeholder="Type frame name to search stock..." style={INP}/>
@@ -560,8 +594,8 @@ export default function NewOrder() {
               )}
             </div>
 
-            {/* Frame photo after selection */}
-            {selectedFrame && selectedFrame.image_url && (
+            {/* Frame photo after selection — only our stock */}
+            {!customerOwnFrame && selectedFrame && selectedFrame.image_url && (
               <div style={{ marginBottom:12, borderRadius:10, overflow:'hidden', border:`1px solid ${C.border}` }}>
                 <img src={selectedFrame.image_url} alt={selectedFrame.name} style={{ width:'100%', height:160, objectFit:'cover' }}/>
                 <div style={{ padding:'8px 12px', background:'#dcfce7', fontSize:12, fontWeight:600, color:'#2d7a4f' }}>
@@ -570,7 +604,7 @@ export default function NewOrder() {
               </div>
             )}
 
-            {/* Frame details */}
+            {/* Frame details — hide buy price if customer own frame */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
               <Field label="Frame Type">
                 <select value={frameDetails.type} onChange={e=>setFrameDetails(f=>({...f,type:e.target.value}))} style={SEL}>
@@ -587,12 +621,14 @@ export default function NewOrder() {
                   {FRAME_COLORS.map(c=><option key={c}>{c}</option>)}
                 </select>
               </Field>
-              <Field label="Frame Buying Price (Rs.)">
-                <input type="number" value={frameDetails.buyPrice} onChange={e=>setFrameDetails(f=>({...f,buyPrice:parseFloat(e.target.value)||0}))} style={INP}/>
-              </Field>
-              <Field label="Frame Selling Price (Rs.)">
-                <input type="number" value={frameDetails.sellPrice} onChange={e=>setFrameDetails(f=>({...f,sellPrice:parseFloat(e.target.value)||0}))} style={INP}/>
-              </Field>
+              {!customerOwnFrame && <>
+                <Field label="Frame Buying Price (Rs.)">
+                  <input type="number" value={frameDetails.buyPrice} onChange={e=>setFrameDetails(f=>({...f,buyPrice:parseFloat(e.target.value)||0}))} style={INP}/>
+                </Field>
+                <Field label="Frame Selling Price (Rs.)">
+                  <input type="number" value={frameDetails.sellPrice} onChange={e=>setFrameDetails(f=>({...f,sellPrice:parseFloat(e.target.value)||0}))} style={INP}/>
+                </Field>
+              </>}
             </div>
           </div>
 
@@ -676,22 +712,32 @@ export default function NewOrder() {
         <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 22px', marginBottom:16 }}>
           <div style={{ fontSize:16, fontWeight:700, color:C.navy, marginBottom:18 }}>💰 Payment & Delivery</div>
 
+          {/* ── Price Breakdown ── */}
           <div style={{ background:C.cream, borderRadius:12, padding:16, marginBottom:18 }}>
             <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:12 }}>Price Breakdown</div>
+
+            {/* Frame row — only if not customer own frame OR if they filled name */}
             <div style={{ background:'white', borderRadius:9, padding:'12px 14px', marginBottom:10 }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                <span style={{ fontSize:13, fontWeight:600, color:C.navy }}>🕶️ {frameDetails.name||'Frame'} · {frameDetails.color}</span>
-                <span style={{ fontSize:14, fontWeight:700, color:C.navy }}>{fmtMoney(frameFinal)}</span>
+                <span style={{ fontSize:13, fontWeight:600, color:C.navy }}>
+                  🕶️ {frameDetails.name||'Frame'} · {frameDetails.color}
+                  {customerOwnFrame && <span style={{ background:'#dbeafe', color:'#1e40af', fontSize:10, fontWeight:600, padding:'1px 7px', borderRadius:20, marginLeft:6 }}>Customer's Frame</span>}
+                </span>
+                <span style={{ fontSize:14, fontWeight:700, color:customerOwnFrame?C.muted:C.navy }}>{customerOwnFrame?'—':fmtMoney(frameFinal)}</span>
               </div>
-              <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
-                <span style={{ fontSize:11, color:C.muted }}>Sell price:</span>
-                <input type="number" value={frameDetails.sellPrice} onChange={e=>setFrameDetails(f=>({...f,sellPrice:parseFloat(e.target.value)||0}))} style={{ ...INP, width:110, padding:'6px 10px', fontSize:13 }}/>
-                <span style={{ fontSize:11, color:C.muted }}>Discount:</span>
-                <input type="number" value={frameDetails.frameDiscount} onChange={e=>setFrameDetails(f=>({...f,frameDiscount:parseFloat(e.target.value)||0}))} placeholder="0" style={{ ...INP, width:100, padding:'6px 10px', fontSize:13 }}/>
-                {frameDetails.frameDiscount>0 && <span style={{ fontSize:11, color:C.success, fontWeight:700 }}>-{fmtMoney(frameDetails.frameDiscount)}</span>}
-              </div>
+              {!customerOwnFrame && (
+                <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+                  <span style={{ fontSize:11, color:C.muted }}>Sell price:</span>
+                  <input type="number" value={frameDetails.sellPrice} onChange={e=>setFrameDetails(f=>({...f,sellPrice:parseFloat(e.target.value)||0}))} style={{ ...INP, width:110, padding:'6px 10px', fontSize:13 }}/>
+                  <span style={{ fontSize:11, color:C.muted }}>Discount:</span>
+                  <input type="number" value={frameDetails.frameDiscount} onChange={e=>setFrameDetails(f=>({...f,frameDiscount:parseFloat(e.target.value)||0}))} placeholder="0" style={{ ...INP, width:100, padding:'6px 10px', fontSize:13 }}/>
+                  {frameDetails.frameDiscount>0 && <span style={{ fontSize:11, color:C.success, fontWeight:700 }}>-{fmtMoney(frameDetails.frameDiscount)}</span>}
+                </div>
+              )}
             </div>
-            <div style={{ background:'white', borderRadius:9, padding:'12px 14px', marginBottom:12 }}>
+
+            {/* Lens row */}
+            <div style={{ background:'white', borderRadius:9, padding:'12px 14px', marginBottom:10 }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
                 <span style={{ fontSize:13, fontWeight:600, color:C.navy }}>🔬 {lensDetails.type} · {lensDetails.coating}</span>
                 <span style={{ fontSize:14, fontWeight:700, color:C.navy }}>{fmtMoney(lensFinal)}</span>
@@ -704,20 +750,68 @@ export default function NewOrder() {
                 {lensDetails.lensDiscount>0 && <span style={{ fontSize:11, color:C.success, fontWeight:700 }}>-{fmtMoney(lensDetails.lensDiscount)}</span>}
               </div>
             </div>
+
+            {/* Subtotal */}
+            {subTotal !== totalAmount && (
+              <div style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', fontSize:13, color:C.muted }}>
+                <span>Subtotal</span><span>{fmtMoney(subTotal)}</span>
+              </div>
+            )}
+
+            {/* Overall discount */}
+            <div style={{ background:'white', borderRadius:9, padding:'11px 14px', marginBottom:10, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+              <span style={{ fontSize:13, fontWeight:600, color:C.navy, minWidth:130 }}>💰 Overall Discount</span>
+              <input type="number" value={overallDiscount||''} onChange={e=>setOverallDiscount(parseFloat(e.target.value)||0)}
+                placeholder="0" style={{ ...INP, width:120, padding:'6px 10px', fontSize:13 }}/>
+              {parseFloat(overallDiscount)>0 && <span style={{ fontSize:13, color:C.success, fontWeight:700 }}>- {fmtMoney(overallDiscount)}</span>}
+            </div>
+
+            {/* Total */}
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderTop:`2px solid ${C.border}`, paddingTop:12 }}>
               <span style={{ fontSize:14, fontWeight:700, color:C.navy }}>Total</span>
-              <span style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:C.navy }}>{fmtMoney(totalAmount)}</span>
+              <span style={{ fontFamily:"'Playfair Display',serif", fontSize:24, fontWeight:700, color:C.navy }}>{fmtMoney(totalAmount)}</span>
             </div>
           </div>
 
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:16 }}>
-            <Field label="Advance Paid (Rs.)">
-              <input type="number" value={advance} onChange={e=>setAdvance(e.target.value)} placeholder="e.g. 3000" style={INP}/>
-            </Field>
-            <div/>
-            <div style={{ background:C.navy, borderRadius:10, padding:'12px 14px', textAlign:'center', display:'flex', flexDirection:'column', justifyContent:'center' }}>
-              <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.gold, marginBottom:4 }}>Balance Due</div>
-              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:'white' }}>{fmtMoney(balanceAmount)}</div>
+          {/* ── Advance payment ── */}
+          <div style={{ background:C.cream, borderRadius:12, padding:16, marginBottom:16 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:12 }}>💵 Advance Payment</div>
+
+            {/* Payment method */}
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:7 }}>Payment Method</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+                {[['cash','💵 Cash'],['bank','🏦 Bank'],['card','💳 Card']].map(([v,l])=>(
+                  <button key={v} onClick={()=>setPayMethod(v)}
+                    style={{ padding:'10px 6px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`2px solid ${payMethod===v?C.navy:C.border}`, background:payMethod===v?C.navy:'white', color:payMethod===v?'white':C.muted, textAlign:'center' }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {payMethod==='bank' && (
+                <div style={{ marginTop:8, background:'#eff6ff', border:`1px solid #93c5fd`, borderRadius:8, padding:'9px 13px', fontSize:12, color:'#1e40af' }}>
+                  🏦 This advance will be automatically recorded as a bank deposit to <b>Pan Asia Bank</b>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:5 }}>Advance Amount (Rs.)</div>
+                <input type="number" value={advance} onChange={e=>setAdvance(e.target.value)} placeholder="e.g. 3000" style={{ ...INP, fontSize:16, fontWeight:700 }}/>
+                {/* Quick fill buttons */}
+                <div style={{ display:'flex', gap:5, marginTop:6, flexWrap:'wrap' }}>
+                  <button onClick={()=>setAdvance(String(totalAmount))} style={{ padding:'4px 10px', background:C.navy, color:'white', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Full</button>
+                  {[500,1000,2000,5000].filter(v=>v<totalAmount).slice(0,3).map(v=>(
+                    <button key={v} onClick={()=>setAdvance(String(v))} style={{ padding:'4px 10px', background:C.cream, border:`1px solid ${C.border}`, borderRadius:6, fontSize:11, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>{fmtMoney(v)}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ background:C.navy, borderRadius:10, padding:'14px 16px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.gold, marginBottom:4 }}>Balance Due</div>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:24, fontWeight:700, color:'white' }}>{fmtMoney(balanceAmount)}</div>
+                {balanceAmount===0 && <div style={{ fontSize:11, color:'#86efac', marginTop:3 }}>✅ Fully paid</div>}
+              </div>
             </div>
           </div>
 
@@ -741,14 +835,16 @@ export default function NewOrder() {
             <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:10 }}>📋 Order Summary</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, fontSize:13 }}>
               {[
-                {l:'Customer', v:custMode==='new'?`${newCust.title} ${newCust.name}`:selectedCust?.name},
-                {l:'Phone',    v:custMode==='new'?newCust.phone:selectedCust?.phone},
-                {l:'Frame',    v:`${frameDetails.name||'—'} (${frameDetails.color})`},
-                {l:'Lens',     v:`${lensDetails.type} · ${lensDetails.coating}`},
-                {l:'Frame price', v:fmtMoney(frameFinal)},
+                {l:'Customer',    v:custMode==='new'?`${newCust.title} ${newCust.name}`:selectedCust?.name},
+                {l:'Phone',       v:custMode==='new'?newCust.phone:selectedCust?.phone},
+                {l:'Frame',       v:customerOwnFrame?`${frameDetails.name||'Customer Frame'} (Own)`:`${frameDetails.name||'—'} (${frameDetails.color})`},
+                {l:'Lens',        v:`${lensDetails.type} · ${lensDetails.coating}`},
+                {l:'Frame price', v:customerOwnFrame?'No charge':fmtMoney(frameFinal)},
                 {l:'Lens price',  v:fmtMoney(lensFinal)},
-                {l:'Total',    v:fmtMoney(totalAmount), bold:true},
-                {l:'Balance',  v:fmtMoney(balanceAmount), red:balanceAmount>0},
+                ...(parseFloat(overallDiscount)>0?[{l:'Discount',  v:`-${fmtMoney(overallDiscount)}`, red:false}]:[]),
+                {l:'Total',       v:fmtMoney(totalAmount), bold:true},
+                {l:'Advance',     v:`${fmtMoney(parseFloat(advance)||0)} (${payMethod})`, bold:false},
+                {l:'Balance',     v:fmtMoney(balanceAmount), red:balanceAmount>0},
               ].map(item=>(
                 <div key={item.l} style={{ fontSize:13 }}>
                   <span style={{ color:C.muted }}>{item.l}: </span>
