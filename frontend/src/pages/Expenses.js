@@ -38,7 +38,7 @@ const EXPENSE_CATS = [
   { key:'Phone & Internet',icon:'📱', color:'#1d4ed8' },
   { key:'Other',           icon:'📦', color:'#6b7280' },
 ];
-const BANKS = ['People\'s Bank','Bank of Ceylon (BOC)','Commercial Bank','HNB','Sampath Bank','NSB','Seylan Bank','Other'];
+const BANKS = ['Pan Asia Bank','People\'s Bank','Bank of Ceylon (BOC)','Commercial Bank','HNB','Sampath Bank','NSB','Seylan Bank','Other'];
 const getCat = (key) => EXPENSE_CATS.find(c=>c.key===key) || EXPENSE_CATS[EXPENSE_CATS.length-1];
 
 function apiGet(path) {
@@ -93,7 +93,7 @@ export default function Expenses() {
 
   // Add deposit form
   const [showAddDep,  setShowAddDep]  = useState(false);
-  const [depForm,     setDepForm]     = useState({ date:today(), amount:'', bank_name:"People's Bank", reference:'', notes:'' });
+  const [depForm,     setDepForm]     = useState({ date:today(), amount:'', bank_name:"Pan Asia Bank", account_no:'', payment_type:'cash', reference:'', notes:'' });
   const [savingDep,   setSavingDep]   = useState(false);
   const [depError,    setDepError]    = useState('');
 
@@ -183,7 +183,7 @@ export default function Expenses() {
     try {
       const res = await apiPost('/cash-deposits', { ...depForm, amount:parseFloat(depForm.amount) });
       if (res.error) throw new Error(res.error);
-      setDepForm({ date:viewDate, amount:'', bank_name:"People's Bank", reference:'', notes:'' });
+      setDepForm({ date:viewDate, amount:'', bank_name:"Pan Asia Bank", account_no:'', payment_type:'cash', reference:'', notes:'' });
       setShowAddDep(false);
       showToast('Deposit recorded ✓');
       loadDaily(); loadMonthly();
@@ -406,23 +406,73 @@ export default function Expenses() {
                     )}
                   </div>
 
+                  {/* Payment Type */}
                   <div style={{ marginBottom:10 }}>
-                    <label style={LBL}>Bank</label>
-                    <select value={depForm.bank_name} onChange={e=>setDepForm(f=>({...f,bank_name:e.target.value}))} style={SEL}>
-                      {BANKS.map(b=><option key={b}>{b}</option>)}
-                    </select>
+                    <label style={LBL}>How was it deposited?</label>
+                    <div style={{ display:'flex', gap:6 }}>
+                      {[['cash','💵 Cash deposit'],['online','📱 Online / Transfer'],['cheque','📋 Cheque from customer']].map(([v,l])=>(
+                        <button key={v} onClick={()=>setDepForm(f=>({...f,payment_type:v}))}
+                          style={{ flex:1, padding:'8px 6px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${depForm.payment_type===v?'#2563eb':C.border}`, background:depForm.payment_type===v?'#eff6ff':'white', color:depForm.payment_type===v?'#1e40af':C.muted, textAlign:'center' }}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
                     <div>
-                      <label style={LBL}>Slip / Reference No.</label>
-                      <input value={depForm.reference} onChange={e=>setDepForm(f=>({...f,reference:e.target.value}))} placeholder="Optional" style={INP}/>
+                      <label style={LBL}>Bank</label>
+                      <select value={depForm.bank_name} onChange={e=>setDepForm(f=>({...f,bank_name:e.target.value}))} style={SEL}>
+                        {BANKS.map(b=><option key={b}>{b}</option>)}
+                      </select>
                     </div>
                     <div>
-                      <label style={LBL}>Notes</label>
-                      <input value={depForm.notes} onChange={e=>setDepForm(f=>({...f,notes:e.target.value}))} placeholder="Optional" style={INP}/>
+                      <label style={LBL}>Account No.</label>
+                      <input value={depForm.account_no} onChange={e=>setDepForm(f=>({...f,account_no:e.target.value}))}
+                        placeholder="e.g. 1234567890" style={INP}/>
                     </div>
                   </div>
+
+                  {/* Cheque fields */}
+                  {depForm.payment_type === 'cheque' && (
+                    <div style={{ background:'#fffbeb', border:`1px solid #fde68a`, borderRadius:10, padding:'12px 14px', marginBottom:10 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:'#92400e', marginBottom:10 }}>📋 Cheque Details</div>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                        <div>
+                          <label style={LBL}>Cheque No.</label>
+                          <input value={depForm.reference} onChange={e=>setDepForm(f=>({...f,reference:e.target.value}))}
+                            placeholder="e.g. 001234" style={INP}/>
+                        </div>
+                        <div>
+                          <label style={LBL}>Cheque Date</label>
+                          <input type="date" value={depForm.cheque_date||''} onChange={e=>setDepForm(f=>({...f,cheque_date:e.target.value}))} style={INP}/>
+                        </div>
+                        <div>
+                          <label style={LBL}>Drawn on Bank</label>
+                          <input value={depForm.cheque_bank||''} onChange={e=>setDepForm(f=>({...f,cheque_bank:e.target.value}))}
+                            placeholder="Customer's bank" style={INP}/>
+                        </div>
+                        <div>
+                          <label style={LBL}>Customer Name</label>
+                          <input value={depForm.notes} onChange={e=>setDepForm(f=>({...f,notes:e.target.value}))}
+                            placeholder="Cheque holder name" style={INP}/>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {depForm.payment_type !== 'cheque' && (
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+                      <div>
+                        <label style={LBL}>Slip / Ref No.</label>
+                        <input value={depForm.reference} onChange={e=>setDepForm(f=>({...f,reference:e.target.value}))} placeholder="Optional" style={INP}/>
+                      </div>
+                      <div>
+                        <label style={LBL}>Notes</label>
+                        <input value={depForm.notes} onChange={e=>setDepForm(f=>({...f,notes:e.target.value}))} placeholder="Optional" style={INP}/>
+                      </div>
+                    </div>
+                  )}
 
                   <button onClick={handleAddDeposit} disabled={savingDep}
                     style={{ width:'100%', padding:'10px', background:savingDep?C.muted:'#2563eb', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:savingDep?'not-allowed':'pointer', fontFamily:'inherit' }}>
@@ -444,9 +494,18 @@ export default function Expenses() {
                           🏦
                         </div>
                         <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{dep.bank_name||'Bank Deposit'}</div>
-                          <div style={{ fontSize:11, color:C.muted }}>
-                            {dep.reference && <span>Ref: {dep.reference} · </span>}
+                          <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>
+                            {dep.bank_name||'Bank Deposit'}
+                            {dep.account_no && <span style={{ fontSize:11, color:C.muted, marginLeft:8 }}>A/C: {dep.account_no}</span>}
+                          </div>
+                          <div style={{ fontSize:11, color:C.muted, display:'flex', gap:6, flexWrap:'wrap', marginTop:2 }}>
+                            {dep.payment_type && dep.payment_type!=='cash' && (
+                              <span style={{ background:dep.payment_type==='cheque'?'#fffbeb':'#eff6ff', color:dep.payment_type==='cheque'?'#92400e':'#1e40af', padding:'1px 7px', borderRadius:20, fontWeight:600, fontSize:10 }}>
+                                {dep.payment_type==='cheque'?'📋 Cheque':'📱 Online'}
+                              </span>
+                            )}
+                            {dep.payment_type==='cheque' && dep.reference && <span>Cheque: {dep.reference}</span>}
+                            {dep.payment_type!=='cheque' && dep.reference && <span>Ref: {dep.reference}</span>}
                             {dep.notes && <span>{dep.notes}</span>}
                           </div>
                         </div>
@@ -623,7 +682,27 @@ export default function Expenses() {
                 <div><label style={LBL}>Date</label><input type="date" value={depForm.date} onChange={e=>setDepForm(f=>({...f,date:e.target.value}))} style={INP}/></div>
                 <div><label style={LBL}>Amount (Rs.)</label><input type="number" value={depForm.amount} onChange={e=>setDepForm(f=>({...f,amount:e.target.value}))} placeholder="e.g. 25000" style={{ ...INP, fontWeight:700 }}/></div>
                 <div><label style={LBL}>Bank</label><select value={depForm.bank_name} onChange={e=>setDepForm(f=>({...f,bank_name:e.target.value}))} style={SEL}>{BANKS.map(b=><option key={b}>{b}</option>)}</select></div>
-                <div><label style={LBL}>Slip / Reference No.</label><input value={depForm.reference} onChange={e=>setDepForm(f=>({...f,reference:e.target.value}))} placeholder="Optional" style={INP}/></div>
+                <div><label style={LBL}>Account No.</label><input value={depForm.account_no} onChange={e=>setDepForm(f=>({...f,account_no:e.target.value}))} placeholder="e.g. 1234567890" style={INP}/></div>
+                <div style={{ gridColumn:'1/-1' }}>
+                  <label style={LBL}>How deposited?</label>
+                  <div style={{ display:'flex', gap:6 }}>
+                    {[['cash','💵 Cash'],['online','📱 Online'],['cheque','📋 Cheque']].map(([v,l])=>(
+                      <button key={v} onClick={()=>setDepForm(f=>({...f,payment_type:v}))}
+                        style={{ flex:1, padding:'8px 4px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${depForm.payment_type===v?'#2563eb':C.border}`, background:depForm.payment_type===v?'#eff6ff':'white', color:depForm.payment_type===v?'#1e40af':C.muted }}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {depForm.payment_type === 'cheque'
+                  ? <>
+                      <div><label style={LBL}>Cheque No. *</label><input value={depForm.reference} onChange={e=>setDepForm(f=>({...f,reference:e.target.value}))} placeholder="e.g. 001234" style={INP}/></div>
+                      <div><label style={LBL}>Cheque Date</label><input type="date" value={depForm.cheque_date||''} onChange={e=>setDepForm(f=>({...f,cheque_date:e.target.value}))} style={INP}/></div>
+                      <div><label style={LBL}>Drawn on Bank</label><input value={depForm.cheque_bank||''} onChange={e=>setDepForm(f=>({...f,cheque_bank:e.target.value}))} placeholder="Customer's bank" style={INP}/></div>
+                      <div><label style={LBL}>Cheque Holder</label><input value={depForm.notes} onChange={e=>setDepForm(f=>({...f,notes:e.target.value}))} placeholder="Customer name" style={INP}/></div>
+                    </>
+                  : <div><label style={LBL}>Slip / Reference No.</label><input value={depForm.reference} onChange={e=>setDepForm(f=>({...f,reference:e.target.value}))} placeholder="Optional" style={INP}/></div>
+                }
               </div>
               <div style={{ marginBottom:12 }}><label style={LBL}>Notes</label><input value={depForm.notes} onChange={e=>setDepForm(f=>({...f,notes:e.target.value}))} placeholder="Optional notes" style={INP}/></div>
               <button onClick={handleAddDeposit} disabled={savingDep} style={{ padding:'10px 22px', background:savingDep?C.muted:'#2563eb', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
@@ -654,9 +733,19 @@ export default function Expenses() {
                       <div style={{ display:'flex', alignItems:'center', gap:14, padding:'12px 18px', borderBottom:`1px solid ${C.cream}` }}>
                         <div style={{ width:40, height:40, borderRadius:10, background:'#dbeafe', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>🏦</div>
                         <div style={{ flex:1 }}>
-                          <div style={{ fontSize:14, fontWeight:600, color:C.navy }}>{dep.bank_name||'Bank Deposit'}</div>
-                          <div style={{ fontSize:12, color:C.muted }}>
-                            {dep.reference && <span style={{ fontWeight:600 }}>Ref: {dep.reference}</span>}
+                          <div style={{ fontSize:14, fontWeight:600, color:C.navy }}>
+                            {dep.bank_name||'Bank Deposit'}
+                            {dep.account_no && <span style={{ fontSize:12, color:C.muted, marginLeft:8 }}>A/C: {dep.account_no}</span>}
+                          </div>
+                          <div style={{ fontSize:12, color:C.muted, display:'flex', gap:8, flexWrap:'wrap', marginTop:2 }}>
+                            {dep.payment_type && dep.payment_type!=='cash' && (
+                              <span style={{ background:dep.payment_type==='cheque'?'#fffbeb':'#eff6ff', color:dep.payment_type==='cheque'?'#92400e':'#1e40af', padding:'2px 9px', borderRadius:20, fontWeight:700, fontSize:11 }}>
+                                {dep.payment_type==='cheque'?'📋 Cheque':'📱 Online Transfer'}
+                              </span>
+                            )}
+                            {dep.payment_type==='cheque' && dep.reference && <span><b>Cheque No:</b> {dep.reference}</span>}
+                            {dep.payment_type==='cheque' && dep.cheque_bank && <span>· {dep.cheque_bank}</span>}
+                            {dep.payment_type!=='cheque' && dep.reference && <span style={{ fontWeight:600 }}>Ref: {dep.reference}</span>}
                             {dep.reference && dep.notes && ' · '}
                             {dep.notes}
                           </div>

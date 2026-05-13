@@ -166,6 +166,9 @@ export default function DealerPurchases() {
     unit_cost:      '',
     payment_method: 'cash',
     payment_status: 'paid',
+    cheque_no:      '',
+    cheque_date:    '',
+    cheque_bank:    '',
     notes:          '',
   });
 
@@ -203,7 +206,7 @@ export default function DealerPurchases() {
         unit_cost:   parseFloat(form.unit_cost),
       });
       if (res.error) throw new Error(res.error);
-      setForm(f=>({ ...f, description:'', quantity:'1', unit_cost:'', invoice_no:'', notes:'' }));
+      setForm(f=>({ ...f, description:'', quantity:'1', unit_cost:'', invoice_no:'', cheque_no:'', cheque_date:'', cheque_bank:'', notes:'' }));
       setShowAdd(false);
       showToast(`Purchase recorded — ${fmt(res.total_cost)}`);
       load();
@@ -227,7 +230,7 @@ export default function DealerPurchases() {
     partial: { bg:'#fef9c3', color:'#854d0e'  },
   };
 
-  const PAY_ICON = { cash:'💵', bank:'🏦', credit:'📋' };
+  const PAY_ICON = { cash:'💵', bank:'🏦', cheque:'📋', credit:'📒' };
 
   const TABS = [
     { key:'log',      label:'📋 Purchase Log' },
@@ -335,7 +338,8 @@ export default function DealerPurchases() {
               <select value={form.payment_method} onChange={e=>setForm(f=>({...f,payment_method:e.target.value}))} style={SEL}>
                 <option value="cash">💵 Cash</option>
                 <option value="bank">🏦 Bank Transfer</option>
-                <option value="credit">📋 Credit</option>
+                <option value="cheque">📋 Cheque</option>
+                <option value="credit">📒 Credit</option>
               </select>
             </div>
             <div>
@@ -357,6 +361,32 @@ export default function DealerPurchases() {
               <span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:C.navy }}>
                 {fmt(totalCost)}
               </span>
+            </div>
+          )}
+
+          {/* Cheque details - shown when cheque selected */}
+          {form.payment_method === 'cheque' && (
+            <div style={{ background:'#fffbeb', border:`1.5px solid #fde68a`, borderRadius:12, padding:'14px 16px', marginBottom:14 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:'#92400e', marginBottom:12 }}>📋 Cheque Details</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+                <div>
+                  <label style={LBL}>Cheque No. *</label>
+                  <input value={form.cheque_no} onChange={e=>setForm(f=>({...f,cheque_no:e.target.value}))}
+                    placeholder="e.g. 001234" style={INP}/>
+                </div>
+                <div>
+                  <label style={LBL}>Cheque Date</label>
+                  <input type="date" value={form.cheque_date} onChange={e=>setForm(f=>({...f,cheque_date:e.target.value}))} style={INP}/>
+                </div>
+                <div>
+                  <label style={LBL}>Your Bank</label>
+                  <input value={form.cheque_bank} onChange={e=>setForm(f=>({...f,cheque_bank:e.target.value}))}
+                    placeholder="e.g. Pan Asia Bank" style={INP}/>
+                </div>
+              </div>
+              <div style={{ fontSize:12, color:'#b45309', marginTop:8 }}>
+                💡 Cheque will be drawn from your Pan Asia Bank current account
+              </div>
             </div>
           )}
 
@@ -446,6 +476,11 @@ export default function DealerPurchases() {
                             <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>
                               <span style={{ background:'#e0f2fe', color:'#0369a1', padding:'1px 7px', borderRadius:20, fontSize:10, fontWeight:600 }}>{p.category||'Other'}</span>
                               <span style={{ marginLeft:8 }}>{PAY_ICON[p.payment_method]} {p.payment_method}</span>
+                              {p.payment_method==='cheque' && p.cheque_no && (
+                                <span style={{ marginLeft:6, background:'#fffbeb', color:'#92400e', padding:'1px 7px', borderRadius:20, fontSize:10, fontWeight:600 }}>
+                                  Cheque: {p.cheque_no}{p.cheque_date?` · ${p.cheque_date}`:''}
+                                </span>
+                              )}
                               {p.notes && <span style={{ marginLeft:8, fontStyle:'italic' }}>{p.notes}</span>}
                             </div>
                           </div>

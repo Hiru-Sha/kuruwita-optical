@@ -103,7 +103,8 @@ router.get('/summary', auth, async (req, res) => {
 // POST /api/dealer-purchases — add a purchase
 router.post('/', auth, async (req, res) => {
   const { dealer_name, purchase_date, invoice_no, category, description,
-          quantity, unit_cost, payment_method, payment_status, notes } = req.body;
+          quantity, unit_cost, payment_method, payment_status, notes,
+          cheque_no, cheque_date, cheque_bank } = req.body;
 
   if (!dealer_name || !description || !quantity || !unit_cost) {
     return res.status(400).json({ error: 'dealer_name, description, quantity and unit_cost required' });
@@ -113,12 +114,14 @@ router.post('/', auth, async (req, res) => {
   try {
     const result = await pool.query(`
       INSERT INTO dealer_purchases
-        (dealer_name, purchase_date, invoice_no, category, description, quantity, unit_cost, total_cost, payment_method, payment_status, notes, added_by)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+        (dealer_name, purchase_date, invoice_no, category, description, quantity, unit_cost, total_cost,
+         payment_method, payment_status, notes, cheque_no, cheque_date, cheque_bank, added_by)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
       [dealer_name, purchase_date || new Date().toISOString().split('T')[0],
        invoice_no||null, category||null, description,
        parseInt(quantity), parseFloat(unit_cost), total_cost,
-       payment_method||'cash', payment_status||'paid', notes||null, req.user.id]
+       payment_method||'cash', payment_status||'paid', notes||null,
+       cheque_no||null, cheque_date||null, cheque_bank||null, req.user.id]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
