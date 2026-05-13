@@ -15,7 +15,8 @@ app.use('/api/quick-sales',        require('./routes/quickSales'));
 app.use('/api/expenses',           require('./routes/expenses'));
 app.use('/api/cash-deposits',      require('./routes/cashDeposits'));
 app.use('/api/stock-adjustments',  require('./routes/stockAdjustments'));
-app.use('/api/dealer-purchases',   require('./routes/dealerPurchases'));  // ← NEW
+app.use('/api/dealer-purchases',   require('./routes/dealerPurchases'));
+app.use('/api/repairs',            require('./routes/repairs'));            // ← NEW
 app.get('/api/health', (req,res)=>res.json({ status:'ok', time:new Date() }));
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, ()=>console.log(`✅ Kuruwita Optical on port ${PORT}`));

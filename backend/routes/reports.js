@@ -16,6 +16,7 @@ router.get('/dashboard', auth, async (req, res) => {
       pool.query(`SELECT COUNT(*) AS count FROM orders WHERE lens_company IS NOT NULL AND lens_step < 3`),
       pool.query(`SELECT o.id, o.order_number, o.deliver_date, o.balance_amount, c.name AS customer_name, c.phone FROM orders o JOIN customers c ON o.customer_id=c.id WHERE o.deliver_date <= CURRENT_DATE + INTERVAL '2 days' AND o.status != 'delivered' ORDER BY o.deliver_date LIMIT 10`),
       pool.query(`SELECT COALESCE(SUM(total_amount),0) AS total FROM orders WHERE created_at::date=CURRENT_DATE`),
+      pool.query(`SELECT COALESCE(SUM(charge),0) AS total FROM repairs WHERE created_at::date=CURRENT_DATE AND payment_method!='free'`),
     ]);
     res.json({
       month_revenue: { ...mr.rows[0] },
@@ -24,6 +25,7 @@ router.get('/dashboard', auth, async (req, res) => {
       lens_jobs_out: lensOut.rows[0].count,
       reminders: reminders.rows,
       daily_revenue: daily.rows[0].total,
+      daily_repair_revenue: repairDaily.rows[0].total,
     });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });

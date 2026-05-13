@@ -17,6 +17,8 @@ import Expenses   from './pages/Expenses';
 import Settings        from './pages/Settings';
 import BalanceFollowUp from './pages/BalanceFollowUp';
 import RxTracker       from './pages/RxTracker';
+import DealerPurchases from './pages/DealerPurchases';
+import Repairs         from './pages/Repairs';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -53,6 +55,8 @@ export default function App() {
             <Route path="settings"        element={<Settings />} />
             <Route path="balance"         element={<BalanceFollowUp />} />
             <Route path="rx-tracker"      element={<RxTracker />} />
+            <Route path="dealers"          element={<DealerPurchases />} />
+            <Route path="repairs"          element={<Repairs />} />
             {/* Admin-only routes */}
             <Route path="grinding"  element={<AdminOnly><Grinding /></AdminOnly>} />
             <Route path="reports"   element={<AdminOnly><Reports  /></AdminOnly>} />

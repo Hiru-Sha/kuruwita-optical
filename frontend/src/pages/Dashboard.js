@@ -36,20 +36,23 @@ export default function Dashboard() {
       fetch(`${BASE}/quick-sales?limit=200`,{headers:h}).then(r=>r.json()),
       fetch(`${BASE}/expenses?month=${todayStr.slice(0,7)}`,{headers:h}).then(r=>r.json()).catch(()=>[]),
       fetch(`${BASE}/cash-deposits?date=${todayStr}`,{headers:h}).then(r=>r.json()).catch(()=>[]),
-    ]).then(([dash,orders,qsales,expenses,deposits])=>{
+      fetch(`${BASE}/repairs?month=${todayStr.slice(0,7)}`,{headers:h}).then(r=>r.json()).catch(()=>[]),
+    ]).then(([dash,orders,qsales,expenses,deposits,repairs])=>{
       setData(dash);
       const todayOrders=(Array.isArray(orders)?orders:[]).filter(o=>o.created_at?.slice(0,10)===todayStr);
       const todayQS    =(Array.isArray(qsales)?qsales:[]).filter(s=>s.created_at?.slice(0,10)===todayStr);
       const todayExp   =(Array.isArray(expenses)?expenses:[]).filter(e=>e.date?.slice(0,10)===todayStr);
       const todayDep   =Array.isArray(deposits)?deposits:[];
+      const todayRepairs=(Array.isArray(repairs)?repairs:[]).filter(r=>r.created_at?.slice(0,10)===todayStr&&r.payment_method!=='free');
       const orderIncome=todayOrders.reduce((s,o)=>s+parseFloat(o.advance_amount||0),0);
       const qsIncome   =todayQS.reduce((s,q)=>s+parseFloat(q.total||0),0);
-      const totalIncome=orderIncome+qsIncome;
+      const repairIncome=todayRepairs.reduce((s,r)=>s+parseFloat(r.charge||0),0);
+      const totalIncome=orderIncome+qsIncome+repairIncome;
       const totalExp   =todayExp.reduce((s,e)=>s+parseFloat(e.amount||0),0);
       const totalDep   =todayDep.reduce((s,d)=>s+parseFloat(d.amount||0),0);
-      setCash({orderIncome,qsIncome,totalIncome,totalExp,totalDep,
+      setCash({orderIncome,qsIncome,repairIncome,totalIncome,totalExp,totalDep,
         cashInHand:totalIncome-totalExp-totalDep,
-        orderCount:todayOrders.length,qsCount:todayQS.length,
+        orderCount:todayOrders.length,qsCount:todayQS.length,repairCount:todayRepairs.length,
         expCount:todayExp.length,depCount:todayDep.length});
     }).catch(console.error).finally(()=>setLoading(false));
   },[]);
@@ -97,6 +100,7 @@ export default function Dashboard() {
           {/* Formula */}
           <div style={{background:cream,padding:'8px 14px',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',fontSize:11,borderBottom:`1px solid ${border}`}}>
             <span style={{color:success,fontWeight:700}}>{fmt(cash.totalIncome)}</span>
+            <span style={{color:muted,fontSize:10}}>(orders+sales+repairs)</span>
             <span style={{color:muted}}>−</span>
             <span style={{color:danger,fontWeight:700}}>{fmt(cash.totalExp)}</span>
             <span style={{color:muted}}>−</span>
@@ -108,7 +112,7 @@ export default function Dashboard() {
           <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(4,1fr)'}}>
             {[
               {icon:'📋',label:'Orders',    val:fmt(cash.orderIncome),sub:`${cash.orderCount} advance${cash.orderCount!==1?'s':''}`,  color:success},
-              {icon:'🛍️',label:'Quick Sales',val:fmt(cash.qsIncome),   sub:`${cash.qsCount} sale${cash.qsCount!==1?'s':''}`,         color:success},
+              {icon:'🛍️',label:'Sales + Repairs',val:fmt((cash.qsIncome||0)+(cash.repairIncome||0)),   sub:`${cash.qsCount||0} sales · ${cash.repairCount||0} repairs`,         color:success},
               {icon:'💸',label:'Expenses',  val:fmt(cash.totalExp),   sub:`${cash.expCount} item${cash.expCount!==1?'s':''}`,         color:cash.totalExp>0?danger:muted},
               {icon:'🏦',label:'Deposited', val:fmt(cash.totalDep),   sub:`${cash.depCount} deposit${cash.depCount!==1?'s':''}`,      color:'#2563eb'},
             ].map((b,i)=>(
@@ -143,6 +147,7 @@ export default function Dashboard() {
         {[
           {label:'+ New Order',  href:'/orders/new',  bg:gold,     color:navy,   icon:'📋'},
           {label:'Quick Sale',   href:'/quick-sale',  bg:success,  color:'white',icon:'🛍️'},
+          {label:'🔧 Repair',    href:'/repairs',     bg:'#0891b2',color:'white',icon:'🔧'},
           {label:'Add Expense',  href:'/expenses',    bg:'#7c3aed',color:'white',icon:'💸'},
           {label:'Deposit Cash', href:'/expenses',    bg:'#2563eb',color:'white',icon:'🏦'},
           {label:'All Orders',   href:'/orders',      bg:navy,     color:'white',icon:'📋'},
