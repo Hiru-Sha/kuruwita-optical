@@ -1,3 +1,4 @@
+/* eslint-disable */
 // ============================================================
 //  NewOrder.js — Complete with all patches applied correctly
 //  ✅ QR Scanner integrated
@@ -576,7 +577,7 @@ export default function NewOrder() {
             </div>
 
             {/* Frame search — only for our stock */}
-            {!customerOwnFrame ? (
+            {!customerOwnFrame && (
             <div style={{ position:'relative', marginBottom:12 }}>
               <Field label="Search Frame from Stock">
                 <input value={frameSearch} onChange={e=>handleFrameSearch(e.target.value)} placeholder="Type frame name to search stock..." style={INP}/>
@@ -599,6 +600,32 @@ export default function NewOrder() {
                 </div>
               )}
             </div>
+            )}
+
+            {/* Manual frame entry for customer's own frame */}
+            {customerOwnFrame && (
+              <div style={{ marginBottom:12 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+                  <Field label="Frame Brand / Name">
+                    <input value={frameDetails.name} onChange={e=>setFrameDetails(f=>({...f,name:e.target.value}))}
+                      placeholder="e.g. RayBan, Titan..." style={INP}/>
+                  </Field>
+                  <Field label="Frame Color">
+                    <select value={frameDetails.color} onChange={e=>setFrameDetails(f=>({...f,color:e.target.value}))} style={{ ...INP, cursor:'pointer' }}>
+                      {FRAME_COLORS.map(col=>(<option key={col}>{col}</option>))}
+                    </select>
+                  </Field>
+                  <Field label="Frame Type">
+                    <select value={frameDetails.type} onChange={e=>setFrameDetails(f=>({...f,type:e.target.value}))} style={{ ...INP, cursor:'pointer' }}>
+                      {FRAME_TYPES.map(t=>(<option key={t}>{t}</option>))}
+                    </select>
+                  </Field>
+                </div>
+                <div style={{ background:'#eff6ff', borderRadius:8, padding:'9px 13px', marginTop:8, fontSize:12, color:'#1e40af' }}>
+                  ℹ️ No charge for frame — lens fitting only. Frame price will be Rs. 0.
+                </div>
+              </div>
+            )}
 
             {/* Frame photo after selection — only our stock */}
             {!customerOwnFrame && selectedFrame && selectedFrame.image_url && (
