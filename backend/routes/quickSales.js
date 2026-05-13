@@ -46,7 +46,8 @@ router.post('/', auth, async (req, res) => {
         [importTs, result.rows[0].id]);
     }
     await client.query('COMMIT');
-    res.status(201).json({ ...result.rows[0], sale_number: saleNum }); catch (err) {
+    res.status(201).json({ ...result.rows[0], sale_number: saleNum });
+  } catch (err) {
     await client.query('ROLLBACK');
     console.error(err);
     res.status(500).json({ error: 'Failed: ' + err.message });
