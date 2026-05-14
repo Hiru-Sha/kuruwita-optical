@@ -142,7 +142,9 @@ export default function QuickSale() {
   const [done,     setDone]    = useState(null);
   const [doneItems,setDoneItems]=useState([]);
   const [mob,      setMob]     = useState(window.innerWidth < 640);
-  const [activeTab,setActiveTab]= useState('sale');   // 'sale' | 'history'
+  const [activeTab,setActiveTab]= useState('sale');
+  const [pastMode, setPastMode] = useState(false);
+  const [saleDate, setSaleDate] = useState('');   // 'sale' | 'history'
   const [history,  setHistory]  = useState([]);
   const [histLoad, setHistLoad] = useState(false);
   const timer = useRef(null);
@@ -170,8 +172,16 @@ export default function QuickSale() {
     clearTimeout(timer.current);
     if (!v.trim()) return setResults([]);
     timer.current = setTimeout(async () => {
-      try { const r=await getInventory({search:v}); setResults(r.data.filter(i=>i.quantity>0).slice(0,8)); }
-      catch { setResults([]); }
+      try {
+        const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('ko_token');
+        const res   = await fetch(`${BASE}/inventory?search=${encodeURIComponent(v)}&limit=20`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        const arr  = Array.isArray(json) ? json : Array.isArray(json.data) ? json.data : [];
+        setResults(arr.filter(i=>i.quantity>0).slice(0,8));
+      } catch { setResults([]); }
     }, 300);
   };
 
@@ -203,7 +213,7 @@ export default function QuickSale() {
       const res   = await fetch(`${BASE}/quick-sales`,{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-        body:JSON.stringify({customer_name:custName.trim()||null,customer_phone:custPhone.trim()||null,items:cart,subtotal,discount:discAmt,total,payment_method:payMethod,amount_paid:paid,change_given:change})
+        body:JSON.stringify({customer_name:custName.trim()||null,customer_phone:custPhone.trim()||null,items:cart,subtotal,discount:discAmt,total,payment_method:payMethod,amount_paid:paid,change_given:change,import_date:pastMode&&saleDate?saleDate:null})
       });
       if (!res.ok){const d=await res.json();throw new Error(d.error||'Failed');}
       const data=await res.json();
@@ -249,6 +259,23 @@ export default function QuickSale() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Past record date override */}
+      <div style={{marginBottom:10}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+          <button onClick={()=>{setPastMode(p=>!p);setSaleDate('');}}
+            style={{padding:'6px 13px',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',border:`1.5px solid ${pastMode?'#b45309':C.border}`,background:pastMode?'#fffbeb':'white',color:pastMode?'#b45309':C.muted}}>
+            📅 {pastMode?'Backdating ON ✓':'Enter a past sale?'}
+          </button>
+          {pastMode && (
+            <input type="date" value={saleDate} onChange={e=>setSaleDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
+              style={{padding:'6px 12px',border:'2px solid #f59e0b',borderRadius:8,fontSize:14,fontWeight:700,fontFamily:'inherit',outline:'none',background:'#fffbeb',color:'#92400e'}}/>
+          )}
+          {pastMode && saleDate && <span style={{fontSize:12,color:'#92400e',background:'#fef3c7',padding:'3px 9px',borderRadius:20,fontWeight:600}}>{new Date(saleDate+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</span>}
+        </div>
+        {pastMode && !saleDate && <div style={{fontSize:12,color:'#b45309',marginTop:5}}>⬆️ Set the date this sale was made</div>}
       </div>
 
       {error&&<div style={{background:'#fef2f2',border:`1px solid #fca5a5`,color:C.danger,borderRadius:10,padding:'10px 14px',fontSize:13,marginBottom:14}}>⚠️ {error}</div>}

@@ -6,6 +6,38 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getInventory, createItem, updateItem, deleteItem } from '../api';
 
+// ── Autocomplete input ────────────────────────────────────────
+function AutoInput({ value, onChange, placeholder, style, suggestions=[] }) {
+  const [open, setOpen] = React.useState(false);
+  const filtered = suggestions.filter(s =>
+    s && value && s.toLowerCase().includes(value.toLowerCase()) && s.toLowerCase() !== value.toLowerCase()
+  ).slice(0, 6);
+
+  return (
+    <div style={{ position:'relative' }}>
+      <input value={value} onChange={e=>{ onChange(e.target.value); setOpen(true); }}
+        onFocus={()=>setOpen(true)}
+        onBlur={()=>setTimeout(()=>setOpen(false), 150)}
+        placeholder={placeholder} style={style}/>
+      {open && filtered.length > 0 && (
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white',
+          border:'1.5px solid #c9a84c', borderRadius:8, boxShadow:'0 4px 16px rgba(0,0,0,.12)',
+          zIndex:100, overflow:'hidden', marginTop:2 }}>
+          {filtered.map((s,i)=>(
+            <div key={i} onMouseDown={()=>{ onChange(s); setOpen(false); }}
+              style={{ padding:'9px 13px', cursor:'pointer', fontSize:13, color:'#0f1f3d',
+                borderBottom:'1px solid #f8f5ef' }}
+              onMouseEnter={e=>e.currentTarget.style.background='#f8f5ef'}
+              onMouseLeave={e=>e.currentTarget.style.background='white'}>
+              {s}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 import { StickerModal } from '../components/QRStickers';
 
@@ -97,18 +129,24 @@ const buildName = (form) => {
   }
 };
 
-function CategoryFields({ form, set }) {
+function CategoryFields({ form, set, suggestions }) {
   const inp = (key, placeholder) => <input value={form[key]||''} onChange={e=>set(f=>({...f,[key]:e.target.value}))} placeholder={placeholder} style={INP}/>;
   const sel = (key, options) => <select value={form[key]||''} onChange={e=>set(f=>({...f,[key]:e.target.value}))} style={SEL}>{options.map(o=><option key={o}>{o}</option>)}</select>;
-  const common = <>
-    <Field label="Brand"><input value={form.brand||''} onChange={e=>set(f=>({...f,brand:e.target.value}))} placeholder="Brand name" style={INP}/></Field>
-    <Field label="Dealer"><input value={form.dealer||''} onChange={e=>set(f=>({...f,dealer:e.target.value}))} placeholder="Supplier" style={INP}/></Field>
+  const common = (sugg) => <>
+    <Field label="Brand">
+      <AutoInput value={form.brand||''} onChange={v=>set(f=>({...f,brand:v}))} placeholder="Brand name" style={INP}
+        suggestions={sugg?.brands||[]}/>
+    </Field>
+    <Field label="Dealer">
+      <AutoInput value={form.dealer||''} onChange={v=>set(f=>({...f,dealer:v}))} placeholder="Supplier" style={INP}
+        suggestions={sugg?.dealers||[]}/>
+    </Field>
   </>;
   switch(form.category) {
-    case 'Frames': return <>{common}<Field label="Model Name">{inp('frame_name','e.g. RB3025')}</Field><Field label="Shape">{sel('frame_shape',FR_SHAPES)}</Field><Field label="Type">{sel('frame_type',FR_TYPES)}</Field><Field label="Material">{sel('frame_material',FR_MATS)}</Field><Field label="Color">{sel('frame_color',FR_COLORS)}</Field><Field label="Size">{sel('frame_size',FR_SIZES)}</Field></>;
-    case 'Sunglasses': return <>{common}<Field label="Model">{inp('frame_name','Model code')}</Field><Field label="Type">{sel('sg_type',SG_TYPES)}</Field><Field label="Shape">{sel('frame_shape',FR_SHAPES)}</Field><Field label="Material">{sel('frame_material',FR_MATS)}</Field><Field label="Color">{sel('frame_color',FR_COLORS)}</Field><Field label="Size">{sel('frame_size',FR_SIZES)}</Field></>;
-    case 'Reading Glasses': return <>{common}<Field label="Lens Type">{sel('rg_lens_type',RG_TYPES)}</Field><Field label="Material">{sel('rg_material',RG_MATS)}</Field><Field label="Power">{sel('rg_power',RG_POWERS)}</Field><Field label="Color">{sel('frame_color',FR_COLORS)}</Field></>;
-    default: return <>{common}<Field label="Name / Type">{inp('item_name','Item name')}</Field>{['Boxes','Sunglass Pouches','Chains'].includes(form.category)&&<Field label="Color">{sel('frame_color',FR_COLORS)}</Field>}</>;
+    case 'Frames': return <>{common(suggestions)}<Field label="Model Name">{inp('frame_name','e.g. RB3025')}</Field><Field label="Shape">{sel('frame_shape',FR_SHAPES)}</Field><Field label="Type">{sel('frame_type',FR_TYPES)}</Field><Field label="Material">{sel('frame_material',FR_MATS)}</Field><Field label="Color">{sel('frame_color',FR_COLORS)}</Field><Field label="Size">{sel('frame_size',FR_SIZES)}</Field></>;
+    case 'Sunglasses': return <>{common(suggestions)}<Field label="Model">{inp('frame_name','Model code')}</Field><Field label="Type">{sel('sg_type',SG_TYPES)}</Field><Field label="Shape">{sel('frame_shape',FR_SHAPES)}</Field><Field label="Material">{sel('frame_material',FR_MATS)}</Field><Field label="Color">{sel('frame_color',FR_COLORS)}</Field><Field label="Size">{sel('frame_size',FR_SIZES)}</Field></>;
+    case 'Reading Glasses': return <>{common(suggestions)}<Field label="Lens Type">{sel('rg_lens_type',RG_TYPES)}</Field><Field label="Material">{sel('rg_material',RG_MATS)}</Field><Field label="Power">{sel('rg_power',RG_POWERS)}</Field><Field label="Color">{sel('frame_color',FR_COLORS)}</Field></>;
+    default: return <>{common(suggestions)}<Field label="Name / Type">{inp('item_name','Item name')}</Field>{['Boxes','Sunglass Pouches','Chains'].includes(form.category)&&<Field label="Color">{sel('frame_color',FR_COLORS)}</Field>}</>;
   }
 }
 
@@ -321,6 +359,7 @@ export default function Inventory() {
   const [selected,     setSelected]    = useState(null);
   const [panelTab,     setPanelTab]    = useState('details');
   const [showAdd,      setShowAdd]     = useState(false);
+  const [suggestions,  setSuggestions] = useState({ dealers:[], brands:[], names:[] });
   const [addSaving,    setAddSaving]   = useState(false);
   const [addCat,       setAddCat]      = useState('Frames');
   const [colorVariants,setColorVariants] = useState([{ color:'Black', qty:'1', image:null }]);
@@ -342,9 +381,14 @@ export default function Inventory() {
     fetch(`${BASE}/inventory?${params}`, { headers:{ Authorization:`Bearer ${token}` } })
       .then(r=>r.json())
       .then(r=>{
-        // Handle both { data: [...] } and [...] response shapes
         const arr = Array.isArray(r) ? r : Array.isArray(r.data) ? r.data : [];
         setItems(arr);
+        // Build autocomplete suggestions from existing data
+        setSuggestions({
+          dealers: [...new Set(arr.map(i=>i.dealer).filter(Boolean))].sort(),
+          brands:  [...new Set(arr.map(i=>i.brand).filter(Boolean))].sort(),
+          names:   [...new Set(arr.map(i=>i.item_name).filter(Boolean))].sort(),
+        });
       })
       .catch(()=>setItems([]))
       .finally(()=>setLoading(false));
@@ -496,7 +540,7 @@ export default function Inventory() {
             </label>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
-            <CategoryFields form={form} set={setForm}/>
+            <CategoryFields form={form} set={setForm} suggestions={suggestions}/>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginTop:4 }}>
             <Field label="Cost Price (Rs.)"><input type="number" value={form.cost_price||''} onChange={e=>setForm(f=>({...f,cost_price:e.target.value}))} placeholder="Buy price" style={INP}/></Field>
