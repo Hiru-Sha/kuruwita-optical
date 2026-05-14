@@ -333,7 +333,9 @@ export default function Inventory() {
   const load = useCallback(()=>{
     setLoading(true);
     getInventory({ search:search||undefined, category:activeCat!=='All'?activeCat:undefined, no_images:'1' })
-      .then(r=>setItems(r.data)).catch(()=>setItems([])).finally(()=>setLoading(false));
+      .then(r=>setItems(Array.isArray(r.data)?r.data:Array.isArray(r)?r:[]))
+      .catch(()=>setItems([]))
+      .finally(()=>setLoading(false));
   },[search,activeCat]);
 
   useEffect(()=>{ load(); },[load]);
