@@ -30,31 +30,15 @@ export default function Dashboard() {
     const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
     const token = localStorage.getItem('ko_token');
     const h     = { Authorization:`Bearer ${token}` };
-    Promise.all([
-      fetch(`${BASE}/reports/dashboard`,{headers:h}).then(r=>r.json()),
-      fetch(`${BASE}/orders?limit=200`,{headers:h}).then(r=>r.json()),
-      fetch(`${BASE}/quick-sales?limit=200`,{headers:h}).then(r=>r.json()),
-      fetch(`${BASE}/expenses?month=${todayStr.slice(0,7)}`,{headers:h}).then(r=>r.json()).catch(()=>[]),
-      fetch(`${BASE}/cash-deposits?date=${todayStr}`,{headers:h}).then(r=>r.json()).catch(()=>[]),
-      fetch(`${BASE}/repairs?month=${todayStr.slice(0,7)}`,{headers:h}).then(r=>r.json()).catch(()=>[]),
-    ]).then(([dash,orders,qsales,expenses,deposits,repairs])=>{
-      setData(dash);
-      const todayOrders=(Array.isArray(orders)?orders:[]).filter(o=>o.created_at?.slice(0,10)===todayStr);
-      const todayQS    =(Array.isArray(qsales)?qsales:[]).filter(s=>s.created_at?.slice(0,10)===todayStr);
-      const todayExp   =(Array.isArray(expenses)?expenses:[]).filter(e=>e.date?.slice(0,10)===todayStr);
-      const todayDep   =Array.isArray(deposits)?deposits:[];
-      const todayRepairs=(Array.isArray(repairs)?repairs:[]).filter(r=>r.created_at?.slice(0,10)===todayStr&&r.payment_method!=='free');
-      const orderIncome=todayOrders.reduce((s,o)=>s+parseFloat(o.advance_amount||0),0);
-      const qsIncome   =todayQS.reduce((s,q)=>s+parseFloat(q.total||0),0);
-      const repairIncome=todayRepairs.reduce((s,r)=>s+parseFloat(r.charge||0),0);
-      const totalIncome=orderIncome+qsIncome+repairIncome;
-      const totalExp   =todayExp.reduce((s,e)=>s+parseFloat(e.amount||0),0);
-      const totalDep   =todayDep.reduce((s,d)=>s+parseFloat(d.amount||0),0);
-      setCash({orderIncome,qsIncome,repairIncome,totalIncome,totalExp,totalDep,
-        cashInHand:totalIncome-totalExp-totalDep,
-        orderCount:todayOrders.length,qsCount:todayQS.length,repairCount:todayRepairs.length,
-        expCount:todayExp.length,depCount:todayDep.length});
-    }).catch(console.error).finally(()=>setLoading(false));
+    // Single request — replaces 6 separate API calls
+    fetch(`${BASE}/dashboard-today`,{headers:h})
+      .then(r=>r.json())
+      .then(result=>{
+        setData(result);
+        setCash(result.daily_cash);
+      })
+      .catch(console.error)
+      .finally(()=>setLoading(false));
   },[]);
 
   if (loading) return (
@@ -184,7 +168,7 @@ export default function Dashboard() {
                   <div style={{fontSize:13,fontWeight:600,color:navy,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.customer_name}</div>
                   <div style={{fontSize:11,color:muted}}>{r.order_number} · {fmt(r.balance_amount)}</div>
                 </div>
-                <a href={`https://wa.me/94${r.phone?.replace(/^0/,'')}?text=${encodeURIComponent(`Hello ${r.customer_name}, your order ${r.order_number} is ready. Please visit Kuruwita Optical. Thank you!`)}`}
+                <a href={`https://wa.me/94${r.phone?.replace(/^0/,'')}?text=${encodeURIComponent(`Hello ${r.customer_name}, your order ${r.order_number} is ready. Please visit Wickramakalutota Opticals. Thank you!`)}`}
                   target="_blank" rel="noreferrer"
                   style={{background:'#25D366',color:'white',padding:'8px 12px',borderRadius:7,fontSize:12,fontWeight:700,textDecoration:'none',whiteSpace:'nowrap',flexShrink:0}}>
                   💬 WA
