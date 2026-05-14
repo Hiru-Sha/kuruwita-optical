@@ -5,6 +5,8 @@
 // ============================================================
 import React, { useEffect, useState, useCallback } from 'react';
 import { getInventory, createItem, updateItem, deleteItem } from '../api';
+
+
 import { StickerModal } from '../components/QRStickers';
 
 const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b' };
@@ -334,7 +336,7 @@ export default function Inventory() {
     setLoading(true);
     const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
     const token = localStorage.getItem('ko_token');
-    const params = new URLSearchParams({ no_images:'1', limit:'500' });
+    const params = new URLSearchParams({ limit:'500' });
     if (search)                   params.set('search', search);
     if (activeCat !== 'All')      params.set('category', activeCat);
     fetch(`${BASE}/inventory?${params}`, { headers:{ Authorization:`Bearer ${token}` } })

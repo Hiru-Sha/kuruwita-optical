@@ -1,6 +1,5 @@
 // ============================================================
 //  Inventory Routes — /api/inventory
-//  no_images=1 param skips image_url in list for faster load
 // ============================================================
 const router = require('express').Router();
 const pool   = require('../db/pool');
@@ -8,12 +7,7 @@ const auth   = require('../middleware/auth');
 
 // GET /api/inventory
 router.get('/', auth, async (req, res) => {
-  const { search, category, limit = 500, no_images } = req.query;
-
-  // When no_images=1, exclude image_url from list (huge speedup)
-  const imageCol = no_images === '1'
-    ? `NULL AS image_url`
-    : `image_url`;
+  const { search, category, limit = 500 } = req.query;
 
   try {
     let sql = `
@@ -21,8 +15,7 @@ router.get('/', auth, async (req, res) => {
              frame_type, frame_color, frame_shape, frame_material, frame_size,
              sg_type, rg_lens_type, rg_material, rg_power, item_name,
              cost_price, sell_price, quantity, min_quantity,
-             ${imageCol},
-             created_at, updated_at
+             image_url, created_at, updated_at
       FROM inventory
       WHERE 1=1
     `;
