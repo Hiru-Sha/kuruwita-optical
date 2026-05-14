@@ -322,6 +322,8 @@ export default function Inventory() {
   const [addSaving,    setAddSaving]   = useState(false);
   const [addCat,       setAddCat]      = useState('Frames');
   const [colorVariants,setColorVariants] = useState([{ color:'Black', qty:'1', image:null }]);
+  // Keep first variant color in sync with form frame_color
+  const prevFrameColor = React.useRef('Black');
   const [loading,      setLoading]     = useState(true);
   const [imgData,      setImgData]     = useState(null);
   const [form,         setForm]        = useState(defaults('Frames'));
@@ -330,11 +332,23 @@ export default function Inventory() {
 
   const load = useCallback(()=>{
     setLoading(true);
-    getInventory({ search:search||undefined, category:activeCat!=='All'?activeCat:undefined })
+    getInventory({ search:search||undefined, category:activeCat!=='All'?activeCat:undefined, no_images:'1' })
       .then(r=>setItems(r.data)).catch(()=>setItems([])).finally(()=>setLoading(false));
   },[search,activeCat]);
 
   useEffect(()=>{ load(); },[load]);
+
+  // Sync form frame_color → first colour variant
+  useEffect(()=>{
+    if (form.frame_color && form.frame_color !== prevFrameColor.current) {
+      prevFrameColor.current = form.frame_color;
+      setColorVariants(cv => {
+        if (!cv.length) return cv;
+        // Only update first row if user hasn't manually changed it
+        return cv.map((v,i) => i===0 ? {...v, color: form.frame_color} : v);
+      });
+    }
+  },[form.frame_color]);
 
   const handleCatChange = (cat) => { setAddCat(cat); setForm(defaults(cat)); setImgData(null); setColorVariants([{ color:'Black', qty:'1', image:null }]); };
   const handleImgPick   = async (e) => { const f=e.target.files[0]; if(!f) return; setImgData(await toBase64(f)); };
@@ -380,6 +394,18 @@ export default function Inventory() {
   const handleDelete = async (id) => {
     if(!window.confirm('Remove this item?')) return;
     await deleteItem(id); setSelected(null); load();
+  };
+
+  // Load full item (with image) when panel opens
+  const loadFullItem = async (item) => {
+    setSelected(item); // show panel immediately with no image
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/inventory/${item.id}`, { headers:{ Authorization:`Bearer ${token}` } });
+      const full  = await res.json();
+      setSelected(full); // update with full data including image
+    } catch(e) { /* non-critical — panel still works without image */ }
   };
 
   const handlePanelImg = async (e) => {
@@ -559,7 +585,7 @@ export default function Inventory() {
           : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(185px,1fr))', gap:14 }}>
               {items.map(item=>(
                 <ItemCard key={item.id} item={item}
-                  onClick={()=>{ setSelected(item); setPanelTab('details'); }}
+                  onClick={()=>{ setPanelTab('details'); loadFullItem(item); }}
                   onSticker={i=>{ setStickerItems([i]); setShowStickers(true); }}
                 />
               ))}
