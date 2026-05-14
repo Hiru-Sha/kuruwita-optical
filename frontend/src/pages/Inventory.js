@@ -458,7 +458,7 @@ export default function Inventory() {
                 <select value={v.color}
                   onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:e.target.value}:x))}
                   style={{ ...INP, padding:'8px 10px' }}>
-                  {FRAME_COLORS.map(col=><option key={col}>{col}</option>)}
+                  {FR_COLORS.map(col=><option key={col}>{col}</option>)}
                 </select>
                 <input type="number" min="0" value={v.qty} placeholder="Qty"
                   onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,qty:e.target.value}:x))}
