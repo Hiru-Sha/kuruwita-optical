@@ -19,6 +19,9 @@ import BalanceFollowUp from './pages/BalanceFollowUp';
 import RxTracker       from './pages/RxTracker';
 import DealerPurchases from './pages/DealerPurchases';
 import Repairs         from './pages/Repairs';
+import LabReceivings   from './pages/LabReceivings';
+import KalutotaAccount from './pages/KalutotaAccount';
+import BulkImport     from './pages/BulkImport';
 import ReportPDF       from './pages/ReportPDF';
 
 function Protected({ children }) {
@@ -58,6 +61,9 @@ export default function App() {
             <Route path="rx-tracker"      element={<RxTracker />} />
             <Route path="dealers"          element={<DealerPurchases />} />
             <Route path="repairs"          element={<Repairs />} />
+            <Route path="lab-receivings"   element={<LabReceivings />} />
+            <Route path="kalutota"          element={<KalutotaAccount />} />
+            <Route path="bulk-import"       element={<BulkImport />} />
             <Route path="report-pdf"       element={<ReportPDF />} />
             {/* Admin-only routes */}
             <Route path="grinding"  element={<AdminOnly><Grinding /></AdminOnly>} />

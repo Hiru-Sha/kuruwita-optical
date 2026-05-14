@@ -246,6 +246,7 @@ router.patch('/:id', auth, async (req, res) => {
     'frame', 'frame_type', 'lens_type', 'lens_coating', 'lens_company', 'lens_step',
     'total_amount', 'advance_amount', 'balance_amount', 'deliver_date', 'status',
     'has_rx', 'rx_hospital', 'rx_date', 'rx_doctor', 'rx_returned', 'notes',
+    'lab_bill_amount', 'lab_paid', 'lab_paid_date', 'lab_payment_method', 'lab_notes',
   ];
 
   const fields = [], values = [];

@@ -160,6 +160,22 @@ router.get('/', auth, async (req, res) => {
         ORDER BY total DESC
       `, [from, to]),
 
+      // ── Lab bills ────────────────────────────────────────────
+      pool.query(`
+        SELECT
+          lens_company,
+          COALESCE(SUM(lab_bill_amount),0) AS lab_total,
+          COALESCE(SUM(CASE WHEN lab_paid THEN lab_bill_amount END),0) AS total_paid,
+          COALESCE(SUM(CASE WHEN NOT COALESCE(lab_paid,false) AND lab_bill_amount > 0 THEN lab_bill_amount END),0) AS total_unpaid,
+          COUNT(CASE WHEN lab_bill_amount > 0 THEN 1 END) AS orders_with_bill,
+          COUNT(CASE WHEN NOT COALESCE(lab_paid,false) AND lab_bill_amount > 0 THEN 1 END) AS unpaid_count
+        FROM orders
+        WHERE created_at::date BETWEEN $1 AND $2
+          AND lens_company IS NOT NULL
+        GROUP BY lens_company
+        ORDER BY lab_total DESC
+      `, [from, to]),
+
       // ── Top frames ──────────────────────────────────────────
       pool.query(`
         SELECT frame,
@@ -184,6 +200,20 @@ router.get('/', auth, async (req, res) => {
           AND created_at::date BETWEEN $1 AND $2
         GROUP BY lens_type
         ORDER BY units DESC
+      `, [from, to]),
+
+      // ── Kalutota account summary ─────────────────────────────
+      pool.query(`
+        SELECT
+          COALESCE(SUM(CASE WHEN direction='out' THEN total_amount END),0) AS total_out,
+          COALESCE(SUM(CASE WHEN direction='in'  THEN total_amount END),0) AS total_in,
+          COALESCE(SUM(CASE WHEN direction='out' AND payment_status='pending'
+            THEN total_amount - COALESCE(paid_amount,0) END),0) AS they_owe_you,
+          COALESCE(SUM(CASE WHEN direction='in' AND payment_status='pending'
+            THEN total_amount - COALESCE(paid_amount,0) END),0) AS you_owe_them,
+          COUNT(*) AS total_transactions
+        FROM kalutota_transactions
+        WHERE date BETWEEN $1 AND $2
       `, [from, to]),
 
       // ── Daily revenue trend ─────────────────────────────────
@@ -240,6 +270,13 @@ router.get('/', auth, async (req, res) => {
       deposits:   dep,
       stockPurchases: stockPurchases.rows,
       lensJobs:   lensJobStats.rows,
+      kalutota:   kalutotaStats.rows[0] || {},
+      labBills: {
+        total_billed: labBillStats.rows.reduce((s,r)=>s+parseFloat(r.lab_total||0),0),
+        total_paid:   labBillStats.rows.reduce((s,r)=>s+parseFloat(r.total_paid||0),0),
+        total_unpaid: labBillStats.rows.reduce((s,r)=>s+parseFloat(r.total_unpaid||0),0),
+        by_lab:       labBillStats.rows,
+      },
       topFrames:  topFrames.rows,
       topLenses:  topLensTypes.rows,
       daily:      dailyRevenue.rows,

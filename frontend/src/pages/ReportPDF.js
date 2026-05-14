@@ -326,6 +326,42 @@ ${data.stockPurchases.length > 0 ? `
   </tr>
 </table>` : ''}
 
+<!-- ══ LAB BILLS ════════════════════════════════════════ -->
+${data.labBills && data.labBills.total_billed > 0 ? `
+<h2>Lab Bills — Negombo Optical & Solex</h2>
+<div class="grid3">
+  <div class="kpi dark"><div class="kpi-label">Total Billed by Labs</div><div class="kpi-value">${fmtR(data.labBills.total_billed)}</div></div>
+  <div class="kpi"><div class="kpi-label">Paid to Labs</div><div class="kpi-value" style="color:#2d7a4f">${fmtR(data.labBills.total_paid)}</div></div>
+  <div class="kpi"><div class="kpi-label">Still Owed to Labs</div><div class="kpi-value" style="color:#c0392b">${fmtR(data.labBills.total_unpaid)}</div></div>
+</div>
+${data.labBills.by_lab && data.labBills.by_lab.length > 0 ? `
+<table>
+  <tr><th>Lab</th><th class="c">Orders</th><th class="r">Total Billed</th><th class="r">Paid</th><th class="r">Unpaid</th></tr>
+  ${data.labBills.by_lab.map(l=>`
+    <tr>
+      <td style="padding:6px 10px;border:1px solid #e0ddd6;font-weight:600">${l.lens_company}</td>
+      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center">${l.orders_with_bill}</td>
+      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right">${fmtR(l.lab_total)}</td>
+      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:#2d7a4f">${fmtR(l.total_paid)}</td>
+      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:${parseFloat(l.total_unpaid)>0?'#c0392b':'#6b7280'};font-weight:${parseFloat(l.total_unpaid)>0?'700':'400'}">${fmtR(l.total_unpaid)}</td>
+    </tr>`).join('')}
+</table>` : ''}` : ''}
+
+<!-- ══ KALUTOTA ACCOUNT ════════════════════════════════════ -->
+${data.kalutota && data.kalutota.total_transactions > 0 ? `
+<h2>Kalutota Opticals Account</h2>
+<div class="grid4">
+  <div class="kpi dark"><div class="kpi-label">Net Balance</div>
+    <div class="kpi-value" style="color:${parseFloat(data.kalutota.they_owe_you||0) >= parseFloat(data.kalutota.you_owe_them||0)?'#86efac':'#fca5a5'}">
+      ${fmtR(Math.abs((parseFloat(data.kalutota.they_owe_you||0))-(parseFloat(data.kalutota.you_owe_them||0))))}
+    </div>
+    <div class="kpi-sub">${parseFloat(data.kalutota.they_owe_you||0) >= parseFloat(data.kalutota.you_owe_them||0)?'They owe you':'You owe them'}</div>
+  </div>
+  <div class="kpi"><div class="kpi-label">Goods Out (they took)</div><div class="kpi-value" style="color:#7c3aed">${fmtR(data.kalutota.total_out)}</div></div>
+  <div class="kpi"><div class="kpi-label">Goods In (they gave)</div><div class="kpi-value" style="color:#0891b2">${fmtR(data.kalutota.total_in)}</div></div>
+  <div class="kpi"><div class="kpi-label">Transactions</div><div class="kpi-value">${data.kalutota.total_transactions}</div></div>
+</div>` : ''}
+
 <!-- ══ PAGE BREAK ════════════════════════════════════════ -->
 <div class="page-break"></div>
 
