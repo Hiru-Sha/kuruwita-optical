@@ -125,6 +125,14 @@ export default function NewOrder() {
   );
   const [notes, setNotes] = useState('');
 
+  // ── Order type (normal / warranty / replacement) ────────────
+  const [orderType, setOrderType] = useState('normal');
+  // normal       = standard paid order
+  // lens_warranty= lens replaced free (our fault)
+  // lens_paid    = lens replaced, customer pays
+  // frame_replace_free = frame/item replaced free (one-to-one)
+  // frame_replace_paid = frame/item replaced, customer pays difference
+
   // ── Customer own frame ────────────────────────────────────
   const [customerOwnFrame, setCustomerOwnFrame] = useState(false);
 
@@ -132,8 +140,12 @@ export default function NewOrder() {
   const [showScanner, setShowScanner] = useState(false);
 
   // ── Computed totals ──────────────────────────────────────
-  const frameFinal    = Math.max(0,(frameDetails.sellPrice||0)-(frameDetails.frameDiscount||0));
-  const lensFinal     = Math.max(0,(lensDetails.sellPrice||0)-(lensDetails.lensDiscount||0));
+  const frameFinal    = (orderType==='frame_replace_free' || orderType==='lens_warranty')
+    ? 0
+    : Math.max(0,(frameDetails.sellPrice||0)-(frameDetails.frameDiscount||0));
+  const lensFinal     = (orderType==='lens_warranty')
+    ? 0
+    : Math.max(0,(lensDetails.sellPrice||0)-(lensDetails.lensDiscount||0));
   const subTotal      = frameFinal + lensFinal;
   const totalAmount   = Math.max(0, subTotal - (parseFloat(overallDiscount)||0));
   const balanceAmount = Math.max(0,totalAmount-(parseFloat(advance)||0));
@@ -316,6 +328,7 @@ export default function NewOrder() {
         discount_amount:      (parseFloat(overallDiscount)||0) + (frameDetails.frameDiscount||0) + (lensDetails.lensDiscount||0),
         payment_method:       payMethod,
         customer_own_frame:   customerOwnFrame,
+        order_type:           orderType,
         deliver_date:         deliverDate,
         status:               pastMode ? 'delivered' : 'created',
         import_date:          pastMode ? orderDate : null,
@@ -540,6 +553,49 @@ export default function NewOrder() {
       {step===3 && (
         <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'20px 22px', marginBottom:16 }}>
           <div style={{ fontSize:16, fontWeight:700, color:C.navy, marginBottom:14 }}>🕶️ Frame & Lens</div>
+
+          {/* ── Order Type ── */}
+          <div style={{ marginBottom:18 }}>
+            <div style={{ fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:8 }}>Order Type</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:8, marginBottom:8 }}>
+              {[
+                { v:'normal',             icon:'📋', label:'Normal Order',          sub:'Standard paid order',              col:C.navy,    bg:'white'    },
+                { v:'lens_warranty',      icon:'🔁', label:'Lens Replacement Free', sub:'Our fault — no charge to customer',col:'#2d7a4f', bg:'#dcfce7'  },
+                { v:'lens_paid',          icon:'🔬', label:'Lens Replacement Paid', sub:'Customer pays for new lens',       col:'#2563eb', bg:'#eff6ff'  },
+                { v:'frame_replace_free', icon:'🎁', label:'Frame Replace Free',    sub:'One-to-one replacement, no charge',col:'#7c3aed', bg:'#f5f3ff'  },
+                { v:'frame_replace_paid', icon:'💰', label:'Frame Replace Paid',    sub:'Replacement with payment',         col:'#b45309', bg:'#fffbeb'  },
+              ].map(t=>(
+                <button key={t.v} onClick={()=>setOrderType(t.v)}
+                  style={{ padding:'10px 12px', borderRadius:10, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                    border:`2px solid ${orderType===t.v?t.col:'#e0ddd6'}`,
+                    background:orderType===t.v?t.bg:'white',
+                    color:orderType===t.v?t.col:'#6b7280',
+                    display:'flex', alignItems:'center', gap:8, textAlign:'left' }}>
+                  <span style={{ fontSize:20, flexShrink:0 }}>{t.icon}</span>
+                  <div>
+                    <div>{t.label}</div>
+                    <div style={{ fontSize:10, opacity:.7, fontWeight:400 }}>{t.sub}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {/* Warranty note */}
+            {orderType==='lens_warranty' && (
+              <div style={{ background:'#dcfce7', border:'1px solid #86efac', borderRadius:9, padding:'9px 13px', fontSize:12, color:'#2d7a4f' }}>
+                ✅ <b>Free lens replacement</b> — lens price will be set to Rs. 0 automatically. Frame charge still applies if new frame is given.
+              </div>
+            )}
+            {orderType==='frame_replace_free' && (
+              <div style={{ background:'#f5f3ff', border:'1px solid #c4b5fd', borderRadius:9, padding:'9px 13px', fontSize:12, color:'#7c3aed' }}>
+                🎁 <b>Free replacement</b> — frame and lens prices set to Rs. 0. Use notes to record the original order number.
+              </div>
+            )}
+            {(orderType==='lens_paid'||orderType==='frame_replace_paid') && (
+              <div style={{ background:'#eff6ff', border:'1px solid #93c5fd', borderRadius:9, padding:'9px 13px', fontSize:12, color:'#1e40af' }}>
+                💰 <b>Paid replacement</b> — set the price in Step 4 as normal.
+              </div>
+            )}
+          </div>
 
           {/* ── Customer own frame toggle ── */}
           <div style={{ marginBottom:18 }}>
@@ -778,8 +834,11 @@ export default function NewOrder() {
                 <span style={{ fontSize:13, fontWeight:600, color:C.navy }}>
                   🕶️ {frameDetails.name||'Frame'} · {frameDetails.color}
                   {customerOwnFrame && <span style={{ background:'#dbeafe', color:'#1e40af', fontSize:10, fontWeight:600, padding:'1px 7px', borderRadius:20, marginLeft:6 }}>Customer's Frame</span>}
+                  {orderType==='frame_replace_free' && <span style={{ background:'#f5f3ff', color:'#7c3aed', fontSize:10, fontWeight:600, padding:'1px 7px', borderRadius:20, marginLeft:6 }}>🎁 Free Replace</span>}
                 </span>
-                <span style={{ fontSize:14, fontWeight:700, color:customerOwnFrame?C.muted:C.navy }}>{customerOwnFrame?'—':fmtMoney(frameFinal)}</span>
+                <span style={{ fontSize:14, fontWeight:700, color:(customerOwnFrame||orderType==='frame_replace_free')?C.muted:C.navy }}>
+                  {(customerOwnFrame||orderType==='frame_replace_free')?'Rs. 0':fmtMoney(frameFinal)}
+                </span>
               </div>
               {!customerOwnFrame && (
                 <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
@@ -795,8 +854,13 @@ export default function NewOrder() {
             {/* Lens row */}
             <div style={{ background:'white', borderRadius:9, padding:'12px 14px', marginBottom:10 }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                <span style={{ fontSize:13, fontWeight:600, color:C.navy }}>🔬 {lensDetails.type} · {lensDetails.coating}</span>
-                <span style={{ fontSize:14, fontWeight:700, color:C.navy }}>{fmtMoney(lensFinal)}</span>
+                <span style={{ fontSize:13, fontWeight:600, color:C.navy }}>
+                  🔬 {lensDetails.type} · {lensDetails.coating}
+                  {orderType==='lens_warranty' && <span style={{ background:'#dcfce7', color:'#2d7a4f', fontSize:10, fontWeight:600, padding:'1px 7px', borderRadius:20, marginLeft:6 }}>🔁 Free Replace</span>}
+                </span>
+                <span style={{ fontSize:14, fontWeight:700, color:orderType==='lens_warranty'?C.muted:C.navy }}>
+                  {orderType==='lens_warranty'?'Rs. 0':fmtMoney(lensFinal)}
+                </span>
               </div>
               <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
                 <span style={{ fontSize:11, color:C.muted }}>Sell price:</span>
@@ -894,6 +958,7 @@ export default function NewOrder() {
                 ...(pastMode && orderDate ? [{l:'📅 Order Date', v:new Date(orderDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}), bold:true}] : []),
                 {l:'Customer',    v:custMode==='new'?`${newCust.title} ${newCust.name}`:selectedCust?.name},
                 {l:'Phone',       v:custMode==='new'?newCust.phone:selectedCust?.phone},
+                {l:'Order Type',  v:orderType==='normal'?'Normal':orderType==='lens_warranty'?'🔁 Lens Free':orderType==='lens_paid'?'🔬 Lens Paid':orderType==='frame_replace_free'?'🎁 Frame Free':'💰 Frame Paid', bold:orderType!=='normal'},
                 {l:'Frame',       v:customerOwnFrame?`${frameDetails.name||'Customer Frame'} (Own)`:`${frameDetails.name||'—'} (${frameDetails.color})`},
                 {l:'Lens',        v:`${lensDetails.type} · ${lensDetails.coating}`},
                 {l:'Frame price', v:customerOwnFrame?'No charge':fmtMoney(frameFinal)},
