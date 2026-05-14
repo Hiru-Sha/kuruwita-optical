@@ -301,7 +301,7 @@ export default function Inventory() {
   const [showAdd,      setShowAdd]     = useState(false);
   const [addSaving,    setAddSaving]   = useState(false);
   const [addCat,       setAddCat]      = useState('Frames');
-  const [colorVariants,setColorVariants] = useState([{ color:'Black', qty:'1' }]);
+  const [colorVariants,setColorVariants] = useState([{ color:'Black', qty:'1', image:null }]);
   const [loading,      setLoading]     = useState(true);
   const [imgData,      setImgData]     = useState(null);
   const [form,         setForm]        = useState(defaults('Frames'));
@@ -316,7 +316,7 @@ export default function Inventory() {
 
   useEffect(()=>{ load(); },[load]);
 
-  const handleCatChange = (cat) => { setAddCat(cat); setForm(defaults(cat)); setImgData(null); setColorVariants([{ color:'Black', qty:'1' }]); };
+  const handleCatChange = (cat) => { setAddCat(cat); setForm(defaults(cat)); setImgData(null); setColorVariants([{ color:'Black', qty:'1', image:null }]); };
   const handleImgPick   = async (e) => { const f=e.target.files[0]; if(!f) return; setImgData(await toBase64(f)); };
 
   const handleAdd = async () => {
@@ -333,7 +333,7 @@ export default function Inventory() {
           ...form,
           frame_color: variant.color,
           name: variantName,
-          image_url: imgData||null,
+          image_url: variant.image||imgData||null,  // variant image or fallback to global
           sell_price:    parseFloat(form.sell_price)||0,
           cost_price:    parseFloat(form.cost_price)||0,
           quantity:      parseInt(variant.qty)||0,
@@ -343,7 +343,7 @@ export default function Inventory() {
       setShowAdd(false);
       setForm(defaults(addCat));
       setImgData(null);
-      setColorVariants([{ color:'Black', qty:'1' }]);
+      setColorVariants([{ color:'Black', qty:'1', image:null }]);
       load();
     } catch(e) {
       alert('Save failed: ' + (e.message||'Unknown error'));
@@ -429,9 +429,9 @@ export default function Inventory() {
             </div>
           </div>
           <div style={{ marginBottom:14 }}>
-            <label style={LBL}>Photo</label>
+            <label style={LBL}>Default Photo <span style={{ fontWeight:400, color:C.muted }}>(used for variants without their own photo)</span></label>
             <label style={{ display:'flex', alignItems:'center', justifyContent:'center', width:110, height:90, border:`2px dashed ${imgData?C.gold:C.border}`, borderRadius:10, cursor:'pointer', background:imgData?'#fdf9f0':C.cream, overflow:'hidden', position:'relative' }}>
-              {imgData ? <img src={imgData} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <><span style={{ fontSize:22 }}>📷</span><span style={{ fontSize:10, color:C.muted, marginTop:4 }}>Tap to upload</span></>}
+              {imgData ? <img src={imgData} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <><span style={{ fontSize:22 }}>📷</span><span style={{ fontSize:10, color:C.muted, marginTop:4 }}>Optional</span></>}
               <input type="file" accept="image/*" onChange={handleImgPick} style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer' }}/>
             </label>
           </div>
@@ -448,13 +448,26 @@ export default function Inventory() {
           <div style={{ marginTop:4, background:C.cream, borderRadius:12, padding:'14px 16px' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
               <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>🎨 Colours & Quantities</div>
-              <button onClick={()=>setColorVariants(v=>[...v,{color:'Black',qty:'1'}])}
+              <button onClick={()=>setColorVariants(v=>[...v,{color:'Black',qty:'1',image:null}])}
                 style={{ padding:'5px 12px', background:C.navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                 + Add colour
               </button>
             </div>
             {colorVariants.map((v,i)=>(
-              <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 100px 36px', gap:8, marginBottom:8, alignItems:'center' }}>
+              <div key={i} style={{ display:'grid', gridTemplateColumns:'44px 1fr 100px 44px 36px', gap:8, marginBottom:8, alignItems:'center' }}>
+                {/* Image picker per variant */}
+                <label style={{ width:44, height:44, border:`2px dashed ${v.image?C.gold:C.border}`, borderRadius:8, cursor:'pointer', background:v.image?'#fdf9f0':C.cream, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative', flexShrink:0 }}>
+                  {v.image
+                    ?<img src={v.image} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                    :<span style={{ fontSize:18 }}>📷</span>
+                  }
+                  <input type="file" accept="image/*" style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer' }}
+                    onChange={async e=>{
+                      const f=e.target.files[0]; if(!f) return;
+                      const b64=await toBase64(f);
+                      setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,image:b64}:x));
+                    }}/>
+                </label>
                 <select value={v.color}
                   onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:e.target.value}:x))}
                   style={{ ...INP, padding:'8px 10px' }}>
@@ -463,6 +476,12 @@ export default function Inventory() {
                 <input type="number" min="0" value={v.qty} placeholder="Qty"
                   onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,qty:e.target.value}:x))}
                   style={{ ...INP, padding:'8px 10px', fontWeight:700 }}/>
+                {/* Remove image button */}
+                {v.image
+                  ?<button onClick={()=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,image:null}:x))}
+                    style={{ background:'#fff7ed', color:'#c2410c', border:'1px solid #fed7aa', borderRadius:7, padding:'4px 6px', fontSize:11, cursor:'pointer', fontFamily:'inherit', height:44, whiteSpace:'nowrap' }}>✕ img</button>
+                  :<div/>
+                }
                 {colorVariants.length>1
                   ?<button onClick={()=>setColorVariants(cv=>cv.filter((_,j)=>j!==i))}
                     style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7, padding:'8px', fontSize:14, cursor:'pointer' }}>✕</button>
