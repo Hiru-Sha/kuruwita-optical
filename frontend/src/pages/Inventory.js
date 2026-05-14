@@ -299,7 +299,9 @@ export default function Inventory() {
   const [selected,     setSelected]    = useState(null);
   const [panelTab,     setPanelTab]    = useState('details');
   const [showAdd,      setShowAdd]     = useState(false);
+  const [addSaving,    setAddSaving]   = useState(false);
   const [addCat,       setAddCat]      = useState('Frames');
+  const [colorVariants,setColorVariants] = useState([{ color:'Black', qty:'1' }]);
   const [loading,      setLoading]     = useState(true);
   const [imgData,      setImgData]     = useState(null);
   const [form,         setForm]        = useState(defaults('Frames'));
@@ -314,16 +316,40 @@ export default function Inventory() {
 
   useEffect(()=>{ load(); },[load]);
 
-  const handleCatChange = (cat) => { setAddCat(cat); setForm(defaults(cat)); setImgData(null); };
+  const handleCatChange = (cat) => { setAddCat(cat); setForm(defaults(cat)); setImgData(null); setColorVariants([{ color:'Black', qty:'1' }]); };
   const handleImgPick   = async (e) => { const f=e.target.files[0]; if(!f) return; setImgData(await toBase64(f)); };
 
   const handleAdd = async () => {
     const name = buildName(form);
     if (!name.trim()) return alert('Please fill in the required fields');
-    await createItem({ ...form, name, image_url:imgData||null,
-      sell_price:parseFloat(form.sell_price)||0, cost_price:parseFloat(form.cost_price)||0,
-      quantity:parseInt(form.quantity)||0, min_quantity:parseInt(form.min_quantity)||2 });
-    setShowAdd(false); setForm(defaults(addCat)); setImgData(null); load();
+    if (addSaving) return; // prevent double-click
+    setAddSaving(true);
+    try {
+      // Save each colour variant
+      for (const variant of colorVariants) {
+        if (!variant.color || parseInt(variant.qty||0) < 0) continue;
+        const variantName = buildName({ ...form, frame_color: variant.color });
+        await createItem({
+          ...form,
+          frame_color: variant.color,
+          name: variantName,
+          image_url: imgData||null,
+          sell_price:    parseFloat(form.sell_price)||0,
+          cost_price:    parseFloat(form.cost_price)||0,
+          quantity:      parseInt(variant.qty)||0,
+          min_quantity:  parseInt(form.min_quantity)||2,
+        });
+      }
+      setShowAdd(false);
+      setForm(defaults(addCat));
+      setImgData(null);
+      setColorVariants([{ color:'Black', qty:'1' }]);
+      load();
+    } catch(e) {
+      alert('Save failed: ' + (e.message||'Unknown error'));
+    } finally {
+      setAddSaving(false);
+    }
   };
 
   const handleSavePanel = async (local) => {
@@ -351,7 +377,7 @@ export default function Inventory() {
 
   const low = items.filter(i=>i.quantity>0&&i.quantity<=i.min_quantity).length;
   const out = items.filter(i=>i.quantity===0).length;
-  const val = items.reduce((s,i)=>s+(parseFloat(i.sell_price||0)*i.quantity),0);
+  const val = items.reduce((s,i)=>s+(parseFloat(i.cost_price||0)*i.quantity),0);
 
   return (
     <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
@@ -378,7 +404,7 @@ export default function Inventory() {
           {l:'Total Items',  v:items.length, dark:true},
           {l:'Low Stock',    v:low,   c:C.danger},
           {l:'Out of Stock', v:out,   c:'#9ca3af'},
-          {l:'Stock Value',  v:`Rs.${Math.round(val/1000)}K`, c:C.success},
+          {l:'Stock Value (cost)', v:`Rs.${Math.round(val/1000)}K`, c:C.success},
         ].map(s=>(
           <div key={s.l} style={{ background:s.dark?C.navy:'white', border:`1px solid ${C.border}`, borderRadius:10, padding:'12px 14px', textAlign:'center' }}>
             <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?C.gold:C.muted, marginBottom:4 }}>{s.l}</div>
@@ -418,10 +444,56 @@ export default function Inventory() {
             <Field label="Quantity"><input type="number" value={form.quantity||''} onChange={e=>setForm(f=>({...f,quantity:e.target.value}))} placeholder="e.g. 5" style={INP}/></Field>
             <Field label="Min Alert"><input type="number" value={form.min_quantity||''} onChange={e=>setForm(f=>({...f,min_quantity:e.target.value}))} placeholder="e.g. 2" style={INP}/></Field>
           </div>
-          {buildName(form) && <div style={{ marginTop:10, background:C.cream, borderRadius:8, padding:'8px 14px', fontSize:13, color:C.muted }}>Will save as: <b style={{color:C.navy}}>{buildName(form)}</b></div>}
+          {/* ── Colour variants ─────────────────────────────── */}
+          <div style={{ marginTop:4, background:C.cream, borderRadius:12, padding:'14px 16px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>🎨 Colours & Quantities</div>
+              <button onClick={()=>setColorVariants(v=>[...v,{color:'Black',qty:'1'}])}
+                style={{ padding:'5px 12px', background:C.navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                + Add colour
+              </button>
+            </div>
+            {colorVariants.map((v,i)=>(
+              <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 100px 36px', gap:8, marginBottom:8, alignItems:'center' }}>
+                <select value={v.color}
+                  onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:e.target.value}:x))}
+                  style={{ ...INP, padding:'8px 10px' }}>
+                  {FRAME_COLORS.map(col=><option key={col}>{col}</option>)}
+                </select>
+                <input type="number" min="0" value={v.qty} placeholder="Qty"
+                  onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,qty:e.target.value}:x))}
+                  style={{ ...INP, padding:'8px 10px', fontWeight:700 }}/>
+                {colorVariants.length>1
+                  ?<button onClick={()=>setColorVariants(cv=>cv.filter((_,j)=>j!==i))}
+                    style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7, padding:'8px', fontSize:14, cursor:'pointer' }}>✕</button>
+                  :<div/>
+                }
+              </div>
+            ))}
+            <div style={{ fontSize:11, color:C.muted, marginTop:4 }}>
+              Each colour saves as a separate inventory item.
+              {colorVariants.length>1 && <b style={{color:C.navy}}> {colorVariants.length} variants will be saved.</b>}
+            </div>
+          </div>
+
+          {/* Preview */}
+          {buildName(form) && (
+            <div style={{ marginTop:10, background:C.cream, borderRadius:8, padding:'8px 14px', fontSize:12, color:C.muted }}>
+              Preview: {colorVariants.slice(0,3).map((v,i)=>(
+                <b key={i} style={{color:C.navy,marginRight:8}}>{buildName({...form,frame_color:v.color})} (×{v.qty||0})</b>
+              ))}{colorVariants.length>3&&`+${colorVariants.length-3} more`}
+            </div>
+          )}
+
           <div style={{ display:'flex', gap:8, marginTop:14 }}>
-            <button onClick={handleAdd} style={{ padding:'10px 22px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>💾 Save Item</button>
-            <button onClick={()=>{setShowAdd(false);setForm(defaults(addCat));setImgData(null);}} style={{ padding:'10px 16px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>Cancel</button>
+            <button onClick={handleAdd} disabled={addSaving}
+              style={{ padding:'10px 22px', background:addSaving?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:addSaving?'not-allowed':'pointer', fontFamily:'inherit', minWidth:140 }}>
+              {addSaving ? '⏳ Saving...' : `💾 Save ${colorVariants.length>1?`${colorVariants.length} variants`:'Item'}`}
+            </button>
+            <button onClick={()=>{setShowAdd(false);setForm(defaults(addCat));setImgData(null);setColorVariants([{color:'Black',qty:'1'}]);}}
+              style={{ padding:'10px 16px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+              Cancel
+            </button>
           </div>
         </div>
       )}
