@@ -3,7 +3,7 @@ const express = require('express');
 const cors    = require('cors');
 const app     = express();
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '25mb' }));
 app.use('/api/auth',               require('./routes/auth'));
 app.use('/api/orders',             require('./routes/orders'));
 app.use('/api/customers',          require('./routes/customers'));
