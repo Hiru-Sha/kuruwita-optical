@@ -39,7 +39,35 @@ router.post('/', auth, async (req, res) => {
         await client.query('UPDATE inventory SET quantity = GREATEST(0, quantity - $1) WHERE id = $2', [item.qty||1, item.inventory_id]);
       }
     }
-        // Backdate created_at if past sale
+        // Auto-create Old Stock inventory for each item in past quick sales
+    if (import_date && items && items.length) {
+      for (const item of items) {
+        if (!item.inventory_id && item.name && item.name.trim()) {
+          try {
+            // Map item to inventory category
+            const name = item.name.trim();
+            const cat  = item.category || 'Old Stock';
+            const existing = await client.query(
+              `SELECT id FROM inventory WHERE name ILIKE $1 AND category=$2 LIMIT 1`,
+              [name, cat]
+            );
+            if (existing.rows.length) {
+              await client.query(`UPDATE inventory SET quantity = quantity + $1 WHERE id = $2`,
+                [item.qty||1, existing.rows[0].id]);
+            } else {
+              await client.query(`
+                INSERT INTO inventory (name, category, sell_price, cost_price, quantity, brand, dealer)
+                VALUES ($1, $2, $3, 0, 0, '', 'Past stock')
+                ON CONFLICT DO NOTHING`,
+                [name, cat, parseFloat(item.price)||0]
+              );
+            }
+          } catch(e) { /* non-critical */ }
+        }
+      }
+    }
+
+    // Backdate created_at if past sale
     if (import_date) {
       const importTs = new Date(import_date + 'T12:00:00');
       await client.query(`UPDATE quick_sales SET created_at=$1 WHERE id=$2`,
