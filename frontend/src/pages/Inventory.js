@@ -332,8 +332,18 @@ export default function Inventory() {
 
   const load = useCallback(()=>{
     setLoading(true);
-    getInventory({ search:search||undefined, category:activeCat!=='All'?activeCat:undefined, no_images:'1' })
-      .then(r=>setItems(Array.isArray(r.data)?r.data:Array.isArray(r)?r:[]))
+    const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    const token = localStorage.getItem('ko_token');
+    const params = new URLSearchParams({ no_images:'1', limit:'500' });
+    if (search)                   params.set('search', search);
+    if (activeCat !== 'All')      params.set('category', activeCat);
+    fetch(`${BASE}/inventory?${params}`, { headers:{ Authorization:`Bearer ${token}` } })
+      .then(r=>r.json())
+      .then(r=>{
+        // Handle both { data: [...] } and [...] response shapes
+        const arr = Array.isArray(r) ? r : Array.isArray(r.data) ? r.data : [];
+        setItems(arr);
+      })
       .catch(()=>setItems([]))
       .finally(()=>setLoading(false));
   },[search,activeCat]);
