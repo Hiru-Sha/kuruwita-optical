@@ -225,16 +225,10 @@ export default function Customers() {
     setTab('orders');
     try {
       const r = await getCustomer(id);
-      const cust   = r?.data || r;
-      const orders = r?.orders || cust?.orders || [];
-      // Extract refractions from orders that have Rx data
-      const refractions = orders
-        .filter(o => o.has_rx || o.r_sph || o.l_sph)
-        .map(o => ({
-          ...o,
-          created_at: o.created_at,
-          order_number: o.order_number,
-        }));
+      // axios wraps: r.data = { data: customer, orders: [] }
+      const cust   = r?.data?.data || r?.data || r;
+      const orders = r?.data?.orders || r?.orders || [];
+      const refractions = orders.filter(o=>o.has_rx||o.r_sph||o.l_sph).map(o=>({...o}));
       setSelected({ ...cust, orders, refractions });
     } catch { setSelected(null); }
     finally { setLoadingCust(false); }
@@ -253,8 +247,8 @@ export default function Customers() {
       await addCommLog(selected.id, { type: commType, note: commNote });
       setCommNote('');
       const r = await getCustomer(selected.id);
-      const cust   = r?.data || r;
-      const orders = r?.orders || cust?.orders || [];
+      const cust   = r?.data?.data || r?.data || r;
+      const orders = r?.data?.orders || r?.orders || [];
       const refractions = orders.filter(o=>o.has_rx||o.r_sph||o.l_sph).map(o=>({...o}));
       setSelected({ ...cust, orders, refractions });
     } catch {}
@@ -267,8 +261,8 @@ export default function Customers() {
     try {
       await updateOrder(order.id, { rx_returned: true });
       const r = await getCustomer(selected.id);
-      const cust   = r?.data || r;
-      const orders = r?.orders || cust?.orders || [];
+      const cust   = r?.data?.data || r?.data || r;
+      const orders = r?.data?.orders || r?.orders || [];
       const refractions = orders.filter(o=>o.has_rx||o.r_sph||o.l_sph).map(o=>({...o}));
       setSelected({ ...cust, orders, refractions });
       load();
