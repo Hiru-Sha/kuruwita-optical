@@ -225,7 +225,17 @@ export default function Customers() {
     setTab('orders');
     try {
       const r = await getCustomer(id);
-      setSelected(r.data);
+      const cust   = r?.data || r;
+      const orders = r?.orders || cust?.orders || [];
+      // Extract refractions from orders that have Rx data
+      const refractions = orders
+        .filter(o => o.has_rx || o.r_sph || o.l_sph)
+        .map(o => ({
+          ...o,
+          created_at: o.created_at,
+          order_number: o.order_number,
+        }));
+      setSelected({ ...cust, orders, refractions });
     } catch { setSelected(null); }
     finally { setLoadingCust(false); }
   };
@@ -243,7 +253,10 @@ export default function Customers() {
       await addCommLog(selected.id, { type: commType, note: commNote });
       setCommNote('');
       const r = await getCustomer(selected.id);
-      setSelected(r.data);
+      const cust   = r?.data || r;
+      const orders = r?.orders || cust?.orders || [];
+      const refractions = orders.filter(o=>o.has_rx||o.r_sph||o.l_sph).map(o=>({...o}));
+      setSelected({ ...cust, orders, refractions });
     } catch {}
     finally { setAddingComm(false); }
   };
@@ -254,7 +267,10 @@ export default function Customers() {
     try {
       await updateOrder(order.id, { rx_returned: true });
       const r = await getCustomer(selected.id);
-      setSelected(r.data);
+      const cust   = r?.data || r;
+      const orders = r?.orders || cust?.orders || [];
+      const refractions = orders.filter(o=>o.has_rx||o.r_sph||o.l_sph).map(o=>({...o}));
+      setSelected({ ...cust, orders, refractions });
       load();
     } catch {}
   };
@@ -467,8 +483,8 @@ export default function Customers() {
                               <button onClick={()=>{
                                 const rx = selected.refractions[0];
                                 const params = new URLSearchParams({
-                                  customer_id:   selected.data?.id,
-                                  customer_name: selected.data?.name,
+                                  customer_id:   selected?.id,
+                                  customer_name: selected?.name,
                                   r_sph: rx.r_sph||'', r_cyl: rx.r_cyl||'', r_axis: rx.r_axis||'', r_add: rx.r_add||'', r_pd: rx.r_pd||'',
                                   l_sph: rx.l_sph||'', l_cyl: rx.l_cyl||'', l_axis: rx.l_axis||'', l_add: rx.l_add||'', l_pd: rx.l_pd||'',
                                 });
