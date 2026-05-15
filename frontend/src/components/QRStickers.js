@@ -12,11 +12,29 @@ import React, { useRef } from 'react';
 
 const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280' };
 
-// Use Google Charts QR — more reliable than qrserver for printing
-const qrUrl = (text) => {
-  const encoded = encodeURIComponent(text);
-  return `https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=${encoded}&choe=UTF-8`;
-};
+// QR image component — fetches and converts to base64 so it prints correctly
+function QRImage({ text, size='18mm' }) {
+  const [src, setSrc] = React.useState(null);
+  React.useEffect(() => {
+    const url = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(text)}&choe=UTF-8`;
+    fetch(url)
+      .then(r => r.blob())
+      .then(blob => {
+        const reader = new FileReader();
+        reader.onload = () => setSrc(reader.result);
+        reader.readAsDataURL(blob);
+      })
+      .catch(() => setSrc(url)); // fallback to direct URL
+  }, [text]);
+
+  if (!src) return (
+    <div style={{ width:size, height:size, background:'#f3f4f6', display:'flex',
+      alignItems:'center', justifyContent:'center', fontSize:'6pt', color:'#999' }}>
+      QR...
+    </div>
+  );
+  return <img src={src} alt="QR" style={{ width:size, height:size, display:'block' }}/>;
+}
 
 const encodeItem = (item) => JSON.stringify({
   id:    item.id,
@@ -31,8 +49,6 @@ export const decodeQR = (raw) => { try { return JSON.parse(raw); } catch { retur
 // ── Single foldable sticker ───────────────────────────────────
 function Sticker({ item }) {
   const fmt  = (n) => 'Rs.' + parseFloat(n||0).toLocaleString('en-LK', { minimumFractionDigits:0 });
-  const qr   = qrUrl(encodeItem(item));
-
   const line1 = [item.brand, item.frame_color].filter(Boolean).join(' · ');
   const line2 = [item.frame_type, item.sg_type, item.rg_power].filter(Boolean).join(' · ');
 
@@ -77,13 +93,8 @@ function Sticker({ item }) {
           letterSpacing: '0.3pt',
         }}>◀ FOLD</div>
 
-        {/* QR — using <img> with crossOrigin */}
-        <img
-          src={qr}
-          alt="QR"
-          style={{ width:'18mm', height:'18mm', marginTop:'2mm', display:'block' }}
-          crossOrigin="anonymous"
-        />
+        {/* QR — base64 encoded so it prints correctly */}
+        <QRImage text={encodeItem(item)} size="18mm"/>
       </div>
 
       {/* ── RIGHT HALF — Item info ── */}
