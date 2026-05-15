@@ -101,9 +101,7 @@ function Sticker({ item, onReady }) {
         flex:1, padding:'1.5mm', boxSizing:'border-box',
         display:'flex', flexDirection:'column', justifyContent:'space-between',
       }}>
-        <div style={{ fontSize:'3.5pt', color:'#999', textTransform:'uppercase', letterSpacing:'.4pt' }}>
-          Wickramakalutota Opticals
-        </div>
+
         <div style={{ fontSize:'6.5pt', fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2,
           overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
           {item.name}
@@ -114,7 +112,7 @@ function Sticker({ item, onReady }) {
             {line2 && <div>{line2}</div>}
           </div>
         )}
-        <div style={{ fontSize:'9pt', fontWeight:'bold', color:'#0f1f3d',
+        <div style={{ fontSize:'11pt', fontWeight:'bold', color:'#0f1f3d',
           borderTop:'0.3mm solid #eee', paddingTop:'1mm' }}>
           {fmt(item.sell_price)}
         </div>
