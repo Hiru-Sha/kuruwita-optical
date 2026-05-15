@@ -115,9 +115,8 @@ function Sticker({ item, onReady, stickerNum }) {
         <div style={{ borderTop:'0.3mm solid #eee', paddingTop:'1mm',
           display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <span style={{ fontSize:'11pt', fontWeight:'bold', color:'#0f1f3d' }}>{fmt(item.sell_price)}</span>
-          <span style={{ fontSize:'6pt', fontWeight:'bold', color:'#555', background:'#f0f0f0',
-            borderRadius:'2pt', padding:'0 3pt', lineHeight:1.3, border:'0.2mm solid #ccc' }}>
-            #{stickerNum}
+          <span style={{ fontSize:'6pt', fontWeight:'bold', color:'#999' }}>
+            {stickerNum}
           </span>
         </div>
       </div>
