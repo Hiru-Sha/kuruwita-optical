@@ -63,8 +63,9 @@ router.post('/', auth, async (req, res) => {
         name, category, brand, dealer,
         frame_type, frame_color, frame_shape, frame_material, frame_size,
         sg_type, rg_lens_type, rg_material, rg_power, item_name,
-        cost_price, sell_price, quantity, min_quantity, image_url
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+        cost_price, sell_price, quantity, min_quantity, image_url,
+        display_number, stock_number, location
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
       RETURNING *`,
       [name.trim(), category||null, brand||null, dealer||null,
        frame_type||null, frame_color||null, frame_shape||null,
