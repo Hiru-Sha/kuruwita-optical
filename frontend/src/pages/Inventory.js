@@ -177,10 +177,13 @@ function ItemCard({ item, onClick, onSticker }) {
           <div style={{ textAlign:'right' }}>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               {item.display_number && (
-                <div style={{ background:item.location==='display'?'#dbeafe':'#f3f4f6',
-                  color:item.location==='display'?'#1e40af':'#6b7280',
-                  borderRadius:6, padding:'1px 7px', fontSize:11, fontWeight:700, flexShrink:0 }}>
-                  #{item.display_number}
+                <div style={{ background:'#dbeafe', color:'#1e40af', borderRadius:6, padding:'1px 7px', fontSize:10, fontWeight:700, flexShrink:0 }} title="Showroom slot">
+                  🏪#{item.display_number}
+                </div>
+              )}
+              {item.stock_number && (
+                <div style={{ background:'#f5f3ff', color:'#7c3aed', borderRadius:6, padding:'1px 7px', fontSize:10, fontWeight:700, flexShrink:0 }} title="Stock box">
+                  📦#{item.stock_number}
                 </div>
               )}
               <div style={{ fontSize:18, fontWeight:700, color:isOut?'#9ca3af':isLow?C.danger:C.success }}>{item.quantity}</div>
@@ -471,7 +474,7 @@ export default function Inventory() {
       cost_price:     parseFloat(local.cost_price)||0,
       min_quantity:   parseInt(local.min_quantity)||2,
       display_number: local.display_number ? parseInt(local.display_number) : null,
-      location:       local.location || 'stock',
+      stock_number:   local.stock_number   ? parseInt(local.stock_number)   : null,
     });
     load(); setSelected(null);
   };
@@ -807,33 +810,26 @@ export default function Inventory() {
                       <Field label="Cost Price (Rs.)"><input type="number" value={selected.cost_price||''} onChange={e=>setSelected(s=>({...s,cost_price:e.target.value}))} style={INP}/></Field>
                       <Field label="Sell Price (Rs.)"><input type="number" value={selected.sell_price||''} onChange={e=>setSelected(s=>({...s,sell_price:e.target.value}))} style={INP}/></Field>
                       <Field label="Min Alert Qty"><input type="number" value={selected.min_quantity||''} onChange={e=>setSelected(s=>({...s,min_quantity:e.target.value}))} style={INP}/></Field>
-                      <Field label="Display # (slot number)"><input type="number" value={selected.display_number||''} onChange={e=>setSelected(s=>({...s,display_number:e.target.value||null}))} placeholder="e.g. 1, 2, 3..." style={INP}/></Field>
                     </div>
 
-                    {/* Location toggle */}
-                    <div style={{ marginTop:10 }}>
-                      <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:7 }}>📍 Location</div>
-                      <div style={{ display:'flex', gap:8 }}>
-                        <button onClick={()=>setSelected(s=>({...s,location:'display'}))}
-                          style={{ flex:1, padding:'10px 8px', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-                            border:`2px solid ${selected.location==='display'?'#2563eb':C.border}`,
-                            background:selected.location==='display'?'#dbeafe':'white',
-                            color:selected.location==='display'?'#1e40af':C.muted,
-                            display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
-                          <span style={{ fontSize:20 }}>🏪</span>
-                          <span>Front Display</span>
-                          <span style={{ fontSize:10, opacity:.7, fontWeight:400 }}>Visible in shop</span>
-                        </button>
-                        <button onClick={()=>setSelected(s=>({...s,location:'stock'}))}
-                          style={{ flex:1, padding:'10px 8px', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-                            border:`2px solid ${!selected.location||selected.location==='stock'?C.navy:C.border}`,
-                            background:!selected.location||selected.location==='stock'?C.navy:'white',
-                            color:!selected.location||selected.location==='stock'?'white':C.muted,
-                            display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
-                          <span style={{ fontSize:20 }}>📦</span>
-                          <span>Stock Box</span>
-                          <span style={{ fontSize:10, opacity:.7, fontWeight:400 }}>Back storage</span>
-                        </button>
+                    {/* Display & Stock numbers */}
+                    <div style={{ marginTop:12, background:'#eff6ff', borderRadius:10, padding:'12px 14px' }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.navy, marginBottom:10 }}>📍 Location Numbers</div>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                        <div>
+                          <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:'#1e40af', display:'block', marginBottom:5 }}>🏪 Showroom Slot #</label>
+                          <input type="number" min="1" value={selected.display_number||''} onChange={e=>setSelected(s=>({...s,display_number:e.target.value||null}))}
+                            placeholder="e.g. 1, 2, 3..."
+                            style={{ ...INP, fontWeight:700, fontSize:16, textAlign:'center', background:'#dbeafe', border:'1.5px solid #93c5fd' }}/>
+                          <div style={{ fontSize:10, color:'#1e40af', marginTop:3 }}>Position on display stand</div>
+                        </div>
+                        <div>
+                          <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:'#7c3aed', display:'block', marginBottom:5 }}>📦 Stock Box #</label>
+                          <input type="number" min="1" value={selected.stock_number||''} onChange={e=>setSelected(s=>({...s,stock_number:e.target.value||null}))}
+                            placeholder="e.g. 1, 2, 3..."
+                            style={{ ...INP, fontWeight:700, fontSize:16, textAlign:'center', background:'#f5f3ff', border:'1.5px solid #c4b5fd' }}/>
+                          <div style={{ fontSize:10, color:'#7c3aed', marginTop:3 }}>Position in storage box</div>
+                        </div>
                       </div>
                     </div>
                     <div style={{ background:C.cream, borderRadius:9, padding:'9px 14px', marginTop:8, display:'flex', gap:20, fontSize:13 }}>

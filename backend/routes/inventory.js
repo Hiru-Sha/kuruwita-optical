@@ -15,7 +15,7 @@ router.get('/', auth, async (req, res) => {
              frame_type, frame_color, frame_shape, frame_material, frame_size,
              sg_type, rg_lens_type, rg_material, rg_power, item_name,
              cost_price, sell_price, quantity, min_quantity,
-             image_url, display_number, location, created_at, updated_at
+             image_url, display_number, stock_number, location, created_at, updated_at
       FROM inventory
       WHERE 1=1
     `;
@@ -72,7 +72,7 @@ router.post('/', auth, async (req, res) => {
        rg_lens_type||null, rg_material||null, rg_power||null, item_name||null,
        parseFloat(cost_price)||0, parseFloat(sell_price)||0,
        parseInt(quantity)||0, parseInt(min_quantity)||2, image_url||null,
-       display_number||null, location||'stock']
+       display_number||null, stock_number||null, location||'stock']
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
@@ -85,7 +85,7 @@ router.patch('/:id', auth, async (req, res) => {
     frame_color, frame_type, frame_shape, frame_material, frame_size,
     sg_type, rg_power, item_name,
     sell_price, cost_price, quantity, min_quantity, image_url,
-    display_number, location,
+    display_number, stock_number, location,
   } = req.body;
   try {
     const result = await pool.query(`
@@ -108,14 +108,15 @@ router.patch('/:id', auth, async (req, res) => {
         min_quantity   = COALESCE($16, min_quantity),
         image_url      = COALESCE($17, image_url),
         display_number = COALESCE($18, display_number),
-        location       = COALESCE($19, location),
+        stock_number   = COALESCE($19, stock_number),
+        location       = COALESCE($20, location),
         updated_at     = NOW()
-      WHERE id = $20 RETURNING *`,
+      WHERE id = $21 RETURNING *`,
       [name, brand, dealer, category,
        frame_color, frame_type, frame_shape, frame_material, frame_size,
        sg_type, rg_power, item_name,
        sell_price, cost_price, quantity, min_quantity, image_url,
-       display_number || null, location || null,
+       display_number||null, stock_number||null, location||null,
        req.params.id]
     );
     res.json(result.rows[0]);
