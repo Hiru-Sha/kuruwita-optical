@@ -231,9 +231,11 @@ export default function Customers() {
     Promise.all(
       (selected.orders||[]).map(o => getOrder(o.id).then(r=>r?.data||r).catch(()=>o))
     ).then(fullOrders => {
+      console.log('FULL ORDER 0:', JSON.stringify(fullOrders[0]).slice(0,300));
       const rx = fullOrders.filter(o =>
         o.has_rx || (o.r_sph && String(o.r_sph).trim()) || (o.l_sph && String(o.l_sph).trim())
       );
+      console.log('RX ORDERS:', rx.length);
       setRxOrders(rx);
     }).finally(()=>setLoadingRx(false));
   },[tab, selected?.id]);
