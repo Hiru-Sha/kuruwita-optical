@@ -12,28 +12,48 @@ import React, { useRef } from 'react';
 
 const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280' };
 
-// QR image component — fetches and converts to base64 so it prints correctly
+// Load qrcode.js once — pure JS canvas, no external API, no CORS issues
+function loadQRLib() {
+  return new Promise((resolve) => {
+    if (window.QRCode) return resolve(window.QRCode);
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.onload = () => resolve(window.QRCode);
+    document.head.appendChild(s);
+  });
+}
+
+// QR drawn directly on canvas — works offline, prints perfectly, no CORS
 function QRImage({ text, size='18mm', onLoad=()=>{} }) {
-  const [src, setSrc] = React.useState(null);
+  const ref = React.useRef(null);
+  const [ready, setReady] = React.useState(false);
+
   React.useEffect(() => {
-    const url = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(text)}&choe=UTF-8`;
-    fetch(url)
-      .then(r => r.blob())
-      .then(blob => {
-        const reader = new FileReader();
-        reader.onload = () => setSrc(reader.result);
-        reader.readAsDataURL(blob);
-      })
-      .catch(() => setSrc(url)); // fallback to direct URL
+    loadQRLib().then(QRCode => {
+      if (!ref.current) return;
+      ref.current.innerHTML = '';
+      new QRCode(ref.current, {
+        text,
+        width:  150,
+        height: 150,
+        colorDark:  '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+      setReady(true);
+      setTimeout(onLoad, 150);
+    });
   }, [text]);
 
-  if (!src) return (
-    <div style={{ width:size, height:size, background:'#f3f4f6', display:'flex',
-      alignItems:'center', justifyContent:'center', fontSize:'6pt', color:'#999' }}>
-      QR...
+  return (
+    <div ref={ref} style={{
+      width: size, height: size,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      overflow: 'hidden', background: ready ? 'transparent' : '#f3f4f6',
+    }}>
+      {!ready && <span style={{ fontSize:'5pt', color:'#aaa' }}>QR...</span>}
     </div>
   );
-  return <img src={src} alt="QR" style={{ width:size, height:size, display:'block' }} onLoad={onLoad}/>;
 }
 
 const encodeItem = (item) => JSON.stringify({
@@ -177,14 +197,26 @@ export function StickerModal({ items, onClose }) {
   }, [loadCount, totalQR]);
 
   const handlePrint = () => {
-    // Give a short delay to make sure all base64 images are rendered in DOM
+    // Convert all canvas QR codes to <img> tags before printing
+    // Canvas doesn't survive DOM cloning but <img src=dataURL> does
+    const sheet = sheetRef.current;
+    const canvases = sheet.querySelectorAll('canvas');
+    canvases.forEach(canvas => {
+      try {
+        const dataUrl = canvas.toDataURL('image/png');
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.style.cssText = canvas.style.cssText || 'width:150px;height:150px;';
+        img.style.width   = canvas.offsetWidth  + 'px';
+        img.style.height  = canvas.offsetHeight + 'px';
+        canvas.parentNode.replaceChild(img, canvas);
+      } catch(e) { console.warn('canvas conversion failed', e); }
+    });
+
+    // Inject print CSS
     const styleId = 'ko-sticker-css';
     let style = document.getElementById(styleId);
-    if (!style) {
-      style = document.createElement('style');
-      style.id = styleId;
-      document.head.appendChild(style);
-    }
+    if (!style) { style = document.createElement('style'); style.id = styleId; document.head.appendChild(style); }
     style.textContent = `
       @media print {
         @page { size: A4 portrait; margin: 5mm; }
@@ -193,28 +225,18 @@ export function StickerModal({ items, onClose }) {
         .no-print { display: none !important; }
       }
       #ko-sticker-sheet {
-        display: none;
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%;
-        background: white;
-        z-index: 99999;
+        display: none; position: fixed;
+        top: 0; left: 0; width: 100%;
+        background: white; z-index: 99999;
       }
     `;
 
-    // Show the sheet div for printing
-    sheetRef.current.id = 'ko-sticker-sheet';
-    sheetRef.current.style.display = 'block';
-
+    sheet.id = 'ko-sticker-sheet';
     window.print();
 
-    // Hide again after print dialog closes
     setTimeout(() => {
-      if (sheetRef.current) {
-        sheetRef.current.style.display = '';
-        sheetRef.current.id = '';
-      }
-    }, 500);
+      if (sheet) sheet.id = '';
+    }, 1000);
   };
 
   return (
