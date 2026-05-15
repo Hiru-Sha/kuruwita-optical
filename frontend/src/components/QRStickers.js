@@ -202,46 +202,51 @@ export function StickerModal({ items, onClose }) {
   }, [loadCount, totalQR]);
 
   const handlePrint = () => {
-    // Convert all canvas QR codes to <img> tags before printing
-    // Canvas doesn't survive DOM cloning but <img src=dataURL> does
     const sheet = sheetRef.current;
-    const canvases = sheet.querySelectorAll('canvas');
-    canvases.forEach(canvas => {
+    if (!sheet) return;
+
+    // Clone the sheet and convert canvas → img in the CLONE only (never touch React DOM)
+    const clone = sheet.cloneNode(true);
+    const origCanvases = sheet.querySelectorAll('canvas');
+    const cloneCanvases = clone.querySelectorAll('canvas');
+
+    origCanvases.forEach((canvas, i) => {
       try {
         const dataUrl = canvas.toDataURL('image/png');
         const img = document.createElement('img');
         img.src = dataUrl;
-        img.style.cssText = canvas.style.cssText || 'width:150px;height:150px;';
-        img.style.width   = canvas.offsetWidth  + 'px';
-        img.style.height  = canvas.offsetHeight + 'px';
-        canvas.parentNode.replaceChild(img, canvas);
-      } catch(e) { console.warn('canvas conversion failed', e); }
+        img.style.width  = '150px';
+        img.style.height = '150px';
+        img.style.display = 'block';
+        if (cloneCanvases[i] && cloneCanvases[i].parentNode) {
+          cloneCanvases[i].parentNode.replaceChild(img, cloneCanvases[i]);
+        }
+      } catch(e) {}
     });
 
-    // Inject print CSS
-    const styleId = 'ko-sticker-css';
-    let style = document.getElementById(styleId);
-    if (!style) { style = document.createElement('style'); style.id = styleId; document.head.appendChild(style); }
-    style.textContent = `
-      @media print {
+    // Remove no-print elements from clone
+    clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+    // Open a new window and print from there
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) { alert('Please allow popups to print stickers.'); return; }
+
+    win.document.write(`<!DOCTYPE html><html><head>
+      <title>Stickers — Wickramakalutota Opticals</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: white; font-family: Arial, sans-serif; }
         @page { size: A4 portrait; margin: 5mm; }
-        body > * { display: none !important; }
-        #ko-sticker-sheet { display: block !important; }
-        .no-print { display: none !important; }
-      }
-      #ko-sticker-sheet {
-        display: none; position: fixed;
-        top: 0; left: 0; width: 100%;
-        background: white; z-index: 99999;
-      }
-    `;
-
-    sheet.id = 'ko-sticker-sheet';
-    window.print();
-
-    setTimeout(() => {
-      if (sheet) sheet.id = '';
-    }, 1000);
+        @media print { body { margin: 0; } }
+      </style>
+    </head><body>`);
+    win.document.write(clone.outerHTML);
+    win.document.write(`<script>
+      window.onload = function() {
+        setTimeout(function() { window.print(); window.close(); }, 300);
+      };
+    <\/script></body></html>`);
+    win.document.close();
   };
 
   return (
