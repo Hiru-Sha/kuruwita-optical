@@ -175,7 +175,16 @@ function ItemCard({ item, onClick, onSticker }) {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:6 }}>
           <div style={{ fontSize:14, fontWeight:700, color:'#1a1a2e' }}>Rs.{parseFloat(item.sell_price||0).toLocaleString()}</div>
           <div style={{ textAlign:'right' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:isOut?'#9ca3af':isLow?C.danger:C.success }}>{item.quantity}</div>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              {item.display_number && (
+                <div style={{ background:item.location==='display'?'#dbeafe':'#f3f4f6',
+                  color:item.location==='display'?'#1e40af':'#6b7280',
+                  borderRadius:6, padding:'1px 7px', fontSize:11, fontWeight:700, flexShrink:0 }}>
+                  #{item.display_number}
+                </div>
+              )}
+              <div style={{ fontSize:18, fontWeight:700, color:isOut?'#9ca3af':isLow?C.danger:C.success }}>{item.quantity}</div>
+            </div>
             <div style={{ fontSize:10, color:'#9ca3af' }}>in stock</div>
           </div>
         </div>
@@ -461,6 +470,8 @@ export default function Inventory() {
       sell_price:     parseFloat(local.sell_price)||0,
       cost_price:     parseFloat(local.cost_price)||0,
       min_quantity:   parseInt(local.min_quantity)||2,
+      display_number: local.display_number ? parseInt(local.display_number) : null,
+      location:       local.location || 'stock',
     });
     load(); setSelected(null);
   };
@@ -796,6 +807,34 @@ export default function Inventory() {
                       <Field label="Cost Price (Rs.)"><input type="number" value={selected.cost_price||''} onChange={e=>setSelected(s=>({...s,cost_price:e.target.value}))} style={INP}/></Field>
                       <Field label="Sell Price (Rs.)"><input type="number" value={selected.sell_price||''} onChange={e=>setSelected(s=>({...s,sell_price:e.target.value}))} style={INP}/></Field>
                       <Field label="Min Alert Qty"><input type="number" value={selected.min_quantity||''} onChange={e=>setSelected(s=>({...s,min_quantity:e.target.value}))} style={INP}/></Field>
+                      <Field label="Display # (slot number)"><input type="number" value={selected.display_number||''} onChange={e=>setSelected(s=>({...s,display_number:e.target.value||null}))} placeholder="e.g. 1, 2, 3..." style={INP}/></Field>
+                    </div>
+
+                    {/* Location toggle */}
+                    <div style={{ marginTop:10 }}>
+                      <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:7 }}>📍 Location</div>
+                      <div style={{ display:'flex', gap:8 }}>
+                        <button onClick={()=>setSelected(s=>({...s,location:'display'}))}
+                          style={{ flex:1, padding:'10px 8px', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                            border:`2px solid ${selected.location==='display'?'#2563eb':C.border}`,
+                            background:selected.location==='display'?'#dbeafe':'white',
+                            color:selected.location==='display'?'#1e40af':C.muted,
+                            display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+                          <span style={{ fontSize:20 }}>🏪</span>
+                          <span>Front Display</span>
+                          <span style={{ fontSize:10, opacity:.7, fontWeight:400 }}>Visible in shop</span>
+                        </button>
+                        <button onClick={()=>setSelected(s=>({...s,location:'stock'}))}
+                          style={{ flex:1, padding:'10px 8px', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                            border:`2px solid ${!selected.location||selected.location==='stock'?C.navy:C.border}`,
+                            background:!selected.location||selected.location==='stock'?C.navy:'white',
+                            color:!selected.location||selected.location==='stock'?'white':C.muted,
+                            display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+                          <span style={{ fontSize:20 }}>📦</span>
+                          <span>Stock Box</span>
+                          <span style={{ fontSize:10, opacity:.7, fontWeight:400 }}>Back storage</span>
+                        </button>
+                      </div>
                     </div>
                     <div style={{ background:C.cream, borderRadius:9, padding:'9px 14px', marginTop:8, display:'flex', gap:20, fontSize:13 }}>
                       <span>Profit: <b style={{color:C.success}}>Rs.{(parseFloat(selected.sell_price||0)-parseFloat(selected.cost_price||0)).toLocaleString()}</b></span>
