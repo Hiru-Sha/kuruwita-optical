@@ -65,7 +65,7 @@ function useQRDataUrl(text) {
 }
 
 // ── Single sticker ────────────────────────────────────────────
-function Sticker({ item, onReady }) {
+function Sticker({ item, onReady, stickerNum }) {
   const text   = encodeItem(item);
   const qrUrl  = useQRDataUrl(text);
   const fmt    = (n) => 'Rs.' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
@@ -112,11 +112,13 @@ function Sticker({ item, onReady }) {
             {line2 && <div>{line2}</div>}
           </div>
         )}
-        <div style={{ fontSize:'11pt', fontWeight:'bold', color:'#0f1f3d',
-          borderTop:'0.3mm solid #eee', paddingTop:'1mm', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <span>{fmt(item.sell_price)}</span>
-          {item.display_number ? <span style={{ fontSize:'6pt', background:'#1e40af', color:'white', borderRadius:'3pt', padding:'0 3pt', marginLeft:'1mm' }}>🏪{item.display_number}</span> : null}
-          {item.stock_number   ? <span style={{ fontSize:'6pt', background:'#7c3aed', color:'white', borderRadius:'3pt', padding:'0 3pt', marginLeft:'1mm' }}>📦{item.stock_number}</span>   : null}
+        <div style={{ borderTop:'0.3mm solid #eee', paddingTop:'1mm',
+          display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontSize:'11pt', fontWeight:'bold', color:'#0f1f3d' }}>{fmt(item.sell_price)}</span>
+          <span style={{ fontSize:'14pt', fontWeight:'bold', color:'white', background:'#0f1f3d',
+            borderRadius:'3pt', padding:'0 5pt', minWidth:'14pt', textAlign:'center', lineHeight:1.3 }}>
+            {stickerNum}
+          </span>
         </div>
       </div>
     </div>
@@ -223,10 +225,14 @@ export function StickerModal({ items, onClose }) {
                 </div>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(4,50mm)',
                   gap:'0', width:'200mm', margin:'0 auto' }}>
-                  {pageItems.map((item,idx)=>(
-                    <Sticker key={`${item.id}-${pi}-${idx}`} item={item}
-                      onReady={()=>setReadyCount(n=>n+1)}/>
-                  ))}
+                  {pageItems.map((item,idx)=>{
+                    const globalIdx = pi * PER_PAGE + idx + 1;
+                    return (
+                      <Sticker key={`${item.id}-${pi}-${idx}`} item={item}
+                        stickerNum={globalIdx}
+                        onReady={()=>setReadyCount(n=>n+1)}/>
+                    );
+                  })}
                   {Array(Math.max(0,PER_PAGE-pageItems.length)).fill(null).map((_,ei)=>(
                     <div key={`e-${ei}`} style={{
                       width:'50mm', height:'25mm',
