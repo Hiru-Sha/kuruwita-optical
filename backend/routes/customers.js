@@ -31,7 +31,15 @@ router.get('/:id', auth, async (req, res) => {
     const orders = await pool.query(
       'SELECT * FROM orders WHERE customer_id=$1 ORDER BY created_at DESC', [req.params.id]
     );
-    res.json({ data: c.rows[0], orders: orders.rows });
+    // Get refractions from the refractions table
+    const refractions = await pool.query(`
+      SELECT r.*, o.order_number, o.created_at as order_date
+      FROM refractions r
+      JOIN orders o ON r.order_id = o.id
+      WHERE o.customer_id = $1
+      ORDER BY r.created_at DESC
+    `, [req.params.id]);
+    res.json({ data: c.rows[0], orders: orders.rows, refractions: refractions.rows });
   } catch(err) { res.status(500).json({ error: 'Failed' }); }
 });
 
