@@ -29,7 +29,13 @@ router.get('/:id', auth, async (req, res) => {
     const c = await pool.query('SELECT * FROM customers WHERE id=$1', [req.params.id]);
     if (!c.rows.length) return res.status(404).json({ error: 'Not found' });
     const orders = await pool.query(
-      'SELECT * FROM orders WHERE customer_id=$1 ORDER BY created_at DESC', [req.params.id]
+      `SELECT o.*,
+              o.r_sph, o.r_cyl, o.r_axis, o.r_add, o.r_va, o.r_pd,
+              o.l_sph, o.l_cyl, o.l_axis, o.l_add, o.l_va, o.l_pd,
+              o.has_rx, o.ref_notes
+       FROM orders o
+       WHERE o.customer_id=$1
+       ORDER BY o.created_at DESC`, [req.params.id]
     );
     res.json({ data: c.rows[0], orders: orders.rows });
   } catch(err) { res.status(500).json({ error: 'Failed' }); }

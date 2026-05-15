@@ -228,15 +228,12 @@ export default function Customers() {
     setTab('orders');
     try {
       const r = await getCustomer(id);
-      console.log('RAW API RESPONSE:', JSON.stringify(r).slice(0,500));
       // axios wraps: r.data = { data: customer, orders: [] }
       const cust   = r?.data?.data || r?.data || r;
       const orders = r?.data?.orders || r?.orders || [];
-      console.log('CUST:', cust?.name, 'ORDERS:', orders?.length, 'FIRST ORDER r_sph:', orders?.[0]?.r_sph);
-      const refractions = orders.filter(o=> o.has_rx || o.r_sph || o.l_sph ).map(o=>({...o}));
-      console.log('REFRACTIONS found:', refractions.length);
+      const refractions = orders.filter(o=> o.has_rx || o.r_sph!=null || o.l_sph!=null ).map(o=>({...o}));
       setSelected({ ...cust, orders, refractions });
-    } catch(e) { console.error('LOAD ERROR:', e); setSelected(null); }
+    } catch { setSelected(null); }
     finally { setLoadingCust(false); }
   };
 
@@ -255,7 +252,7 @@ export default function Customers() {
       const r = await getCustomer(selected.id);
       const cust   = r?.data?.data || r?.data || r;
       const orders = r?.data?.orders || r?.orders || [];
-      const refractions = orders.filter(o=> o.has_rx || o.r_sph || o.l_sph ).map(o=>({...o}));
+      const refractions = orders.filter(o=> o.has_rx || o.r_sph!=null || o.l_sph!=null ).map(o=>({...o}));
       setSelected({ ...cust, orders, refractions });
     } catch {}
     finally { setAddingComm(false); }
@@ -269,7 +266,7 @@ export default function Customers() {
       const r = await getCustomer(selected.id);
       const cust   = r?.data?.data || r?.data || r;
       const orders = r?.data?.orders || r?.orders || [];
-      const refractions = orders.filter(o=> o.has_rx || o.r_sph || o.l_sph ).map(o=>({...o}));
+      const refractions = orders.filter(o=> o.has_rx || o.r_sph!=null || o.l_sph!=null ).map(o=>({...o}));
       setSelected({ ...cust, orders, refractions });
       load();
     } catch {}
@@ -573,7 +570,7 @@ export default function Customers() {
                                   const r = await getCustomer(selected.id);
                                   const cust = r?.data?.data || r?.data || r;
                                   const orders = r?.data?.orders || r?.orders || [];
-                                  const refractions = orders.filter(o=> o.has_rx || o.r_sph || o.l_sph ).map(o=>({...o}));
+                                  const refractions = orders.filter(o=> o.has_rx || o.r_sph!=null || o.l_sph!=null ).map(o=>({...o}));
                                   setSelected({...cust, orders, refractions});
                                   setEditMode(false);
                                   load();
