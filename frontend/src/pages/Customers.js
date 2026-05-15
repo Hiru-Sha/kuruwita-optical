@@ -228,7 +228,12 @@ export default function Customers() {
       // axios wraps: r.data = { data: customer, orders: [] }
       const cust   = r?.data?.data || r?.data || r;
       const orders = r?.data?.orders || r?.orders || [];
-      const refractions = orders.filter(o=>o.has_rx||o.r_sph||o.l_sph).map(o=>({...o}));
+      // has_rx stored as integer 0/1 in DB; r_sph might be '0.00' or blank
+      const refractions = orders.filter(o=>
+        parseInt(o.has_rx)===1 ||
+        (o.r_sph && o.r_sph.trim() && o.r_sph !== '0') ||
+        (o.l_sph && o.l_sph.trim() && o.l_sph !== '0')
+      ).map(o=>({...o}));
       setSelected({ ...cust, orders, refractions });
     } catch { setSelected(null); }
     finally { setLoadingCust(false); }
@@ -249,7 +254,12 @@ export default function Customers() {
       const r = await getCustomer(selected.id);
       const cust   = r?.data?.data || r?.data || r;
       const orders = r?.data?.orders || r?.orders || [];
-      const refractions = orders.filter(o=>o.has_rx||o.r_sph||o.l_sph).map(o=>({...o}));
+      // has_rx stored as integer 0/1 in DB; r_sph might be '0.00' or blank
+      const refractions = orders.filter(o=>
+        parseInt(o.has_rx)===1 ||
+        (o.r_sph && o.r_sph.trim() && o.r_sph !== '0') ||
+        (o.l_sph && o.l_sph.trim() && o.l_sph !== '0')
+      ).map(o=>({...o}));
       setSelected({ ...cust, orders, refractions });
     } catch {}
     finally { setAddingComm(false); }
@@ -263,7 +273,12 @@ export default function Customers() {
       const r = await getCustomer(selected.id);
       const cust   = r?.data?.data || r?.data || r;
       const orders = r?.data?.orders || r?.orders || [];
-      const refractions = orders.filter(o=>o.has_rx||o.r_sph||o.l_sph).map(o=>({...o}));
+      // has_rx stored as integer 0/1 in DB; r_sph might be '0.00' or blank
+      const refractions = orders.filter(o=>
+        parseInt(o.has_rx)===1 ||
+        (o.r_sph && o.r_sph.trim() && o.r_sph !== '0') ||
+        (o.l_sph && o.l_sph.trim() && o.l_sph !== '0')
+      ).map(o=>({...o}));
       setSelected({ ...cust, orders, refractions });
       load();
     } catch {}
