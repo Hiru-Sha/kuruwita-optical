@@ -228,12 +228,15 @@ export default function Customers() {
     setTab('orders');
     try {
       const r = await getCustomer(id);
+      console.log('RAW API RESPONSE:', JSON.stringify(r).slice(0,500));
       // axios wraps: r.data = { data: customer, orders: [] }
       const cust   = r?.data?.data || r?.data || r;
       const orders = r?.data?.orders || r?.orders || [];
+      console.log('CUST:', cust?.name, 'ORDERS:', orders?.length, 'FIRST ORDER r_sph:', orders?.[0]?.r_sph);
       const refractions = orders.filter(o=> o.has_rx || o.r_sph || o.l_sph ).map(o=>({...o}));
+      console.log('REFRACTIONS found:', refractions.length);
       setSelected({ ...cust, orders, refractions });
-    } catch { setSelected(null); }
+    } catch(e) { console.error('LOAD ERROR:', e); setSelected(null); }
     finally { setLoadingCust(false); }
   };
 
