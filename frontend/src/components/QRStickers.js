@@ -115,9 +115,9 @@ function Sticker({ item, onReady, stickerNum }) {
         <div style={{ borderTop:'0.3mm solid #eee', paddingTop:'1mm',
           display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <span style={{ fontSize:'11pt', fontWeight:'bold', color:'#0f1f3d' }}>{fmt(item.sell_price)}</span>
-          <span style={{ fontSize:'14pt', fontWeight:'bold', color:'white', background:'#0f1f3d',
-            borderRadius:'3pt', padding:'0 5pt', minWidth:'14pt', textAlign:'center', lineHeight:1.3 }}>
-            {stickerNum}
+          <span style={{ fontSize:'6pt', fontWeight:'bold', color:'#555', background:'#f0f0f0',
+            borderRadius:'2pt', padding:'0 3pt', lineHeight:1.3, border:'0.2mm solid #ccc' }}>
+            #{stickerNum}
           </span>
         </div>
       </div>
@@ -130,10 +130,13 @@ export function StickerModal({ items, onClose }) {
   const sheetRef = useRef();
   const [readyCount, setReadyCount] = useState(0);
 
-  const expanded = items.flatMap(item => {
-    const qty = Math.max(1, parseInt(item.quantity)||1);
-    return Array(qty).fill(item);
-  });
+  const expanded = items
+    .filter(item => item.category !== 'Old Stock')  // skip old stock
+    .flatMap(item => {
+      const qty = Math.max(1, parseInt(item.quantity)||1);
+      // Each item gets its own 1,2,3... sequence
+      return Array.from({length: qty}, (_, i) => ({ ...item, _seq: i + 1 }));
+    });
 
   const total    = expanded.length;
   const allReady = readyCount >= total && total > 0;
@@ -225,14 +228,11 @@ export function StickerModal({ items, onClose }) {
                 </div>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(4,50mm)',
                   gap:'0', width:'200mm', margin:'0 auto' }}>
-                  {pageItems.map((item,idx)=>{
-                    const globalIdx = pi * PER_PAGE + idx + 1;
-                    return (
-                      <Sticker key={`${item.id}-${pi}-${idx}`} item={item}
-                        stickerNum={globalIdx}
-                        onReady={()=>setReadyCount(n=>n+1)}/>
-                    );
-                  })}
+                  {pageItems.map((item,idx)=>(
+                    <Sticker key={`${item.id}-${pi}-${idx}`} item={item}
+                      stickerNum={item._seq}
+                      onReady={()=>setReadyCount(n=>n+1)}/>
+                  ))}
                   {Array(Math.max(0,PER_PAGE-pageItems.length)).fill(null).map((_,ei)=>(
                     <div key={`e-${ei}`} style={{
                       width:'50mm', height:'25mm',
