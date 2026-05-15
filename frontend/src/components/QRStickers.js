@@ -1,76 +1,137 @@
 /* eslint-disable */
 // ============================================================
-//  QRStickers.js
-//  A4 sticker sheet — quantity-based, cut guides for scissors
-//  Sticker size: 63.5mm × 38.1mm (standard A4 label size)
-//  Per A4 sheet: 3 columns × 7 rows = 21 stickers
+//  QRStickers.js — Foldable frame arm stickers
+//  Size: 50mm × 25mm per sticker
+//  Design: fold in half along center line
+//    Left half  (25mm×25mm): QR code
+//    Right half (25mm×25mm): shop name + item + price
+//  Fold and stick around frame arm
+//  A4 layout: 4 cols × 11 rows = 44 stickers per page
 // ============================================================
-import React, { useState, useRef } from 'react';
+import React, { useRef } from 'react';
 
-const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b' };
+const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280' };
 
-const qrUrl = (data, size=60) =>
-  `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data)}&size=${size}x${size}&margin=2`;
+// Use Google Charts QR — more reliable than qrserver for printing
+const qrUrl = (text) => {
+  const encoded = encodeURIComponent(text);
+  return `https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=${encoded}&choe=UTF-8`;
+};
 
 const encodeItem = (item) => JSON.stringify({
-  id: item.id, name: item.name, cat: item.category,
-  price: item.sell_price, color: item.frame_color||'',
-  type: item.frame_type||'', brand: item.brand||'',
+  id:    item.id,
+  name:  item.name,
+  price: item.sell_price,
+  color: item.frame_color || '',
+  brand: item.brand || '',
 });
 
 export const decodeQR = (raw) => { try { return JSON.parse(raw); } catch { return null; } };
 
-// ── Single sticker — fits 63.5mm × 38.1mm ────────────────────
-function Sticker({ item, index }) {
+// ── Single foldable sticker ───────────────────────────────────
+function Sticker({ item }) {
+  const fmt  = (n) => 'Rs.' + parseFloat(n||0).toLocaleString('en-LK', { minimumFractionDigits:0 });
   const qr   = qrUrl(encodeItem(item));
-  const fmt  = (n) => 'Rs.' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 
-  const lines = [];
-  if (item.brand)          lines.push(item.brand);
-  if (item.frame_color)    lines.push(item.frame_color);
-  if (item.frame_type)     lines.push(item.frame_type);
-  if (item.sg_type)        lines.push(item.sg_type);
-  if (item.rg_power)       lines.push(item.rg_power);
-  if (item.frame_material) lines.push(item.frame_material);
+  const line1 = [item.brand, item.frame_color].filter(Boolean).join(' · ');
+  const line2 = [item.frame_type, item.sg_type, item.rg_power].filter(Boolean).join(' · ');
 
   return (
     <div style={{
-      width: '50mm', height: '25mm',
-      display: 'flex', overflow: 'hidden',
-      fontFamily: 'Arial, sans-serif',
-      background: 'white',
+      width:     '50mm',
+      height:    '25mm',
+      display:   'flex',
+      overflow:  'hidden',
+      fontFamily:'Arial, sans-serif',
+      background:'white',
       boxSizing: 'border-box',
       pageBreakInside: 'avoid',
-      position: 'relative',
+      border:    '0.4mm dashed #bbb',   /* outer cut line */
+      position:  'relative',
     }}>
-      {/* Cut guide dashes — will show as dotted border in print */}
-      <div style={{
-        position:'absolute', inset:0,
-        border: '0.3mm dashed #ccc',
-        pointerEvents:'none',
-        boxSizing:'border-box',
-      }}/>
 
-      {/* QR code */}
-      <div style={{ width:'22mm', display:'flex', alignItems:'center', justifyContent:'center', padding:'2mm', flexShrink:0 }}>
-        <img src={qr} alt="QR" style={{ width:'18mm', height:'18mm' }} crossOrigin="anonymous"/>
+      {/* ── LEFT HALF — QR code (fold this over) ── */}
+      <div style={{
+        width:          '25mm',
+        height:         '25mm',
+        display:        'flex',
+        flexDirection:  'column',
+        alignItems:     'center',
+        justifyContent: 'center',
+        borderRight:    '0.5mm solid #000',  /* FOLD LINE — solid so visible */
+        flexShrink:     0,
+        padding:        '1mm',
+        boxSizing:      'border-box',
+        position:       'relative',
+        background:     'white',
+      }}>
+        {/* Fold indicator */}
+        <div style={{
+          position:   'absolute',
+          top:        '1mm',
+          left:       '50%',
+          transform:  'translateX(-50%)',
+          fontSize:   '3.5pt',
+          color:      '#999',
+          whiteSpace: 'nowrap',
+          letterSpacing: '0.3pt',
+        }}>◀ FOLD</div>
+
+        {/* QR — using <img> with crossOrigin */}
+        <img
+          src={qr}
+          alt="QR"
+          style={{ width:'18mm', height:'18mm', marginTop:'2mm', display:'block' }}
+          crossOrigin="anonymous"
+        />
       </div>
 
-      {/* Info */}
-      <div style={{ flex:1, padding:'2mm 2mm 2mm 0', display:'flex', flexDirection:'column', justifyContent:'space-between', overflow:'hidden' }}>
-        <div>
-          <div style={{ fontSize:'4pt', color:'#999', textTransform:'uppercase', letterSpacing:'0.3pt', marginBottom:'0.5mm' }}>
-            Wickramakalutota Opticals
-          </div>
-          <div style={{ fontSize:'6.5pt', fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2, marginBottom:'0.5mm',
-            overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
-            {item.name}
-          </div>
-          <div style={{ fontSize:'5pt', color:'#555', lineHeight:1.3 }}>
-            {lines.slice(0,2).join(' · ')}
-          </div>
+      {/* ── RIGHT HALF — Item info ── */}
+      <div style={{
+        width:          '25mm',
+        height:         '25mm',
+        display:        'flex',
+        flexDirection:  'column',
+        justifyContent: 'space-between',
+        padding:        '1.5mm',
+        boxSizing:      'border-box',
+        background:     'white',
+      }}>
+        {/* Shop name */}
+        <div style={{ fontSize:'3.5pt', color:'#999', textTransform:'uppercase', letterSpacing:'0.4pt', lineHeight:1.2 }}>
+          Wickramakalutota Opticals
         </div>
-        <div style={{ fontSize:'11pt', fontWeight:'bold', color:'#0f1f3d', marginTop:'1mm' }}>
+
+        {/* Item name */}
+        <div style={{
+          fontSize:         '6.5pt',
+          fontWeight:       'bold',
+          color:            '#0f1f3d',
+          lineHeight:       1.2,
+          overflow:         'hidden',
+          display:          '-webkit-box',
+          WebkitLineClamp:  2,
+          WebkitBoxOrient:  'vertical',
+        }}>
+          {item.name}
+        </div>
+
+        {/* Details */}
+        {(line1||line2) && (
+          <div style={{ fontSize:'5pt', color:'#555', lineHeight:1.3 }}>
+            {line1 && <div>{line1}</div>}
+            {line2 && <div>{line2}</div>}
+          </div>
+        )}
+
+        {/* Price */}
+        <div style={{
+          fontSize:   '9pt',
+          fontWeight: 'bold',
+          color:      '#0f1f3d',
+          borderTop:  '0.3mm solid #eee',
+          paddingTop: '1mm',
+        }}>
           {fmt(item.sell_price)}
         </div>
       </div>
@@ -78,57 +139,69 @@ function Sticker({ item, index }) {
   );
 }
 
-// ── STICKER SHEET MODAL ──────────────────────────────────────
+// ── STICKER MODAL ─────────────────────────────────────────────
 export function StickerModal({ items, onClose }) {
   const sheetRef = useRef();
-  // Expand items by quantity — 3 Black frames means 3 stickers
+
+  // Expand by quantity
   const expanded = items.flatMap(item => {
-    const qty = Math.max(1, parseInt(item.quantity)||1);
+    const qty = Math.max(1, parseInt(item.quantity) || 1);
     return Array(qty).fill(item);
   });
 
-  const handlePrint = () => {
-    const style = document.createElement('style');
-    style.id = 'ko-sticker-print';
-    style.textContent = `
-      @media print {
-        @page { size: A4 portrait; margin: 5mm; }
-        body > * { display: none !important; }
-        #ko-sticker-sheet { display: block !important; }
-      }
-    `;
-    if (!document.getElementById('ko-sticker-print')) document.head.appendChild(style);
-
-    // Create a full-screen print div
-    const printDiv = document.createElement('div');
-    printDiv.id = 'ko-sticker-sheet';
-    printDiv.style.cssText = `
-      position:fixed; top:0; left:0; width:100%; height:100%;
-      background:white; z-index:99999; display:none;
-    `;
-    printDiv.innerHTML = sheetRef.current.innerHTML;
-    document.body.appendChild(printDiv);
-
-    window.print();
-    setTimeout(() => {
-      document.body.removeChild(printDiv);
-    }, 500);
-  };
-
-  // A4 sheet: 3 cols × 7 rows = 21 per page
-  const COLS = 3;
+  // 44 stickers per A4 page (4×11)
+  const PER_PAGE = 44;
   const pages = [];
-  for (let i = 0; i < expanded.length; i += 44) {
-    pages.push(expanded.slice(i, i + 44));
+  for (let i = 0; i < expanded.length; i += PER_PAGE) {
+    pages.push(expanded.slice(i, i + PER_PAGE));
   }
 
+  const handlePrint = () => {
+    // Inject print CSS
+    const styleId = 'ko-sticker-css';
+    if (!document.getElementById(styleId)) {
+      const s = document.createElement('style');
+      s.id = styleId;
+      s.textContent = `
+        @media print {
+          @page { size: A4 portrait; margin: 5mm; }
+          body > *:not(#ko-print-root) { display: none !important; }
+          #ko-print-root {
+            display: block !important;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 99999;
+            background: white;
+          }
+          .no-print { display: none !important; }
+        }
+      `;
+      document.head.appendChild(s);
+    }
+
+    // Create print container
+    const el = document.createElement('div');
+    el.id = 'ko-print-root';
+    el.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;background:white;z-index:99999;';
+    el.innerHTML = sheetRef.current.innerHTML;
+    document.body.appendChild(el);
+
+    window.print();
+
+    setTimeout(() => {
+      const existing = document.getElementById('ko-print-root');
+      if (existing) document.body.removeChild(existing);
+    }, 1000);
+  };
+
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.6)', zIndex:1000,
+    <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.65)', zIndex:1000,
       display:'flex', alignItems:'flex-start', justifyContent:'center',
       overflowY:'auto', padding:'24px 16px', fontFamily:"'DM Sans',sans-serif" }}
       onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
 
-      <div style={{ background:'white', borderRadius:14, width:'100%', maxWidth:760,
+      <div style={{ background:'white', borderRadius:14, width:'100%', maxWidth:800,
         boxShadow:'0 24px 60px rgba(0,0,0,.3)' }}>
 
         {/* Header */}
@@ -136,76 +209,87 @@ export function StickerModal({ items, onClose }) {
           padding:'14px 20px', borderBottom:`1px solid ${C.border}` }}>
           <div>
             <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, color:C.navy }}>
-              🏷️ Print QR Stickers — A4 Sheet
+              🏷️ Print Frame Arm Stickers
             </div>
             <div style={{ fontSize:12, color:C.muted, marginTop:3 }}>
-  {expanded.length} sticker{expanded.length!==1?'s':''} across {pages.length} A4 page{pages.length!==1?'s':''} ·
-              4 columns × 11 rows · 50mm × 25mm each · dotted cut guides
+              {expanded.length} sticker{expanded.length!==1?'s':''} · {pages.length} A4 page{pages.length!==1?'s':''} ·
+              50mm × 25mm · fold at center line · stick around frame arm
             </div>
           </div>
           <div style={{ display:'flex', gap:8 }}>
             <button onClick={handlePrint}
-              style={{ padding:'8px 20px', background:C.gold, color:C.navy, border:'none',
-                borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              style={{ padding:'9px 22px', background:C.gold, color:C.navy, border:'none',
+                borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               🖨️ Print
             </button>
             <button onClick={onClose}
-              style={{ padding:'8px 14px', background:C.cream, color:C.muted,
-                border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13,
+              style={{ padding:'9px 14px', background:C.cream, color:C.muted,
+                border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13,
                 fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
               ✕
             </button>
           </div>
         </div>
 
-        {/* Sticker count per item */}
-        <div style={{ padding:'12px 20px', background:C.cream, borderBottom:`1px solid ${C.border}` }}>
-          <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>Stickers to print:</div>
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+        {/* How to use */}
+        <div style={{ padding:'10px 20px', background:'#eff6ff', borderBottom:`1px solid #bae6fd`,
+          fontSize:12, color:'#1e40af', display:'flex', gap:16, flexWrap:'wrap' }}>
+          <span>1️⃣ Print on plain paper or sticker sheet</span>
+          <span>2️⃣ Cut along the <b>dashed outer lines</b></span>
+          <span>3️⃣ Fold at the <b>solid center line</b></span>
+          <span>4️⃣ Stick around the frame arm</span>
+        </div>
+
+        {/* Item summary */}
+        <div style={{ padding:'10px 20px', background:C.cream, borderBottom:`1px solid ${C.border}` }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.navy, marginBottom:6 }}>Stickers to print:</div>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             {items.map(item=>(
               <div key={item.id} style={{ background:'white', border:`1px solid ${C.border}`,
-                borderRadius:8, padding:'5px 12px', fontSize:12, color:C.navy }}>
-                {item.name} ×<b>{Math.max(1,parseInt(item.quantity)||1)}</b>
+                borderRadius:8, padding:'4px 11px', fontSize:12, color:C.navy }}>
+                {item.name} × <b>{Math.max(1,parseInt(item.quantity)||1)}</b>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Preview — shows actual A4 layout */}
-        <div style={{ padding:20, maxHeight:600, overflowY:'auto' }}>
+        {/* Preview */}
+        <div style={{ padding:20, maxHeight:560, overflowY:'auto', background:'#f3f4f6' }}>
           <div ref={sheetRef}>
             {pages.map((pageItems, pi)=>(
               <div key={pi} style={{
-                width:'210mm',
-                // 7 rows × 38.1mm + margins
-                minHeight:'270mm',
-                margin:'0 auto 10mm',
-                padding:'5mm',
-                background:'white',
-                boxShadow:'0 2px 8px rgba(0,0,0,.1)',
-                boxSizing:'border-box',
-                pageBreakAfter:'always',
+                width:      '210mm',
+                background: 'white',
+                margin:     '0 auto 12px',
+                padding:    '5mm',
+                boxSizing:  'border-box',
+                boxShadow:  '0 2px 8px rgba(0,0,0,.1)',
+                pageBreakAfter: 'always',
               }}>
-                {/* Page label (only in preview, hidden when printing) */}
-                <div className="no-print" style={{ fontSize:10, color:C.muted, marginBottom:4, textAlign:'center' }}>
+                {/* Page label — hidden when printing */}
+                <div className="no-print" style={{ fontSize:10, color:C.muted, marginBottom:6, textAlign:'center' }}>
                   Page {pi+1} — {pageItems.length} sticker{pageItems.length!==1?'s':''}
                 </div>
-                {/* Grid — 3 columns */}
+
+                {/* Sticker grid — 4 columns */}
                 <div style={{
-                  display:'grid',
-                  gridTemplateColumns:'repeat(4, 50mm)',
-                  gap:'0mm',
-                  width:'200mm',
-                  margin:'0 auto',
+                  display:               'grid',
+                  gridTemplateColumns:   'repeat(4, 50mm)',
+                  gap:                   '0mm',
+                  width:                 '200mm',
+                  margin:                '0 auto',
                 }}>
-                  {pageItems.map((item, i)=>(
-                    <Sticker key={`${item.id}-${i}`} item={item} index={i}/>
+                  {pageItems.map((item, idx)=>(
+                    <Sticker key={`${item.id}-${idx}`} item={item}/>
                   ))}
-                  {/* Fill empty cells so grid is complete */}
-                  {Array(Math.max(0, 44 - pageItems.length)).fill(null).map((_,ei)=>(
-                    <div key={`empty-${ei}`} style={{
-                      width:'50mm', height:'25mm',
-                      border:'0.3mm dashed #eee', boxSizing:'border-box',
+                  {/* Empty placeholder cells */}
+                  {Array(Math.max(0, PER_PAGE - pageItems.length)).fill(null).map((_,ei)=>(
+                    <div key={`e-${ei}`} style={{
+                      width:     '50mm',
+                      height:    '25mm',
+                      border:    '0.4mm dashed #ddd',
+                      boxSizing: 'border-box',
+                      background:'white',
                     }}/>
                   ))}
                 </div>
@@ -215,20 +299,20 @@ export function StickerModal({ items, onClose }) {
         </div>
 
         <div style={{ padding:'10px 20px', borderTop:`1px solid ${C.border}`, fontSize:12, color:C.muted }}>
-          💡 Use scissors along the dotted lines to cut stickers. Scan QR codes to instantly add items in New Order or Quick Sale.
+          💡 QR code on left half — scan in New Order or Quick Sale to add item instantly
         </div>
       </div>
     </div>
   );
 }
 
-// ── QR SCANNER MODAL ─────────────────────────────────────────
+// ── QR SCANNER (unchanged) ────────────────────────────────────
 export function QRScanner({ onScan, onClose, title='Scan Frame QR Code' }) {
-  const videoRef  = useRef(null);
-  const streamRef = useRef(null);
-  const [error,   setError]   = useState('');
-  const [loading, setLoading] = useState(true);
-  const [scanned, setScanned] = useState(false);
+  const videoRef  = React.useRef(null);
+  const streamRef = React.useRef(null);
+  const [error,   setError]   = React.useState('');
+  const [loading, setLoading] = React.useState(true);
+  const [scanned, setScanned] = React.useState(false);
 
   React.useEffect(() => { startCamera(); return () => stopCamera(); }, []);
 
@@ -250,7 +334,7 @@ export function QRScanner({ onScan, onClose, title='Scan Frame QR Code' }) {
 
   const stopCamera = () => { streamRef.current?.getTracks().forEach(t=>t.stop()); };
 
-  const startScanning = async () => {
+  const startScanning = () => {
     if ('BarcodeDetector' in window) {
       const detector = new window.BarcodeDetector({ formats:['qr_code'] });
       const scan = async () => {
@@ -297,24 +381,40 @@ export function QRScanner({ onScan, onClose, title='Scan Frame QR Code' }) {
     <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.8)', zIndex:2000,
       display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
       onClick={e=>{ if(e.target===e.currentTarget){stopCamera();onClose();} }}>
-      <div style={{ background:'white', borderRadius:16, width:'100%', maxWidth:420, overflow:'hidden', boxShadow:'0 24px 80px rgba(0,0,0,.4)' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:`1px solid ${C.border}` }}>
+      <div style={{ background:'white', borderRadius:16, width:'100%', maxWidth:420,
+        overflow:'hidden', boxShadow:'0 24px 80px rgba(0,0,0,.4)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+          padding:'14px 18px', borderBottom:`1px solid ${C.border}` }}>
           <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, color:C.navy }}>📷 {title}</div>
-          <button onClick={()=>{stopCamera();onClose();}} style={{ background:C.cream, border:'none', borderRadius:7, padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted, fontWeight:600 }}>✕ Close</button>
+          <button onClick={()=>{stopCamera();onClose();}}
+            style={{ background:C.cream, border:'none', borderRadius:7, padding:'5px 12px',
+              fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted, fontWeight:600 }}>✕ Close</button>
         </div>
         <div style={{ position:'relative', background:'#000', aspectRatio:'4/3' }}>
           <video ref={videoRef} style={{ width:'100%', height:'100%', objectFit:'cover' }} playsInline muted/>
           <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
-            <div style={{ width:200, height:200, border:'2px solid rgba(201,168,76,.8)', borderRadius:12, boxShadow:'0 0 0 2000px rgba(0,0,0,.3)' }}/>
+            <div style={{ width:200, height:200, border:'2px solid rgba(201,168,76,.8)',
+              borderRadius:12, boxShadow:'0 0 0 2000px rgba(0,0,0,.3)' }}/>
           </div>
-          {loading&&<div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,.5)', color:'white', fontSize:14 }}>Starting camera...</div>}
+          {loading && (
+            <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center',
+              justifyContent:'center', background:'rgba(0,0,0,.5)', color:'white', fontSize:14 }}>
+              Starting camera...
+            </div>
+          )}
         </div>
         <div style={{ padding:'14px 18px' }}>
           {error
-            ?<div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:8, padding:'10px 14px', fontSize:13, marginBottom:12 }}>⚠️ {error}</div>
-            :<div style={{ background:C.cream, borderRadius:8, padding:'10px 14px', fontSize:13, color:C.muted, marginBottom:12, textAlign:'center' }}>Point camera at a frame QR sticker</div>
+            ? <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:'#c0392b',
+                borderRadius:8, padding:'10px 14px', fontSize:13, marginBottom:12 }}>⚠️ {error}</div>
+            : <div style={{ background:C.cream, borderRadius:8, padding:'10px 14px',
+                fontSize:13, color:C.muted, marginBottom:12, textAlign:'center' }}>
+                Point camera at a QR sticker
+              </div>
           }
-          <div style={{ fontSize:12, color:C.muted, textAlign:'center' }}>💡 Hold steady for 1–2 seconds in good lighting.</div>
+          <div style={{ fontSize:12, color:C.muted, textAlign:'center' }}>
+            💡 Hold steady in good lighting for 1–2 seconds
+          </div>
         </div>
       </div>
     </div>
