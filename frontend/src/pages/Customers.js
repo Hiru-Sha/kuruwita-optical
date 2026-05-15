@@ -231,11 +231,25 @@ export default function Customers() {
     Promise.all(
       (selected.orders||[]).map(o => getOrder(o.id).then(r=>r?.data||r).catch(()=>o))
     ).then(fullOrders => {
-      console.log('FULL ORDER 0:', JSON.stringify(fullOrders[0]).slice(0,300));
-      const rx = fullOrders.filter(o =>
-        o.has_rx || (o.r_sph && String(o.r_sph).trim()) || (o.l_sph && String(o.l_sph).trim())
-      );
-      console.log('RX ORDERS:', rx.length);
+      // Refraction stored in order.refraction object OR directly on order as r_sph
+      const rx = fullOrders
+        .filter(o => o.refraction || o.r_sph || o.l_sph || o.has_rx)
+        .map(o => ({
+          ...o,
+          // Merge refraction sub-object fields onto order for easy access
+          r_sph:  o.refraction?.r_sph  || o.r_sph,
+          r_cyl:  o.refraction?.r_cyl  || o.r_cyl,
+          r_axis: o.refraction?.r_axis || o.r_axis,
+          r_add:  o.refraction?.r_add  || o.r_add,
+          r_va:   o.refraction?.r_va   || o.r_va,
+          r_pd:   o.refraction?.r_pd   || o.r_pd,
+          l_sph:  o.refraction?.l_sph  || o.l_sph,
+          l_cyl:  o.refraction?.l_cyl  || o.l_cyl,
+          l_axis: o.refraction?.l_axis || o.l_axis,
+          l_add:  o.refraction?.l_add  || o.l_add,
+          l_va:   o.refraction?.l_va   || o.l_va,
+          l_pd:   o.refraction?.l_pd   || o.l_pd,
+        }));
       setRxOrders(rx);
     }).finally(()=>setLoadingRx(false));
   },[tab, selected?.id]);
