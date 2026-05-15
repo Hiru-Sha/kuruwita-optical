@@ -4,7 +4,7 @@
 //  Shows all past prescriptions, comparison, power trend
 // ============================================================
 import React, { useEffect, useState, useCallback } from 'react';
-import { getCustomers, getCustomer, addCommLog, updateOrder } from '../api';
+import { getCustomers, getCustomer, addCommLog, updateOrder, getOrder } from '../api';
 
 const navy  = '#0f1f3d';
 const gold  = '#c9a84c';
@@ -205,6 +205,8 @@ export default function Customers() {
   const [selected,    setSelected]    = useState(null);
   const [loadingCust, setLoadingCust] = useState(false);
   const [editMode,   setEditMode]   = useState(false);
+  const [rxOrders,   setRxOrders]   = useState([]);
+  const [loadingRx,  setLoadingRx]  = useState(false);
   const [editForm,   setEditForm]   = useState({});
   const [savingEdit, setSavingEdit] = useState(false);
   const [tab,         setTab]         = useState('orders');
@@ -222,10 +224,26 @@ export default function Customers() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Load full order details when refraction tab opened
+  useEffect(()=>{
+    if (tab !== 'refraction' || !selected?.orders?.length) return;
+    setLoadingRx(true);
+    Promise.all(
+      (selected.orders||[]).map(o => getOrder(o.id).then(r=>r?.data||r).catch(()=>o))
+    ).then(fullOrders => {
+      const rx = fullOrders.filter(o =>
+        o.has_rx || (o.r_sph && String(o.r_sph).trim()) || (o.l_sph && String(o.l_sph).trim())
+      );
+      setRxOrders(rx);
+    }).finally(()=>setLoadingRx(false));
+  },[tab, selected?.id]);
+
+
   const openCustomer = async (id) => {
     setLoadingCust(true);
     setSelected({ id, _loading: true });
     setTab('orders');
+    setRxOrders([]);
     try {
       const r = await getCustomer(id);
       // axios wraps: r.data = { data: customer, orders: [] }
@@ -398,7 +416,7 @@ export default function Customers() {
                 <div style={{ display:'flex', borderBottom:`1px solid ${border}`, padding:'0 20px', overflowX:'auto' }}>
                   {[
                     { key:'orders',        label:'Orders',      count: selected.orders?.length },
-                    { key:'refraction',    label:'👁️ Refraction', count: selected.refractions?.length },
+                    { key:'refraction',    label:'👁️ Refraction', count: rxOrders.length },
                     { key:'communication', label:'Comms',        count: null },
                     { key:'profile',       label:'Profile',      count: null },
                   ].map(t => (
@@ -439,7 +457,9 @@ export default function Customers() {
                   {/* ── REFRACTION HISTORY TAB ── */}
                   {tab==='refraction' && (
                     <>
-                      {!selected.refractions?.length ? (
+                      {loadingRx ? (
+                        <div style={{ textAlign:'center', padding:32, color:muted }}>⏳ Loading refraction records...</div>
+                      ) : !rxOrders.length ? (
                         <div style={{ textAlign:'center', padding:'32px 0', color:muted }}>
                           <div style={{ fontSize:36, marginBottom:12 }}>👁️</div>
                           <div style={{ fontSize:14, fontWeight:600, marginBottom:4 }}>No refraction records yet</div>
@@ -451,30 +471,30 @@ export default function Customers() {
                           <div style={{ background:navy, borderRadius:12, padding:'14px 16px', marginBottom:16, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, textAlign:'center' }}>
                             <div>
                               <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Total Records</div>
-                              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:'white', fontWeight:700 }}>{selected.refractions.length}</div>
+                              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:'white', fontWeight:700 }}>{rxOrders.length}</div>
                             </div>
                             <div>
                               <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Latest Right</div>
                               <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'white', fontWeight:700 }}>
-                                {selected.refractions[0]?.r_sph||'Plano'}
+                                {rxOrders[0]?.r_sph||'Plano'}
                               </div>
                             </div>
                             <div>
                               <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Latest Left</div>
                               <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'white', fontWeight:700 }}>
-                                {selected.refractions[0]?.l_sph||'Plano'}
+                                {rxOrders[0]?.l_sph||'Plano'}
                               </div>
                             </div>
                           </div>
 
                           {/* Use Rx for New Order */}
-                          {selected.refractions?.length > 0 && (
+                          {rxOrders.length > 0 && (
                             <div style={{ background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:10, padding:'11px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                               <div>
                                 <div style={{ fontSize:13, fontWeight:700, color:'#1e40af' }}>📋 Latest Rx on file</div>
                                 <div style={{ fontSize:11, color:'#2563eb', marginTop:2 }}>
-                                  R: {selected.refractions[0]?.r_sph||'Plano'} / {selected.refractions[0]?.r_cyl||'0'} × {selected.refractions[0]?.r_axis||'0'} &nbsp;|&nbsp;
-                                  L: {selected.refractions[0]?.l_sph||'Plano'} / {selected.refractions[0]?.l_cyl||'0'} × {selected.refractions[0]?.l_axis||'0'}
+                                  R: {rxOrders[0]?.r_sph||'Plano'} / {rxOrders[0]?.r_cyl||'0'} × {rxOrders[0]?.r_axis||'0'} &nbsp;|&nbsp;
+                                  L: {rxOrders[0]?.l_sph||'Plano'} / {rxOrders[0]?.l_cyl||'0'} × {rxOrders[0]?.l_axis||'0'}
                                 </div>
                               </div>
                               <button onClick={()=>{
@@ -494,7 +514,7 @@ export default function Customers() {
                           )}
 
                           {/* Power trend chart — only if 2+ records */}
-                          <PowerTrendChart refractions={selected.refractions}/>
+                          <PowerTrendChart refractions={rxOrders}/>
 
                           {/* Individual records — latest first, expanded by default */}
                           {selected.refractions.map((rx, i) => {
@@ -617,7 +637,7 @@ export default function Customers() {
                             { l:'Total orders', v: selected.orders?.length||0 },
                             { l:'Total spent',  v:`Rs. ${selected.orders?.reduce((s,o)=>s+parseFloat(o.total_amount||0),0).toLocaleString()||0}` },
                             { l:'Balance due',  v:`Rs. ${selected.orders?.reduce((s,o)=>s+parseFloat(o.balance_amount||0),0).toLocaleString()||0}` },
-                            { l:'Rx records',   v: selected.refractions?.length||0 },
+                            { l:'Rx records',   v: rxOrders.length||0 },
                           ].map(item=>(
                             <div key={item.l} style={{ background:cream, borderRadius:8, padding:'10px 12px' }}>
                               <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:muted, marginBottom:3 }}>{item.l}</div>
