@@ -154,6 +154,10 @@ export default function DealerPurchases() {
   const [saving,     setSaving]     = useState(false);
   const [error,      setError]      = useState('');
   const [toast,      setToast]      = useState('');
+  const [billImage,  setBillImage]  = useState(null);
+  // Multi-item mode: array of {description, category, quantity, unit_cost}
+  const [billItems,  setBillItems]  = useState([{ description:'', category:'Frames', quantity:'1', unit_cost:'' }]);
+  const [multiMode,  setMultiMode]  = useState(false); // single vs multi-item bill
 
   const [form, setForm] = useState({
     dealer_name:    'Negombo Optical',
@@ -170,6 +174,23 @@ export default function DealerPurchases() {
     cheque_date:    '',
     cheque_bank:    '',
     notes:          '',
+  });
+
+  const compressImage = (file) => new Promise((resolve) => {
+    const r = new FileReader();
+    r.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ratio  = Math.min(1, 1200 / img.width);
+        canvas.width  = Math.round(img.width  * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.75));
+      };
+      img.src = e.target.result;
+    };
+    r.readAsDataURL(file);
   });
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(''),3000); };
@@ -193,22 +214,42 @@ export default function DealerPurchases() {
   const actualDealer = form.dealer_name === 'Other Dealer' ? form.custom_dealer : form.dealer_name;
 
   const handleAdd = async () => {
-    if (!actualDealer.trim())     return setError('Please enter dealer name');
-    if (!form.description.trim()) return setError('Please enter a description');
-    if (!form.unit_cost || parseFloat(form.unit_cost)<=0) return setError('Please enter unit cost');
-    if (!form.quantity  || parseInt(form.quantity)<=0)   return setError('Please enter quantity');
+    if (!actualDealer.trim()) return setError('Please enter dealer name');
     setError(''); setSaving(true);
     try {
-      const res = await apiPost('/dealer-purchases', {
-        ...form,
-        dealer_name: actualDealer.trim(),
-        quantity:    parseInt(form.quantity),
-        unit_cost:   parseFloat(form.unit_cost),
-      });
-      if (res.error) throw new Error(res.error);
+      if (multiMode) {
+        // Save each bill item separately with same invoice/payment info
+        const validItems = billItems.filter(i=>i.description.trim() && parseFloat(i.unit_cost)>0);
+        if (!validItems.length) return setError('Add at least one item with description and price');
+        for (const item of validItems) {
+          await apiPost('/dealer-purchases', {
+            ...form,
+            dealer_name:   actualDealer.trim(),
+            description:   item.description,
+            category:      item.category,
+            quantity:      parseInt(item.quantity)||1,
+            unit_cost:     parseFloat(item.unit_cost),
+            bill_image:    billImage||null,
+          });
+        }
+        showToast(`${validItems.length} item${validItems.length!==1?'s':''} recorded`);
+      } else {
+        if (!form.description.trim()) return setError('Please enter a description');
+        if (!form.unit_cost || parseFloat(form.unit_cost)<=0) return setError('Please enter unit cost');
+        const res = await apiPost('/dealer-purchases', {
+          ...form,
+          dealer_name: actualDealer.trim(),
+          quantity:    parseInt(form.quantity),
+          unit_cost:   parseFloat(form.unit_cost),
+          bill_image:  billImage||null,
+        });
+        if (res.error) throw new Error(res.error);
+        showToast(`Purchase recorded — ${fmt(res.total_cost)}`);
+      }
       setForm(f=>({ ...f, description:'', quantity:'1', unit_cost:'', invoice_no:'', cheque_no:'', cheque_date:'', cheque_bank:'', notes:'' }));
+      setBillItems([{ description:'', category:'Frames', quantity:'1', unit_cost:'' }]);
+      setBillImage(null);
       setShowAdd(false);
-      showToast(`Purchase recorded — ${fmt(res.total_cost)}`);
       load();
     } catch(e) { setError(e.message||'Failed to save'); }
     finally { setSaving(false); }
@@ -395,10 +436,77 @@ export default function DealerPurchases() {
             <input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Any extra details..." style={INP}/>
           </div>
 
+          {/* Bill image upload */}
+          <div style={{ marginBottom:12 }}>
+            <label style={LBL}>📷 Bill / Invoice Photo (optional)</label>
+            <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+              <label style={{ width:80, height:70, border:`2px dashed ${billImage?C.gold:C.border}`, borderRadius:10, cursor:'pointer', background:billImage?'#fdf9f0':C.cream, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative', flexShrink:0 }}>
+                {billImage ? <img src={billImage} alt="bill" style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <><span style={{ fontSize:20 }}>📄</span><span style={{ fontSize:10, color:C.muted }}>Upload</span></>}
+                <input type="file" accept="image/*" style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer' }}
+                  onChange={async e=>{ const f=e.target.files[0]; if(!f) return; setBillImage(await compressImage(f)); }}/>
+              </label>
+              <div style={{ fontSize:12, color:C.muted, flex:1 }}>
+                Photo of the dealer bill/invoice. Saved with this purchase record.
+                {billImage && <div style={{ marginTop:6 }}><button onClick={()=>setBillImage(null)} style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7, padding:'3px 10px', fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>✕ Remove</button></div>}
+              </div>
+            </div>
+          </div>
+
+          {/* Multi-item toggle */}
+          <div style={{ background:'#eff6ff', border:`1px solid #bae6fd`, borderRadius:10, padding:'10px 14px', marginBottom:12 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:multiMode?10:0 }}>
+              <div>
+                <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Multiple items in this bill?</div>
+                <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>Different frame types with different prices from same invoice</div>
+              </div>
+              <button onClick={()=>setMultiMode(m=>!m)}
+                style={{ padding:'5px 13px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${multiMode?'#2563eb':C.border}`, background:multiMode?'#2563eb':'white', color:multiMode?'white':C.muted }}>
+                {multiMode ? '✓ Multi ON' : 'Single item'}
+              </button>
+            </div>
+            {multiMode && (
+              <div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 70px 100px 28px', gap:6, marginBottom:4 }}>
+                  <span style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase' }}>Description</span>
+                  <span style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase' }}>Category</span>
+                  <span style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase' }}>Qty</span>
+                  <span style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase' }}>Unit Price</span>
+                  <span/>
+                </div>
+                {billItems.map((item,i)=>(
+                  <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 130px 70px 100px 28px', gap:6, marginBottom:6, alignItems:'center' }}>
+                    <input value={item.description} onChange={e=>setBillItems(b=>b.map((x,j)=>j===i?{...x,description:e.target.value}:x))}
+                      placeholder="e.g. Full rim black frame" style={{ ...INP, padding:'6px 9px', fontSize:12 }}/>
+                    <select value={item.category} onChange={e=>setBillItems(b=>b.map((x,j)=>j===i?{...x,category:e.target.value}:x))}
+                      style={{ ...SEL, padding:'6px 9px', fontSize:12 }}>
+                      {CATS.map(cat=><option key={cat}>{cat}</option>)}
+                    </select>
+                    <input type="number" value={item.quantity} onChange={e=>setBillItems(b=>b.map((x,j)=>j===i?{...x,quantity:e.target.value}:x))}
+                      placeholder="1" style={{ ...INP, padding:'6px 9px', fontSize:12 }}/>
+                    <input type="number" value={item.unit_cost} onChange={e=>setBillItems(b=>b.map((x,j)=>j===i?{...x,unit_cost:e.target.value}:x))}
+                      placeholder="Rs." style={{ ...INP, padding:'6px 9px', fontSize:12 }}/>
+                    {billItems.length>1
+                      ? <button onClick={()=>setBillItems(b=>b.filter((_,j)=>j!==i))} style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:13 }}>✕</button>
+                      : <div/>}
+                  </div>
+                ))}
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:8 }}>
+                  <button onClick={()=>setBillItems(b=>[...b,{description:'',category:'Frames',quantity:'1',unit_cost:''}])}
+                    style={{ padding:'5px 13px', background:C.navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                    + Add row
+                  </button>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>
+                    Bill Total: {fmt(billItems.reduce((s,i)=>s+(parseFloat(i.unit_cost)||0)*(parseInt(i.quantity)||1),0))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div style={{ display:'flex', gap:8 }}>
             <button onClick={handleAdd} disabled={saving}
               style={{ padding:'10px 24px', background:saving?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
-              {saving ? '⏳ Saving...' : '💾 Save Purchase'}
+              {saving ? '⏳ Saving...' : multiMode ? `💾 Save ${billItems.filter(i=>i.description.trim()).length} Items` : '💾 Save Purchase'}
             </button>
             <button onClick={()=>{ setShowAdd(false); setError(''); }}
               style={{ padding:'10px 16px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>

@@ -1,4 +1,11 @@
 /* eslint-disable */
+// Remove number input spinners globally
+if (typeof document !== 'undefined' && !document.getElementById('ko-no-spinners')) {
+  const s = document.createElement('style');
+  s.id = 'ko-no-spinners';
+  s.textContent = 'input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}';
+  document.head.appendChild(s);
+}
 // ============================================================
 //  NewOrder.js — Complete with all patches applied correctly
 //  ✅ QR Scanner integrated
@@ -836,9 +843,15 @@ export default function NewOrder() {
                   {customerOwnFrame && <span style={{ background:'#dbeafe', color:'#1e40af', fontSize:10, fontWeight:600, padding:'1px 7px', borderRadius:20, marginLeft:6 }}>Customer's Frame</span>}
                   {orderType==='frame_replace_free' && <span style={{ background:'#f5f3ff', color:'#7c3aed', fontSize:10, fontWeight:600, padding:'1px 7px', borderRadius:20, marginLeft:6 }}>🎁 Free Replace</span>}
                 </span>
-                <span style={{ fontSize:14, fontWeight:700, color:(customerOwnFrame||orderType==='frame_replace_free')?C.muted:C.navy }}>
-                  {(customerOwnFrame||orderType==='frame_replace_free')?'Rs. 0':fmtMoney(frameFinal)}
-                </span>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  {(!customerOwnFrame && orderType!=='frame_replace_free') ? (
+                    <input type="number" value={frameDetails.sellPrice||0}
+                      onChange={e=>setFrameDetails(f=>({...f,sellPrice:parseFloat(e.target.value)||0}))}
+                      style={{ width:90, padding:'4px 8px', border:`1.5px solid ${C.border}`, borderRadius:7, fontSize:13, fontWeight:700, fontFamily:'inherit', textAlign:'right', background:C.cream }}/>
+                  ) : (
+                    <span style={{ fontSize:14, fontWeight:700, color:C.muted }}>Rs. 0</span>
+                  )}
+                </div>
               </div>
               {!customerOwnFrame && (
                 <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
@@ -858,9 +871,15 @@ export default function NewOrder() {
                   🔬 {lensDetails.type} · {lensDetails.coating}
                   {orderType==='lens_warranty' && <span style={{ background:'#dcfce7', color:'#2d7a4f', fontSize:10, fontWeight:600, padding:'1px 7px', borderRadius:20, marginLeft:6 }}>🔁 Free Replace</span>}
                 </span>
-                <span style={{ fontSize:14, fontWeight:700, color:orderType==='lens_warranty'?C.muted:C.navy }}>
-                  {orderType==='lens_warranty'?'Rs. 0':fmtMoney(lensFinal)}
-                </span>
+                <div>
+                  {orderType==='lens_warranty' ? (
+                    <span style={{ fontSize:14, fontWeight:700, color:C.muted }}>Rs. 0</span>
+                  ) : (
+                    <input type="number" value={lensDetails.sellPrice||0}
+                      onChange={e=>setLensDetails(f=>({...f,sellPrice:parseFloat(e.target.value)||0}))}
+                      style={{ width:90, padding:'4px 8px', border:`1.5px solid ${C.border}`, borderRadius:7, fontSize:13, fontWeight:700, fontFamily:'inherit', textAlign:'right', background:C.cream }}/>
+                  )}
+                </div>
               </div>
               <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
                 <span style={{ fontSize:11, color:C.muted }}>Sell price:</span>

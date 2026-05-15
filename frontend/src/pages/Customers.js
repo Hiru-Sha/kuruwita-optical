@@ -430,7 +430,7 @@ export default function Customers() {
                         <div style={{ textAlign:'center', padding:'32px 0', color:muted }}>
                           <div style={{ fontSize:36, marginBottom:12 }}>👁️</div>
                           <div style={{ fontSize:14, fontWeight:600, marginBottom:4 }}>No refraction records yet</div>
-                          <div style={{ fontSize:13 }}>Records are saved automatically when a new order is created</div>
+                          <div style={{ fontSize:13 }}>Records are saved automatically when a new order is created with refraction data</div>
                         </div>
                       ) : (
                         <>
@@ -453,6 +453,32 @@ export default function Customers() {
                               </div>
                             </div>
                           </div>
+
+                          {/* Use Rx for New Order */}
+                          {selected.refractions?.length > 0 && (
+                            <div style={{ background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:10, padding:'11px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                              <div>
+                                <div style={{ fontSize:13, fontWeight:700, color:'#1e40af' }}>📋 Latest Rx on file</div>
+                                <div style={{ fontSize:11, color:'#2563eb', marginTop:2 }}>
+                                  R: {selected.refractions[0]?.r_sph||'Plano'} / {selected.refractions[0]?.r_cyl||'0'} × {selected.refractions[0]?.r_axis||'0'} &nbsp;|&nbsp;
+                                  L: {selected.refractions[0]?.l_sph||'Plano'} / {selected.refractions[0]?.l_cyl||'0'} × {selected.refractions[0]?.l_axis||'0'}
+                                </div>
+                              </div>
+                              <button onClick={()=>{
+                                const rx = selected.refractions[0];
+                                const params = new URLSearchParams({
+                                  customer_id:   selected.data?.id,
+                                  customer_name: selected.data?.name,
+                                  r_sph: rx.r_sph||'', r_cyl: rx.r_cyl||'', r_axis: rx.r_axis||'', r_add: rx.r_add||'', r_pd: rx.r_pd||'',
+                                  l_sph: rx.l_sph||'', l_cyl: rx.l_cyl||'', l_axis: rx.l_axis||'', l_add: rx.l_add||'', l_pd: rx.l_pd||'',
+                                });
+                                window.location.href = '/orders/new?' + params.toString();
+                              }}
+                                style={{ padding:'8px 16px', background:'#1e40af', color:'white', border:'none', borderRadius:9, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                                ➕ New Order with this Rx
+                              </button>
+                            </div>
+                          )}
 
                           {/* Power trend chart — only if 2+ records */}
                           <PowerTrendChart refractions={selected.refractions}/>

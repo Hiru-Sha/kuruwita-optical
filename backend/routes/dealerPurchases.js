@@ -104,27 +104,44 @@ router.get('/summary', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   const { dealer_name, purchase_date, invoice_no, category, description,
           quantity, unit_cost, payment_method, payment_status, notes,
-          cheque_no, cheque_date, cheque_bank } = req.body;
+          cheque_no, cheque_date, cheque_bank, bill_image } = req.body;
 
   if (!dealer_name || !description || !quantity || !unit_cost) {
     return res.status(400).json({ error: 'dealer_name, description, quantity and unit_cost required' });
   }
   const total_cost = parseFloat(unit_cost) * parseInt(quantity);
-
+  const client = await pool.connect();
   try {
-    const result = await pool.query(`
+    await client.query('BEGIN');
+    const result = await client.query(`
       INSERT INTO dealer_purchases
         (dealer_name, purchase_date, invoice_no, category, description, quantity, unit_cost, total_cost,
-         payment_method, payment_status, notes, cheque_no, cheque_date, cheque_bank, added_by)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+         payment_method, payment_status, notes, cheque_no, cheque_date, cheque_bank, bill_image, added_by)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
       [dealer_name, purchase_date || new Date().toISOString().split('T')[0],
        invoice_no||null, category||null, description,
        parseInt(quantity), parseFloat(unit_cost), total_cost,
        payment_method||'cash', payment_status||'paid', notes||null,
-       cheque_no||null, cheque_date||null, cheque_bank||null, req.user.id]
+       cheque_no||null, cheque_date||null, cheque_bank||null,
+       bill_image||null, req.user.id]
     );
+    // Auto-record Pan Asia Bank deposit for bank payments
+    if ((payment_method||'cash') === 'bank') {
+      await client.query(`
+        INSERT INTO cash_deposits (date, amount, bank_name, account_no, payment_type, reference, notes, added_by)
+        VALUES ($1, $2, 'Pan Asia Bank', '', 'bank', $3, 'Auto: dealer payment', $4)`,
+        [purchase_date||new Date().toISOString().split('T')[0],
+         total_cost,
+         `Payment to ${dealer_name}${invoice_no?' inv:'+invoice_no:''}`,
+         req.user.id]
+      );
+    }
+    await client.query('COMMIT');
     res.status(201).json(result.rows[0]);
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err); res.status(500).json({ error: 'Failed' });
+  } finally { client.release(); }
 });
 
 // DELETE /api/dealer-purchases/:id
