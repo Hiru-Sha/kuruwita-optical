@@ -13,7 +13,7 @@ import React, { useRef } from 'react';
 const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280' };
 
 // QR image component — fetches and converts to base64 so it prints correctly
-function QRImage({ text, size='18mm' }) {
+function QRImage({ text, size='18mm', onLoad=()=>{} }) {
   const [src, setSrc] = React.useState(null);
   React.useEffect(() => {
     const url = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(text)}&choe=UTF-8`;
@@ -33,7 +33,7 @@ function QRImage({ text, size='18mm' }) {
       QR...
     </div>
   );
-  return <img src={src} alt="QR" style={{ width:size, height:size, display:'block' }}/>;
+  return <img src={src} alt="QR" style={{ width:size, height:size, display:'block' }} onLoad={onLoad}/>;
 }
 
 const encodeItem = (item) => JSON.stringify({
@@ -47,7 +47,7 @@ const encodeItem = (item) => JSON.stringify({
 export const decodeQR = (raw) => { try { return JSON.parse(raw); } catch { return null; } };
 
 // ── Single foldable sticker ───────────────────────────────────
-function Sticker({ item }) {
+function Sticker({ item, onQRLoad=()=>{} }) {
   const fmt  = (n) => 'Rs.' + parseFloat(n||0).toLocaleString('en-LK', { minimumFractionDigits:0 });
   const line1 = [item.brand, item.frame_color].filter(Boolean).join(' · ');
   const line2 = [item.frame_type, item.sg_type, item.rg_power].filter(Boolean).join(' · ');
@@ -94,7 +94,7 @@ function Sticker({ item }) {
         }}>◀ FOLD</div>
 
         {/* QR — base64 encoded so it prints correctly */}
-        <QRImage text={encodeItem(item)} size="18mm"/>
+        <QRImage text={encodeItem(item)} size="18mm" onLoad={onQRLoad}/>
       </div>
 
       {/* ── RIGHT HALF — Item info ── */}
@@ -167,43 +167,54 @@ export function StickerModal({ items, onClose }) {
     pages.push(expanded.slice(i, i + PER_PAGE));
   }
 
-  const handlePrint = () => {
-    // Inject print CSS
-    const styleId = 'ko-sticker-css';
-    if (!document.getElementById(styleId)) {
-      const s = document.createElement('style');
-      s.id = styleId;
-      s.textContent = `
-        @media print {
-          @page { size: A4 portrait; margin: 5mm; }
-          body > *:not(#ko-print-root) { display: none !important; }
-          #ko-print-root {
-            display: block !important;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 99999;
-            background: white;
-          }
-          .no-print { display: none !important; }
-        }
-      `;
-      document.head.appendChild(s);
-    }
+  const [allLoaded, setAllLoaded] = React.useState(false);
+  const [loadCount, setLoadCount] = React.useState(0);
+  const totalQR = expanded.length;
 
-    // Create print container
-    const el = document.createElement('div');
-    el.id = 'ko-print-root';
-    el.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;background:white;z-index:99999;';
-    el.innerHTML = sheetRef.current.innerHTML;
-    document.body.appendChild(el);
+  // Track when all QR images have loaded
+  React.useEffect(() => {
+    if (loadCount >= totalQR && totalQR > 0) setAllLoaded(true);
+  }, [loadCount, totalQR]);
+
+  const handlePrint = () => {
+    // Give a short delay to make sure all base64 images are rendered in DOM
+    const styleId = 'ko-sticker-css';
+    let style = document.getElementById(styleId);
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    style.textContent = `
+      @media print {
+        @page { size: A4 portrait; margin: 5mm; }
+        body > * { display: none !important; }
+        #ko-sticker-sheet { display: block !important; }
+        .no-print { display: none !important; }
+      }
+      #ko-sticker-sheet {
+        display: none;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%;
+        background: white;
+        z-index: 99999;
+      }
+    `;
+
+    // Show the sheet div for printing
+    sheetRef.current.id = 'ko-sticker-sheet';
+    sheetRef.current.style.display = 'block';
 
     window.print();
 
+    // Hide again after print dialog closes
     setTimeout(() => {
-      const existing = document.getElementById('ko-print-root');
-      if (existing) document.body.removeChild(existing);
-    }, 1000);
+      if (sheetRef.current) {
+        sheetRef.current.style.display = '';
+        sheetRef.current.id = '';
+      }
+    }, 500);
   };
 
   return (
@@ -228,10 +239,12 @@ export function StickerModal({ items, onClose }) {
             </div>
           </div>
           <div style={{ display:'flex', gap:8 }}>
-            <button onClick={handlePrint}
-              style={{ padding:'9px 22px', background:C.gold, color:C.navy, border:'none',
-                borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-              🖨️ Print
+            <button onClick={handlePrint} disabled={!allLoaded}
+              style={{ padding:'9px 22px', background:allLoaded?C.gold:'#e0ddd6',
+                color:allLoaded?C.navy:C.muted, border:'none',
+                borderRadius:9, fontSize:13, fontWeight:700,
+                cursor:allLoaded?'pointer':'not-allowed', fontFamily:'inherit' }}>
+              {allLoaded ? '🖨️ Print' : `⏳ Loading QR (${loadCount}/${totalQR})`}
             </button>
             <button onClick={onClose}
               style={{ padding:'9px 14px', background:C.cream, color:C.muted,
@@ -291,7 +304,7 @@ export function StickerModal({ items, onClose }) {
                   margin:                '0 auto',
                 }}>
                   {pageItems.map((item, idx)=>(
-                    <Sticker key={`${item.id}-${idx}`} item={item}/>
+                    <Sticker key={`${item.id}-${idx}`} item={item} onQRLoad={()=>setLoadCount(n=>n+1)}/>
                   ))}
                   {/* Empty placeholder cells */}
                   {Array(Math.max(0, PER_PAGE - pageItems.length)).fill(null).map((_,ei)=>(
