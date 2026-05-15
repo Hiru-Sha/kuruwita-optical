@@ -9,7 +9,7 @@ import React, { useState, useRef } from 'react';
 
 const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b' };
 
-const qrUrl = (data, size=80) =>
+const qrUrl = (data, size=60) =>
   `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data)}&size=${size}x${size}&margin=2`;
 
 const encodeItem = (item) => JSON.stringify({
@@ -35,7 +35,7 @@ function Sticker({ item, index }) {
 
   return (
     <div style={{
-      width: '63.5mm', height: '38.1mm',
+      width: '50mm', height: '25mm',
       display: 'flex', overflow: 'hidden',
       fontFamily: 'Arial, sans-serif',
       background: 'white',
@@ -52,21 +52,21 @@ function Sticker({ item, index }) {
       }}/>
 
       {/* QR code */}
-      <div style={{ width:'36mm', display:'flex', alignItems:'center', justifyContent:'center', padding:'3mm', flexShrink:0 }}>
-        <img src={qr} alt="QR" style={{ width:'28mm', height:'28mm' }} crossOrigin="anonymous"/>
+      <div style={{ width:'22mm', display:'flex', alignItems:'center', justifyContent:'center', padding:'2mm', flexShrink:0 }}>
+        <img src={qr} alt="QR" style={{ width:'18mm', height:'18mm' }} crossOrigin="anonymous"/>
       </div>
 
       {/* Info */}
-      <div style={{ flex:1, padding:'3mm 3mm 3mm 0', display:'flex', flexDirection:'column', justifyContent:'space-between', overflow:'hidden' }}>
+      <div style={{ flex:1, padding:'2mm 2mm 2mm 0', display:'flex', flexDirection:'column', justifyContent:'space-between', overflow:'hidden' }}>
         <div>
-          <div style={{ fontSize:'5pt', color:'#999', textTransform:'uppercase', letterSpacing:'0.5pt', marginBottom:'1mm' }}>
+          <div style={{ fontSize:'4pt', color:'#999', textTransform:'uppercase', letterSpacing:'0.3pt', marginBottom:'0.5mm' }}>
             Wickramakalutota Opticals
           </div>
-          <div style={{ fontSize:'8pt', fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2, marginBottom:'1mm',
+          <div style={{ fontSize:'6.5pt', fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2, marginBottom:'0.5mm',
             overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
             {item.name}
           </div>
-          <div style={{ fontSize:'6pt', color:'#555', lineHeight:1.4 }}>
+          <div style={{ fontSize:'5pt', color:'#555', lineHeight:1.3 }}>
             {lines.slice(0,2).join(' · ')}
           </div>
         </div>
@@ -118,8 +118,8 @@ export function StickerModal({ items, onClose }) {
   // A4 sheet: 3 cols × 7 rows = 21 per page
   const COLS = 3;
   const pages = [];
-  for (let i = 0; i < expanded.length; i += 21) {
-    pages.push(expanded.slice(i, i + 21));
+  for (let i = 0; i < expanded.length; i += 44) {
+    pages.push(expanded.slice(i, i + 44));
   }
 
   return (
@@ -139,8 +139,8 @@ export function StickerModal({ items, onClose }) {
               🏷️ Print QR Stickers — A4 Sheet
             </div>
             <div style={{ fontSize:12, color:C.muted, marginTop:3 }}>
-              {expanded.length} sticker{expanded.length!==1?'s':''} across {pages.length} A4 page{pages.length!==1?'s':''} ·
-              3 columns × 7 rows · 63.5mm × 38.1mm each · dotted cut guides
+  {expanded.length} sticker{expanded.length!==1?'s':''} across {pages.length} A4 page{pages.length!==1?'s':''} ·
+              4 columns × 11 rows · 50mm × 25mm each · dotted cut guides
             </div>
           </div>
           <div style={{ display:'flex', gap:8 }}>
@@ -193,18 +193,23 @@ export function StickerModal({ items, onClose }) {
                 {/* Grid — 3 columns */}
                 <div style={{
                   display:'grid',
-                  gridTemplateColumns:'repeat(3, 63.5mm)',
+                  gridTemplateColumns:'repeat(4, 50mm)',
                   gap:'0mm',
-                  width:'190.5mm',
+                  width:'200mm',
                   margin:'0 auto',
                 }}>
                   {pageItems.map((item, i)=>(
                     <Sticker key={`${item.id}-${i}`} item={item} index={i}/>
                   ))}
                   {/* Fill empty cells so grid is complete */}
-                  {Array(21 - pageItems.length).fill(null).map((_,i)=>(
+                  {Array(44 - pageItems.length).fill(null).map((_,i)=>(
                     <div key={`empty-${i}`} style={{
-                      width:'63.5mm', height:'38.1mm',
+                      width:'50mm', height:'25mm',
+                      border:'0.3mm dashed #eee', boxSizing:'border-box',
+                    }}/>
+                  ))}
+                    <div key={`empty-${i}`} style={{
+                      width:'50mm', height:'25mm',
                       border:'0.3mm dashed #eee', boxSizing:'border-box',
                     }}/>
                   ))}
