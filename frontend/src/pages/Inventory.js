@@ -445,7 +445,22 @@ export default function Inventory() {
   };
 
   const handleSavePanel = async (local) => {
-    await updateItem(local.id,{ sell_price:parseFloat(local.sell_price)||0, cost_price:parseFloat(local.cost_price)||0, min_quantity:parseInt(local.min_quantity)||2, dealer:local.dealer });
+    await updateItem(local.id, {
+      name:           local.name,
+      brand:          local.brand,
+      dealer:         local.dealer,
+      category:       local.category,
+      frame_color:    local.frame_color,
+      frame_type:     local.frame_type,
+      frame_shape:    local.frame_shape,
+      frame_material: local.frame_material,
+      frame_size:     local.frame_size,
+      sg_type:        local.sg_type,
+      rg_power:       local.rg_power,
+      sell_price:     parseFloat(local.sell_price)||0,
+      cost_price:     parseFloat(local.cost_price)||0,
+      min_quantity:   parseInt(local.min_quantity)||2,
+    });
     load(); setSelected(null);
   };
 
@@ -641,7 +656,15 @@ export default function Inventory() {
         : !items.length
           ? <div style={{ textAlign:'center', padding:'48px 20px', color:C.muted }}><div style={{ fontSize:40, marginBottom:12 }}>📦</div><div style={{ fontSize:14, fontWeight:600 }}>No items yet</div></div>
           : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(185px,1fr))', gap:14 }}>
-              {items.map(item=>(
+              {items.filter(item=>{
+                if (!subFilter) return true;
+                if (activeCat==='Sunglasses') {
+                  if (subFilter==='RayBan') return (item.brand||'').toLowerCase().includes('rayban');
+                  return item.sg_type===subFilter;
+                }
+                if (activeCat==='Frames') return item.frame_type===subFilter;
+                return true;
+              }).map(item=>(
                 <ItemCard key={item.id} item={item}
                   onClick={()=>{ setPanelTab('details'); loadFullItem(item); }}
                   onSticker={i=>{ setStickerItems([i]); setShowStickers(true); }}
@@ -698,21 +721,89 @@ export default function Inventory() {
               {/* ── DETAILS TAB ── */}
               {panelTab==='details' && (
                 <>
-                  <div style={{ marginBottom:18 }}>
-                    <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:10, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>Pricing</div>
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                      <Field label="Cost Price (Rs.)"><input type="number" value={selected.cost_price||''} onChange={e=>setSelected(s=>({...s,cost_price:e.target.value}))} style={INP}/></Field>
-                      <Field label="Sell Price (Rs.)"><input type="number" value={selected.sell_price||''} onChange={e=>setSelected(s=>({...s,sell_price:e.target.value}))} style={INP}/></Field>
-                      <Field label="Min Alert"><input type="number" value={selected.min_quantity||''} onChange={e=>setSelected(s=>({...s,min_quantity:e.target.value}))} style={INP}/></Field>
+                  {/* ── Identity ── */}
+                  <div style={{ marginBottom:14 }}>
+                    <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:8, paddingBottom:5, borderBottom:`1px solid ${C.cream}` }}>Identity</div>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                      <Field label="Item Name"><input value={selected.name||''} onChange={e=>setSelected(s=>({...s,name:e.target.value}))} style={INP}/></Field>
+                      <Field label="Brand"><input value={selected.brand||''} onChange={e=>setSelected(s=>({...s,brand:e.target.value}))} style={INP}/></Field>
+                      <Field label="Category">
+                        <select value={selected.category||''} onChange={e=>setSelected(s=>({...s,category:e.target.value}))} style={{...INP,cursor:'pointer'}}>
+                          {CATS.map(cat=><option key={cat}>{cat}</option>)}
+                        </select>
+                      </Field>
                       <Field label="Dealer"><input value={selected.dealer||''} onChange={e=>setSelected(s=>({...s,dealer:e.target.value}))} style={INP}/></Field>
                     </div>
-                    <div style={{ background:C.cream, borderRadius:9, padding:'9px 14px', marginTop:10, display:'flex', gap:20, fontSize:13 }}>
+                  </div>
+                  {/* ── Frame details ── */}
+                  {['Frames','Sunglasses','Reading Glasses'].includes(selected.category) && (
+                    <div style={{ marginBottom:14 }}>
+                      <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:8, paddingBottom:5, borderBottom:`1px solid ${C.cream}` }}>Frame Details</div>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                        <Field label="Color">
+                          <select value={selected.frame_color||''} onChange={e=>setSelected(s=>({...s,frame_color:e.target.value}))} style={{...INP,cursor:'pointer'}}>
+                            {FR_COLORS.map(c=><option key={c}>{c}</option>)}
+                          </select>
+                        </Field>
+                        <Field label="Type">
+                          <select value={selected.frame_type||''} onChange={e=>setSelected(s=>({...s,frame_type:e.target.value}))} style={{...INP,cursor:'pointer'}}>
+                            <option value="">—</option>
+                            {FR_TYPES.map(t=><option key={t}>{t}</option>)}
+                          </select>
+                        </Field>
+                        <Field label="Shape">
+                          <select value={selected.frame_shape||''} onChange={e=>setSelected(s=>({...s,frame_shape:e.target.value}))} style={{...INP,cursor:'pointer'}}>
+                            <option value="">—</option>
+                            {FR_SHAPES.map(t=><option key={t}>{t}</option>)}
+                          </select>
+                        </Field>
+                        <Field label="Material">
+                          <select value={selected.frame_material||''} onChange={e=>setSelected(s=>({...s,frame_material:e.target.value}))} style={{...INP,cursor:'pointer'}}>
+                            <option value="">—</option>
+                            {FR_MATS.map(t=><option key={t}>{t}</option>)}
+                          </select>
+                        </Field>
+                        <Field label="Size">
+                          <select value={selected.frame_size||''} onChange={e=>setSelected(s=>({...s,frame_size:e.target.value}))} style={{...INP,cursor:'pointer'}}>
+                            <option value="">—</option>
+                            {FR_SIZES.map(t=><option key={t}>{t}</option>)}
+                          </select>
+                        </Field>
+                        {selected.category==='Sunglasses' && (
+                          <Field label="SG Type">
+                            <select value={selected.sg_type||''} onChange={e=>setSelected(s=>({...s,sg_type:e.target.value}))} style={{...INP,cursor:'pointer'}}>
+                              <option value="">—</option>
+                              {SG_TYPES.map(t=><option key={t}>{t}</option>)}
+                            </select>
+                          </Field>
+                        )}
+                        {selected.category==='Reading Glasses' && (
+                          <Field label="Power">
+                            <select value={selected.rg_power||''} onChange={e=>setSelected(s=>({...s,rg_power:e.target.value}))} style={{...INP,cursor:'pointer'}}>
+                              <option value="">—</option>
+                              {RG_POWERS.map(t=><option key={t}>{t}</option>)}
+                            </select>
+                          </Field>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {/* ── Pricing ── */}
+                  <div style={{ marginBottom:14 }}>
+                    <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:8, paddingBottom:5, borderBottom:`1px solid ${C.cream}` }}>Pricing & Stock</div>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                      <Field label="Cost Price (Rs.)"><input type="number" value={selected.cost_price||''} onChange={e=>setSelected(s=>({...s,cost_price:e.target.value}))} style={INP}/></Field>
+                      <Field label="Sell Price (Rs.)"><input type="number" value={selected.sell_price||''} onChange={e=>setSelected(s=>({...s,sell_price:e.target.value}))} style={INP}/></Field>
+                      <Field label="Min Alert Qty"><input type="number" value={selected.min_quantity||''} onChange={e=>setSelected(s=>({...s,min_quantity:e.target.value}))} style={INP}/></Field>
+                    </div>
+                    <div style={{ background:C.cream, borderRadius:9, padding:'9px 14px', marginTop:8, display:'flex', gap:20, fontSize:13 }}>
                       <span>Profit: <b style={{color:C.success}}>Rs.{(parseFloat(selected.sell_price||0)-parseFloat(selected.cost_price||0)).toLocaleString()}</b></span>
                       <span>Margin: <b>{parseFloat(selected.sell_price)>0?Math.round((parseFloat(selected.sell_price)-parseFloat(selected.cost_price))/parseFloat(selected.sell_price)*100):0}%</b></span>
                     </div>
                   </div>
+                  {/* ── Actions ── */}
                   <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                    <button onClick={()=>handleSavePanel(selected)} style={{ padding:'10px 18px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>💾 Save</button>
+                    <button onClick={()=>handleSavePanel(selected)} style={{ padding:'10px 18px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>💾 Save All</button>
                     <button onClick={()=>{ setStickerItems([selected]); setShowStickers(true); }} style={{ padding:'10px 16px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>🏷️ Sticker</button>
                     <button onClick={()=>setPanelTab('adjust')} style={{ padding:'10px 16px', background:'#eff6ff', border:`1.5px solid #bae6fd`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#0369a1' }}>📦 Adjust Stock</button>
                     <button onClick={()=>handleDelete(selected.id)} style={{ padding:'10px 14px', background:'#fee2e2', color:C.danger, border:`1.5px solid #fca5a5`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>🗑️</button>

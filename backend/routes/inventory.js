@@ -79,23 +79,42 @@ router.post('/', auth, async (req, res) => {
 
 // PATCH /api/inventory/:id
 router.patch('/:id', auth, async (req, res) => {
-  const { sell_price, cost_price, quantity, min_quantity, dealer, image_url, name } = req.body;
+  const {
+    name, brand, dealer, category,
+    frame_color, frame_type, frame_shape, frame_material, frame_size,
+    sg_type, rg_power, item_name,
+    sell_price, cost_price, quantity, min_quantity, image_url,
+  } = req.body;
   try {
     const result = await pool.query(`
       UPDATE inventory SET
-        sell_price   = COALESCE($1, sell_price),
-        cost_price   = COALESCE($2, cost_price),
-        quantity     = COALESCE($3, quantity),
-        min_quantity = COALESCE($4, min_quantity),
-        dealer       = COALESCE($5, dealer),
-        image_url    = COALESCE($6, image_url),
-        name         = COALESCE($7, name),
-        updated_at   = NOW()
-      WHERE id = $8 RETURNING *`,
-      [sell_price, cost_price, quantity, min_quantity, dealer, image_url, name, req.params.id]
+        name           = COALESCE($1,  name),
+        brand          = COALESCE($2,  brand),
+        dealer         = COALESCE($3,  dealer),
+        category       = COALESCE($4,  category),
+        frame_color    = COALESCE($5,  frame_color),
+        frame_type     = COALESCE($6,  frame_type),
+        frame_shape    = COALESCE($7,  frame_shape),
+        frame_material = COALESCE($8,  frame_material),
+        frame_size     = COALESCE($9,  frame_size),
+        sg_type        = COALESCE($10, sg_type),
+        rg_power       = COALESCE($11, rg_power),
+        item_name      = COALESCE($12, item_name),
+        sell_price     = COALESCE($13, sell_price),
+        cost_price     = COALESCE($14, cost_price),
+        quantity       = COALESCE($15, quantity),
+        min_quantity   = COALESCE($16, min_quantity),
+        image_url      = COALESCE($17, image_url),
+        updated_at     = NOW()
+      WHERE id = $18 RETURNING *`,
+      [name, brand, dealer, category,
+       frame_color, frame_type, frame_shape, frame_material, frame_size,
+       sg_type, rg_power, item_name,
+       sell_price, cost_price, quantity, min_quantity, image_url,
+       req.params.id]
     );
     res.json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
 
 // DELETE /api/inventory/:id
