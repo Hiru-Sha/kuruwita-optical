@@ -55,6 +55,7 @@ router.post('/', auth, async (req, res) => {
     frame_type, frame_color, frame_shape, frame_material, frame_size,
     sg_type, rg_lens_type, rg_material, rg_power, item_name,
     cost_price, sell_price, quantity, min_quantity, image_url,
+    display_number, stock_number, location,
   } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Name required' });
   try {
