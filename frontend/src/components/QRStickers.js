@@ -38,7 +38,7 @@ function QRImage({ text, size='18mm', onLoad=()=>{} }) {
         height: 150,
         colorDark:  '#000000',
         colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M,
+        correctLevel: QRCode.CorrectLevel.L,
       });
       setReady(true);
       setTimeout(onLoad, 150);
@@ -56,15 +56,20 @@ function QRImage({ text, size='18mm', onLoad=()=>{} }) {
   );
 }
 
-const encodeItem = (item) => JSON.stringify({
-  id:    item.id,
-  name:  item.name,
-  price: item.sell_price,
-  color: item.frame_color || '',
-  brand: item.brand || '',
-});
+// Encode only the ID — keeps QR data tiny so it never overflows
+const encodeItem = (item) => `KO-INV-${item.id}`;
 
-export const decodeQR = (raw) => { try { return JSON.parse(raw); } catch { return null; } };
+export const decodeQR = (raw) => {
+  try {
+    // New short format: KO-INV-{id}
+    if (raw && raw.startsWith('KO-INV-')) {
+      const id = parseInt(raw.replace('KO-INV-',''));
+      if (!isNaN(id)) return { id };
+    }
+    // Legacy JSON format
+    return JSON.parse(raw);
+  } catch { return null; }
+};
 
 // ── Single foldable sticker ───────────────────────────────────
 function Sticker({ item, onQRLoad=()=>{} }) {
