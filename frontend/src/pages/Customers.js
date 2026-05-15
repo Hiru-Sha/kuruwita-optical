@@ -204,6 +204,9 @@ export default function Customers() {
 
   const [selected,    setSelected]    = useState(null);
   const [loadingCust, setLoadingCust] = useState(false);
+  const [editMode,   setEditMode]   = useState(false);
+  const [editForm,   setEditForm]   = useState({});
+  const [savingEdit, setSavingEdit] = useState(false);
   const [tab,         setTab]         = useState('orders');
   const [commNote,    setCommNote]    = useState('');
   const [commType,    setCommType]    = useState('call');
@@ -567,21 +570,77 @@ export default function Customers() {
                   {/* ── PROFILE TAB ── */}
                   {tab==='profile' && (
                     <>
-                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16 }}>
-                        {[
-                          { l:'Phone',        v: selected.phone },
-                          { l:'Age',          v: selected.age ? selected.age+' years' : '—' },
-                          { l:'Total orders', v: selected.orders?.length||0 },
-                          { l:'Total spent',  v:`Rs. ${selected.orders?.reduce((s,o)=>s+parseFloat(o.total_amount||0),0).toLocaleString()||0}` },
-                          { l:'Balance due',  v:`Rs. ${selected.orders?.reduce((s,o)=>s+parseFloat(o.balance_amount||0),0).toLocaleString()||0}` },
-                          { l:'Rx records',   v: selected.refractions?.length||0 },
-                        ].map(item=>(
-                          <div key={item.l} style={{ background:cream, borderRadius:8, padding:'10px 12px' }}>
-                            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:muted, marginBottom:3 }}>{item.l}</div>
-                            <div style={{ fontSize:13, fontWeight:600, color:'#1a1a2e' }}>{item.v}</div>
-                          </div>
-                        ))}
+                      {/* Edit toggle */}
+                      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:12 }}>
+                        {!editMode
+                          ? <button onClick={()=>{ setEditForm({ name:selected.name||'', phone:selected.phone||'', age:selected.age||'', address:selected.address||'', email:selected.email||'' }); setEditMode(true); }}
+                              style={{ padding:'7px 16px', background:navy, color:'white', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                              ✏️ Edit Details
+                            </button>
+                          : <div style={{ display:'flex', gap:8 }}>
+                              <button onClick={async()=>{
+                                setSavingEdit(true);
+                                try {
+                                  await updateCustomer(selected.id, editForm);
+                                  const r = await getCustomer(selected.id);
+                                  const cust = r?.data?.data || r?.data || r;
+                                  const orders = r?.data?.orders || r?.orders || [];
+                                  const refractions = orders.filter(o=>parseInt(o.has_rx)===1||(o.r_sph&&o.r_sph.trim()&&o.r_sph!=='0')||(o.l_sph&&o.l_sph.trim()&&o.l_sph!=='0')).map(o=>({...o}));
+                                  setSelected({...cust, orders, refractions});
+                                  setEditMode(false);
+                                  load();
+                                } catch(e){ alert('Failed to save'); }
+                                finally { setSavingEdit(false); }
+                              }} disabled={savingEdit}
+                                style={{ padding:'7px 16px', background:savingEdit?muted:'#2d7a4f', color:'white', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                                {savingEdit?'⏳ Saving...':'💾 Save'}
+                              </button>
+                              <button onClick={()=>setEditMode(false)}
+                                style={{ padding:'7px 14px', background:cream, border:`1.5px solid ${border}`, borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:'inherit', color:muted }}>
+                                Cancel
+                              </button>
+                            </div>
+                        }
                       </div>
+
+                      {editMode ? (
+                        /* ── Edit form ── */
+                        <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
+                          {[
+                            { l:'Full Name',    k:'name',    type:'text',  ph:'Customer name' },
+                            { l:'Phone',        k:'phone',   type:'tel',   ph:'07X XXX XXXX' },
+                            { l:'Age',          k:'age',     type:'number',ph:'e.g. 35' },
+                            { l:'Address',      k:'address', type:'text',  ph:'Street, City' },
+                            { l:'Email',        k:'email',   type:'email', ph:'optional' },
+                          ].map(f=>(
+                            <div key={f.k}>
+                              <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:muted, display:'block', marginBottom:4 }}>{f.l}</label>
+                              <input type={f.type} value={editForm[f.k]||''} onChange={e=>setEditForm(ef=>({...ef,[f.k]:e.target.value}))}
+                                placeholder={f.ph}
+                                style={{ width:'100%', padding:'9px 12px', border:`1.5px solid ${border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:cream, color:navy, boxSizing:'border-box' }}/>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        /* ── View mode ── */
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16 }}>
+                          {[
+                            { l:'Phone',        v: selected.phone||'—' },
+                            { l:'Age',          v: selected.age ? selected.age+' years' : '—' },
+                            { l:'Address',      v: selected.address||'—' },
+                            { l:'Email',        v: selected.email||'—' },
+                            { l:'Total orders', v: selected.orders?.length||0 },
+                            { l:'Total spent',  v:`Rs. ${selected.orders?.reduce((s,o)=>s+parseFloat(o.total_amount||0),0).toLocaleString()||0}` },
+                            { l:'Balance due',  v:`Rs. ${selected.orders?.reduce((s,o)=>s+parseFloat(o.balance_amount||0),0).toLocaleString()||0}` },
+                            { l:'Rx records',   v: selected.refractions?.length||0 },
+                          ].map(item=>(
+                            <div key={item.l} style={{ background:cream, borderRadius:8, padding:'10px 12px' }}>
+                              <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:muted, marginBottom:3 }}>{item.l}</div>
+                              <div style={{ fontSize:13, fontWeight:600, color:'#1a1a2e' }}>{item.v}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       {selected.orders?.some(o=>o.has_rx&&!o.rx_returned) && (
                         <div style={{ background:'#e0f2fe', borderRadius:10, padding:'12px 14px' }}>
