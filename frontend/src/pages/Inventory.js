@@ -355,6 +355,7 @@ function AdjustmentPanel({ item, onDone }) {
 export default function Inventory() {
   const [items,        setItems]       = useState([]);
   const [activeCat,    setActiveCat]   = useState('All');
+  const [subFilter,    setSubFilter]   = useState('');
   const [search,       setSearch]      = useState('');
   const [selected,     setSelected]    = useState(null);
   const [panelTab,     setPanelTab]    = useState('details');
