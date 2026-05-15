@@ -202,13 +202,8 @@ export function StickerModal({ items, onClose }) {
                     <Sticker key={`${item.id}-${i}`} item={item} index={i}/>
                   ))}
                   {/* Fill empty cells so grid is complete */}
-                  {Array(44 - pageItems.length).fill(null).map((_,i)=>(
-                    <div key={`empty-${i}`} style={{
-                      width:'50mm', height:'25mm',
-                      border:'0.3mm dashed #eee', boxSizing:'border-box',
-                    }}/>
-                  ))}
-                    <div key={`empty-${i}`} style={{
+                  {Array(Math.max(0, 44 - pageItems.length)).fill(null).map((_,ei)=>(
+                    <div key={`empty-${ei}`} style={{
                       width:'50mm', height:'25mm',
                       border:'0.3mm dashed #eee', boxSizing:'border-box',
                     }}/>
