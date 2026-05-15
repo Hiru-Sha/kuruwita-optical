@@ -5,10 +5,7 @@ const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', m
 
 export const decodeQR = (raw) => { try { return JSON.parse(raw); } catch { return null; } };
 
-const encodeItem = (item) => JSON.stringify({
-  id: item.id, name: item.name, price: item.sell_price,
-  color: item.frame_color||'', brand: item.brand||'',
-});
+const encodeItem = (item) => String(item.id);  // just the ID — short, always works
 
 // ── Generate QR as SVG path using qrcode-svg approach ─────────
 // Uses a hidden iframe with qrcodejs loaded — completely isolated from React
