@@ -318,10 +318,15 @@ router.post('/import', auth, async (req, res) => {
     const dateObj = new Date(import_date || Date.now());
     const y  = dateObj.getFullYear().toString().slice(2);
     const m  = String(dateObj.getMonth()+1).padStart(2,'0');
+    // Get MAX sequence to avoid duplicate on rapid inserts
     const countRes = await client.query(
-      `SELECT COUNT(*) FROM orders WHERE TO_CHAR(created_at,'YYMM') = $1`, [y+m]
+      `SELECT COALESCE(MAX(
+         CAST(SPLIT_PART(order_number, '-', 3) AS INTEGER)
+       ), 0) as maxseq
+       FROM orders
+       WHERE order_number LIKE $1`, [`KO-${y}${m}-%`]
     );
-    const seq = parseInt(countRes.rows[0].count) + 1;
+    const seq = parseInt(countRes.rows[0].maxseq) + 1;
     const order_number = `KO-${y}${m}-${String(seq).padStart(3,'0')}`;
     const importTs = import_date ? new Date(import_date + 'T12:00:00') : new Date();
 

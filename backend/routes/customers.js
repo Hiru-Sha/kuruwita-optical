@@ -48,12 +48,13 @@ router.get('/:id', auth, async (req, res) => {
 // Two people CAN share the same phone number (family, etc.)
 // Only auto-match if BOTH name AND phone match exactly
 router.post('/', auth, async (req, res) => {
-  const { name, phone, age, address, email } = req.body;
+  const { name, phone, age, address, email, force_new, title } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Name required' });
 
   try {
     // Only return existing customer if BOTH name AND phone match
-    if (phone?.trim()) {
+    // force_new=true skips matching (used by bulk import)
+    if (!force_new && phone?.trim()) {
       const existing = await pool.query(
         `SELECT * FROM customers WHERE name ILIKE $1 AND phone = $2 LIMIT 1`,
         [name.trim(), phone.trim()]

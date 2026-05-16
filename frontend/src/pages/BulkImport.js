@@ -140,7 +140,7 @@ export default function BulkImport() {
           const cr = await fetch(`${BASE}/customers`, {
             method:'POST',
             headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-            body:JSON.stringify({ name:(f.title?f.title+' ':'')+f.customer_name.trim(), phone:f.phone.trim()||null, age:f.age||null, title:f.title||null }),
+            body:JSON.stringify({ name:(f.title?f.title+' ':'')+f.customer_name.trim(), phone:f.phone.trim()||null, age:f.age||null, title:f.title||null, force_new:true }),
           }).then(r=>r.json());
           customerId = cr.data?.id || cr.id;
         } catch(e) {
@@ -153,7 +153,7 @@ export default function BulkImport() {
         const cr = await fetch(`${BASE}/customers`, {
           method:'POST',
           headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-          body:JSON.stringify({ name: (f.title?f.title+' ':'')+( f.customer_name.trim() || 'Past Customer'), phone:f.phone.trim()||null, title:f.title||null }),
+          body:JSON.stringify({ name: (f.title?f.title+' ':'')+( f.customer_name.trim() || 'Past Customer'), phone:f.phone.trim()||null, title:f.title||null, force_new:true }),
         }).then(r=>r.json());
         customerId = cr.data?.id || cr.id || 1;
       }
