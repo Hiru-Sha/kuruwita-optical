@@ -28,8 +28,6 @@ const AXES        = Array.from({length:181},(_,i)=>String(i));
 const VA_OPTIONS  = ['6/6','6/9','6/12','6/18','6/24','6/36','6/60','CF','HM','PL'];
 const ORDER_TYPES  = ['normal','lens_warranty','lens_paid','frame_replace_free','frame_replace_paid'];
 const ORDER_TYPE_LABELS = { normal:'Normal Order', lens_warranty:'🔁 Lens Replace Free', lens_paid:'🔬 Lens Replace Paid', frame_replace_free:'🎁 Frame Replace Free', frame_replace_paid:'💰 Frame Replace Paid' };
-const FRAME_TYPES  = ['Full rim','Half rim','Rimless'];
-const FRAME_COLORS = ['Black','Gold','Silver','Brown','Gunmetal','Blue','Red','Pink','Tortoise','Crystal','Green','White','Other'];
 const REPAIR_TYPES = ['Arm Repair','Nose Pad Replacement','Frame Polishing','Screw / Nail Fix','Lens Refit','Hinge Repair','Frame Straightening','Other Repair'];
 
 function apiPost(path, body) {
