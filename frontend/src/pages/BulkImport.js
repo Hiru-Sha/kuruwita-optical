@@ -133,29 +133,26 @@ export default function BulkImport() {
       const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
       const token = localStorage.getItem('ko_token');
 
-      // 1. Create or find customer
+      // 1. Create customer — always force new record
+      const custName = ((f.title ? f.title + ' ' : '') + (f.customer_name.trim() || 'Past Customer')).trim();
       let customerId = null;
-      if (f.customer_name.trim()) {
-        try {
-          const cr = await fetch(`${BASE}/customers`, {
-            method:'POST',
-            headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-            body:JSON.stringify({ name:(f.title?f.title+' ':'')+f.customer_name.trim(), phone:f.phone.trim()||null, age:f.age||null, title:f.title||null, force_new:true }),
-          }).then(r=>r.json());
-          customerId = cr.data?.id || cr.id;
-        } catch(e) {
-          // try to search existing
-        }
-      }
-
-      // If no customer, create anonymous
-      if (!customerId) {
-        const cr = await fetch(`${BASE}/customers`, {
-          method:'POST',
-          headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-          body:JSON.stringify({ name: (f.title?f.title+' ':'')+( f.customer_name.trim() || 'Past Customer'), phone:f.phone.trim()||null, title:f.title||null, force_new:true }),
-        }).then(r=>r.json());
-        customerId = cr.data?.id || cr.id || 1;
+      try {
+        const custRes  = await fetch(`${BASE}/customers`, {
+          method:  'POST',
+          headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+          body:    JSON.stringify({
+            name:      custName,
+            phone:     f.phone.trim() || null,
+            age:       f.age         || null,
+            force_new: true,
+          }),
+        });
+        const custJson = await custRes.json();
+        // Handle all possible response shapes
+        customerId = custJson?.data?.id || custJson?.id || custJson?.data?.data?.id || null;
+        if (!customerId) throw new Error('No customer ID in response: ' + JSON.stringify(custJson).slice(0,100));
+      } catch(e) {
+        throw new Error('Failed to create customer: ' + e.message);
       }
 
       const autoTotal  = parseFloat(f.frame_price||0) + parseFloat(f.lens_price||0);
