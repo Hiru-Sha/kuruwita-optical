@@ -376,8 +376,6 @@ export default function Inventory() {
   const [addSaving,    setAddSaving]   = useState(false);
   const [dupMatches,   setDupMatches]  = useState([]); // existing items with same name
   const [dupChecking,  setDupChecking] = useState(false);
-  const [mergeLog,     setMergeLog]    = useState([]); // summary of what was merged vs created
-  const [showMerge,    setShowMerge]   = useState(false);
   const [addCat,       setAddCat]      = useState('Frames');
   const [colorVariants,setColorVariants] = useState([{ color:'Black', qty:'1', image:null }]);
   // Keep first variant color in sync with form frame_color
@@ -521,9 +519,7 @@ export default function Inventory() {
       load();
       // Show merge summary if any merges happened
       const results = []; // mergeResult populated during loop above
-      const log = mergeLogRef.current;
       mergeLogRef.current = [];
-      if (log.length) { setMergeLog(log); setShowMerge(true); }
     } catch(e) {
       alert('Save failed: ' + (e.message||'Unknown error'));
     } finally {
@@ -960,44 +956,6 @@ export default function Inventory() {
         <StickerModal items={stickerItems} onClose={()=>setShowStickers(false)}/>
       )}
 
-      {/* Merge result summary */}
-      {showMerge && mergeLog.length > 0 && (
-          <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.6)', zIndex:999,
-            display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
-            onClick={()=>setShowMerge(false)}>
-            <div style={{ background:'white', borderRadius:14, padding:24, maxWidth:400, width:'100%',
-              boxShadow:'0 24px 60px rgba(0,0,0,.3)' }} onClick={e=>e.stopPropagation()}>
-              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, color:C.navy, marginBottom:14 }}>
-                ✅ Stock Updated
-              </div>
-              {mergeLog.map((r,i)=>(
-                <div key={i} style={{ background:r.merged?'#fffbeb':C.cream, borderRadius:9,
-                  padding:'9px 13px', marginBottom:8, fontSize:13 }}>
-                  {r.merged ? (
-                    <>
-                      <b style={{ color:'#92400e' }}>🔁 Merged:</b> <span style={{ color:C.navy }}>{r.name}</span>
-                      <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>
-                        +{r.qty} units added · Old price Rs.{parseFloat(r.oldPrice).toLocaleString()} → New Rs.{parseFloat(r.newPrice).toLocaleString()}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <b style={{ color:C.success }}>✨ New:</b> <span style={{ color:C.navy }}>{r.name}</span>
-                      <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>
-                        {r.qty} units added as new item
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
-              <button onClick={()=>setShowMerge(false)}
-                style={{ marginTop:14, width:'100%', padding:'10px', background:C.navy, color:'white',
-                  border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                Done
-              </button>
-            </div>
-          </div>
-        )}
     </div>
   );
 }
