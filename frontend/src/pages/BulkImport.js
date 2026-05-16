@@ -51,6 +51,7 @@ function makeRepairNum(date, seq) {
 // ── Default form templates ────────────────────────────────────
 const defaultOrder = () => ({
   date:'',
+  title:'',            // Mr / Mrs / Miss / Master / Rev
   customer_name:'',
   phone:'',
   age:'',
@@ -67,6 +68,10 @@ const defaultOrder = () => ({
   status:'delivered',  // most past orders are delivered
   deliver_date:'',
   notes:'',
+  // Refraction
+  has_rx:false,
+  r_sph:'', r_cyl:'', r_axis:'', r_add:'', r_va:'', r_pd:'',
+  l_sph:'', l_cyl:'', l_axis:'', l_add:'', l_va:'', l_pd:'',
 });
 
 const defaultSale = () => ({
@@ -118,7 +123,7 @@ export default function BulkImport() {
           const cr = await fetch(`${BASE}/customers`, {
             method:'POST',
             headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-            body:JSON.stringify({ name:f.customer_name.trim(), phone:f.phone.trim()||null, age:f.age||null }),
+            body:JSON.stringify({ name:(f.title?f.title+' ':'')+f.customer_name.trim(), phone:f.phone.trim()||null, age:f.age||null, title:f.title||null }),
           }).then(r=>r.json());
           customerId = cr.data?.id || cr.id;
         } catch(e) {
@@ -131,7 +136,7 @@ export default function BulkImport() {
         const cr = await fetch(`${BASE}/customers`, {
           method:'POST',
           headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-          body:JSON.stringify({ name: f.customer_name.trim() || 'Past Customer', phone:f.phone.trim()||null }),
+          body:JSON.stringify({ name: (f.title?f.title+' ':'')+( f.customer_name.trim() || 'Past Customer'), phone:f.phone.trim()||null, title:f.title||null }),
         }).then(r=>r.json());
         customerId = cr.data?.id || cr.id || 1;
       }
@@ -162,6 +167,11 @@ export default function BulkImport() {
           notes:              f.notes || 'Imported from past records',
           customer_own_frame: f.customer_own_frame,
           import_date:        f.date,   // backend uses this to set created_at
+          has_rx: f.has_rx,
+          r_sph:  f.r_sph||null, r_cyl:  f.r_cyl||null, r_axis:  f.r_axis||null,
+          r_add:  f.r_add||null, r_va:   f.r_va||null,  r_pd:    f.r_pd||null,
+          l_sph:  f.l_sph||null, l_cyl:  f.l_cyl||null, l_axis:  f.l_axis||null,
+          l_add:  f.l_add||null, l_va:   f.l_va||null,  l_pd:    f.l_pd||null,
         }),
       }).then(r=>r.json());
 
@@ -292,8 +302,18 @@ export default function BulkImport() {
                 </div>
 
                 {/* Customer */}
-                <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:10 }}>
-                  <div><label style={LBL}>Customer Name</label><input value={orderForm.customer_name} onChange={e=>setOrderForm(f=>({...f,customer_name:e.target.value}))} placeholder="e.g. Mrs. Perera" style={INP}/></div>
+                <div style={{ display:'grid', gridTemplateColumns:'100px 1fr 140px 100px', gap:10 }}>
+                  <div>
+                    <label style={LBL}>Title</label>
+                    <select value={orderForm.title} onChange={e=>setOrderForm(f=>({...f,title:e.target.value}))} style={{ ...INP, cursor:'pointer' }}>
+                      <option value=''>—</option>
+                      {['Mr','Mrs','Miss','Master','Rev','Dr'].map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div><label style={LBL}>Customer Name</label>
+                    <input value={orderForm.customer_name} onChange={e=>setOrderForm(f=>({...f,customer_name:e.target.value}))}
+                      placeholder="Full name" style={INP}/>
+                  </div>
                   <div><label style={LBL}>Phone</label><input value={orderForm.phone} onChange={e=>setOrderForm(f=>({...f,phone:e.target.value}))} placeholder="07X..." style={INP}/></div>
                   <div><label style={LBL}>Age</label><input type="number" value={orderForm.age} onChange={e=>setOrderForm(f=>({...f,age:e.target.value}))} placeholder="35" style={INP}/></div>
                 </div>
@@ -382,6 +402,39 @@ export default function BulkImport() {
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                   <div><label style={LBL}>Delivery Date</label><input type="date" value={orderForm.deliver_date} onChange={e=>setOrderForm(f=>({...f,deliver_date:e.target.value}))} style={INP}/></div>
                   <div><label style={LBL}>Notes (optional)</label><input value={orderForm.notes} onChange={e=>setOrderForm(f=>({...f,notes:e.target.value}))} placeholder="Any note..." style={INP}/></div>
+                </div>
+
+                {/* Refraction */}
+                <div style={{ background:C.cream, borderRadius:10, padding:'12px 14px' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:orderForm.has_rx?12:0 }}>
+                    <label style={{ fontSize:13, fontWeight:700, color:C.navy }}>👁️ Refraction / Prescription</label>
+                    <button onClick={()=>setOrderForm(f=>({...f,has_rx:!f.has_rx}))}
+                      style={{ padding:'5px 13px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                        border:`1.5px solid ${orderForm.has_rx?C.navy:C.border}`,
+                        background:orderForm.has_rx?C.navy:'white',
+                        color:orderForm.has_rx?'white':C.muted }}>
+                      {orderForm.has_rx ? '✓ Has Rx' : '+ Add Rx'}
+                    </button>
+                  </div>
+                  {orderForm.has_rx && (
+                    <>
+                      <div style={{ display:'grid', gridTemplateColumns:'55px 1fr 1fr 1fr 1fr 1fr', gap:5, marginBottom:4 }}>
+                        {['','SPH','CYL','AXIS','ADD','VA'].map(h=>(
+                          <div key={h} style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', textAlign:'center' }}>{h}</div>
+                        ))}
+                      </div>
+                      {[['Right','r'],['Left','l']].map(([eye,p])=>(
+                        <div key={p} style={{ display:'grid', gridTemplateColumns:'55px 1fr 1fr 1fr 1fr 1fr', gap:5, marginBottom:5 }}>
+                          <div style={{ fontSize:12, fontWeight:700, color:C.navy, display:'flex', alignItems:'center' }}>{eye}</div>
+                          {['sph','cyl','axis','add','va'].map(k=>(
+                            <input key={k} value={orderForm[p+'_'+k]||''} onChange={e=>setOrderForm(f=>({...f,[p+'_'+k]:e.target.value}))}
+                              placeholder={k==='sph'||k==='cyl'?'0.00':k==='axis'?'0':'—'}
+                              style={{ ...INP, padding:'6px 4px', fontSize:12, textAlign:'center' }}/>
+                          ))}
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
             )}
