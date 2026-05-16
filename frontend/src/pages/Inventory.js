@@ -416,14 +416,17 @@ export default function Inventory() {
 
   // Check for duplicates when name fields change
   useEffect(()=>{
-    const name = buildName(form);
-    if (name && name.length > 3 && showAdd) {
-      const timer = setTimeout(()=>checkDuplicates(name), 500);
+    const name     = buildName(form);
+    const model    = form.frame_name || '';
+    // Search by model number if typed, otherwise by full built name
+    const searchBy = model.length >= 3 ? model : name;
+    if (searchBy && searchBy.length >= 3 && showAdd) {
+      const timer = setTimeout(()=>checkDuplicates(searchBy), 500);
       return ()=>clearTimeout(timer);
     } else {
       setDupMatches([]);
     }
-  },[form.brand, form.item_name, form.frame_color, showAdd]);
+  },[form.brand, form.item_name, form.frame_name, form.frame_color, showAdd]);
 
   // Sync form frame_color → first colour variant
   useEffect(()=>{
@@ -442,12 +445,13 @@ export default function Inventory() {
 
   // Check for duplicates when name/model changes
   const checkDuplicates = React.useCallback(async (name) => {
-    if (!name || name.length < 4) { setDupMatches([]); return; }
+    if (!name || name.length < 3) { setDupMatches([]); return; }
+    const searchTerm = name;
     setDupChecking(true);
     try {
       const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
       const token = localStorage.getItem('ko_token');
-      const res   = await fetch(`${BASE}/inventory?search=${encodeURIComponent(name)}&limit=10`, {
+      const res   = await fetch(`${BASE}/inventory?search=${encodeURIComponent(searchTerm)}&limit=10`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const json  = await res.json();
