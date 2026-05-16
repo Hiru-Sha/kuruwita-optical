@@ -958,9 +958,10 @@ export default function Inventory() {
       {/* Sticker modal */}
       {showStickers && (
         <StickerModal items={stickerItems} onClose={()=>setShowStickers(false)}/>
+      )}
 
-        {/* Merge result summary */}
-        {showMerge && mergeLog.length > 0 && (
+      {/* Merge result summary */}
+      {showMerge && mergeLog.length > 0 && (
           <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.6)', zIndex:999,
             display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
             onClick={()=>setShowMerge(false)}>
@@ -997,7 +998,7 @@ export default function Inventory() {
             </div>
           </div>
         )}
-      )}
+      )
     </div>
   );
 }
