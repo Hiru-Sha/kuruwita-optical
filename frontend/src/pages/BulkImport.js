@@ -16,7 +16,18 @@ const SEL  = { ...INP, cursor:'pointer' };
 const LBL  = { fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:4, display:'block' };
 
 const LENS_TYPES   = ['Single Vision','Bifocal','Progressive','Reading','Sunglass Lens','Photochromic'];
-const COATINGS     = ['CR (White)','HMC','Hard Coat','Blue Filter','Photochromic','AR Coat'];
+const COATINGS     = ['CR (White)','HMC','Hard Coat','Blue Filter','Photochromic','Blue + Photochromic','AR Coat'];
+const FRAME_MATS   = ['Plastic','Metal','TR90','Titanium','Acetate','Mixed'];
+const FRAME_SHAPES = ['Oval','Rectangle','Round','Square','Cat Eye','Aviator','Wayfarer'];
+const FRAME_SIZES  = ['Small','Medium','Large','Extra Large'];
+const FRAME_TYPES  = ['Full rim','Half rim','Rimless'];
+const FRAME_COLORS = ['Black','Gold','Silver','Brown','Blue','Grey','Red','Green','Pink','Purple','Tortoise','Transparent','White','Rose Gold','Gunmetal'];
+const LENS_COMPANIES = ['Negombo Optical','Solex','Local Lab','Other'];
+const DIOPTERS    = ['0.00',...Array.from({length:80},(_,i)=>((i+1)*0.25).toFixed(2))];
+const AXES        = Array.from({length:181},(_,i)=>String(i));
+const VA_OPTIONS  = ['6/6','6/9','6/12','6/18','6/24','6/36','6/60','CF','HM','PL'];
+const ORDER_TYPES  = ['normal','lens_warranty','lens_paid','frame_replace_free','frame_replace_paid'];
+const ORDER_TYPE_LABELS = { normal:'Normal Order', lens_warranty:'🔁 Lens Replace Free', lens_paid:'🔬 Lens Replace Paid', frame_replace_free:'🎁 Frame Replace Free', frame_replace_paid:'💰 Frame Replace Paid' };
 const FRAME_TYPES  = ['Full rim','Half rim','Rimless'];
 const FRAME_COLORS = ['Black','Gold','Silver','Brown','Gunmetal','Blue','Red','Pink','Tortoise','Crystal','Green','White','Other'];
 const REPAIR_TYPES = ['Arm Repair','Nose Pad Replacement','Frame Polishing','Screw / Nail Fix','Lens Refit','Hinge Repair','Frame Straightening','Other Repair'];
@@ -58,20 +69,28 @@ const defaultOrder = () => ({
   frame_desc:'',       // free text — "RayBan Black Plastic Full rim"
   frame_type:'Full rim',
   frame_color:'Black',
+  frame_material:'Plastic',
+  frame_shape:'',
+  frame_size:'',
   customer_own_frame: false,
   lens_type:'Single Vision',
   lens_coating:'CR (White)',
+  lens_company:'',
+  lens_index:'',
+  order_type:'normal',
   frame_price:'',
   lens_price:'',
   total:'',
   advance:'',
+  discount:'',
   status:'delivered',  // most past orders are delivered
   deliver_date:'',
   notes:'',
-  // Refraction
+  // Refraction — same fields as NewOrder
   has_rx:false,
-  r_sph:'', r_cyl:'', r_axis:'', r_add:'', r_va:'', r_pd:'',
-  l_sph:'', l_cyl:'', l_axis:'', l_add:'', l_va:'', l_pd:'',
+  r_sph_s:'-', r_sph:'0.00', r_cyl_s:'-', r_cyl:'0.00', r_axis:'0', r_add:'0.00', r_va:'6/6', r_pd:'',
+  l_sph_s:'-', l_sph:'0.00', l_cyl_s:'-', l_cyl:'0.00', l_axis:'0', l_add:'0.00', l_va:'6/6', l_pd:'',
+  rx_notes:'', rx_hospital:'', rx_date:'', rx_doctor:'',
 });
 
 const defaultSale = () => ({
@@ -141,9 +160,12 @@ export default function BulkImport() {
         customerId = cr.data?.id || cr.id || 1;
       }
 
-      const totalAmt   = parseFloat(f.total)   || (parseFloat(f.frame_price||0) + parseFloat(f.lens_price||0));
-      const advanceAmt = parseFloat(f.advance) || (f.status==='delivered' ? totalAmt : 0);
-      const balanceAmt = Math.max(0, totalAmt - advanceAmt);
+      const autoTotal  = parseFloat(f.frame_price||0) + parseFloat(f.lens_price||0);
+      const totalAmt   = parseFloat(f.total) || autoTotal;
+      const discountAmt = parseFloat(f.discount||0);
+      const totalAfterDiscount = Math.max(0, totalAmt - discountAmt);
+      const advanceAmt = parseFloat(f.advance) || (f.status==='delivered' ? totalAfterDiscount : 0);
+      const balanceAmt = Math.max(0, totalAfterDiscount - advanceAmt);
 
       // 2. Create order with backdated created_at
       const orderRes = await fetch(`${BASE}/orders/import`, {
@@ -154,12 +176,17 @@ export default function BulkImport() {
           frame:              f.frame_desc || 'Frame',
           frame_type:         f.frame_type,
           frame_color:        f.frame_color,
-          frame_material:     'Plastic',
+          frame_material:     f.frame_material || 'Plastic',
+          frame_shape:        f.frame_shape || null,
+          frame_size:         f.frame_size  || null,
           lens_type:          f.lens_type,
           lens_coating:       f.lens_coating,
+          lens_company:       f.lens_company || null,
+          lens_index:         f.lens_index   || null,
+          order_type:         f.order_type   || 'normal',
           frame_sell_price:   f.customer_own_frame ? 0 : (parseFloat(f.frame_price)||0),
           lens_sell_price:    parseFloat(f.lens_price)||0,
-          total_amount:       totalAmt,
+          total_amount:       totalAfterDiscount,
           advance_amount:     advanceAmt,
           balance_amount:     balanceAmt,
           deliver_date:       f.deliver_date || f.date,
@@ -167,11 +194,22 @@ export default function BulkImport() {
           notes:              f.notes || 'Imported from past records',
           customer_own_frame: f.customer_own_frame,
           import_date:        f.date,   // backend uses this to set created_at
-          has_rx: f.has_rx,
-          r_sph:  f.r_sph||null, r_cyl:  f.r_cyl||null, r_axis:  f.r_axis||null,
-          r_add:  f.r_add||null, r_va:   f.r_va||null,  r_pd:    f.r_pd||null,
-          l_sph:  f.l_sph||null, l_cyl:  f.l_cyl||null, l_axis:  f.l_axis||null,
-          l_add:  f.l_add||null, l_va:   f.l_va||null,  l_pd:    f.l_pd||null,
+          has_rx:      f.has_rx,
+          rx_hospital: f.has_rx ? f.rx_hospital||null : null,
+          rx_date:     f.has_rx ? f.rx_date||null     : null,
+          rx_doctor:   f.has_rx ? f.rx_doctor||null   : null,
+          r_sph:  f.has_rx ? ((!f.r_sph||f.r_sph==='0.00') ? 'Plano' : f.r_sph_s+f.r_sph) : null,
+          r_cyl:  f.has_rx ? ((!f.r_cyl||f.r_cyl==='0.00') ? '0.00'  : f.r_cyl_s+f.r_cyl) : null,
+          r_axis: f.has_rx ? f.r_axis||null : null,
+          r_add:  f.has_rx ? (f.r_add&&f.r_add!=='0.00' ? '+'+f.r_add : null) : null,
+          r_va:   f.has_rx ? f.r_va||null   : null,
+          r_pd:   f.has_rx ? f.r_pd||null   : null,
+          l_sph:  f.has_rx ? ((!f.l_sph||f.l_sph==='0.00') ? 'Plano' : f.l_sph_s+f.l_sph) : null,
+          l_cyl:  f.has_rx ? ((!f.l_cyl||f.l_cyl==='0.00') ? '0.00'  : f.l_cyl_s+f.l_cyl) : null,
+          l_axis: f.has_rx ? f.l_axis||null : null,
+          l_add:  f.has_rx ? (f.l_add&&f.l_add!=='0.00' ? '+'+f.l_add : null) : null,
+          l_va:   f.has_rx ? f.l_va||null   : null,
+          l_pd:   f.has_rx ? f.l_pd||null   : null,
         }),
       }).then(r=>r.json());
 
@@ -318,6 +356,14 @@ export default function BulkImport() {
                   <div><label style={LBL}>Age</label><input type="number" value={orderForm.age} onChange={e=>setOrderForm(f=>({...f,age:e.target.value}))} placeholder="35" style={INP}/></div>
                 </div>
 
+                {/* Order type */}
+                <div>
+                  <label style={LBL}>Order Type</label>
+                  <select value={orderForm.order_type} onChange={e=>setOrderForm(f=>({...f,order_type:e.target.value}))} style={SEL}>
+                    {ORDER_TYPES.map(t=><option key={t} value={t}>{ORDER_TYPE_LABELS[t]}</option>)}
+                  </select>
+                </div>
+
                 {/* Frame source toggle */}
                 <div>
                   <label style={LBL}>Frame Source</label>
@@ -333,10 +379,46 @@ export default function BulkImport() {
 
                 {/* Frame description */}
                 <div>
-                  <label style={LBL}>Frame Description {orderForm.customer_own_frame?'(Customer\'s frame)':'(free text — no exact stock needed)'}</label>
+                  <label style={LBL}>Frame Description (brand · model · color)</label>
                   <input value={orderForm.frame_desc} onChange={e=>setOrderForm(f=>({...f,frame_desc:e.target.value}))}
-                    placeholder="e.g. RayBan Black Plastic Full rim, Titan Gold Metal..."
+                    placeholder="e.g. RayBan RB4487 Black, Prada SPR88S Brown..."
                     style={INP}/>
+                </div>
+
+                {/* Frame details grid */}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+                  <div>
+                    <label style={LBL}>Frame Type</label>
+                    <select value={orderForm.frame_type} onChange={e=>setOrderForm(f=>({...f,frame_type:e.target.value}))} style={SEL}>
+                      {FRAME_TYPES.map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={LBL}>Frame Color</label>
+                    <select value={orderForm.frame_color} onChange={e=>setOrderForm(f=>({...f,frame_color:e.target.value}))} style={SEL}>
+                      {FRAME_COLORS.map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={LBL}>Frame Material</label>
+                    <select value={orderForm.frame_material} onChange={e=>setOrderForm(f=>({...f,frame_material:e.target.value}))} style={SEL}>
+                      {FRAME_MATS.map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={LBL}>Frame Shape</label>
+                    <select value={orderForm.frame_shape} onChange={e=>setOrderForm(f=>({...f,frame_shape:e.target.value}))} style={SEL}>
+                      <option value=''>— Any —</option>
+                      {FRAME_SHAPES.map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={LBL}>Frame Size</label>
+                    <select value={orderForm.frame_size} onChange={e=>setOrderForm(f=>({...f,frame_size:e.target.value}))} style={SEL}>
+                      <option value=''>— Any —</option>
+                      {FRAME_SIZES.map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
                 </div>
 
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
@@ -360,11 +442,24 @@ export default function BulkImport() {
                   </div>
                 </div>
 
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8 }}>
                   <div>
                     <label style={LBL}>Lens Coating</label>
                     <select value={orderForm.lens_coating} onChange={e=>setOrderForm(f=>({...f,lens_coating:e.target.value}))} style={SEL}>
-                      {COATINGS.map(c=><option key={c}>{c}</option>)}
+                      {COATINGS.map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={LBL}>Lens Company / Lab</label>
+                    <select value={orderForm.lens_company} onChange={e=>setOrderForm(f=>({...f,lens_company:e.target.value}))} style={SEL}>
+                      <option value=''>— Select —</option>
+                      {LENS_COMPANIES.map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={LBL}>Lens Index</label>
+                    <select value={orderForm.lens_index} onChange={e=>setOrderForm(f=>({...f,lens_index:e.target.value}))} style={SEL}>
+                      {['','1.50','1.56','1.61','1.67','1.74'].map(t=><option key={t} value={t}>{t||'— Default —'}</option>)}
                     </select>
                   </div>
                   <div>
@@ -376,26 +471,73 @@ export default function BulkImport() {
                   </div>
                 </div>
 
-                {/* Prices */}
-                <div style={{ background:C.cream, borderRadius:10, padding:'12px 14px' }}>
-                  <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:10 }}>💰 Pricing</div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:10 }}>
+                {/* Prices — same as New Order Step 4 */}
+                <div style={{ background:C.cream, borderRadius:10, padding:'14px 16px' }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:12 }}>💰 Pricing</div>
+
+                  {/* Frame + Lens prices */}
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
                     {!orderForm.customer_own_frame && (
-                      <div><label style={LBL}>Frame Price</label><input type="number" value={orderForm.frame_price} onChange={e=>setOrderForm(f=>({...f,frame_price:e.target.value}))} placeholder="0" style={INP}/></div>
+                      <div>
+                        <label style={LBL}>🕶️ Frame Selling Price (Rs.)</label>
+                        <input type="number" value={orderForm.frame_price} onChange={e=>setOrderForm(f=>({...f,frame_price:e.target.value}))}
+                          placeholder="0" style={{ ...INP, fontSize:15, fontWeight:600 }}/>
+                      </div>
                     )}
-                    <div><label style={LBL}>Lens Price</label><input type="number" value={orderForm.lens_price} onChange={e=>setOrderForm(f=>({...f,lens_price:e.target.value}))} placeholder="e.g. 5000" style={INP}/></div>
                     <div>
-                      <label style={LBL}>Total</label>
-                      <input type="number" value={orderForm.total} onChange={e=>setOrderForm(f=>({...f,total:e.target.value}))}
-                        placeholder={String((parseFloat(orderForm.frame_price||0)+parseFloat(orderForm.lens_price||0))||'')}
-                        style={{ ...INP, fontWeight:700 }}/>
+                      <label style={LBL}>🔬 Lens Selling Price (Rs.)</label>
+                      <input type="number" value={orderForm.lens_price} onChange={e=>setOrderForm(f=>({...f,lens_price:e.target.value}))}
+                        placeholder="e.g. 5000" style={{ ...INP, fontSize:15, fontWeight:600 }}/>
                     </div>
-                    <div>
-                      <label style={LBL}>Advance Paid</label>
-                      <input type="number" value={orderForm.advance} onChange={e=>setOrderForm(f=>({...f,advance:e.target.value}))}
-                        placeholder={orderForm.status==='delivered'?'Full amount':'e.g. 2000'}
-                        style={INP}/>
-                    </div>
+                  </div>
+
+                  {/* Auto-calculated total */}
+                  {(() => {
+                    const autoTotal = parseFloat(orderForm.frame_price||0) + parseFloat(orderForm.lens_price||0);
+                    const manualTotal = parseFloat(orderForm.total||0);
+                    const displayTotal = manualTotal || autoTotal;
+                    const advance = parseFloat(orderForm.advance||0) || (orderForm.status==='delivered' ? displayTotal : 0);
+                    const balance = Math.max(0, displayTotal - advance);
+                    return (
+                      <div style={{ background:'white', borderRadius:9, padding:'12px 14px', marginBottom:10 }}>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+                          <div>
+                            <label style={LBL}>Total Amount (Rs.)</label>
+                            <input type="number" value={orderForm.total} onChange={e=>setOrderForm(f=>({...f,total:e.target.value}))}
+                              placeholder={String(autoTotal||'')}
+                              style={{ ...INP, fontSize:16, fontWeight:700 }}/>
+                            {autoTotal>0 && !orderForm.total && (
+                              <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>Auto: Rs.{autoTotal.toLocaleString()}</div>
+                            )}
+                          </div>
+                          <div>
+                            <label style={LBL}>Advance Paid (Rs.)</label>
+                            <input type="number" value={orderForm.advance} onChange={e=>setOrderForm(f=>({...f,advance:e.target.value}))}
+                              placeholder={orderForm.status==='delivered'?String(displayTotal||'Full amount'):'e.g. 2000'}
+                              style={INP}/>
+                          </div>
+                        </div>
+                        {/* Balance */}
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
+                          padding:'10px 14px', borderRadius:8,
+                          background: balance===0?'#dcfce7':'#fef9c3',
+                          border: `1px solid ${balance===0?'#86efac':'#fde047'}` }}>
+                          <span style={{ fontSize:13, fontWeight:700, color: balance===0?'#2d7a4f':'#92400e' }}>
+                            {balance===0 ? '✅ Fully Paid' : `⏳ Balance Due`}
+                          </span>
+                          <span style={{ fontSize:16, fontWeight:700, color: balance===0?'#2d7a4f':'#92400e' }}>
+                            Rs.{balance.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Discount (optional) */}
+                  <div>
+                    <label style={LBL}>Overall Discount (Rs.) — optional</label>
+                    <input type="number" value={orderForm.discount||''} onChange={e=>setOrderForm(f=>({...f,discount:e.target.value}))}
+                      placeholder="0" style={INP}/>
                   </div>
                 </div>
 
@@ -404,35 +546,121 @@ export default function BulkImport() {
                   <div><label style={LBL}>Notes (optional)</label><input value={orderForm.notes} onChange={e=>setOrderForm(f=>({...f,notes:e.target.value}))} placeholder="Any note..." style={INP}/></div>
                 </div>
 
-                {/* Refraction */}
+                {/* Refraction — same layout as New Order */}
                 <div style={{ background:C.cream, borderRadius:10, padding:'12px 14px' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:orderForm.has_rx?12:0 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:orderForm.has_rx?14:0 }}>
                     <label style={{ fontSize:13, fontWeight:700, color:C.navy }}>👁️ Refraction / Prescription</label>
-                    <button onClick={()=>setOrderForm(f=>({...f,has_rx:!f.has_rx}))}
-                      style={{ padding:'5px 13px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-                        border:`1.5px solid ${orderForm.has_rx?C.navy:C.border}`,
-                        background:orderForm.has_rx?C.navy:'white',
-                        color:orderForm.has_rx?'white':C.muted }}>
-                      {orderForm.has_rx ? '✓ Has Rx' : '+ Add Rx'}
-                    </button>
+                    <div onClick={()=>setOrderForm(f=>({...f,has_rx:!f.has_rx}))}
+                      style={{ width:44, height:24, borderRadius:12, background:orderForm.has_rx?C.navy:C.border,
+                        position:'relative', cursor:'pointer', transition:'background .2s', flexShrink:0 }}>
+                      <div style={{ position:'absolute', top:3, left:orderForm.has_rx?23:3, width:18, height:18,
+                        borderRadius:'50%', background:'white', transition:'left .2s' }}/>
+                    </div>
                   </div>
                   {orderForm.has_rx && (
                     <>
-                      <div style={{ display:'grid', gridTemplateColumns:'55px 1fr 1fr 1fr 1fr 1fr', gap:5, marginBottom:4 }}>
-                        {['','SPH','CYL','AXIS','ADD','VA'].map(h=>(
-                          <div key={h} style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', textAlign:'center' }}>{h}</div>
-                        ))}
-                      </div>
-                      {[['Right','r'],['Left','l']].map(([eye,p])=>(
-                        <div key={p} style={{ display:'grid', gridTemplateColumns:'55px 1fr 1fr 1fr 1fr 1fr', gap:5, marginBottom:5 }}>
-                          <div style={{ fontSize:12, fontWeight:700, color:C.navy, display:'flex', alignItems:'center' }}>{eye}</div>
-                          {['sph','cyl','axis','add','va'].map(k=>(
-                            <input key={k} value={orderForm[p+'_'+k]||''} onChange={e=>setOrderForm(f=>({...f,[p+'_'+k]:e.target.value}))}
-                              placeholder={k==='sph'||k==='cyl'?'0.00':k==='axis'?'0':'—'}
-                              style={{ ...INP, padding:'6px 4px', fontSize:12, textAlign:'center' }}/>
-                          ))}
+                      {[{label:'Right Eye (R)',p:'r'},{label:'Left Eye (L)',p:'l'}].map(eye=>(
+                        <div key={eye.p} style={{ background:'white', borderRadius:9, padding:12, marginBottom:10 }}>
+                          <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>{eye.label}</div>
+                          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                            {/* SPH */}
+                            <div>
+                              <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4 }}>SPH</div>
+                              <div style={{ display:'flex', gap:4 }}>
+                                <select value={orderForm[eye.p+'_sph_s']} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_sph_s']:e.target.value}))}
+                                  style={{ ...SEL, width:50, padding:'8px 4px' }}>
+                                  <option>-</option><option>+</option>
+                                </select>
+                                <select value={orderForm[eye.p+'_sph']} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_sph']:e.target.value}))}
+                                  style={{ ...SEL, width:84 }}>
+                                  {DIOPTERS.map(v=><option key={v}>{v}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                            {/* CYL */}
+                            <div>
+                              <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4 }}>CYL</div>
+                              <div style={{ display:'flex', gap:4 }}>
+                                <select value={orderForm[eye.p+'_cyl_s']} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_cyl_s']:e.target.value}))}
+                                  style={{ ...SEL, width:50, padding:'8px 4px' }}>
+                                  <option>-</option><option>+</option>
+                                </select>
+                                <select value={orderForm[eye.p+'_cyl']} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_cyl']:e.target.value}))}
+                                  style={{ ...SEL, width:84 }}>
+                                  {DIOPTERS.map(v=><option key={v}>{v}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                            {/* AXIS */}
+                            <div>
+                              <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4 }}>AXIS</div>
+                              <select value={orderForm[eye.p+'_axis']} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_axis']:e.target.value}))}
+                                style={{ ...SEL, width:76 }}>
+                                {AXES.map(v=><option key={v}>{v}</option>)}
+                              </select>
+                            </div>
+                            {/* ADD */}
+                            <div>
+                              <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4 }}>ADD</div>
+                              <select value={orderForm[eye.p+'_add']} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_add']:e.target.value}))}
+                                style={{ ...SEL, width:84 }}>
+                                {DIOPTERS.map(v=><option key={v}>{v}</option>)}
+                              </select>
+                            </div>
+                            {/* VA */}
+                            <div>
+                              <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4 }}>V/A</div>
+                              <select value={orderForm[eye.p+'_va']} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_va']:e.target.value}))}
+                                style={{ ...SEL, width:80 }}>
+                                {VA_OPTIONS.map(v=><option key={v}>{v}</option>)}
+                              </select>
+                            </div>
+                            {/* PD */}
+                            <div>
+                              <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4 }}>PD</div>
+                              <input value={orderForm[eye.p+'_pd']||''} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_pd']:e.target.value}))}
+                                placeholder="32" style={{ ...INP, width:64 }}/>
+                            </div>
+                          </div>
                         </div>
                       ))}
+
+                      {/* Copy right to left */}
+                      <button onClick={()=>setOrderForm(f=>({...f,
+                        l_sph_s:f.r_sph_s, l_sph:f.r_sph, l_cyl_s:f.r_cyl_s, l_cyl:f.r_cyl,
+                        l_axis:f.r_axis, l_add:f.r_add, l_va:f.r_va, l_pd:f.r_pd,
+                      }))} style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:7,
+                        padding:'6px 14px', fontSize:12, cursor:'pointer', fontFamily:'inherit',
+                        color:C.muted, marginBottom:10 }}>
+                        ↓ Copy Right Eye to Left Eye
+                      </button>
+
+                      {/* Clinical notes */}
+                      <div style={{ marginBottom:8 }}>
+                        <label style={LBL}>Remarks / Clinical Notes</label>
+                        <textarea value={orderForm.rx_notes||''} onChange={e=>setOrderForm(f=>({...f,rx_notes:e.target.value}))}
+                          placeholder="e.g. Presbyopia, recommend progressive lenses..."
+                          style={{ ...INP, resize:'vertical', minHeight:60, lineHeight:1.6 }}/>
+                      </div>
+
+                      {/* Hospital / Doctor / Date */}
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+                        <div>
+                          <label style={LBL}>Hospital / Clinic</label>
+                          <input value={orderForm.rx_hospital||''} onChange={e=>setOrderForm(f=>({...f,rx_hospital:e.target.value}))}
+                            placeholder="e.g. Colombo National Hospital" style={INP}/>
+                        </div>
+                        <div>
+                          <label style={LBL}>Doctor</label>
+                          <input value={orderForm.rx_doctor||''} onChange={e=>setOrderForm(f=>({...f,rx_doctor:e.target.value}))}
+                            placeholder="Dr. name" style={INP}/>
+                        </div>
+                        <div>
+                          <label style={LBL}>Rx Date</label>
+                          <input type="date" value={orderForm.rx_date||''} onChange={e=>setOrderForm(f=>({...f,rx_date:e.target.value}))}
+                            style={INP}/>
+                        </div>
+                      </div>
                     </>
                   )}
                 </div>
