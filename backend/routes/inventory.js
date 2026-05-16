@@ -87,7 +87,7 @@ router.patch('/:id', auth, async (req, res) => {
     frame_color, frame_type, frame_shape, frame_material, frame_size,
     sg_type, rg_power, item_name,
     sell_price, cost_price, quantity, min_quantity, image_url,
-    display_number, stock_number, location,
+    display_number, stock_number, location, notes,
   } = req.body;
   try {
     const result = await pool.query(`
@@ -112,13 +112,14 @@ router.patch('/:id', auth, async (req, res) => {
         display_number = COALESCE($18, display_number),
         stock_number   = COALESCE($19, stock_number),
         location       = COALESCE($20, location),
+        notes          = COALESCE($21, notes),
         updated_at     = NOW()
-      WHERE id = $21 RETURNING *`,
+      WHERE id = $22 RETURNING *`,
       [name, brand, dealer, category,
        frame_color, frame_type, frame_shape, frame_material, frame_size,
        sg_type, rg_power, item_name,
        sell_price, cost_price, quantity, min_quantity, image_url,
-       display_number||null, stock_number||null, location||null,
+       display_number||null, stock_number||null, location||null, notes||null,
        req.params.id]
     );
     res.json(result.rows[0]);

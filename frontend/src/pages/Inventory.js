@@ -374,10 +374,15 @@ export default function Inventory() {
   const [showAdd,      setShowAdd]     = useState(false);
   const [suggestions,  setSuggestions] = useState({ dealers:[], brands:[], names:[] });
   const [addSaving,    setAddSaving]   = useState(false);
+  const [dupMatches,   setDupMatches]  = useState([]); // existing items with same name
+  const [dupChecking,  setDupChecking] = useState(false);
+  const [mergeLog,     setMergeLog]    = useState([]); // summary of what was merged vs created
+  const [showMerge,    setShowMerge]   = useState(false);
   const [addCat,       setAddCat]      = useState('Frames');
   const [colorVariants,setColorVariants] = useState([{ color:'Black', qty:'1', image:null }]);
   // Keep first variant color in sync with form frame_color
   const prevFrameColor = React.useRef('Black');
+  const mergeLogRef    = React.useRef([]);
   const [loading,      setLoading]     = useState(true);
   const [imgData,      setImgData]     = useState(null);
   const [form,         setForm]        = useState(defaults('Frames'));
@@ -409,6 +414,17 @@ export default function Inventory() {
 
   useEffect(()=>{ load(); },[load]);
 
+  // Check for duplicates when name fields change
+  useEffect(()=>{
+    const name = buildName(form);
+    if (name && name.length > 3 && showAdd) {
+      const timer = setTimeout(()=>checkDuplicates(name), 500);
+      return ()=>clearTimeout(timer);
+    } else {
+      setDupMatches([]);
+    }
+  },[form.brand, form.item_name, form.frame_color, showAdd]);
+
   // Sync form frame_color → first colour variant
   useEffect(()=>{
     if (form.frame_color && form.frame_color !== prevFrameColor.current) {
@@ -424,32 +440,86 @@ export default function Inventory() {
   const handleCatChange = (cat) => { setAddCat(cat); setForm(defaults(cat)); setImgData(null); setColorVariants([{ color:'Black', qty:'1', image:null }]); };
   const handleImgPick   = async (e) => { const f=e.target.files[0]; if(!f) return; setImgData(await toBase64(f)); };
 
+  // Check for duplicates when name/model changes
+  const checkDuplicates = React.useCallback(async (name) => {
+    if (!name || name.length < 4) { setDupMatches([]); return; }
+    setDupChecking(true);
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/inventory?search=${encodeURIComponent(name)}&limit=10`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json  = await res.json();
+      const arr   = Array.isArray(json) ? json : Array.isArray(json.data) ? json.data : [];
+      // Find items where name is very similar
+      const matches = arr.filter(item =>
+        item.name.toLowerCase().includes(name.toLowerCase()) ||
+        name.toLowerCase().includes(item.name.toLowerCase().split(' ')[0])
+      );
+      setDupMatches(matches);
+    } catch { setDupMatches([]); }
+    finally { setDupChecking(false); }
+  }, []);
+
   const handleAdd = async () => {
     const name = buildName(form);
     if (!name.trim()) return alert('Please fill in the required fields');
     if (addSaving) return; // prevent double-click
+    mergeLogRef.current = [];
     setAddSaving(true);
     try {
       // Save each colour variant
       for (const variant of colorVariants) {
         if (!variant.color || parseInt(variant.qty||0) < 0) continue;
         const variantName = buildName({ ...form, frame_color: variant.color });
-        await createItem({
-          ...form,
-          frame_color: variant.color,
-          name: variantName,
-          image_url: variant.image||imgData||null,  // variant image or fallback to global
-          sell_price:    parseFloat(form.sell_price)||0,
-          cost_price:    parseFloat(form.cost_price)||0,
-          quantity:      parseInt(variant.qty)||0,
-          min_quantity:  parseInt(form.min_quantity)||2,
-        });
+        const newSell  = parseFloat(form.sell_price)||0;
+        const newCost  = parseFloat(form.cost_price)||0;
+        const newQty   = parseInt(variant.qty)||0;
+
+        // Check for exact match (same name, same color) — merge stock
+        const exact = items.find(i =>
+          i.name.toLowerCase() === variantName.toLowerCase() ||
+          (i.brand === form.brand && i.frame_color === variant.color &&
+           i.category === form.category && i.frame_type === form.frame_type)
+        );
+
+        if (exact) {
+          // Merge: add quantity, store both prices in notes
+          const mergeNotes = `New stock added ${new Date().toLocaleDateString('en-GB')} · Old price: Rs.${exact.sell_price} · New price: Rs.${newSell}`;
+          await updateItem(exact.id, {
+            quantity:   exact.quantity + newQty,
+            // Store new price as sell price, old price saved in notes
+            sell_price: newSell,
+            cost_price: newCost,
+            notes:      mergeNotes,
+          });
+          mergeLogRef.current.push({ name: variantName, qty: newQty, merged: true, oldPrice: exact.sell_price, newPrice: newSell });
+        } else {
+          await createItem({
+            ...form,
+            frame_color: variant.color,
+            name: variantName,
+            image_url: variant.image||imgData||null,
+            sell_price:   newSell,
+            cost_price:   newCost,
+            quantity:     newQty,
+            min_quantity: parseInt(form.min_quantity)||2,
+          });
+          mergeLogRef.current.push({ name: variantName, qty: newQty, merged: false });
+        }
       }
       setShowAdd(false);
       setForm(defaults(addCat));
       setImgData(null);
       setColorVariants([{ color:'Black', qty:'1', image:null }]);
+      setDupMatches([]);
       load();
+      // Show merge summary if any merges happened
+      const results = []; // mergeResult populated during loop above
+      const log = mergeLogRef.current;
+      mergeLogRef.current = [];
+      if (log.length) { setMergeLog(log); setShowMerge(true); }
     } catch(e) {
       alert('Save failed: ' + (e.message||'Unknown error'));
     } finally {
@@ -628,6 +698,31 @@ export default function Inventory() {
               {colorVariants.length>1 && <b style={{color:C.navy}}> {colorVariants.length} variants will be saved.</b>}
             </div>
           </div>
+
+          {/* Duplicate suggestion banner */}
+          {dupMatches.length > 0 && (
+            <div style={{ marginTop:8, background:'#fffbeb', border:`1.5px solid ${C.gold}`, borderRadius:10, padding:'10px 14px' }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'#92400e', marginBottom:8 }}>
+                ⚠️ Similar item{dupMatches.length>1?'s':''} already in stock:
+              </div>
+              {dupMatches.slice(0,3).map(m=>(
+                <div key={m.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
+                  background:'white', borderRadius:8, padding:'7px 10px', marginBottom:5, fontSize:12 }}>
+                  <div>
+                    <b style={{ color:C.navy }}>{m.name}</b>
+                    <span style={{ color:C.muted, marginLeft:8 }}>Qty: {m.quantity} · Rs.{parseFloat(m.sell_price).toLocaleString()}</span>
+                  </div>
+                  <button onClick={()=>{ setSelected(m); setPanelTab('details'); setShowAdd(false); }}
+                    style={{ padding:'3px 10px', background:C.navy, color:'white', border:'none', borderRadius:6, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+                    View
+                  </button>
+                </div>
+              ))}
+              <div style={{ fontSize:11, color:'#92400e', marginTop:6 }}>
+                💡 If price is different, saving will add to existing stock and record both prices.
+              </div>
+            </div>
+          )}
 
           {/* Preview */}
           {buildName(form) && (
@@ -859,6 +954,45 @@ export default function Inventory() {
       {/* Sticker modal */}
       {showStickers && (
         <StickerModal items={stickerItems} onClose={()=>setShowStickers(false)}/>
+
+        {/* Merge result summary */}
+        {showMerge && mergeLog.length > 0 && (
+          <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.6)', zIndex:999,
+            display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+            onClick={()=>setShowMerge(false)}>
+            <div style={{ background:'white', borderRadius:14, padding:24, maxWidth:400, width:'100%',
+              boxShadow:'0 24px 60px rgba(0,0,0,.3)' }} onClick={e=>e.stopPropagation()}>
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, color:C.navy, marginBottom:14 }}>
+                ✅ Stock Updated
+              </div>
+              {mergeLog.map((r,i)=>(
+                <div key={i} style={{ background:r.merged?'#fffbeb':C.cream, borderRadius:9,
+                  padding:'9px 13px', marginBottom:8, fontSize:13 }}>
+                  {r.merged ? (
+                    <>
+                      <b style={{ color:'#92400e' }}>🔁 Merged:</b> <span style={{ color:C.navy }}>{r.name}</span>
+                      <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>
+                        +{r.qty} units added · Old price Rs.{parseFloat(r.oldPrice).toLocaleString()} → New Rs.{parseFloat(r.newPrice).toLocaleString()}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <b style={{ color:C.success }}>✨ New:</b> <span style={{ color:C.navy }}>{r.name}</span>
+                      <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>
+                        {r.qty} units added as new item
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+              <button onClick={()=>setShowMerge(false)}
+                style={{ marginTop:14, width:'100%', padding:'10px', background:C.navy, color:'white',
+                  border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                Done
+              </button>
+            </div>
+          </div>
+        )}
       )}
     </div>
   );
