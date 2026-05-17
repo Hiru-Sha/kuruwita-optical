@@ -64,14 +64,24 @@ router.post('/', auth, async (req, res) => {
       }
     }
 
-    // Always create new
-    const result = await pool.query(
-      `INSERT INTO customers (name, phone, age, address, email)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [name.trim(), phone?.trim()||null, age||null, address||null, email||null]
-    );
+    // Always create new — try with all fields, fallback to name+phone only
+    let result;
+    try {
+      result = await pool.query(
+        `INSERT INTO customers (name, phone, age, address, email)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [name.trim(), phone?.trim()||null, age||null, address||null, email||null]
+      );
+    } catch(insertErr) {
+      // Fallback: some tables may not have all columns yet
+      console.warn('Full insert failed, trying minimal:', insertErr.message);
+      result = await pool.query(
+        `INSERT INTO customers (name, phone) VALUES ($1, $2) RETURNING *`,
+        [name.trim(), phone?.trim()||null]
+      );
+    }
     res.status(201).json({ data: result.rows[0] });
-  } catch(err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+  } catch(err) { console.error('Customer create error:', err.message); res.status(500).json({ error: err.message }); }
 });
 
 // PATCH /api/customers/:id
