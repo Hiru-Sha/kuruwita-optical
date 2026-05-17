@@ -6,6 +6,7 @@
 // ============================================================
 import React, { useEffect, useState, useCallback } from 'react';
 
+const CATS = ['Frames','Sunglasses','Reading Glasses','Boxes','Sunglass Pouches','Glass Cleaner','Chains','Ear Tips','Old Stock'];
 const C = {
   navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
   border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
