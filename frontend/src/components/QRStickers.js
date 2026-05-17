@@ -282,12 +282,9 @@ export function StickerModal({ items, onClose }) {
   const expanded = buildExpanded();
   const total    = expanded.length;  // both types
   const allReady = readyCount >= total && total > 0;
-  const PER_PAGE = 40; // 8 cols × 5 rows at 25mm×55mm at 50mm×30mm
-
-  const pages = [];
-  for (let i=0; i < expanded.length; i += PER_PAGE) {
-    pages.push(expanded.slice(i, i + PER_PAGE));
-  }
+  // Split by sticker type
+  const armItems  = expanded.filter(i => ARM_CATS.includes(i.category));
+  const flatItems = expanded.filter(i => !ARM_CATS.includes(i.category));
 
   const toggleItem  = (id) => setSelected(s => ({ ...s, [id]: !s[id] }));
   const selectAll   = () => { const s={}; filteredItems.forEach(i=>s[i.id]=true);  setSelected(s); };
