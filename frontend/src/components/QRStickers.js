@@ -71,93 +71,43 @@ function Sticker({ item, onReady, stickerNum }) {
   return (
     <div style={{
       width:'25mm', height:'55mm',
-      display:'flex', alignItems:'center', justifyContent:'center',
-      overflow:'hidden', pageBreakInside:'avoid',
-      border:'0.3mm dashed #aaa', boxSizing:'border-box',
+      display:'flex', flexDirection:'column',
+      fontFamily:"'Arial',sans-serif",
+      background:'white',
+      boxSizing:'border-box',
+      pageBreakInside:'avoid',
+      border:'0.3mm dashed #aaa',
     }}>
-      {/* Inner content — 55mm wide × 25mm tall, rotated 90° CCW */}
+      {/* TOP 25mm — Details, reads L→R when frame on desk */}
       <div style={{
-        width:'55mm', height:'25mm',
-        display:'flex', flexDirection:'row',
-        fontFamily:"'Arial',sans-serif",
-        background:'white',
+        height:'25mm', flexShrink:0,
+        display:'flex', flexDirection:'column',
+        justifyContent:'space-between',
+        padding:'2mm 2mm 1.5mm 2mm',
         boxSizing:'border-box',
-        transform:'rotate(-90deg)',
-        flexShrink:0,
       }}>
-        {/* LEFT section — QR (25mm) */}
         <div style={{
-          width:'25mm', height:'25mm', flexShrink:0,
-          display:'flex', flexDirection:'column',
-          alignItems:'center', justifyContent:'center',
-          padding:'1mm', boxSizing:'border-box',
-          position:'relative',
-        }}>
-          {qrUrl
-            ? <img src={qrUrl} alt="QR" style={{ width:'20mm', height:'20mm', display:'block' }}/>
-            : <div style={{ width:'20mm', height:'20mm', background:'#f5f5f5',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                fontSize:'4pt', color:'#bbb', border:'0.3mm solid #eee' }}>QR...</div>
-          }
-          {/* per-item number */}
-          <div style={{ position:'absolute', bottom:'0.5mm', left:'1mm',
-            fontSize:'5pt', fontWeight:'bold', color:'#555' }}>{stickerNum}</div>
+          fontSize: brand.length > 16 ? '5.5pt' : brand.length > 12 ? '6.5pt' : '8pt',
+          fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2,
+          overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
+        }}>{brand}</div>
+        {model ? <div style={{ fontSize: model.length>18?'4.5pt':'5pt', fontWeight:'600', color:'#333', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{model}</div> : null}
+        {(color||detail) ? <div style={{ fontSize:'4.5pt', color:'#666', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{[color,detail].filter(Boolean).join(' · ')}</div> : null}
+        <div style={{ fontSize:'11pt', fontWeight:'bold', color:'#0f1f3d', borderTop:'0.3mm solid #ddd', paddingTop:'1mm' }}>{fmt(item.sell_price)}</div>
+      </div>
 
-        </div>
+      {/* MIDDLE 5mm — Fold line */}
+      <div style={{ height:'5mm', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', borderTop:'0.5mm solid #000', borderBottom:'0.5mm solid #000', background:'#f8f8f8' }}>
+        <div style={{ fontSize:'3pt', color:'#bbb', letterSpacing:'1pt' }}>▼ FOLD HERE ▼</div>
+      </div>
 
-        {/* MIDDLE — 5mm gap / fold line */}
-        <div style={{
-          width:'5mm', height:'25mm', flexShrink:0,
-          display:'flex', alignItems:'center', justifyContent:'center',
-          borderLeft:'0.4mm solid #000',
-          borderRight:'0.4mm solid #000',
-          background:'#fafafa',
-          position:'relative',
-        }}>
-          <div style={{
-            fontSize:'3pt', color:'#bbb', letterSpacing:'0.5pt',
-            writingMode:'vertical-rl', textOrientation:'mixed',
-            transform:'rotate(180deg)',
-          }}>◀ FOLD ▶</div>
-        </div>
-
-        {/* RIGHT section — Details (25mm) */}
-        <div style={{
-          flex:1, padding:'1.5mm 2mm',
-          boxSizing:'border-box',
-          display:'flex', flexDirection:'column',
-          justifyContent:'space-between',
-        }}>
-          {/* Brand — auto shrink font */}
-          <div style={{
-            fontSize: brand.length > 16 ? '5.5pt' : brand.length > 12 ? '6.5pt' : '8pt',
-            fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2,
-            overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
-          }}>{brand}</div>
-
-          {/* Model + Color — always show both */}
-          <div style={{ fontSize:'5pt', color:'#444', lineHeight:1.4 }}>
-            {model ? (
-              <div style={{ overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
-                fontWeight:'600', fontSize: model.length > 18 ? '4.5pt' : '5pt' }}>
-                {model}
-              </div>
-            ) : null}
-            {(color || detail) ? (
-              <div style={{ overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-                {[color, detail].filter(Boolean).join(' · ')}
-              </div>
-            ) : null}
-          </div>
-
-          {/* Price */}
-          <div style={{
-            borderTop:'0.2mm solid #eee', paddingTop:'1mm',
-            fontSize:'10pt', fontWeight:'bold', color:'#0f1f3d',
-          }}>
-            {fmt(item.sell_price)}
-          </div>
-        </div>
+      {/* BOTTOM 25mm — QR, folds behind arm */}
+      <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'1.5mm', boxSizing:'border-box', position:'relative' }}>
+        {qrUrl
+          ? <img src={qrUrl} alt="QR" style={{ width:'20mm', height:'20mm', display:'block' }}/>
+          : <div style={{ width:'20mm', height:'20mm', background:'#f5f5f5', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'4pt', color:'#bbb' }}>QR...</div>
+        }
+        <div style={{ position:'absolute', bottom:'1mm', right:'2mm', fontSize:'5pt', fontWeight:'bold', color:'#888' }}>{stickerNum}</div>
       </div>
     </div>
   );
