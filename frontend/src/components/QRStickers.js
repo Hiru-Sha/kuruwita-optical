@@ -1,12 +1,4 @@
 /* eslint-disable */
-// ============================================================
-//  QRStickers.js — Foldable arm tag sticker
-//  Design matches the photo: shop name top, price bottom, folds around arm
-//  Size: 50mm × 30mm (fold in half = 25mm × 30mm per side)
-//  Left half: QR + sequence number
-//  Right half: Shop name + item name + price
-//  A4 layout: 4 cols × 9 rows = 36 per page
-// ============================================================
 import React, { useState, useEffect, useRef } from 'react';
 
 const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280' };
@@ -15,7 +7,7 @@ export const decodeQR = (raw) => { try { return JSON.parse(raw); } catch { retur
 const encodeItem = (item) => String(item.id);
 const fmt = (n) => 'Rs.' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 
-// ── Track printed items ───────────────────────────────────────
+// ── Track printed ─────────────────────────────────────────────
 const PRINTED_KEY = 'ko_printed_stickers';
 const getPrinted  = () => { try { return JSON.parse(localStorage.getItem(PRINTED_KEY)||'{}'); } catch { return {}; } };
 const markPrinted = (ids) => { const p=getPrinted(); ids.forEach(id=>{ p[String(id)]=new Date().toISOString(); }); localStorage.setItem(PRINTED_KEY,JSON.stringify(p)); };
@@ -39,7 +31,7 @@ function useQRDataUrl(text) {
           setDataUrl(canvas ? canvas.toDataURL('image/png') : img?.src || null);
           if (document.body.contains(host)) document.body.removeChild(host);
         }, 200);
-      } catch(e) { console.error('QR fail',e); }
+      } catch(e) {}
     }
     if (window.QRCode) { generate(); }
     else if (!document.getElementById('qrcodejs')) {
@@ -56,127 +48,107 @@ function useQRDataUrl(text) {
   return dataUrl;
 }
 
-// ── Single sticker — like the photo example ───────────────────
-// 50mm wide × 30mm tall, fold vertically in middle
-// Left 25mm: QR code side (folds behind arm, hidden)
-// Right 25mm: Visible tag (shop name + item + price)
-// Fold line: solid vertical line at 25mm
-function Sticker({ item, onReady, stickerNum }) {
+// ── Single sticker ────────────────────────────────────────────
+// Physical printed size: 25mm wide × 55mm tall
+// Rotated 90° CCW so text reads bottom-to-top along the arm
+// Top section  (25mm): QR code
+// Gap (5mm):   fold/gap line
+// Bottom section (25mm): Brand + model + price + numbers
+function Sticker({ item, onReady, stickerNum, globalNum }) {
   const qrUrl = useQRDataUrl(encodeItem(item));
-  const shortName = item.name?.split(' · ').slice(0,2).join(' · ') || item.name || '';
-  const brand = item.brand || item.name?.split(' · ')[0] || '';
+  const brand  = item.brand || '';
+  const model  = item.frame_name || item.name?.split(' · ').slice(1,2).join('') || '';
+  const color  = item.frame_color || '';
+  const detail = [item.frame_type, item.sg_type, item.rg_power, item.frame_size].filter(Boolean).join(' · ');
 
   useEffect(() => { if (qrUrl && onReady) onReady(); }, [qrUrl]);
 
+  // We design it as 55mm wide × 25mm tall, then rotate -90deg
+  // The wrapper will be 25mm × 55mm to hold the rotated result
   return (
     <div style={{
-      width: '50mm', height: '30mm',
-      display: 'flex',
-      fontFamily: "'Arial', sans-serif",
-      background: 'white',
-      boxSizing: 'border-box',
-      pageBreakInside: 'avoid',
-      // Outer cut guide
-      border: '0.3mm dashed #aaa',
-      position: 'relative',
+      width:'25mm', height:'55mm',
+      display:'flex', alignItems:'center', justifyContent:'center',
+      overflow:'hidden', pageBreakInside:'avoid',
+      border:'0.3mm dashed #aaa', boxSizing:'border-box',
     }}>
-
-      {/* ── LEFT HALF — QR (folds behind arm) ── */}
+      {/* Inner content — 55mm wide × 25mm tall, rotated 90° CCW */}
       <div style={{
-        width: '25mm', height: '30mm', flexShrink: 0,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        // Fold line — solid black
-        borderRight: '0.6mm solid #000',
-        padding: '1.5mm', boxSizing: 'border-box',
-        background: 'white',
-        position: 'relative',
+        width:'55mm', height:'25mm',
+        display:'flex', flexDirection:'row',
+        fontFamily:"'Arial',sans-serif",
+        background:'white',
+        boxSizing:'border-box',
+        transform:'rotate(-90deg)',
+        flexShrink:0,
       }}>
-        {/* FOLD label */}
+        {/* LEFT section — QR (25mm) */}
         <div style={{
-          position: 'absolute', top: '1mm', left: 0, right: 0,
-          textAlign: 'center', fontSize: '3pt', color: '#bbb',
-          letterSpacing: '0.3pt',
-        }}>◀ FOLD HERE ▶</div>
-
-        {/* QR code */}
-        {qrUrl
-          ? <img src={qrUrl} alt="QR"
-              style={{ width: '20mm', height: '20mm', display: 'block', marginTop: '2mm' }}/>
-          : <div style={{ width:'20mm', height:'20mm', marginTop:'2mm', background:'#f5f5f5',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              fontSize:'5pt', color:'#bbb', border:'0.3mm solid #eee' }}>
-              QR...
-            </div>
-        }
-
-        {/* Sequence number - tiny, bottom */}
-        <div style={{
-          position: 'absolute', bottom: '1mm', right: '2mm',
-          fontSize: '4pt', color: '#ccc', fontWeight: 'bold',
-        }}>{stickerNum}</div>
-      </div>
-
-      {/* ── RIGHT HALF — Visible tag ── */}
-      <div style={{
-        width: '25mm', height: '30mm',
-        display: 'flex', flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '2mm 2.5mm',
-        boxSizing: 'border-box',
-        background: 'white',
-      }}>
-        {/* Shop name — top, small italic like the photo */}
-        <div style={{
-          fontSize: '5pt',
-          fontStyle: 'italic',
-          color: '#888',
-          textAlign: 'center',
-          letterSpacing: '0.2pt',
-          borderBottom: '0.2mm solid #eee',
-          paddingBottom: '1mm',
+          width:'25mm', height:'25mm', flexShrink:0,
+          display:'flex', flexDirection:'column',
+          alignItems:'center', justifyContent:'center',
+          padding:'1mm', boxSizing:'border-box',
+          position:'relative',
         }}>
-          Wickramakalutota Opticals
+          {qrUrl
+            ? <img src={qrUrl} alt="QR" style={{ width:'20mm', height:'20mm', display:'block' }}/>
+            : <div style={{ width:'20mm', height:'20mm', background:'#f5f5f5',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:'4pt', color:'#bbb', border:'0.3mm solid #eee' }}>QR...</div>
+          }
+          {/* per-item number */}
+          <div style={{ position:'absolute', bottom:'0.5mm', left:'1mm',
+            fontSize:'5pt', fontWeight:'bold', color:'#555' }}>{stickerNum}</div>
+          {/* global number — faint */}
+          <div style={{ position:'absolute', bottom:'0.5mm', right:'1mm',
+            fontSize:'4pt', color:'#ccc' }}>{globalNum}</div>
         </div>
 
-        {/* Brand name — prominent like "Make Run" in photo */}
+        {/* MIDDLE — 5mm gap / fold line */}
         <div style={{
-          fontSize: '8pt',
-          fontWeight: 'bold',
-          color: '#0f1f3d',
-          textAlign: 'center',
-          lineHeight: 1.2,
-          overflow: 'hidden',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
+          width:'5mm', height:'25mm', flexShrink:0,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          borderLeft:'0.4mm solid #000',
+          borderRight:'0.4mm solid #000',
+          background:'#fafafa',
+          position:'relative',
         }}>
-          {brand}
+          <div style={{
+            fontSize:'3pt', color:'#bbb', letterSpacing:'0.5pt',
+            writingMode:'vertical-rl', textOrientation:'mixed',
+            transform:'rotate(180deg)',
+          }}>◀ FOLD ▶</div>
         </div>
 
-        {/* Model / details */}
+        {/* RIGHT section — Details (25mm) */}
         <div style={{
-          fontSize: '5pt',
-          color: '#777',
-          textAlign: 'center',
-          lineHeight: 1.3,
-          overflow: 'hidden',
-          whiteSpace: 'nowrap',
-          textOverflow: 'ellipsis',
+          flex:1, padding:'1.5mm 2mm',
+          boxSizing:'border-box',
+          display:'flex', flexDirection:'column',
+          justifyContent:'space-between',
         }}>
-          {item.name?.split(' · ').slice(1).join(' · ') || ''}
-        </div>
+          {/* Brand */}
+          <div style={{
+            fontSize:'8pt', fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2,
+            overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
+          }}>
+            {brand || item.name?.split(' · ')[0]}
+          </div>
 
-        {/* Price — bottom, bold like photo */}
-        <div style={{
-          borderTop: '0.2mm solid #eee',
-          paddingTop: '1mm',
-          textAlign: 'center',
-          fontSize: '10pt',
-          fontWeight: 'bold',
-          color: '#0f1f3d',
-        }}>
-          {fmt(item.sell_price)}
+          {/* Model + color */}
+          <div style={{ fontSize:'5.5pt', color:'#444', lineHeight:1.3 }}>
+            {model && <div style={{ fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{model}</div>}
+            {color && <div style={{ overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{color}{detail?` · ${detail}`:''}</div>}
+            {!model && !color && <div style={{ overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{item.name}</div>}
+          </div>
+
+          {/* Price */}
+          <div style={{
+            borderTop:'0.2mm solid #eee', paddingTop:'1mm',
+            fontSize:'10pt', fontWeight:'bold', color:'#0f1f3d',
+          }}>
+            {fmt(item.sell_price)}
+          </div>
         </div>
       </div>
     </div>
@@ -185,9 +157,9 @@ function Sticker({ item, onReady, stickerNum }) {
 
 // ── STICKER MODAL ─────────────────────────────────────────────
 export function StickerModal({ items, onClose }) {
-  const sheetRef   = useRef();
-  const [readyCount,  setReadyCount]  = useState(0);
-  const [selected,    setSelected]    = useState(() => {
+  const sheetRef  = useRef();
+  const [readyCount, setReadyCount] = useState(0);
+  const [selected,   setSelected]   = useState(() => {
     const printed = getPrinted();
     const sel = {};
     items.forEach(item => { sel[item.id] = !printed[String(item.id)]; });
@@ -195,23 +167,57 @@ export function StickerModal({ items, onClose }) {
   });
   const [showAll, setShowAll] = useState(false);
 
-  const printed      = getPrinted();
+  const printed       = getPrinted();
   const filteredItems = items.filter(item => showAll || !printed[String(item.id)]);
   const selectedItems = filteredItems.filter(item => selected[item.id]);
 
-  const expanded = selectedItems
-    .filter(item => item.category !== 'Old Stock')
-    .flatMap(item => {
-      const qty = Math.max(1, parseInt(item.quantity)||1);
-      return Array.from({length: qty}, (_, i) => ({ ...item, _seq: i + 1 }));
-    });
+  // Expand by quantity — per-item seq + global category seq
+  // Group by category+subtype for global numbering
+  // e.g. all Polarised sunglasses get global 1..59
+  const buildExpanded = () => {
+    const result = [];
+    // Build global counters per category+subtype
+    const globalCounters = {}; // key → current count
+    const getKey = (item) => {
+      if (item.category==='Sunglasses') return `SG-${item.sg_type||'All'}`;
+      if (item.category==='Frames')     return `FR-${item.frame_type||'All'}`;
+      return item.category;
+    };
 
+    // First pass: count total per key for reference (optional)
+    selectedItems
+      .filter(item => item.category !== 'Old Stock')
+      .forEach(item => {
+        const key = getKey(item);
+        if (!globalCounters[key]) globalCounters[key] = 0;
+      });
+
+    // Second pass: expand with numbers
+    selectedItems
+      .filter(item => item.category !== 'Old Stock')
+      .forEach(item => {
+        const qty = Math.max(1, parseInt(item.quantity)||1);
+        const key = getKey(item);
+        if (!globalCounters[key]) globalCounters[key] = 0;
+        for (let i=0; i<qty; i++) {
+          globalCounters[key]++;
+          result.push({
+            ...item,
+            _seq:    i + 1,                    // per-item: 1,2,3,4
+            _global: globalCounters[key],       // global category: 1..59
+          });
+        }
+      });
+    return result;
+  };
+
+  const expanded = buildExpanded();
   const total    = expanded.length;
   const allReady = readyCount >= total && total > 0;
-  const PER_PAGE = 36; // 4 cols × 9 rows
+  const PER_PAGE = 40; // 8 cols × 5 rows at 25mm×55mm at 50mm×30mm
 
   const pages = [];
-  for (let i = 0; i < expanded.length; i += PER_PAGE) {
+  for (let i=0; i < expanded.length; i += PER_PAGE) {
     pages.push(expanded.slice(i, i + PER_PAGE));
   }
 
@@ -225,13 +231,8 @@ export function StickerModal({ items, onClose }) {
     const win = window.open('','_blank','width=900,height=700');
     if (!win) { alert('Please allow popups.'); return; }
     win.document.write(`<!DOCTYPE html><html><head>
-<title>Stickers — Wickramakalutota Opticals</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:white;font-family:Arial,sans-serif;}
-  @page{size:A4 portrait;margin:5mm;}
-  @media print{body{margin:0;}}
-</style>
+<title>Stickers</title>
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{background:white;}@page{size:A4 portrait;margin:5mm;}</style>
 </head><body><div>${html}</div>
 <script>window.onload=function(){setTimeout(function(){window.print();window.close();},400);};<\/script>
 </body></html>`);
@@ -252,24 +253,19 @@ export function StickerModal({ items, onClose }) {
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
           padding:'14px 20px', borderBottom:`1px solid ${C.border}` }}>
           <div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, color:C.navy }}>
-              🏷️ Print Frame Arm Tags
-            </div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, color:C.navy }}>🏷️ Print Frame Arm Tags</div>
             <div style={{ fontSize:12, color:C.muted, marginTop:3 }}>
-              50mm×30mm · fold at center · wrap around frame arm · {expanded.length} tag{expanded.length!==1?'s':''}
+              50mm×30mm · fold at center · {expanded.length} tag{expanded.length!==1?'s':''}
             </div>
           </div>
           <div style={{ display:'flex', gap:8 }}>
             <button onClick={handlePrint} disabled={!allReady || expanded.length===0}
               style={{ padding:'9px 22px',
-                background: allReady && expanded.length ? C.gold : '#e5e7eb',
-                color: allReady && expanded.length ? C.navy : '#9ca3af',
+                background: allReady&&expanded.length ? C.gold : '#e5e7eb',
+                color: allReady&&expanded.length ? C.navy : '#9ca3af',
                 border:'none', borderRadius:9, fontSize:13, fontWeight:700,
-                cursor: allReady && expanded.length ? 'pointer' : 'not-allowed',
-                fontFamily:'inherit' }}>
-              {expanded.length===0 ? 'No items selected'
-                : !allReady ? `⏳ Loading QR ${readyCount}/${total}`
-                : '🖨️ Print'}
+                cursor: allReady&&expanded.length ? 'pointer' : 'not-allowed', fontFamily:'inherit' }}>
+              {expanded.length===0 ? 'No items' : !allReady ? `⏳ ${readyCount}/${total}` : '🖨️ Print'}
             </button>
             <button onClick={onClose}
               style={{ padding:'9px 14px', background:C.cream, color:C.muted,
@@ -278,21 +274,29 @@ export function StickerModal({ items, onClose }) {
           </div>
         </div>
 
+        {/* Number legend */}
+        <div style={{ padding:'8px 20px', background:'#fffbeb', borderBottom:`1px solid #fde68a`,
+          fontSize:12, color:'#92400e', display:'flex', gap:20, flexWrap:'wrap' }}>
+          <span><b>Bottom-left number</b> = per-item count (Gucci Brown: 1,2,3,4)</span>
+          <span><b style={{ color:'#bbb' }}>Bottom-right (faint)</b> = global category count (all Polarised: 1..59)</span>
+        </div>
+
         {/* Item selector */}
         <div style={{ padding:'12px 20px', borderBottom:`1px solid ${C.border}`, background:C.cream }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-            <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Select items to print:</div>
+            <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Select items:</div>
             <div style={{ display:'flex', gap:6 }}>
               <button onClick={()=>setShowAll(s=>!s)}
-                style={{ padding:'4px 10px', borderRadius:7, fontSize:11, fontWeight:600,
-                  cursor:'pointer', fontFamily:'inherit', border:`1px solid ${C.border}`,
+                style={{ padding:'4px 10px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer',
+                  fontFamily:'inherit', border:`1px solid ${C.border}`,
                   background:showAll?C.navy:'white', color:showAll?'white':C.muted }}>
                 {showAll ? '👁️ All' : `🔇 Printed hidden (${Object.keys(printed).length})`}
               </button>
               <button onClick={selectAll}   style={{ padding:'4px 10px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid ${C.border}`, background:'white', color:C.navy }}>All</button>
               <button onClick={deselectAll} style={{ padding:'4px 10px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid ${C.border}`, background:'white', color:C.muted }}>None</button>
               <button onClick={()=>{ clearPrinted(); setSelected(s=>{ const n={}; items.forEach(i=>n[i.id]=true); return n; }); }}
-                style={{ padding:'4px 10px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid #fca5a5`, background:'#fef2f2', color:'#c0392b' }}>
+                style={{ padding:'4px 10px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer',
+                  fontFamily:'inherit', border:`1px solid #fca5a5`, background:'#fef2f2', color:'#c0392b' }}>
                 Reset printed
               </button>
             </div>
@@ -315,7 +319,7 @@ export function StickerModal({ items, onClose }) {
               );
             })}
             {filteredItems.length===0 && (
-              <div style={{ fontSize:13, color:C.muted }}>All printed — click "Printed hidden" to show them.</div>
+              <div style={{ fontSize:13, color:C.muted }}>All printed — toggle "Printed hidden" to show.</div>
             )}
           </div>
         </div>
@@ -324,10 +328,9 @@ export function StickerModal({ items, onClose }) {
         <div style={{ padding:'8px 20px', background:'#eff6ff', borderBottom:`1px solid #bae6fd`,
           fontSize:12, color:'#1e40af', display:'flex', gap:14, flexWrap:'wrap' }}>
           <span>1️⃣ Select items</span>
-          <span>2️⃣ Wait for QR codes to load</span>
-          <span>3️⃣ Print → Cut dashed outer lines</span>
-          <span>4️⃣ Fold at solid center line</span>
-          <span>5️⃣ Wrap around frame arm</span>
+          <span>2️⃣ Wait for QR codes</span>
+          <span>3️⃣ Print → Cut dashed lines</span>
+          <span>4️⃣ Fold at solid center line → wrap around frame arm</span>
         </div>
 
         {/* Preview */}
@@ -348,10 +351,9 @@ export function StickerModal({ items, onClose }) {
                     <div className="no-print" style={{ fontSize:10, color:C.muted, marginBottom:6, textAlign:'center' }}>
                       Page {pi+1} — {pageItems.length} tag{pageItems.length!==1?'s':''}
                     </div>
-                    {/* 4 cols × 50mm = 200mm fits A4 */}
                     <div style={{
                       display:'grid',
-                      gridTemplateColumns:'repeat(4, 50mm)',
+                      gridTemplateColumns:'repeat(8, 25mm)',
                       gap:'0mm',
                       width:'200mm',
                       margin:'0 auto',
@@ -361,6 +363,7 @@ export function StickerModal({ items, onClose }) {
                           key={`${item.id}-${pi}-${idx}`}
                           item={item}
                           stickerNum={item._seq}
+                          globalNum={item._global}
                           onReady={()=>setReadyCount(n=>n+1)}
                         />
                       ))}
@@ -379,7 +382,7 @@ export function StickerModal({ items, onClose }) {
         </div>
 
         <div style={{ padding:'10px 20px', borderTop:`1px solid ${C.border}`, fontSize:12, color:C.muted }}>
-          💡 After printing, items are marked as printed and hidden from next run. Use "Reset printed" to print again.
+          💡 After printing, items are marked as printed and hidden from next run.
         </div>
       </div>
     </div>
@@ -405,17 +408,16 @@ export function QRScanner({ onScan, onClose, title='Scan Frame QR Code' }) {
       setLoading(false); startScanning();
     } catch(e) { setError('Camera not available.'); setLoading(false); }
   };
-  const stopCamera = () => streamRef.current?.getTracks().forEach(t=>t.stop());
+  const stopCamera    = () => streamRef.current?.getTracks().forEach(t=>t.stop());
   const startScanning = () => {
-    if ('BarcodeDetector' in window) {
-      const det = new window.BarcodeDetector({formats:['qr_code']});
-      const scan = async()=>{
-        if(!videoRef.current||scanned) return;
-        try{ const codes=await det.detect(videoRef.current); if(codes.length){handleScan(codes[0].rawValue);return;} }catch{}
-        setTimeout(scan,300);
-      };
-      setTimeout(scan,500);
-    }
+    if (!('BarcodeDetector' in window)) return;
+    const det = new window.BarcodeDetector({formats:['qr_code']});
+    const scan = async()=>{
+      if(!videoRef.current||scanned) return;
+      try{ const c=await det.detect(videoRef.current); if(c.length){handleScan(c[0].rawValue);return;} }catch{}
+      setTimeout(scan,300);
+    };
+    setTimeout(scan,500);
   };
   const handleScan = (raw) => {
     if(scanned) return; setScanned(true);
