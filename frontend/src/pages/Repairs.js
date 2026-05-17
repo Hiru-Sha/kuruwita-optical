@@ -126,6 +126,8 @@ export default function Repairs() {
   const [month,     setMonth]    = useState(thisMonth());
   const [statusFilt,setStatusFilt]=useState('all');
   const [showAdd,   setShowAdd]  = useState(false);
+  const [pastMode,  setPastMode]  = useState(false);
+  const [repairDate,setRepairDate]= useState('');
   const [saving,    setSaving]   = useState(false);
   const [error,     setError]    = useState('');
   const [toast,     setToast]    = useState('');
