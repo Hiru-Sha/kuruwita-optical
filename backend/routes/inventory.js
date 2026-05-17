@@ -7,7 +7,10 @@ const auth   = require('../middleware/auth');
 
 // GET /api/inventory
 router.get('/', auth, async (req, res) => {
-  const { search, category, limit = 500 } = req.query;
+  const { search, category, limit = 500, no_images } = req.query;
+
+  // Skip image_url in list for speed — images loaded individually when needed
+  const imageCol = no_images === '1' ? 'NULL::text AS image_url' : 'image_url';
 
   try {
     let sql = `
@@ -15,7 +18,7 @@ router.get('/', auth, async (req, res) => {
              frame_type, frame_color, frame_shape, frame_material, frame_size,
              sg_type, rg_lens_type, rg_material, rg_power, item_name,
              cost_price, sell_price, quantity, min_quantity,
-             image_url, display_number, stock_number, location, created_at, updated_at
+             ${imageCol}, display_number, stock_number, location, created_at, updated_at
       FROM inventory
       WHERE 1=1
     `;
