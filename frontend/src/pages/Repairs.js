@@ -170,6 +170,7 @@ export default function Repairs() {
       const res = await apiPost('/repairs', {
         ...form,
         charge: parseFloat(form.charge)||0,
+        import_date: pastMode && repairDate ? repairDate : null,
       });
       if (res.error) throw new Error(res.error);
       setLastDone(res);
@@ -234,11 +235,33 @@ export default function Repairs() {
           <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:0 }}>🔧 Repairs</h1>
           <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Arm repair, nose pads, polishing, screws and other frame repairs</p>
         </div>
-        <button onClick={()=>{ setShowAdd(s=>!s); setError(''); }}
-          style={{ padding:'9px 22px', background:showAdd?C.cream:C.gold, color:showAdd?C.muted:C.navy, border:showAdd?`1.5px solid ${C.border}`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-          {showAdd ? '✕ Cancel' : '🔧 New Repair'}
-        </button>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={()=>{ setPastMode(false); setRepairDate(''); setShowAdd(s=>!s); setError(''); }}
+            style={{ padding:'9px 22px', background:showAdd&&!pastMode?C.cream:C.gold, color:showAdd&&!pastMode?C.muted:C.navy, border:showAdd&&!pastMode?`1.5px solid ${C.border}`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            {showAdd && !pastMode ? '✕ Cancel' : '🔧 New Repair'}
+          </button>
+          <button onClick={()=>{ setPastMode(true); setShowAdd(true); setError(''); if(!repairDate) setRepairDate(new Date().toISOString().split('T')[0]); }}
+            style={{ padding:'9px 18px', background:showAdd&&pastMode?'#fffbeb':'white', color:'#b45309', border:`1.5px solid ${showAdd&&pastMode?'#f59e0b':'#fed7aa'}`, borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            📅 {showAdd && pastMode ? '✕ Cancel Past' : 'Add Past Repair'}
+          </button>
+        </div>
       </div>
+
+      {/* Past mode date picker — shown prominently at top of form */}
+      {showAdd && pastMode && (
+        <div style={{ background:'#fffbeb', border:'2px solid #f59e0b', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+          <span style={{ fontSize:13, fontWeight:700, color:'#92400e' }}>📅 Date this repair was done:</span>
+          <input type="date" value={repairDate} onChange={e=>setRepairDate(e.target.value)}
+            max={new Date().toISOString().split('T')[0]}
+            style={{ padding:'8px 14px', border:'2px solid #f59e0b', borderRadius:8, fontSize:15, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:'#92400e' }}/>
+          {repairDate && (
+            <span style={{ fontSize:13, color:'#92400e', background:'#fef3c7', padding:'4px 12px', borderRadius:20, fontWeight:600 }}>
+              {new Date(repairDate+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+            </span>
+          )}
+          {!repairDate && <span style={{ fontSize:12, color:'#b45309' }}>⬆️ Pick the date above</span>}
+        </div>
+      )}
 
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:10, margin:'16px 0' }}>
