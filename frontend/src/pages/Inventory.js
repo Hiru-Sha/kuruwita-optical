@@ -385,6 +385,7 @@ export default function Inventory() {
   const [imgData,      setImgData]     = useState(null);
   const [form,         setForm]        = useState(defaults('Frames'));
   const [showStickers, setShowStickers]= useState(false);
+  const [showFullImg,  setShowFullImg] = useState(false);
   const [stickerItems, setStickerItems]= useState([]);
 
   const load = useCallback(()=>{
@@ -791,7 +792,12 @@ export default function Inventory() {
 
             {/* Photo */}
             <div style={{ height:selected.image_url?'auto':'160px', maxHeight:320, background:C.cream, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative' }}>
-              {selected.image_url ? <img src={selected.image_url} alt={selected.name} style={{ width:'100%', height:'auto', objectFit:'contain', display:'block' }}/> : <div style={{ fontSize:52, opacity:.2, height:160, display:'flex', alignItems:'center', justifyContent:'center', width:'100%' }}>{CAT_ICON[selected.category]||'📦'}</div>}
+              {selected.image_url
+                ? <img src={selected.image_url} alt={selected.name}
+                    onClick={()=>setShowFullImg(true)}
+                    style={{ width:'100%', height:'auto', objectFit:'contain', display:'block', cursor:'zoom-in' }}/>
+                : <div style={{ fontSize:52, opacity:.2, height:160, display:'flex', alignItems:'center', justifyContent:'center', width:'100%' }}>{CAT_ICON[selected.category]||'📦'}</div>
+              }
               <label style={{ position:'absolute', bottom:10, right:10, background:'rgba(15,31,61,.75)', color:'white', borderRadius:20, padding:'5px 14px', fontSize:12, fontWeight:600, cursor:'pointer', zIndex:2 }}>
                 📷 Change Photo
                 <input type="file" accept="image/*" onChange={handlePanelImg} style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}/>
@@ -946,6 +952,46 @@ export default function Inventory() {
               {panelTab==='adjust' && (
                 <AdjustmentPanel item={selected} onDone={handleAdjDone}/>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen image lightbox */}
+      {showFullImg && selected?.image_url && (
+        <div onClick={()=>setShowFullImg(false)}
+          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.92)', zIndex:2000,
+            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+            cursor:'zoom-out', padding:20 }}>
+          <button onClick={()=>setShowFullImg(false)}
+            style={{ position:'absolute', top:16, right:16, background:'rgba(255,255,255,.15)',
+              border:'none', borderRadius:8, padding:'6px 14px', color:'white', fontSize:14,
+              fontWeight:600, cursor:'pointer', fontFamily:'inherit', zIndex:1 }}>
+            ✕ Close
+          </button>
+          <img src={selected.image_url} alt={selected.name}
+            onClick={e=>e.stopPropagation()}
+            style={{ maxWidth:'90vw', maxHeight:'75vh', objectFit:'contain', borderRadius:12,
+              boxShadow:'0 8px 40px rgba(0,0,0,.6)' }}/>
+          <div style={{ marginTop:20, textAlign:'center' }}>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'white', marginBottom:6 }}>
+              {selected.name}
+            </div>
+            <div style={{ fontSize:13, color:'rgba(255,255,255,.6)', marginBottom:4 }}>
+              {selected.category} · {selected.brand||''}
+              {selected.frame_color ? ` · ${selected.frame_color}` : ''}
+              {selected.frame_size  ? ` · ${selected.frame_size}`  : ''}
+            </div>
+            <div style={{ display:'flex', gap:20, justifyContent:'center', marginTop:10 }}>
+              <div style={{ color:'rgba(255,255,255,.5)', fontSize:12 }}>
+                Cost: <b style={{ color:'white' }}>Rs.{parseFloat(selected.cost_price||0).toLocaleString()}</b>
+              </div>
+              <div style={{ color:'rgba(255,255,255,.5)', fontSize:12 }}>
+                Sell: <b style={{ color:'#c9a84c', fontSize:15 }}>Rs.{parseFloat(selected.sell_price||0).toLocaleString()}</b>
+              </div>
+              <div style={{ color:'rgba(255,255,255,.5)', fontSize:12 }}>
+                Stock: <b style={{ color:'white' }}>{selected.quantity}</b>
+              </div>
             </div>
           </div>
         </div>
