@@ -768,6 +768,8 @@ export default function Inventory() {
           ? <div style={{ textAlign:'center', padding:'48px 20px', color:C.muted }}><div style={{ fontSize:40, marginBottom:12 }}>📦</div><div style={{ fontSize:14, fontWeight:600 }}>No items yet</div></div>
           : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(185px,1fr))', gap:14 }}>
               {items.filter(item=>{
+                // Hide Old Stock in All tab — only show when Old Stock tab is active
+                if (activeCat==='All' && item.category==='Old Stock') return false;
                 if (!subFilter) return true;
                 if (activeCat==='Sunglasses') {
                   if (subFilter==='RayBan') return (item.brand||'').toLowerCase().includes('rayban');
