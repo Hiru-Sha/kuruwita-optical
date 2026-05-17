@@ -146,7 +146,7 @@ function Sticker({ item, onReady, stickerNum }) {
 
         {/* Price */}
         <div style={{
-          fontSize:'11pt', fontWeight:'bold', color:'#0f1f3d',
+          fontSize:'13pt', fontWeight:'bold', color:'#0f1f3d',
           borderTop:'0.3mm solid #ddd', paddingTop:'1mm',
           width:'100%', textAlign:'center',
           marginTop:'1mm',
