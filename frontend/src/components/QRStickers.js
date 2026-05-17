@@ -156,6 +156,74 @@ function Sticker({ item, onReady, stickerNum }) {
   );
 }
 
+// ── Categories that use ARM sticker (fold around arm) ────────
+const ARM_CATS = ['Frames','Sunglasses','Reading Glasses'];
+
+// ── Flat label sticker for accessories ───────────────────────
+// 40mm × 20mm — stick directly on box/pouch/chain/cleaner
+function AccessorySticker({ item, onReady, stickerNum }) {
+  const qrUrl = useQRDataUrl(encodeItem(item));
+  const name  = item.item_name || item.brand || item.name?.split(' · ')[0] || item.name || '';
+  const color = item.frame_color || '';
+  const sub   = [item.frame_material, color].filter(Boolean).join(' · ');
+
+  useEffect(() => { if (qrUrl && onReady) onReady(); }, [qrUrl]);
+
+  return (
+    <div style={{
+      width:'40mm', height:'20mm',
+      display:'flex',
+      fontFamily:"'Arial',sans-serif",
+      background:'white',
+      boxSizing:'border-box',
+      pageBreakInside:'avoid',
+      border:'0.3mm dashed #aaa',
+    }}>
+      {/* LEFT — QR 20×20mm */}
+      <div style={{
+        width:'20mm', height:'20mm', flexShrink:0,
+        display:'flex', alignItems:'center', justifyContent:'center',
+        borderRight:'0.3mm solid #ddd',
+        padding:'1.5mm', boxSizing:'border-box',
+        position:'relative',
+      }}>
+        {qrUrl
+          ? <img src={qrUrl} alt="QR" style={{ width:'16mm', height:'16mm', display:'block' }}/>
+          : <div style={{ width:'16mm', height:'16mm', background:'#f5f5f5',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:'4pt', color:'#bbb' }}>QR...</div>
+        }
+        <div style={{ position:'absolute', bottom:'0.5mm', right:'1mm',
+          fontSize:'4pt', color:'#bbb' }}>{stickerNum}</div>
+      </div>
+
+      {/* RIGHT — Details */}
+      <div style={{
+        flex:1, padding:'1.5mm 2mm',
+        boxSizing:'border-box',
+        display:'flex', flexDirection:'column',
+        justifyContent:'space-between',
+      }}>
+        {/* Item name */}
+        <div style={{
+          fontSize: name.length > 14 ? '5.5pt' : '7pt',
+          fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2,
+          overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
+        }}>{name}</div>
+
+        {/* Color/material */}
+        {sub ? <div style={{ fontSize:'5pt', color:'#666', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{sub}</div> : null}
+
+        {/* Price */}
+        <div style={{
+          fontSize:'10pt', fontWeight:'bold', color:'#0f1f3d',
+          borderTop:'0.2mm solid #eee', paddingTop:'0.5mm',
+        }}>{fmt(item.sell_price)}</div>
+      </div>
+    </div>
+  );
+}
+
 // ── STICKER MODAL ─────────────────────────────────────────────
 export function StickerModal({ items, onClose }) {
   const sheetRef  = useRef();
@@ -212,7 +280,7 @@ export function StickerModal({ items, onClose }) {
   };
 
   const expanded = buildExpanded();
-  const total    = expanded.length;
+  const total    = expanded.length;  // both types
   const allReady = readyCount >= total && total > 0;
   const PER_PAGE = 40; // 8 cols × 5 rows at 25mm×55mm at 50mm×30mm
 
@@ -341,41 +409,49 @@ export function StickerModal({ items, onClose }) {
                 <div>No items selected.</div>
               </div>
             : <div ref={sheetRef}>
-                {pages.map((pageItems, pi) => (
-                  <div key={pi} style={{
-                    width:'210mm', background:'white',
-                    margin:'0 auto 12px', padding:'5mm',
-                    boxSizing:'border-box', boxShadow:'0 2px 8px rgba(0,0,0,.1)',
-                    pageBreakAfter:'always',
-                  }}>
-                    <div className="no-print" style={{ fontSize:10, color:C.muted, marginBottom:6, textAlign:'center' }}>
-                      Page {pi+1} — {pageItems.length} tag{pageItems.length!==1?'s':''}
+                {/* ARM TAGS — Frames, Sunglasses, Reading Glasses */}
+                {armItems.length > 0 && (() => {
+                  const PER = 40;
+                  const armPages = [];
+                  for (let i=0; i<armItems.length; i+=PER) armPages.push(armItems.slice(i,i+PER));
+                  return armPages.map((pageItems, pi) => (
+                    <div key={`arm-${pi}`} style={{ width:'210mm', background:'white', margin:'0 auto 12px', padding:'5mm', boxSizing:'border-box', boxShadow:'0 2px 8px rgba(0,0,0,.1)', pageBreakAfter:'always' }}>
+                      <div className="no-print" style={{ fontSize:10, color:C.muted, marginBottom:6, textAlign:'center' }}>
+                        🕶️ Arm Tags — Page {pi+1} · {pageItems.length} tags (fold around frame arm)
+                      </div>
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(8, 25mm)', gap:'0', width:'200mm', margin:'0 auto' }}>
+                        {pageItems.map((item,idx) => (
+                          <Sticker key={`a-${item.id}-${pi}-${idx}`} item={item} stickerNum={item._seq} onReady={()=>setReadyCount(n=>n+1)}/>
+                        ))}
+                        {Array(Math.max(0,PER-pageItems.length)).fill(null).map((_,ei) => (
+                          <div key={`ae-${ei}`} style={{ width:'25mm', height:'55mm', border:'0.3mm dashed #eee', boxSizing:'border-box', background:'white' }}/>
+                        ))}
+                      </div>
                     </div>
-                    <div style={{
-                      display:'grid',
-                      gridTemplateColumns:'repeat(8, 25mm)',
-                      gap:'0mm',
-                      width:'200mm',
-                      margin:'0 auto',
-                    }}>
-                      {pageItems.map((item, idx) => (
-                        <Sticker
-                          key={`${item.id}-${pi}-${idx}`}
-                          item={item}
-                          stickerNum={item._seq}
-                          onReady={()=>setReadyCount(n=>n+1)}
-                        />
-                      ))}
-                      {Array(Math.max(0, PER_PAGE - pageItems.length)).fill(null).map((_,ei) => (
-                        <div key={`e-${ei}`} style={{
-                          width:'50mm', height:'30mm',
-                          border:'0.3mm dashed #e5e5e5',
-                          boxSizing:'border-box', background:'white',
-                        }}/>
-                      ))}
+                  ));
+                })()}
+
+                {/* FLAT LABELS — Boxes, Pouches, Chains, Cleaners, Ear Tips */}
+                {flatItems.length > 0 && (() => {
+                  const PER = 45;
+                  const flatPages = [];
+                  for (let i=0; i<flatItems.length; i+=PER) flatPages.push(flatItems.slice(i,i+PER));
+                  return flatPages.map((pageItems, pi) => (
+                    <div key={`flat-${pi}`} style={{ width:'210mm', background:'white', margin:'0 auto 12px', padding:'5mm', boxSizing:'border-box', boxShadow:'0 2px 8px rgba(0,0,0,.1)', pageBreakAfter:'always' }}>
+                      <div className="no-print" style={{ fontSize:10, color:C.muted, marginBottom:6, textAlign:'center' }}>
+                        📦 Flat Labels — Page {pi+1} · {pageItems.length} labels (stick directly on item)
+                      </div>
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(5, 40mm)', gap:'0', width:'200mm', margin:'0 auto' }}>
+                        {pageItems.map((item,idx) => (
+                          <AccessorySticker key={`f-${item.id}-${pi}-${idx}`} item={item} stickerNum={item._seq} onReady={()=>setReadyCount(n=>n+1)}/>
+                        ))}
+                        {Array(Math.max(0,PER-pageItems.length)).fill(null).map((_,ei) => (
+                          <div key={`fe-${ei}`} style={{ width:'40mm', height:'20mm', border:'0.3mm dashed #eee', boxSizing:'border-box', background:'white' }}/>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
           }
         </div>
