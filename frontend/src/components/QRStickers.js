@@ -56,10 +56,13 @@ function useQRDataUrl(text) {
 // Bottom section (25mm): Brand + model + price + numbers
 function Sticker({ item, onReady, stickerNum, globalNum }) {
   const qrUrl = useQRDataUrl(encodeItem(item));
-  const brand  = item.brand || '';
-  const model  = item.frame_name || item.name?.split(' · ').slice(1,2).join('') || '';
-  const color  = item.frame_color || '';
-  const detail = [item.frame_type, item.sg_type, item.rg_power, item.frame_size].filter(Boolean).join(' · ');
+  // Parse name parts — name is built as "Brand · Model · Color · ..."
+  const parts  = (item.name||'').split(' · ');
+  const brand  = item.brand || parts[0] || '';
+  const model  = item.frame_name || parts[1] || '';
+  const color  = item.frame_color || parts[2] || '';
+  // Detail: type and sg_type only — NO size
+  const detail = [item.frame_type, item.sg_type, item.rg_power].filter(Boolean).join(' · ');
 
   useEffect(() => { if (qrUrl && onReady) onReady(); }, [qrUrl]);
 
@@ -127,23 +130,26 @@ function Sticker({ item, onReady, stickerNum, globalNum }) {
           display:'flex', flexDirection:'column',
           justifyContent:'space-between',
         }}>
-          {/* Brand — shrink font if long name */}
-          {(() => {
-            const b = brand || item.name?.split(' · ')[0] || '';
-            const fs = b.length > 14 ? '6pt' : b.length > 10 ? '7pt' : '8pt';
-            return (
-              <div style={{
-                fontSize:fs, fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2,
-                overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
-              }}>{b}</div>
-            );
-          })()}
+          {/* Brand — auto shrink font */}
+          <div style={{
+            fontSize: brand.length > 16 ? '5.5pt' : brand.length > 12 ? '6.5pt' : '8pt',
+            fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2,
+            overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
+          }}>{brand}</div>
 
-          {/* Model + color — shrink if long */}
-          <div style={{ fontSize:'5pt', color:'#444', lineHeight:1.3 }}>
-            {model && <div style={{ fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{model}</div>}
-            {color && <div style={{ overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{color}{detail?` · ${detail}`:''}</div>}
-            {!model && !color && <div style={{ overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{item.name}</div>}
+          {/* Model + Color — always show both */}
+          <div style={{ fontSize:'5pt', color:'#444', lineHeight:1.4 }}>
+            {model ? (
+              <div style={{ overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
+                fontWeight:'600', fontSize: model.length > 18 ? '4.5pt' : '5pt' }}>
+                {model}
+              </div>
+            ) : null}
+            {(color || detail) ? (
+              <div style={{ overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
+                {[color, detail].filter(Boolean).join(' · ')}
+              </div>
+            ) : null}
           </div>
 
           {/* Price */}
