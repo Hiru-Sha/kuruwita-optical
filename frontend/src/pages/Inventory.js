@@ -790,8 +790,8 @@ export default function Inventory() {
           <div style={{ background:'white', width:'100%', maxWidth:480, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
 
             {/* Photo */}
-            <div style={{ height:160, background:C.cream, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative' }}>
-              {selected.image_url ? <img src={selected.image_url} alt={selected.name} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <div style={{ fontSize:52, opacity:.2 }}>{CAT_ICON[selected.category]||'📦'}</div>}
+            <div style={{ height:selected.image_url?'auto':'160px', maxHeight:320, background:C.cream, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative' }}>
+              {selected.image_url ? <img src={selected.image_url} alt={selected.name} style={{ width:'100%', height:'auto', objectFit:'contain', display:'block' }}/> : <div style={{ fontSize:52, opacity:.2, height:160, display:'flex', alignItems:'center', justifyContent:'center', width:'100%' }}>{CAT_ICON[selected.category]||'📦'}</div>}
               <label style={{ position:'absolute', bottom:10, right:10, background:'rgba(15,31,61,.75)', color:'white', borderRadius:20, padding:'5px 14px', fontSize:12, fontWeight:600, cursor:'pointer', zIndex:2 }}>
                 📷 Change Photo
                 <input type="file" accept="image/*" onChange={handlePanelImg} style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}/>
