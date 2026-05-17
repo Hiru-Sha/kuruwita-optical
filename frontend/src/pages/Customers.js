@@ -225,16 +225,34 @@ export default function Customers() {
 
   const openCustomer = async (id) => {
     setLoadingCust(true);
-    setSelected({ id, _loading: true });
+    setSelected({ id, _loading: true, name:'Loading...' });
     setTab('orders');
-    
+    setRxOrders([]);
     try {
-      const r = await getCustomer(id);
-      const cust        = r?.data?.data || r?.data || r;
-      const orders      = r?.data?.orders      || r?.orders      || [];
-      const refractions = r?.data?.refractions || r?.refractions || [];
+      // Try axios getCustomer first
+      let cust, orders, refractions;
+      try {
+        const r = await getCustomer(id);
+        cust        = r?.data?.data || r?.data || r;
+        orders      = r?.data?.orders      || r?.orders      || [];
+        refractions = r?.data?.refractions || r?.refractions || [];
+      } catch(axiosErr) {
+        // Fallback: direct fetch
+        const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('ko_token');
+        const res   = await fetch(`${BASE}/customers/${id}`, { headers:{ Authorization:`Bearer ${token}` } });
+        const json  = await res.json();
+        cust        = json?.data || json;
+        orders      = json?.orders      || [];
+        refractions = json?.refractions || [];
+      }
+      if (!cust?.id) throw new Error('No customer data');
       setSelected({ ...cust, orders, refractions });
-    } catch { setSelected(null); }
+    } catch(e) {
+      console.error('openCustomer error:', e);
+      // Don't close — show error state
+      setSelected(s => ({ ...s, _loading: false, _error: e.message }));
+    }
     finally { setLoadingCust(false); }
   };
 

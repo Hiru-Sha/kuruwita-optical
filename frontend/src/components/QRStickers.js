@@ -192,10 +192,15 @@ export function StickerModal({ items, onClose }) {
       return item.category;
     };
 
-    // Sort items by category key so same-type items are grouped
+    // Sort: first by category group, then by item name within group
+    // This ensures all Polarised sunglasses are together, all frames together etc
     const sorted = [...selectedItems]
       .filter(item => item.category !== 'Old Stock')
-      .sort((a,b) => getKey(a).localeCompare(getKey(b)));
+      .sort((a,b) => {
+        const ka = getKey(a), kb = getKey(b);
+        if (ka !== kb) return ka.localeCompare(kb);
+        return (a.name||'').localeCompare(b.name||'');
+      });
 
     const globalCounters = {}; // key → running count
 
