@@ -54,7 +54,7 @@ function useQRDataUrl(text) {
 // Top section  (25mm): QR code
 // Gap (5mm):   fold/gap line
 // Bottom section (25mm): Brand + model + price + numbers
-function Sticker({ item, onReady, stickerNum, globalNum }) {
+function Sticker({ item, onReady, stickerNum }) {
   const qrUrl = useQRDataUrl(encodeItem(item));
   // Parse name parts — name is built as "Brand · Model · Color · ..."
   const parts  = (item.name||'').split(' · ');
@@ -102,9 +102,7 @@ function Sticker({ item, onReady, stickerNum, globalNum }) {
           {/* per-item number */}
           <div style={{ position:'absolute', bottom:'0.5mm', left:'1mm',
             fontSize:'5pt', fontWeight:'bold', color:'#555' }}>{stickerNum}</div>
-          {/* global number — faint */}
-          <div style={{ position:'absolute', bottom:'0.5mm', right:'1mm',
-            fontSize:'4pt', color:'#ccc' }}>{globalNum}</div>
+
         </div>
 
         {/* MIDDLE — 5mm gap / fold line */}
@@ -372,7 +370,6 @@ export function StickerModal({ items, onClose }) {
                           key={`${item.id}-${pi}-${idx}`}
                           item={item}
                           stickerNum={item._seq}
-                          globalNum={item._global}
                           onReady={()=>setReadyCount(n=>n+1)}
                         />
                       ))}

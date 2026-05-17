@@ -227,31 +227,21 @@ export default function Customers() {
     setLoadingCust(true);
     setSelected({ id, _loading: true, name:'Loading...' });
     setTab('orders');
-    setRxOrders([]);
     try {
-      // Try axios getCustomer first
-      let cust, orders, refractions;
-      try {
-        const r = await getCustomer(id);
-        cust        = r?.data?.data || r?.data || r;
-        orders      = r?.data?.orders      || r?.orders      || [];
-        refractions = r?.data?.refractions || r?.refractions || [];
-      } catch(axiosErr) {
-        // Fallback: direct fetch
-        const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-        const token = localStorage.getItem('ko_token');
-        const res   = await fetch(`${BASE}/customers/${id}`, { headers:{ Authorization:`Bearer ${token}` } });
-        const json  = await res.json();
-        cust        = json?.data || json;
-        orders      = json?.orders      || [];
-        refractions = json?.refractions || [];
-      }
-      if (!cust?.id) throw new Error('No customer data');
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/customers/${id}`, {
+        headers:{ Authorization:`Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json  = await res.json();
+      const cust        = json?.data || json;
+      const orders      = json?.orders      || [];
+      const refractions = json?.refractions || [];
       setSelected({ ...cust, orders, refractions });
     } catch(e) {
-      console.error('openCustomer error:', e);
-      // Don't close — show error state
-      setSelected(s => ({ ...s, _loading: false, _error: e.message }));
+      console.error('openCustomer failed:', e.message);
+      setSelected(s => ({ ...s, _loading: false, name: 'Failed to load — check connection' }));
     }
     finally { setLoadingCust(false); }
   };
@@ -268,10 +258,13 @@ export default function Customers() {
     try {
       await addCommLog(selected.id, { type: commType, note: commNote });
       setCommNote('');
-      const r = await getCustomer(selected.id);
-      const cust   = r?.data?.data || r?.data || r;
-      const orders = r?.data?.orders || r?.orders || [];
-      const refractions = r?.data?.refractions || r?.refractions || [];
+      const _BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const _token = localStorage.getItem('ko_token');
+      const _res   = await fetch(`${_BASE}/customers/${selected.id}`, { headers:{ Authorization:`Bearer ${_token}` } });
+      const _json  = await _res.json();
+      const cust   = _json?.data || _json;
+      const orders = _json?.orders || [];
+      const refractions = _json?.refractions || [];
       setSelected({ ...cust, orders, refractions });
     } catch {}
     finally { setAddingComm(false); }
@@ -282,10 +275,13 @@ export default function Customers() {
     if (!order) return;
     try {
       await updateOrder(order.id, { rx_returned: true });
-      const r = await getCustomer(selected.id);
-      const cust   = r?.data?.data || r?.data || r;
-      const orders = r?.data?.orders || r?.orders || [];
-      const refractions = r?.data?.refractions || r?.refractions || [];
+      const _BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const _token = localStorage.getItem('ko_token');
+      const _res   = await fetch(`${_BASE}/customers/${selected.id}`, { headers:{ Authorization:`Bearer ${_token}` } });
+      const _json  = await _res.json();
+      const cust   = _json?.data || _json;
+      const orders = _json?.orders || [];
+      const refractions = _json?.refractions || [];
       setSelected({ ...cust, orders, refractions });
       load();
     } catch {}
@@ -588,10 +584,13 @@ export default function Customers() {
                                 setSavingEdit(true);
                                 try {
                                   await updateCustomer(selected.id, editForm);
-                                  const r = await getCustomer(selected.id);
-                                  const cust = r?.data?.data || r?.data || r;
-                                  const orders = r?.data?.orders || r?.orders || [];
-                                  const refractions = r?.data?.refractions || r?.refractions || [];
+                                  const _B = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+                                  const _t = localStorage.getItem('ko_token');
+                                  const _r = await fetch(`${_B}/customers/${selected.id}`, { headers:{ Authorization:`Bearer ${_t}` } });
+                                  const _j = await _r.json();
+                                  const cust = _j?.data || _j;
+                                  const orders = _j?.orders || [];
+                                  const refractions = _j?.refractions || [];
                                   setSelected({...cust, orders, refractions});
                                   setEditMode(false);
                                   load();
