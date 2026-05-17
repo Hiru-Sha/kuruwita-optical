@@ -88,6 +88,7 @@ export default function Expenses() {
   // Add expense form
   const [showAddExp,  setShowAddExp]  = useState(false);
   const [expForm,     setExpForm]     = useState({ date:today(), category:'Rent', description:'', amount:'', payment_method:'cash', notes:'' });
+  const [customCat,   setCustomCat]   = useState(''); // custom category name when 'Other' selected
   const [savingExp,   setSavingExp]   = useState(false);
   const [expError,    setExpError]    = useState('');
 
@@ -162,12 +163,18 @@ export default function Expenses() {
 
   // ── Add expense ─────────────────────────────────────────────
   const handleAddExpense = async () => {
-    if (!expForm.description.trim()) return setExpError('Please enter a description');
+    if (expForm.category === 'Other' && !customCat.trim()) return setExpError('Please enter the expense name');
+    if (!expForm.description.trim() && expForm.category !== 'Other') return setExpError('Please enter a description');
+    // Build final description
+    const finalDesc = expForm.category === 'Other' && customCat.trim()
+      ? customCat.trim() + (expForm.description.trim() ? ': ' + expForm.description.trim() : '')
+      : expForm.description.trim();
     if (!expForm.amount || parseFloat(expForm.amount) <= 0) return setExpError('Please enter a valid amount');
     setExpError(''); setSavingExp(true);
     try {
       const res = await apiPost('/expenses', { ...expForm, amount:parseFloat(expForm.amount) });
       if (res.error) throw new Error(res.error);
+      setCustomCat('');
       setExpForm({ date:viewDate, category:'Rent', description:'', amount:'', payment_method:'cash', notes:'' });
       setShowAddExp(false);
       showToast('Expense added ✓');
@@ -331,6 +338,17 @@ export default function Expenses() {
                     <label style={LBL}>Description</label>
                     <input value={expForm.description} onChange={e=>setExpForm(f=>({...f,description:e.target.value}))}
                       placeholder={`e.g. ${getCat(expForm.category).icon} ${expForm.category}`} style={INP}/>
+
+                  {/* Custom category name when Other is selected */}
+                  {expForm.category === 'Other' && (
+                    <div style={{ marginTop:10 }}>
+                      <label style={LBL}>Expense Name *</label>
+                      <input value={customCat} onChange={e=>setCustomCat(e.target.value)}
+                        placeholder="e.g. Printing, Donations, Parking..."
+                        style={{ ...INP, border:`1.5px solid #f59e0b`, background:'#fffbeb' }}/>
+                      <div style={{ fontSize:11, color:'#92400e', marginTop:3 }}>Enter the specific expense name</div>
+                    </div>
+                  )}
                   </div>
 
                   <button onClick={handleAddExpense} disabled={savingExp}
