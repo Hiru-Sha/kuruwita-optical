@@ -127,16 +127,20 @@ function Sticker({ item, onReady, stickerNum, globalNum }) {
           display:'flex', flexDirection:'column',
           justifyContent:'space-between',
         }}>
-          {/* Brand */}
-          <div style={{
-            fontSize:'8pt', fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2,
-            overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
-          }}>
-            {brand || item.name?.split(' · ')[0]}
-          </div>
+          {/* Brand — shrink font if long name */}
+          {(() => {
+            const b = brand || item.name?.split(' · ')[0] || '';
+            const fs = b.length > 14 ? '6pt' : b.length > 10 ? '7pt' : '8pt';
+            return (
+              <div style={{
+                fontSize:fs, fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2,
+                overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
+              }}>{b}</div>
+            );
+          })()}
 
-          {/* Model + color */}
-          <div style={{ fontSize:'5.5pt', color:'#444', lineHeight:1.3 }}>
+          {/* Model + color — shrink if long */}
+          <div style={{ fontSize:'5pt', color:'#444', lineHeight:1.3 }}>
             {model && <div style={{ fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{model}</div>}
             {color && <div style={{ overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{color}{detail?` · ${detail}`:''}</div>}
             {!model && !color && <div style={{ overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{item.name}</div>}
@@ -172,42 +176,36 @@ export function StickerModal({ items, onClose }) {
   const selectedItems = filteredItems.filter(item => selected[item.id]);
 
   // Expand by quantity — per-item seq + global category seq
-  // Group by category+subtype for global numbering
-  // e.g. all Polarised sunglasses get global 1..59
+  // Global counter is CONTINUOUS across all items of same category group
+  // e.g. all Polarised sunglasses: 1,2,3...59 — never resets
   const buildExpanded = () => {
     const result = [];
-    // Build global counters per category+subtype
-    const globalCounters = {}; // key → current count
     const getKey = (item) => {
       if (item.category==='Sunglasses') return `SG-${item.sg_type||'All'}`;
       if (item.category==='Frames')     return `FR-${item.frame_type||'All'}`;
       return item.category;
     };
 
-    // First pass: count total per key for reference (optional)
-    selectedItems
+    // Sort items by category key so same-type items are grouped
+    const sorted = [...selectedItems]
       .filter(item => item.category !== 'Old Stock')
-      .forEach(item => {
-        const key = getKey(item);
-        if (!globalCounters[key]) globalCounters[key] = 0;
-      });
+      .sort((a,b) => getKey(a).localeCompare(getKey(b)));
 
-    // Second pass: expand with numbers
-    selectedItems
-      .filter(item => item.category !== 'Old Stock')
-      .forEach(item => {
-        const qty = Math.max(1, parseInt(item.quantity)||1);
-        const key = getKey(item);
-        if (!globalCounters[key]) globalCounters[key] = 0;
-        for (let i=0; i<qty; i++) {
-          globalCounters[key]++;
-          result.push({
-            ...item,
-            _seq:    i + 1,                    // per-item: 1,2,3,4
-            _global: globalCounters[key],       // global category: 1..59
-          });
-        }
-      });
+    const globalCounters = {}; // key → running count
+
+    sorted.forEach(item => {
+      const qty = Math.max(1, parseInt(item.quantity)||1);
+      const key = getKey(item);
+      if (!globalCounters[key]) globalCounters[key] = 0;
+      for (let i=0; i<qty; i++) {
+        globalCounters[key]++;
+        result.push({
+          ...item,
+          _seq:    i + 1,               // per-item: 1,2,3,4 for same frame
+          _global: globalCounters[key], // global: 1..59 for all polarised
+        });
+      }
+    });
     return result;
   };
 
