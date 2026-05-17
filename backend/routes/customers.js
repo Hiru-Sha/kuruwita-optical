@@ -32,14 +32,35 @@ router.get('/:id', auth, async (req, res) => {
       'SELECT * FROM orders WHERE customer_id=$1 ORDER BY created_at DESC', [req.params.id]
     );
     // Get refractions from the refractions table
-    const refractions = await pool.query(`
-      SELECT r.*, o.order_number, o.created_at as order_date
-      FROM refractions r
-      JOIN orders o ON r.order_id = o.id
-      WHERE o.customer_id = $1
-      ORDER BY r.created_at DESC
-    `, [req.params.id]);
-    res.json({ data: c.rows[0], orders: orders.rows, refractions: refractions.rows });
+    // Try refractions table first, fall back to rx data stored in orders
+    let refractionRows = [];
+    try {
+      const rfRes = await pool.query(`
+        SELECT r.*, o.order_number, o.created_at as order_date
+        FROM refractions r
+        JOIN orders o ON r.order_id = o.id
+        WHERE o.customer_id = $1
+        ORDER BY r.created_at DESC
+      `, [req.params.id]);
+      refractionRows = rfRes.rows;
+    } catch(e) { console.warn('Refractions query failed:', e.message); }
+
+    // Also pull rx fields directly from orders (some orders store rx inline)
+    if (refractionRows.length === 0) {
+      const rxOrders = (await pool.query(
+        `SELECT id, order_number, created_at, r_sph, r_cyl, r_axis, r_add, r_va, r_pd,
+                l_sph, l_cyl, l_axis, l_add, l_va, l_pd, has_rx, ref_notes
+         FROM orders WHERE customer_id=$1 AND (has_rx=true OR r_sph IS NOT NULL OR l_sph IS NOT NULL)
+         ORDER BY created_at DESC`, [req.params.id]
+      )).rows;
+      refractionRows = rxOrders.map(o => ({
+        ...o, order_date: o.created_at,
+        r_sph: o.r_sph, r_cyl: o.r_cyl, r_axis: o.r_axis,
+        l_sph: o.l_sph, l_cyl: o.l_cyl, l_axis: o.l_axis,
+      }));
+    }
+    const refractions = { rows: refractionRows };
+    res.json({ data: c.rows[0], orders: orders.rows, refractions: refractionRows });
   } catch(err) { res.status(500).json({ error: 'Failed' }); }
 });
 
