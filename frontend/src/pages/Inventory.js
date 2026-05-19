@@ -609,20 +609,97 @@ export default function Inventory() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:10, marginBottom:20 }}>
-        {[
-          {l:'Total Items',  v:items.length, dark:true},
-          {l:'Low Stock',    v:low,   c:C.danger},
-          {l:'Out of Stock', v:out,   c:'#9ca3af'},
-          {l:'Stock Value (cost)', v:`Rs.${Math.round(val/1000)}K`, c:C.success},
-        ].map(s=>(
-          <div key={s.l} style={{ background:s.dark?C.navy:'white', border:`1px solid ${C.border}`, borderRadius:10, padding:'12px 14px', textAlign:'center' }}>
-            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?C.gold:C.muted, marginBottom:4 }}>{s.l}</div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
+      {/* Stats + Category Counts */}
+      {(() => {
+        // Compute counts per category and sub-type
+        const allItems = items.filter(i => i.category !== 'Old Stock');
+        const frames   = allItems.filter(i => i.category === 'Frames');
+        const sg       = allItems.filter(i => i.category === 'Sunglasses');
+        const rg       = allItems.filter(i => i.category === 'Reading Glasses');
+        const accs     = allItems.filter(i => !['Frames','Sunglasses','Reading Glasses'].includes(i.category));
+        const polarised= sg.filter(i => i.sg_type === 'Polarised');
+        const local    = sg.filter(i => i.sg_type === 'Local');
+        const fullRim  = frames.filter(i => i.frame_type === 'Full rim');
+        const halfRim  = frames.filter(i => i.frame_type === 'Half rim');
+        const rimless  = frames.filter(i => i.frame_type === 'Rimless');
+        const totalQty = (arr) => arr.reduce((s,i) => s + (parseInt(i.quantity)||0), 0);
+
+        const cats = [
+          { label:'All Items',      count:allItems.length,   qty:totalQty(allItems),   dark:true,             cat:null,           sub:null },
+          { label:'Frames',         count:frames.length,     qty:totalQty(frames),     c:'#1e40af', bg:'#dbeafe', cat:'Frames',   sub:null },
+          { label:'↳ Full Rim',     count:fullRim.length,    qty:totalQty(fullRim),    c:'#1e40af', bg:'#eff6ff', cat:'Frames',   sub:'Full rim', indent:true },
+          { label:'↳ Half Rim',     count:halfRim.length,    qty:totalQty(halfRim),    c:'#1e40af', bg:'#eff6ff', cat:'Frames',   sub:'Half rim', indent:true },
+          { label:'↳ Rimless',      count:rimless.length,    qty:totalQty(rimless),    c:'#1e40af', bg:'#eff6ff', cat:'Frames',   sub:'Rimless',  indent:true },
+          { label:'Sunglasses',     count:sg.length,         qty:totalQty(sg),         c:'#92400e', bg:'#fef3c7', cat:'Sunglasses', sub:null },
+          { label:'↳ Polarised',    count:polarised.length,  qty:totalQty(polarised),  c:'#92400e', bg:'#fffbeb', cat:'Sunglasses', sub:'Polarised', indent:true },
+          { label:'↳ Local',        count:local.length,      qty:totalQty(local),      c:'#92400e', bg:'#fffbeb', cat:'Sunglasses', sub:'Local',     indent:true },
+          { label:'Reading Glasses',count:rg.length,         qty:totalQty(rg),         c:'#166534', bg:'#dcfce7', cat:'Reading Glasses', sub:null },
+          { label:'Accessories',    count:accs.length,       qty:totalQty(accs),       c:'#6b21a8', bg:'#f5f3ff', cat:null,          sub:'accs' },
+        ];
+
+        return (
+          <div style={{ marginBottom:20 }}>
+            {/* Top row — summary cards */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:12 }}>
+              {[
+                { l:'Total Items',       v:allItems.length,                    dark:true },
+                { l:'Low Stock',         v:low,                                c:C.danger },
+                { l:'Out of Stock',      v:out,                                c:'#9ca3af' },
+                { l:'Stock Value',       v:`Rs.${Math.round(val/1000)}K`,      c:C.success },
+              ].map(s=>(
+                <div key={s.l} style={{ background:s.dark?C.navy:'white', border:`1px solid ${C.border}`, borderRadius:10, padding:'12px 14px', textAlign:'center' }}>
+                  <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?C.gold:C.muted, marginBottom:4 }}>{s.l}</div>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Category count chips — click to filter */}
+            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px' }}>
+              <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:10 }}>
+                Stock Count by Category — click to filter
+              </div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                {cats.map((cat,i) => {
+                  const isActive = cat.dark
+                    ? activeCat==='All' && !subFilter
+                    : cat.sub==='accs'
+                      ? ['Boxes','Sunglass Pouches','Glass Cleaner','Chains','Ear Tips'].includes(activeCat)
+                      : cat.indent
+                        ? activeCat===cat.cat && subFilter===cat.sub
+                        : activeCat===(cat.cat||'All') && !subFilter;
+                  return (
+                    <button key={i} onClick={()=>{
+                      if (cat.dark) { setActiveCat('All'); setSubFilter(''); }
+                      else if (cat.sub==='accs') { setActiveCat('Boxes'); setSubFilter(''); }
+                      else if (cat.indent) { setActiveCat(cat.cat); setSubFilter(cat.sub); }
+                      else { setActiveCat(cat.cat||'All'); setSubFilter(''); }
+                    }} style={{
+                      padding: cat.indent ? '4px 10px 4px 18px' : '5px 12px',
+                      borderRadius:20,
+                      fontSize: cat.indent ? 11 : 12,
+                      fontWeight: isActive ? 700 : 500,
+                      cursor:'pointer',
+                      fontFamily:'inherit',
+                      border:`1.5px solid ${isActive ? (cat.dark?C.navy:cat.c) : C.border}`,
+                      background: isActive ? (cat.dark?C.navy:cat.bg) : 'white',
+                      color: isActive ? (cat.dark?'white':cat.c) : C.muted,
+                      display:'flex', alignItems:'center', gap:6,
+                    }}>
+                      <span>{cat.label}</span>
+                      <span style={{
+                        background: isActive ? 'rgba(255,255,255,0.3)' : '#f3f4f6',
+                        color: isActive ? (cat.dark?'white':cat.c) : C.navy,
+                        borderRadius:10, padding:'0 6px', fontSize:10, fontWeight:700,
+                      }}>{cat.qty}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })()}
 
       {/* Add form */}
       {showAdd && (
@@ -787,6 +864,7 @@ export default function Inventory() {
                   return item.sg_type===subFilter;
                 }
                 if (activeCat==='Frames') return item.frame_type===subFilter;
+                if (activeCat==='Reading Glasses') return true;
                 return true;
               }).map(item=>(
                 <ItemCard key={item.id} item={item}
