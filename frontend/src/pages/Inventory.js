@@ -39,7 +39,7 @@ function AutoInput({ value, onChange, placeholder, style, suggestions=[] }) {
 }
 
 
-import { StickerModal } from '../components/QRStickers';
+import { StickerModal, QRScanner } from '../components/QRStickers';
 
 const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b' };
 const fmtMoney = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
@@ -390,6 +390,8 @@ export default function Inventory() {
   const [imgData,      setImgData]     = useState(null);
   const [form,         setForm]        = useState(defaults('Frames'));
   const [showStickers, setShowStickers]= useState(false);
+  const [showScanner,  setShowScanner] = useState(false);
+  const [scanResult,   setScanResult]  = useState(null); // last scanned item
   const [showFullImg,  setShowFullImg] = useState(false);
   const [stickerItems, setStickerItems]= useState([]);
 
@@ -561,6 +563,31 @@ export default function Inventory() {
     await deleteItem(id); setSelected(null); load();
   };
 
+  // Handle QR scan — find item by id and open panel
+  const handleQRScan = async (scannedId) => {
+    setShowScanner(false);
+    const id = parseInt(scannedId);
+    if (!id) return alert('Invalid QR code');
+    // Try to find in current items list first
+    let found = items.find(i => i.id === id);
+    if (!found) {
+      // Fetch from API
+      try {
+        const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('ko_token');
+        const res   = await fetch(`${BASE}/inventory/${id}`, { headers:{ Authorization:`Bearer ${token}` } });
+        found = await res.json();
+      } catch(e) { alert('Item not found'); return; }
+    }
+    if (found?.id) {
+      setScanResult(found);
+      setPanelTab('details');
+      loadFullItem(found);
+    } else {
+      alert('Item not found in inventory');
+    }
+  };
+
   // Load full item (with image) when panel opens
   const loadFullItem = async (item) => {
     setSelected(item); // show panel immediately with no image
@@ -598,6 +625,10 @@ export default function Inventory() {
           <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Frames, sunglasses, accessories and supplies</p>
         </div>
         <div style={{ display:'flex', gap:8 }}>
+          <button onClick={()=>setShowScanner(true)}
+            style={{ padding:'9px 16px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>
+            📷 Scan QR
+          </button>
           <button onClick={()=>{ setStickerItems(items); setShowStickers(true); }}
             style={{ padding:'9px 16px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
             🏷️ Print All Stickers
@@ -1086,6 +1117,15 @@ export default function Inventory() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* QR Scanner modal */}
+      {showScanner && (
+        <QRScanner
+          title="Scan Frame Sticker"
+          onScan={handleQRScan}
+          onClose={()=>setShowScanner(false)}
+        />
       )}
 
       {/* Sticker modal */}
