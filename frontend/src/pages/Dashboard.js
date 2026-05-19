@@ -13,10 +13,12 @@ const today = () => new Date().toISOString().split('T')[0];
 export default function Dashboard() {
   const { user }  = useAuth();
   const navigate   = useNavigate();
-  const [data,    setData]   = useState(null);
-  const [cash,    setCash]   = useState(null);
-  const [loading, setLoading]= useState(true);
-  const [mob,     setMob]    = useState(window.innerWidth < 640);
+  const [data,     setData]    = useState(null);
+  const [cash,     setCash]    = useState(null);
+  const [loading,  setLoading] = useState(true);
+  const [mob,      setMob]     = useState(window.innerWidth < 640);
+  const [showScan, setShowScan]= useState(false);
+  const [scanItem, setScanItem]= useState(null);
 
   useEffect(()=>{
     const fn = () => setMob(window.innerWidth < 640);
