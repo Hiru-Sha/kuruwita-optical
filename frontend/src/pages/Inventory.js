@@ -4,6 +4,7 @@
 //  Click any item → Adjustment tab to record stock changes
 // ============================================================
 import React, { useEffect, useState, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getInventory, createItem, updateItem, deleteItem } from '../api';
 
 // ── Autocomplete input ────────────────────────────────────────
@@ -382,6 +383,11 @@ export default function Inventory() {
   const [dupMatches,   setDupMatches]  = useState([]); // existing items with same name
   const [dupChecking,  setDupChecking] = useState(false);
   const [addCat,       setAddCat]      = useState('Frames');
+  const [showAIScan,   setShowAIScan]  = useState(false);
+  const [aiPhotos,     setAiPhotos]    = useState({ front:null, arm:null, tag:null });
+  const [aiLoading,    setAiLoading]   = useState(false);
+  const [aiStep,       setAiStep]      = useState('front'); // front | arm | tag | confirm
+  const [aiResult,     setAiResult]    = useState(null);
   const [colorVariants,setColorVariants] = useState([{ color:'Black', qty:'1', image:null }]);
   // Keep first variant color in sync with form frame_color
   const prevFrameColor = React.useRef('Black');
@@ -419,6 +425,28 @@ export default function Inventory() {
   },[search,activeCat]);
 
   useEffect(()=>{ load(); },[load]);
+
+  // Handle ?scan=ID from global QR scanner
+  const location  = useLocation();
+  const navInv    = useNavigate();
+  useEffect(()=>{
+    const params = new URLSearchParams(location.search);
+    const scanId = params.get('scan');
+    if (scanId) {
+      navInv('/inventory', { replace: true }); // clear the param
+      const doScan = async () => {
+        const id = parseInt(scanId);
+        const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('ko_token');
+        try {
+          const res  = await fetch(`${BASE}/inventory/${id}`, { headers:{ Authorization:`Bearer ${token}` } });
+          const item = await res.json();
+          if (item?.id) { setPanelTab('details'); loadFullItem(item); }
+        } catch(e) {}
+      };
+      doScan();
+    }
+  },[location.search]);
 
   // Check for duplicates when name fields change
   useEffect(()=>{
@@ -471,6 +499,54 @@ export default function Inventory() {
     } catch { setDupMatches([]); }
     finally { setDupChecking(false); }
   }, []);
+
+  // ── AI Photo Analysis ────────────────────────────────────
+  const analyzePhotos = async () => {
+    setAiLoading(true);
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/inventory/ai-analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+        body: JSON.stringify({
+          front_image: aiPhotos.front,
+          arm_image:   aiPhotos.arm,
+          tag_image:   aiPhotos.tag,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setAiResult(data);
+      setAiStep('confirm');
+    } catch(e) {
+      alert('AI analysis failed: ' + e.message);
+    }
+    setAiLoading(false);
+  };
+
+  const applyAiResult = () => {
+    if (!aiResult) return;
+    setAddCat('Frames');
+    setForm(f => ({
+      ...defaults('Frames'),
+      brand:          aiResult.brand          || f.brand,
+      frame_name:     aiResult.model          || f.frame_name,
+      frame_color:    aiResult.color          || f.frame_color,
+      frame_type:     aiResult.frame_type     || f.frame_type,
+      frame_shape:    aiResult.frame_shape    || f.frame_shape,
+      frame_material: aiResult.frame_material || f.frame_material,
+      frame_size:     aiResult.frame_size     || f.frame_size,
+      sell_price:     aiResult.sell_price     || f.sell_price,
+      cost_price:     aiResult.cost_price     || f.cost_price,
+    }));
+    setImgData(aiPhotos.front || aiPhotos.arm || null);
+    setShowAIScan(false);
+    setShowAdd(true);
+    setAiStep('front');
+    setAiPhotos({ front:null, arm:null, tag:null });
+    setAiResult(null);
+  };
 
   const handleAdd = async () => {
     const name = buildName(form);
@@ -632,6 +708,10 @@ export default function Inventory() {
           <button onClick={()=>{ setStickerItems(items); setShowStickers(true); }}
             style={{ padding:'9px 16px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
             🏷️ Print All Stickers
+          </button>
+          <button onClick={()=>{ setShowAIScan(true); setAiStep('front'); setAiPhotos({front:null,arm:null,tag:null}); setAiResult(null); }}
+            style={{ padding:'9px 16px', background:'#7c3aed', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            🤖 AI Photo Add
           </button>
           <button onClick={()=>setShowAdd(s=>!s)}
             style={{ padding:'9px 20px', background:showAdd?C.cream:C.gold, color:showAdd?C.muted:C.navy, border:showAdd?`1.5px solid ${C.border}`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
@@ -1114,6 +1194,152 @@ export default function Inventory() {
               <div style={{ color:'rgba(255,255,255,.5)', fontSize:12 }}>
                 Stock: <b style={{ color:'white' }}>{selected.quantity}</b>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Photo Add Modal */}
+      {showAIScan && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.7)', zIndex:500,
+          display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{ background:'white', borderRadius:16, width:'100%', maxWidth:500,
+            boxShadow:'0 24px 60px rgba(0,0,0,.3)', fontFamily:"'DM Sans',sans-serif", overflow:'hidden' }}>
+
+            {/* Header */}
+            <div style={{ background:'#7c3aed', padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <div>
+                <div style={{ color:'white', fontWeight:700, fontSize:16 }}>🤖 AI Frame Scanner</div>
+                <div style={{ color:'rgba(255,255,255,.7)', fontSize:12, marginTop:2 }}>
+                  Take photos → AI fills the form automatically
+                </div>
+              </div>
+              <button onClick={()=>setShowAIScan(false)}
+                style={{ background:'rgba(255,255,255,.2)', border:'none', color:'white', borderRadius:8, padding:'5px 12px', cursor:'pointer', fontSize:13 }}>✕</button>
+            </div>
+
+            {/* Step indicator */}
+            {aiStep !== 'confirm' && (
+              <div style={{ display:'flex', padding:'12px 20px', gap:8, borderBottom:`1px solid ${C.border}` }}>
+                {[
+                  { key:'front', label:'1. Front', desc:'Frame shape & color' },
+                  { key:'arm',   label:'2. Arm',   desc:'Brand & model' },
+                  { key:'tag',   label:'3. Tag',   desc:'Price (optional)' },
+                ].map(s=>(
+                  <div key={s.key} style={{ flex:1, textAlign:'center', padding:'8px', borderRadius:8,
+                    background: aiStep===s.key ? '#f5f3ff' : aiPhotos[s.key] ? '#f0fdf4' : C.cream,
+                    border: `1.5px solid ${aiStep===s.key?'#7c3aed':aiPhotos[s.key]?'#86efac':C.border}` }}>
+                    <div style={{ fontSize:11, fontWeight:700, color: aiStep===s.key?'#7c3aed':aiPhotos[s.key]?'#166534':C.muted }}>{s.label}</div>
+                    <div style={{ fontSize:10, color:C.muted }}>{s.desc}</div>
+                    {aiPhotos[s.key] && <div style={{ fontSize:10, color:'#166534', marginTop:2 }}>✓ Done</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ padding:20 }}>
+              {/* PHOTO STEPS */}
+              {aiStep !== 'confirm' && (
+                <div style={{ textAlign:'center' }}>
+                  <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:4 }}>
+                    {aiStep==='front' && '📸 Photo 1: Front of Frame'}
+                    {aiStep==='arm'   && '📸 Photo 2: Inside of Arm'}
+                    {aiStep==='tag'   && '📸 Photo 3: Price Tag'}
+                  </div>
+                  <div style={{ fontSize:12, color:C.muted, marginBottom:16 }}>
+                    {aiStep==='front' && 'Place frame on a flat surface and take a clear photo of the front'}
+                    {aiStep==='arm'   && 'Open the arm and photograph where the brand name and model number are printed'}
+                    {aiStep==='tag'   && 'Take a photo of the price tag or sticker (skip if no tag)'}
+                  </div>
+
+                  {/* Preview */}
+                  {aiPhotos[aiStep] && (
+                    <img src={aiPhotos[aiStep]} alt="preview"
+                      style={{ width:'100%', maxHeight:200, objectFit:'contain', borderRadius:10, marginBottom:12, border:`1px solid ${C.border}` }}/>
+                  )}
+
+                  {/* Camera/file input */}
+                  <label style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'12px 24px',
+                    background:'#7c3aed', color:'white', borderRadius:10, cursor:'pointer', fontSize:14, fontWeight:600 }}>
+                    📷 {aiPhotos[aiStep] ? 'Retake Photo' : 'Take Photo'}
+                    <input type="file" accept="image/*" capture="environment" style={{ display:'none' }}
+                      onChange={async e=>{
+                        const f=e.target.files[0]; if(!f) return;
+                        const b64 = await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(f); });
+                        setAiPhotos(p=>({...p,[aiStep]:b64}));
+                      }}/>
+                  </label>
+
+                  <div style={{ display:'flex', gap:10, marginTop:16 }}>
+                    {aiStep !== 'front' && (
+                      <button onClick={()=>setAiStep(aiStep==='arm'?'front':'arm')}
+                        style={{ flex:1, padding:'10px', background:C.cream, border:`1px solid ${C.border}`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+                        ← Back
+                      </button>
+                    )}
+                    <button
+                      disabled={aiStep==='front'&&!aiPhotos.front || aiStep==='arm'&&!aiPhotos.arm}
+                      onClick={()=>{
+                        if (aiStep==='front') setAiStep('arm');
+                        else if (aiStep==='arm') setAiStep('tag');
+                        else analyzePhotos(); // tag step → analyze
+                      }}
+                      style={{ flex:1, padding:'10px', background: (aiStep==='front'&&!aiPhotos.front)||(aiStep==='arm'&&!aiPhotos.arm)?'#e5e7eb':'#7c3aed',
+                        border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', color:'white' }}>
+                      {aiStep==='tag' ? (aiLoading?'🤖 Analyzing...':'🤖 Analyze All Photos') : 'Next →'}
+                    </button>
+                  </div>
+
+                  {aiStep==='tag' && (
+                    <button onClick={analyzePhotos} disabled={aiLoading}
+                      style={{ width:'100%', padding:'9px', background:'transparent', border:`1px dashed ${C.border}`,
+                        borderRadius:8, fontSize:12, color:C.muted, cursor:'pointer', marginTop:8, fontFamily:'inherit' }}>
+                      {aiLoading ? '🤖 Analyzing...' : 'Skip tag — Analyze without price'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* CONFIRM STEP */}
+              {aiStep==='confirm' && aiResult && (
+                <div>
+                  <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:12 }}>
+                    ✅ AI Analysis Complete — Review Details
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16 }}>
+                    {[
+                      { label:'Brand',    value:aiResult.brand },
+                      { label:'Model',    value:aiResult.model },
+                      { label:'Color',    value:aiResult.color },
+                      { label:'Type',     value:aiResult.frame_type },
+                      { label:'Shape',    value:aiResult.frame_shape },
+                      { label:'Material', value:aiResult.frame_material },
+                      { label:'Price',    value:aiResult.sell_price ? `Rs.${aiResult.sell_price}` : '—' },
+                      { label:'Confidence', value:aiResult.confidence || '—' },
+                    ].map(r=>(
+                      <div key={r.label} style={{ background:C.cream, borderRadius:8, padding:'8px 12px' }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase' }}>{r.label}</div>
+                        <div style={{ fontSize:13, fontWeight:600, color:C.navy, marginTop:2 }}>{r.value||'—'}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {aiResult.notes && (
+                    <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:8, padding:'8px 12px', fontSize:12, color:'#92400e', marginBottom:12 }}>
+                      💡 {aiResult.notes}
+                    </div>
+                  )}
+                  <div style={{ display:'flex', gap:10 }}>
+                    <button onClick={()=>setAiStep('front')}
+                      style={{ flex:1, padding:'11px', background:C.cream, border:`1px solid ${C.border}`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+                      Retake Photos
+                    </button>
+                    <button onClick={applyAiResult}
+                      style={{ flex:2, padding:'11px', background:'#7c3aed', border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', color:'white' }}>
+                      ✓ Apply & Fill Form
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

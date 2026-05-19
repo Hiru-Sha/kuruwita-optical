@@ -197,7 +197,6 @@ export default function Layout() {
       )}
 
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap');*{box-sizing:border-box}`}</style>
-    </div>
 
       {/* Global QR Scanner */}
       {showScan && (
@@ -218,7 +217,7 @@ export default function Layout() {
         </div>
       )}
 
-      {/* Mobile scan popup — appears on PC when mobile scans */}
+      {/* Mobile scan popup */}
       {mobileScanned && (
         <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.7)', zIndex:9000,
           display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
@@ -234,8 +233,6 @@ export default function Layout() {
                 <div style={{ fontSize:12, color:'#6b7280' }}>Frame scanned from your mobile</div>
               </div>
             </div>
-
-            {/* Item info */}
             <div style={{ background:'#f8f5ef', borderRadius:10, padding:'12px 16px', marginBottom:16 }}>
               <div style={{ fontWeight:700, fontSize:16, color:'#0f1f3d', marginBottom:4 }}>{mobileScanned.item.name}</div>
               <div style={{ display:'flex', gap:20, fontSize:13 }}>
@@ -243,8 +240,6 @@ export default function Layout() {
                 <span style={{ color:'#6b7280' }}>Stock: <b style={{ color: mobileScanned.item.quantity > 0 ? '#2d7a4f' : '#c0392b' }}>{mobileScanned.item.quantity}</b></span>
               </div>
             </div>
-
-            {/* Action buttons */}
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               <button onClick={()=>{ navigate(`/orders/new?frame_id=${mobileScanned.item.id}&frame_name=${encodeURIComponent(mobileScanned.item.name)}&frame_price=${mobileScanned.item.sell_price}`); setMobileScanned(null); }}
                 style={{ padding:'13px', background:'#1e40af', color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer', textAlign:'left', display:'flex', gap:12, alignItems:'center' }}>
@@ -268,5 +263,6 @@ export default function Layout() {
           </div>
         </div>
       )}
+    </div>
   );
 }
