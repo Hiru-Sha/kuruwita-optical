@@ -259,7 +259,7 @@ export default function Layout() {
                 <span style={{ fontSize:22 }}>📋</span>
                 <div><div>New Order</div><div style={{ fontSize:11, fontWeight:400, opacity:.8 }}>Full order with customer & Rx</div></div>
               </button>
-              <button onClick={()=>{ navigate(`/quick-sales?item_id=${mobileScanned.item.id}&item_name=${encodeURIComponent(mobileScanned.item.name)}&price=${mobileScanned.item.sell_price}`); setMobileScanned(null); }}
+              <button onClick={()=>{ navigate(`/quick-sale?item_id=${mobileScanned.item.id}&item_name=${encodeURIComponent(mobileScanned.item.name)}&price=${mobileScanned.item.sell_price}`); setMobileScanned(null); }}
                 style={{ padding:'13px', background:'#166534', color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer', textAlign:'left', display:'flex', gap:12, alignItems:'center' }}>
                 <span style={{ fontSize:22 }}>⚡</span>
                 <div><div>Quick Sale</div><div style={{ fontSize:11, fontWeight:400, opacity:.8 }}>Fast cash sale</div></div>

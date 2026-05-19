@@ -158,7 +158,16 @@ export default function QuickSale() {
         .then(r=>r.json())
         .then(item=>{
           if (item?.id) {
-            setCart([{ ...item, qty:1, unitPrice: parseFloat(price)||item.sell_price }]);
+            setCart([{
+              inventory_id:  item.id,
+              name:          item.name,
+              category:      item.category,
+              image_url:     item.image_url || null,
+              price:         parseFloat(price) || parseFloat(item.sell_price) || 0,
+              qty:           1,
+              max_qty:       item.quantity,
+              item_discount: 0,
+            }]);
           }
         }).catch(()=>{});
     }
