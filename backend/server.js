@@ -2,7 +2,25 @@ require('dotenv').config();
 const express = require('express');
 const cors    = require('cors');
 const app     = express();
-app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
+app.use(cors({
+  origin: function(origin, callback) {
+    const allowed = [
+      process.env.FRONTEND_URL,
+      'https://kuruwita-optical-ztcu.vercel.app',
+      'http://localhost:3000',
+    ].filter(Boolean);
+    // Allow requests with no origin (mobile apps, curl)
+    if (!origin || allowed.includes(origin) || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+}));
+app.options('*', cors());
 app.use(express.json({ limit: '25mb' }));
 app.use('/api/auth',               require('./routes/auth'));
 app.use('/api/orders',             require('./routes/orders'));
