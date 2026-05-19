@@ -86,6 +86,7 @@ const defaultOrder = () => ({
   notes:'',
   // Refraction — same fields as NewOrder
   has_rx:false,
+  rx_source:'shop',   // 'shop' = done by us, 'customer' = customer brought report
   r_sph_s:'-', r_sph:'0.00', r_cyl_s:'-', r_cyl:'0.00', r_axis:'0', r_add:'0.00', r_va:'6/6', r_pd:'',
   l_sph_s:'-', l_sph:'0.00', l_cyl_s:'-', l_cyl:'0.00', l_axis:'0', l_add:'0.00', l_va:'6/6', l_pd:'',
   rx_notes:'', rx_hospital:'', rx_date:'', rx_doctor:'',
@@ -101,11 +102,16 @@ const defaultSale = () => ({
 
 const defaultRepair = () => ({
   date:'',
+  title:'',
   customer_name:'',
+  phone:'',
   repair_type:'Arm Repair',
+  frame_brand:'',
   description:'',
   charge:'',
   payment_method:'cash',
+  status:'collected',
+  notes:'',
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -190,6 +196,7 @@ export default function BulkImport() {
           customer_own_frame: f.customer_own_frame,
           import_date:        f.date,   // backend uses this to set created_at
           has_rx:      f.has_rx,
+          rx_source:   f.has_rx ? (f.rx_source||'shop') : null,
           rx_hospital: f.has_rx ? f.rx_hospital||null : null,
           rx_date:     f.has_rx ? f.rx_date||null     : null,
           rx_doctor:   f.has_rx ? f.rx_doctor||null   : null,
@@ -250,13 +257,17 @@ export default function BulkImport() {
     if (!f.date) return setError('Date is required');
     setError(''); setSaving(true);
     try {
+      const repairCustName = ((f.title?f.title+' ':'')+f.customer_name.trim()).trim() || null;
       const res = await apiPost('/repairs/import', {
-        customer_name:  f.customer_name.trim() || null,
+        customer_name:  repairCustName,
+        phone:          f.phone.trim() || null,
         repair_type:    f.repair_type,
-        description:    f.description,
+        frame_brand:    f.frame_brand.trim() || null,
+        description:    f.description.trim() || null,
         charge:         parseFloat(f.charge)||0,
         payment_method: f.payment_method,
-        status:         'collected',
+        status:         f.status || 'collected',
+        notes:          f.notes.trim() || null,
         import_date:    f.date,
       });
       if (res.error) throw new Error(res.error);
@@ -554,6 +565,24 @@ export default function BulkImport() {
                   </div>
                   {orderForm.has_rx && (
                     <>
+                      {/* Rx Source toggle — who did the refraction */}
+                      <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+                        {[
+                          { val:'shop',     label:'🏪 Done by us',          desc:'Refraction done at our shop' },
+                          { val:'customer', label:'📋 Customer brought Rx', desc:'Customer brought a report/prescription' },
+                        ].map(opt=>(
+                          <button key={opt.val} onClick={()=>setOrderForm(f=>({...f,rx_source:opt.val}))}
+                            style={{ flex:1, padding:'8px 10px', borderRadius:9, fontSize:12, fontWeight:600,
+                              cursor:'pointer', fontFamily:'inherit', textAlign:'left',
+                              border:`2px solid ${orderForm.rx_source===opt.val ? C.navy : C.border}`,
+                              background: orderForm.rx_source===opt.val ? C.navy : 'white',
+                              color: orderForm.rx_source===opt.val ? 'white' : C.muted }}>
+                            <div>{opt.label}</div>
+                            <div style={{ fontSize:10, opacity:.7, marginTop:2 }}>{opt.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+
                       {[{label:'Right Eye (R)',p:'r'},{label:'Left Eye (L)',p:'l'}].map(eye=>(
                         <div key={eye.p} style={{ background:'white', borderRadius:9, padding:12, marginBottom:10 }}>
                           <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>{eye.label}</div>
@@ -638,24 +667,29 @@ export default function BulkImport() {
                           style={{ ...INP, resize:'vertical', minHeight:60, lineHeight:1.6 }}/>
                       </div>
 
-                      {/* Hospital / Doctor / Date */}
-                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
-                        <div>
-                          <label style={LBL}>Hospital / Clinic</label>
-                          <input value={orderForm.rx_hospital||''} onChange={e=>setOrderForm(f=>({...f,rx_hospital:e.target.value}))}
-                            placeholder="e.g. Colombo National Hospital" style={INP}/>
+                      {/* Hospital / Doctor / Date — only when customer brought Rx */}
+                      {orderForm.rx_source === 'customer' && (
+                        <div style={{ background:'#eff6ff', borderRadius:9, padding:'10px 12px', marginTop:4 }}>
+                          <div style={{ fontSize:11, fontWeight:700, color:'#1e40af', marginBottom:8 }}>📋 Prescription Source Details</div>
+                          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+                            <div>
+                              <label style={LBL}>Hospital / Clinic</label>
+                              <input value={orderForm.rx_hospital||''} onChange={e=>setOrderForm(f=>({...f,rx_hospital:e.target.value}))}
+                                placeholder="e.g. Chilaw Hospital" style={INP}/>
+                            </div>
+                            <div>
+                              <label style={LBL}>Doctor</label>
+                              <input value={orderForm.rx_doctor||''} onChange={e=>setOrderForm(f=>({...f,rx_doctor:e.target.value}))}
+                                placeholder="Dr. name" style={INP}/>
+                            </div>
+                            <div>
+                              <label style={LBL}>Rx Date</label>
+                              <input type="date" value={orderForm.rx_date||''} onChange={e=>setOrderForm(f=>({...f,rx_date:e.target.value}))}
+                                style={INP}/>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <label style={LBL}>Doctor</label>
-                          <input value={orderForm.rx_doctor||''} onChange={e=>setOrderForm(f=>({...f,rx_doctor:e.target.value}))}
-                            placeholder="Dr. name" style={INP}/>
-                        </div>
-                        <div>
-                          <label style={LBL}>Rx Date</label>
-                          <input type="date" value={orderForm.rx_date||''} onChange={e=>setOrderForm(f=>({...f,rx_date:e.target.value}))}
-                            style={INP}/>
-                        </div>
-                      </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -699,36 +733,89 @@ export default function BulkImport() {
             {/* ── REPAIR FORM ── */}
             {activeTab==='repairs' && (
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+
+                {/* Date */}
                 <div style={{ background:'#eff6ff', borderRadius:10, padding:'12px 14px' }}>
                   <label style={{ ...LBL, color:'#1e40af' }}>📅 Date of Repair *</label>
                   <input ref={firstFieldRef} type="date" value={repairForm.date}
                     onChange={e=>setRepairForm(f=>({...f,date:e.target.value}))}
                     style={{ ...INP, fontSize:16, fontWeight:700, background:'white' }}/>
+                  <div style={{ fontSize:11, color:'#2563eb', marginTop:4 }}>This sets the actual repair date in the system</div>
                 </div>
+
+                {/* Customer */}
+                <div style={{ display:'grid', gridTemplateColumns:'90px 1fr 140px', gap:8 }}>
+                  <div>
+                    <label style={LBL}>Title</label>
+                    <select value={repairForm.title} onChange={e=>setRepairForm(f=>({...f,title:e.target.value}))} style={{ ...INP, cursor:'pointer' }}>
+                      <option value=''>—</option>
+                      {['Mr','Mrs','Miss','Master','Rev','Dr'].map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={LBL}>Customer Name</label>
+                    <input value={repairForm.customer_name} onChange={e=>setRepairForm(f=>({...f,customer_name:e.target.value}))}
+                      placeholder="Full name (optional)" style={INP}/>
+                  </div>
+                  <div>
+                    <label style={LBL}>Phone</label>
+                    <input value={repairForm.phone} onChange={e=>setRepairForm(f=>({...f,phone:e.target.value}))}
+                      placeholder="07X..." style={INP}/>
+                  </div>
+                </div>
+
+                {/* Repair details */}
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                  <div><label style={LBL}>Customer Name (optional)</label><input value={repairForm.customer_name} onChange={e=>setRepairForm(f=>({...f,customer_name:e.target.value}))} placeholder="Walk-in" style={INP}/></div>
                   <div>
                     <label style={LBL}>Repair Type</label>
                     <select value={repairForm.repair_type} onChange={e=>setRepairForm(f=>({...f,repair_type:e.target.value}))} style={SEL}>
                       {REPAIR_TYPES.map(r=><option key={r}>{r}</option>)}
                     </select>
                   </div>
-                </div>
-                <div><label style={LBL}>Description (optional)</label><input value={repairForm.description} onChange={e=>setRepairForm(f=>({...f,description:e.target.value}))} placeholder="e.g. Left arm hinge broken..." style={INP}/></div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                   <div>
-                    <label style={LBL}>Charge (Rs.) — 0 for free</label>
-                    <input type="number" value={repairForm.charge} onChange={e=>setRepairForm(f=>({...f,charge:e.target.value}))} placeholder="e.g. 200" style={{ ...INP, fontSize:16, fontWeight:700 }}/>
+                    <label style={LBL}>Frame Brand / Model</label>
+                    <input value={repairForm.frame_brand} onChange={e=>setRepairForm(f=>({...f,frame_brand:e.target.value}))}
+                      placeholder="e.g. RayBan, Prada..." style={INP}/>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={LBL}>Description</label>
+                  <input value={repairForm.description} onChange={e=>setRepairForm(f=>({...f,description:e.target.value}))}
+                    placeholder="e.g. Left arm hinge broken, nose pad missing..." style={INP}/>
+                </div>
+
+                {/* Pricing & Status */}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+                  <div>
+                    <label style={LBL}>Charge (Rs.)</label>
+                    <input type="number" value={repairForm.charge} onChange={e=>setRepairForm(f=>({...f,charge:e.target.value}))}
+                      placeholder="0 = free" style={{ ...INP, fontSize:16, fontWeight:700 }}/>
                   </div>
                   <div>
-                    <label style={LBL}>Payment</label>
+                    <label style={LBL}>Payment Method</label>
                     <select value={repairForm.payment_method} onChange={e=>setRepairForm(f=>({...f,payment_method:e.target.value}))} style={SEL}>
                       <option value="cash">💵 Cash</option>
                       <option value="bank">🏦 Bank</option>
                       <option value="free">🎁 Free</option>
                     </select>
                   </div>
+                  <div>
+                    <label style={LBL}>Status</label>
+                    <select value={repairForm.status} onChange={e=>setRepairForm(f=>({...f,status:e.target.value}))} style={SEL}>
+                      <option value="collected">✅ Collected</option>
+                      <option value="done">🔧 Done</option>
+                      <option value="pending">⏳ Pending</option>
+                    </select>
+                  </div>
                 </div>
+
+                <div>
+                  <label style={LBL}>Notes (optional)</label>
+                  <input value={repairForm.notes} onChange={e=>setRepairForm(f=>({...f,notes:e.target.value}))}
+                    placeholder="Any extra details..." style={INP}/>
+                </div>
+
               </div>
             )}
 
