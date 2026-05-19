@@ -160,18 +160,17 @@ function Sticker({ item, onReady, stickerNum }) {
 const ARM_CATS = ['Frames','Sunglasses','Reading Glasses'];
 
 // ── Flat label sticker for accessories ───────────────────────
-// 40mm × 20mm — stick directly on box/pouch/chain/cleaner
+// 30mm × 15mm flat label — smaller, name + price + QR
 function AccessorySticker({ item, onReady, stickerNum }) {
   const qrUrl = useQRDataUrl(encodeItem(item));
   const name  = item.item_name || item.brand || item.name?.split(' · ')[0] || item.name || '';
   const color = item.frame_color || '';
-  const sub   = [item.frame_material, color].filter(Boolean).join(' · ');
 
   useEffect(() => { if (qrUrl && onReady) onReady(); }, [qrUrl]);
 
   return (
     <div style={{
-      width:'40mm', height:'20mm',
+      width:'30mm', height:'15mm',
       display:'flex',
       fontFamily:"'Arial',sans-serif",
       background:'white',
@@ -179,45 +178,46 @@ function AccessorySticker({ item, onReady, stickerNum }) {
       pageBreakInside:'avoid',
       border:'0.3mm dashed #aaa',
     }}>
-      {/* LEFT — QR 20×20mm */}
+      {/* LEFT — QR 15×15mm */}
       <div style={{
-        width:'20mm', height:'20mm', flexShrink:0,
+        width:'15mm', height:'15mm', flexShrink:0,
         display:'flex', alignItems:'center', justifyContent:'center',
         borderRight:'0.3mm solid #ddd',
-        padding:'1.5mm', boxSizing:'border-box',
+        padding:'1mm', boxSizing:'border-box',
         position:'relative',
       }}>
         {qrUrl
-          ? <img src={qrUrl} alt="QR" style={{ width:'16mm', height:'16mm', display:'block' }}/>
-          : <div style={{ width:'16mm', height:'16mm', background:'#f5f5f5',
+          ? <img src={qrUrl} alt="QR" style={{ width:'12mm', height:'12mm', display:'block' }}/>
+          : <div style={{ width:'12mm', height:'12mm', background:'#f5f5f5',
               display:'flex', alignItems:'center', justifyContent:'center',
               fontSize:'4pt', color:'#bbb' }}>QR...</div>
         }
-        <div style={{ position:'absolute', bottom:'0.5mm', right:'1mm',
-          fontSize:'4pt', color:'#bbb' }}>{stickerNum}</div>
+        <div style={{ position:'absolute', bottom:'0.3mm', right:'0.8mm',
+          fontSize:'3.5pt', color:'#ccc' }}>{stickerNum}</div>
       </div>
 
-      {/* RIGHT — Details */}
+      {/* RIGHT — Name + Price */}
       <div style={{
-        flex:1, padding:'1.5mm 2mm',
+        flex:1, padding:'1.5mm 1.5mm',
         boxSizing:'border-box',
         display:'flex', flexDirection:'column',
         justifyContent:'space-between',
       }}>
         {/* Item name */}
         <div style={{
-          fontSize: name.length > 14 ? '5.5pt' : '7pt',
+          fontSize: name.length > 12 ? '5pt' : '6.5pt',
           fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2,
           overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
         }}>{name}</div>
 
-        {/* Color/material */}
-        {sub ? <div style={{ fontSize:'5pt', color:'#666', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{sub}</div> : null}
+        {/* Color */}
+        {color ? <div style={{ fontSize:'4.5pt', color:'#888', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{color}</div> : null}
 
         {/* Price */}
         <div style={{
-          fontSize:'10pt', fontWeight:'bold', color:'#0f1f3d',
+          fontSize:'9pt', fontWeight:'bold', color:'#0f1f3d',
           borderTop:'0.2mm solid #eee', paddingTop:'0.5mm',
+          lineHeight:1,
         }}>{fmt(item.sell_price)}</div>
       </div>
     </div>
@@ -430,7 +430,7 @@ export function StickerModal({ items, onClose }) {
 
                 {/* FLAT LABELS — Boxes, Pouches, Chains, Cleaners, Ear Tips */}
                 {flatItems.length > 0 && (() => {
-                  const PER = 45;
+                  const PER = 78; // 6 cols × 13 rows at 30mm×15mm
                   const flatPages = [];
                   for (let i=0; i<flatItems.length; i+=PER) flatPages.push(flatItems.slice(i,i+PER));
                   return flatPages.map((pageItems, pi) => (
@@ -438,12 +438,12 @@ export function StickerModal({ items, onClose }) {
                       <div className="no-print" style={{ fontSize:10, color:C.muted, marginBottom:6, textAlign:'center' }}>
                         📦 Flat Labels — Page {pi+1} · {pageItems.length} labels (stick directly on item)
                       </div>
-                      <div style={{ display:'grid', gridTemplateColumns:'repeat(5, 40mm)', gap:'0', width:'200mm', margin:'0 auto' }}>
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(6, 30mm)', gap:'0', width:'200mm', margin:'0 auto' }}>
                         {pageItems.map((item,idx) => (
                           <AccessorySticker key={`f-${item.id}-${pi}-${idx}`} item={item} stickerNum={item._seq} onReady={()=>setReadyCount(n=>n+1)}/>
                         ))}
                         {Array(Math.max(0,PER-pageItems.length)).fill(null).map((_,ei) => (
-                          <div key={`fe-${ei}`} style={{ width:'40mm', height:'20mm', border:'0.3mm dashed #eee', boxSizing:'border-box', background:'white' }}/>
+                          <div key={`fe-${ei}`} style={{ width:'30mm', height:'15mm', border:'0.3mm dashed #eee', boxSizing:'border-box', background:'white' }}/>
                         ))}
                       </div>
                     </div>
