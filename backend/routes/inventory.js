@@ -2,9 +2,6 @@
 //  Inventory Routes — /api/inventory
 // ============================================================
 const router    = require('express').Router();
-const aiAnalyze = require('./aiAnalyze');
-// Mount AI analyze as sub-route
-router.use('/', aiAnalyze);
 const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 

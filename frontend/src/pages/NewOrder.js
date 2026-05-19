@@ -14,7 +14,7 @@ if (typeof document !== 'undefined' && !document.getElementById('ko-no-spinners'
 //  ✅ CR (White) coating, lens index selector
 //  ✅ Frame photo on selection
 // ============================================================
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createCustomer, createOrder, getCustomers, getInventory } from '../api';
 import { QRScanner } from '../components/QRStickers';
@@ -107,7 +107,7 @@ export default function NewOrder() {
   const [frameDetails, setFrameDetails] = useState({
     name:'', type:'Full rim', material:'Plastic', color:'Black',
     buyPrice:0, sellPrice:0, frameDiscount:0, inventoryId:null,
-  })
+  });
 
   // Pre-fill frame from QR scan URL params — AFTER frameDetails is declared
   const [scannedFromQR, setScannedFromQR] = useState(false);

@@ -8,6 +8,7 @@ app.use('/api/auth',               require('./routes/auth'));
 app.use('/api/orders',             require('./routes/orders'));
 app.use('/api/customers',          require('./routes/customers'));
 app.use('/api/inventory',          require('./routes/inventory'));
+app.use('/api/inventory',          require('./routes/aiAnalyze'));
 app.use('/api/dealers',            require('./routes/dealers'));
 app.use('/api/reports',            require('./routes/reports'));
 app.use('/api/lens-prices',        require('./routes/lensPrices'));

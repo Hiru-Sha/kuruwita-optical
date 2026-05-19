@@ -9,7 +9,7 @@ const router  = require('express').Router();
 const auth    = require('../middleware/auth');
 const https   = require('https');
 
-function callClaude(messages, max_tokens=600) {
+function callClaude(messages, max_tokens=600, apiKey='') {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       model: 'claude-opus-4-5',
@@ -23,7 +23,7 @@ function callClaude(messages, max_tokens=600) {
       method:   'POST',
       headers: {
         'Content-Type':      'application/json',
-        'x-api-key':         process.env.ANTHROPIC_API_KEY,
+        'x-api-key':         apiKey,
         'anthropic-version': '2023-06-01',
       },
     };
@@ -50,8 +50,12 @@ function makeImageBlock(base64) {
 }
 
 router.post('/ai-analyze', auth, async (req, res) => {
-  const { front_image, arm_image, tag_image } = req.body;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set in Railway environment variables. Go to Railway → your backend → Variables → Add ANTHROPIC_API_KEY.' });
+  }
 
+  const { front_image, arm_image, tag_image } = req.body;
   if (!front_image && !arm_image) {
     return res.status(400).json({ error: 'At least front or arm photo required' });
   }
@@ -93,7 +97,7 @@ Return ONLY valid JSON with these fields (no explanation, no markdown):
 }`
     });
 
-    const response = await callClaude([{ role: 'user', content }]);
+    const response = await callClaude([{ role: 'user', content }], 800, apiKey);
 
     const text = response?.content?.[0]?.text || '';
 
