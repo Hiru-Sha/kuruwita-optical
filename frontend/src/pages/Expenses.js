@@ -583,7 +583,21 @@ export default function Expenses() {
                 <div><label style={LBL}>Amount (Rs.)</label><input type="number" value={expForm.amount} onChange={e=>setExpForm(f=>({...f,amount:e.target.value}))} placeholder="e.g. 15000" style={INP}/></div>
                 <div><label style={LBL}>Payment</label><select value={expForm.payment_method} onChange={e=>setExpForm(f=>({...f,payment_method:e.target.value}))} style={SEL}><option value="cash">💵 Cash</option><option value="bank">🏦 Bank</option></select></div>
               </div>
-              <div style={{ marginBottom:12 }}><label style={LBL}>Description</label><input value={expForm.description} onChange={e=>setExpForm(f=>({...f,description:e.target.value}))} placeholder="Description..." style={INP}/></div>
+              {/* Custom name when Other selected */}
+              {expForm.category === 'Other' && (
+                <div style={{ marginBottom:12, background:'#fffbeb', border:'1.5px solid #f59e0b', borderRadius:9, padding:'10px 12px' }}>
+                  <label style={{ ...LBL, color:'#92400e' }}>📝 Expense Name *</label>
+                  <input value={customCat} onChange={e=>setCustomCat(e.target.value)}
+                    placeholder="e.g. Printing, Donations, Parking, Cleaning..."
+                    style={{ ...INP, border:'1.5px solid #f59e0b', background:'white' }} autoFocus/>
+                </div>
+              )}
+              <div style={{ marginBottom:12 }}>
+                <label style={LBL}>{expForm.category === 'Other' ? 'Additional Notes (optional)' : 'Description'}</label>
+                <input value={expForm.description} onChange={e=>setExpForm(f=>({...f,description:e.target.value}))}
+                  placeholder={expForm.category === 'Other' ? 'Any extra details...' : 'Description...'}
+                  style={INP}/>
+              </div>
               <button onClick={handleAddExpense} disabled={savingExp} style={{ padding:'10px 22px', background:savingExp?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                 {savingExp?'Saving...':'💾 Save Expense'}
               </button>
