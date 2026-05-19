@@ -334,21 +334,22 @@ export default function Expenses() {
                     </div>
                   </div>
 
-                  <div style={{ marginBottom:10 }}>
-                    <label style={LBL}>Description</label>
-                    <input value={expForm.description} onChange={e=>setExpForm(f=>({...f,description:e.target.value}))}
-                      placeholder={`e.g. ${getCat(expForm.category).icon} ${expForm.category}`} style={INP}/>
-
-                  {/* Custom category name when Other is selected */}
+                  {/* Custom expense name — shown when Other is selected */}
                   {expForm.category === 'Other' && (
-                    <div style={{ marginTop:10 }}>
-                      <label style={LBL}>Expense Name *</label>
+                    <div style={{ marginBottom:10, background:'#fffbeb', border:'1.5px solid #f59e0b', borderRadius:9, padding:'10px 12px' }}>
+                      <label style={{ ...LBL, color:'#92400e' }}>📝 Expense Name *</label>
                       <input value={customCat} onChange={e=>setCustomCat(e.target.value)}
-                        placeholder="e.g. Printing, Donations, Parking..."
-                        style={{ ...INP, border:`1.5px solid #f59e0b`, background:'#fffbeb' }}/>
-                      <div style={{ fontSize:11, color:'#92400e', marginTop:3 }}>Enter the specific expense name</div>
+                        placeholder="e.g. Printing, Donations, Parking, Cleaning..."
+                        style={{ ...INP, border:'1.5px solid #f59e0b', background:'white' }}
+                        autoFocus/>
                     </div>
                   )}
+
+                  <div style={{ marginBottom:10 }}>
+                    <label style={LBL}>{expForm.category === 'Other' ? 'Additional Notes (optional)' : 'Description'}</label>
+                    <input value={expForm.description} onChange={e=>setExpForm(f=>({...f,description:e.target.value}))}
+                      placeholder={expForm.category === 'Other' ? 'Any extra details...' : `e.g. ${getCat(expForm.category).icon} ${expForm.category}`}
+                      style={INP}/>
                   </div>
 
                   <button onClick={handleAddExpense} disabled={savingExp}
