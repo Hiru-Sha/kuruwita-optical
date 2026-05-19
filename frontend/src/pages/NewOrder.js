@@ -15,7 +15,7 @@ if (typeof document !== 'undefined' && !document.getElementById('ko-no-spinners'
 //  ✅ Frame photo on selection
 // ============================================================
 import React, { useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { createCustomer, createOrder, getCustomers, getInventory } from '../api';
 import { QRScanner } from '../components/QRStickers';
 
@@ -75,6 +75,30 @@ const SEL = { ...INP, cursor:'pointer' };
 export default function NewOrder() {
   const navigate = useNavigate();
   const [step,   setStep]   = useState(1);
+  const [scannedFromQR, setScannedFromQR] = useState(false);
+  const location = useLocation();
+
+  // Pre-fill frame from QR scan URL params
+  useEffect(()=>{
+    const p = new URLSearchParams(location.search);
+    const frameId    = p.get('frame_id');
+    const frameName  = p.get('frame_name');
+    const frameColor = p.get('frame_color');
+    const frameType  = p.get('frame_type');
+    const framePrice = p.get('frame_price');
+    if (frameName) {
+      setFrameDetails(f=>({
+        ...f,
+        name:     decodeURIComponent(frameName),
+        color:    decodeURIComponent(frameColor||f.color),
+        type:     decodeURIComponent(frameType||f.type),
+        sellPrice:framePrice || f.sellPrice,
+        inventoryId: frameId || null,
+      }));
+      // Jump straight to step 1 with frame pre-filled
+      setScannedFromQR(true);
+    }
+  },[]);
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState('');
 
@@ -302,13 +326,21 @@ export default function NewOrder() {
       if (custMode==='search' && selectedCust) {
         customerId = selectedCust.id;
       } else {
-        try {
-          const res = await createCustomer({ name:`${newCust.title} ${newCust.name}`.trim(), phone:newCust.phone.trim(), age:newCust.age||null });
-          customerId = res.data.id;
-        } catch(e) {
-          if (e.response?.status===409) customerId = e.response.data.id;
-          else throw e;
-        }
+        // Use direct fetch — axios was silently failing
+        const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('ko_token');
+        const custRes = await fetch(`${BASE}/customers`, {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+          body: JSON.stringify({
+            name:  `${newCust.title} ${newCust.name}`.trim(),
+            phone: newCust.phone.trim(),
+            age:   newCust.age || null,
+          }),
+        });
+        const custJson = await custRes.json();
+        customerId = custJson?.data?.id || custJson?.id;
+        if (!customerId) throw new Error('Failed to create customer: ' + JSON.stringify(custJson));
       }
 
       const combineSph = (s,v) => (!v||v==='0.00') ? 'Plano' : s+v;

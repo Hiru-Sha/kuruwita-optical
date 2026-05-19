@@ -1,6 +1,8 @@
 /* eslint-disable */
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { QRScanner } from '../components/QRStickers';
 
 const navy=  '#0f1f3d', gold='#c9a84c', cream='#f8f5ef',
       border='#e0ddd6', muted='#6b7280', success='#2d7a4f', danger='#c0392b';
@@ -10,6 +12,7 @@ const today = () => new Date().toISOString().split('T')[0];
 
 export default function Dashboard() {
   const { user }  = useAuth();
+  const navigate   = useNavigate();
   const [data,    setData]   = useState(null);
   const [cash,    setCash]   = useState(null);
   const [loading, setLoading]= useState(true);
@@ -126,6 +129,23 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* QR SCAN — big prominent button */}
+      <button onClick={()=>setShowScan(true)} style={{
+        width:'100%', padding: mob?'18px':'14px',
+        background:'linear-gradient(135deg,#0f1f3d,#1e3a5f)',
+        color:'white', border:'2px solid #c9a84c', borderRadius:12,
+        fontSize: mob?17:15, fontWeight:700, cursor:'pointer',
+        fontFamily:"'DM Sans',sans-serif",
+        display:'flex', alignItems:'center', justifyContent:'center', gap:10,
+        marginBottom:10, boxShadow:'0 4px 16px rgba(15,31,61,.3)',
+      }}>
+        <span style={{fontSize: mob?28:22}}>📷</span>
+        <div style={{textAlign:'left'}}>
+          <div>Scan Frame QR</div>
+          <div style={{fontSize:12,fontWeight:400,opacity:.7}}>Scan sticker → New Order or Quick Sale</div>
+        </div>
+      </button>
+
       {/* Quick actions — 2 cols on mobile, 3 on desktop */}
       <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(3,1fr)',gap:8,marginBottom:14}}>
         {[
@@ -198,6 +218,73 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+      {/* QR Scanner */}
+      {showScan && (
+        <QRScanner
+          title="Scan Frame Sticker"
+          onScan={handleScan}
+          onClose={()=>setShowScan(false)}
+        />
+      )}
+
+      {/* Scanned item action popup */}
+      {scanItem && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.75)', zIndex:9000,
+          display:'flex', alignItems:'flex-end', justifyContent:'center', padding:'0 0 20px' }}
+          onClick={()=>setScanItem(null)}>
+          <div style={{ background:'white', borderRadius:'20px 20px 16px 16px', width:'100%', maxWidth:480,
+            padding:24, boxShadow:'0 -8px 40px rgba(0,0,0,.3)', fontFamily:"'DM Sans',sans-serif" }}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{ width:40, height:4, background:'#e0ddd6', borderRadius:2, margin:'0 auto 16px' }}/>
+            <div style={{ display:'flex', gap:14, marginBottom:18, alignItems:'center' }}>
+              <div style={{ width:52, height:52, borderRadius:12, background:'#f8f5ef',
+                display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, flexShrink:0 }}>
+                🕶️
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:700, fontSize:16, color:'#0f1f3d', marginBottom:2,
+                  overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
+                  {scanItem.name}
+                </div>
+                <div style={{ fontSize:13, color:'#6b7280' }}>
+                  {scanItem.category} · {scanItem.frame_color||''}
+                </div>
+                <div style={{ display:'flex', gap:16, marginTop:4 }}>
+                  <span style={{ fontSize:16, fontWeight:700, color:'#0f1f3d' }}>
+                    Rs.{parseFloat(scanItem.sell_price||0).toLocaleString()}
+                  </span>
+                  <span style={{ fontSize:13, color: scanItem.quantity>0?'#2d7a4f':'#c0392b', fontWeight:600 }}>
+                    {scanItem.quantity>0 ? `${scanItem.quantity} in stock` : 'Out of stock'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+              <button onClick={()=>{ navigate(`/orders/new?frame_id=${scanItem.id}&frame_name=${encodeURIComponent(scanItem.name)}&frame_color=${encodeURIComponent(scanItem.frame_color||'')}&frame_type=${encodeURIComponent(scanItem.frame_type||'')}&frame_price=${scanItem.sell_price}`); setScanItem(null); }}
+                style={{ padding:'14px 8px', background:'#0f1f3d', color:'white', border:'none',
+                  borderRadius:12, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+                  display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                <span style={{fontSize:24}}>📋</span>
+                <span>New Order</span>
+                <span style={{fontSize:10,fontWeight:400,opacity:.7}}>With Rx + customer</span>
+              </button>
+              <button onClick={()=>{ navigate(`/quick-sale?item_id=${scanItem.id}&item_name=${encodeURIComponent(scanItem.name)}&price=${scanItem.sell_price}`); setScanItem(null); }}
+                style={{ padding:'14px 8px', background:'#166534', color:'white', border:'none',
+                  borderRadius:12, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+                  display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                <span style={{fontSize:24}}>⚡</span>
+                <span>Quick Sale</span>
+                <span style={{fontSize:10,fontWeight:400,opacity:.7}}>Fast cash sale</span>
+              </button>
+            </div>
+            <button onClick={()=>setScanItem(null)}
+              style={{ width:'100%', padding:'11px', background:'#f8f5ef', color:'#6b7280',
+                border:'none', borderRadius:10, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
