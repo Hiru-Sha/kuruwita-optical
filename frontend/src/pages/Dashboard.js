@@ -26,6 +26,20 @@ export default function Dashboard() {
     return () => window.removeEventListener('resize', fn);
   },[]);
 
+  const handleScan = async (rawId) => {
+    setShowScan(false);
+    const id = parseInt(rawId);
+    if (!id) return;
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/inventory/${id}`, { headers:{ Authorization:`Bearer ${token}` } });
+      const item  = await res.json();
+      if (item?.id) setScanItem(item);
+      else alert('Item not found');
+    } catch(e) { alert('Scan failed'); }
+  };
+
   const hour     = new Date().getHours();
   const greeting = hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
   const dateStr  = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
