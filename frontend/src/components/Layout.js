@@ -172,14 +172,19 @@ export default function Layout() {
         </nav>
 
         {/* ── Main content ── */}
-        <main style={{ flex:1, padding: mob ? '14px 14px 80px' : 24, minWidth:0 }}>
+        <main style={{
+          flex:1,
+          padding: mob ? '12px 10px 90px' : 24,
+          minWidth:0,
+          paddingBottom: mob ? 'calc(80px + env(safe-area-inset-bottom))' : 24,
+        }}>
           <Outlet/>
         </main>
       </div>
 
       {/* ── Mobile bottom nav bar ── */}
       {mob && (
-        <nav style={{ position:'fixed', bottom:0, left:0, right:0, background:'white', borderTop:'1px solid #e0ddd6', display:'flex', zIndex:90, height:60 }}>
+        <nav style={{ position:'fixed', bottom:0, left:0, right:0, background:'white', borderTop:'1px solid #e0ddd6', display:'flex', zIndex:90, height:'calc(60px + env(safe-area-inset-bottom))', paddingBottom:'env(safe-area-inset-bottom)' }}>
           {bottomNavItems.map(n=>(
             <NavLink key={n.to} to={n.to}
               style={({isActive})=>({ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, textDecoration:'none', color:isActive?'#0f1f3d':'#9ca3af', background:isActive?'#f8f5ef':'white', borderTop:isActive?'2px solid #c9a84c':'2px solid transparent', fontSize:10, fontWeight:isActive?700:400, transition:'all .15s', padding:'4px 0' })}>
@@ -196,7 +201,15 @@ export default function Layout() {
         </nav>
       )}
 
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap');*{box-sizing:border-box}`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap');
+        *{box-sizing:border-box}
+        @media(max-width:640px){
+          button,select,input,textarea{min-height:44px!important;font-size:15px!important;}
+          *{touch-action:manipulation;}
+          table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+        }
+      `}</style>
 
       {/* Global QR Scanner */}
       {showScan && (

@@ -2,9 +2,52 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Kuruwita Optical POS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+
+    <!-- PWA Meta -->
+    <meta name="theme-color" content="#0f1f3d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="KO Optical" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="KO Optical" />
+
+    <!-- App description -->
+    <meta name="description" content="Wickramakalutota Opticals Management System" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="%PUBLIC_URL%/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="%PUBLIC_URL%/icon-512.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+
+    <!-- Mobile CSS -->
+    <link rel="stylesheet" href="%PUBLIC_URL%/mobile.css" />
+
+    <!-- Splash screen color -->
+    <meta name="msapplication-TileColor" content="#0f1f3d" />
+    <meta name="msapplication-TileImage" content="%PUBLIC_URL%/icon-192.png" />
+
+    <title>KO Optical</title>
   </head>
   <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+
+    <!-- Register Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW registered:', reg.scope))
+            .catch(err => console.log('SW failed:', err));
+        });
+      }
+    </script>
   </body>
 </html>

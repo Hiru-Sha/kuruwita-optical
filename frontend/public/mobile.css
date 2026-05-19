@@ -1,0 +1,64 @@
+/* ============================================================
+   mobile.css — Mobile-first overrides for KO Optical
+   Import this in index.css or index.html
+   ============================================================ */
+
+/* ── Base mobile improvements ───────────────────────────── */
+@media (max-width: 640px) {
+
+  /* Bigger tap targets everywhere */
+  button, select, input, textarea {
+    min-height: 44px !important;
+    font-size: 15px !important;
+  }
+
+  /* Prevent double-tap zoom */
+  * { touch-action: manipulation; }
+
+  /* Scrollable tables */
+  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* ── Header ── */
+  header { padding: 0 10px !important; }
+
+  /* ── Main content padding ── */
+  main { padding: 12px 10px 80px !important; }
+
+  /* ── Cards/grids stack on mobile ── */
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr !important; }
+
+  /* ── Lens Price List — mobile card view ── */
+  .lens-table-row {
+    display: flex !important;
+    flex-direction: column !important;
+    background: white;
+    border: 1px solid #e0ddd6;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+
+  /* ── Orders list — bigger rows ── */
+  .order-row { padding: 14px !important; }
+
+  /* ── Forms — full width inputs ── */
+  .form-grid { grid-template-columns: 1fr !important; }
+
+  /* ── Dashboard quick action buttons ── */
+  .quick-actions { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+
+  /* ── Stats cards — 2 per row ── */
+  .stats-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* ── Modals — full screen on mobile ── */
+  .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+    overflow-y: auto !important;
+  }
+
+  /* ── Print buttons — hide on mobile ── */
+  .print-only-desktop { display: none !important; }
+}
