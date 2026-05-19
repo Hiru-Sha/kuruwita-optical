@@ -176,6 +176,11 @@ function ItemCard({ item, onClick, onSticker }) {
           <div style={{ fontSize:14, fontWeight:700, color:'#1a1a2e' }}>Rs.{parseFloat(item.sell_price||0).toLocaleString()}</div>
           <div style={{ textAlign:'right' }}>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              {item.notes && item.notes.includes('[NEW STOCK') && (
+                <div style={{ background:'#dcfce7', color:'#166534', borderRadius:6, padding:'1px 7px', fontSize:9, fontWeight:700, flexShrink:0 }}>
+                  NEW
+                </div>
+              )}
               {item.display_number && (
                 <div style={{ background:'#dbeafe', color:'#1e40af', borderRadius:6, padding:'1px 7px', fontSize:10, fontWeight:700, flexShrink:0 }} title="Showroom slot">
                   🏪#{item.display_number}
@@ -488,11 +493,12 @@ export default function Inventory() {
         );
 
         if (exact) {
-          // Merge: add quantity, store both prices in notes
-          const mergeNotes = `New stock added ${new Date().toLocaleDateString('en-GB')} · Old price: Rs.${exact.sell_price} · New price: Rs.${newSell}`;
+          // Merge: add quantity, mark new stock, store price history
+          const today = new Date().toLocaleDateString('en-GB');
+          const prevNotes = exact.notes || '';
+          const mergeNotes = `[NEW STOCK ${today}] +${newQty} units · Old price: Rs.${exact.sell_price} · New price: Rs.${newSell}${prevNotes ? ' | ' + prevNotes : ''}`;
           await updateItem(exact.id, {
             quantity:   exact.quantity + newQty,
-            // Store new price as sell price, old price saved in notes
             sell_price: newSell,
             cost_price: newCost,
             notes:      mergeNotes,
@@ -646,14 +652,19 @@ export default function Inventory() {
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginTop:4 }}>
             <Field label="Cost Price (Rs.)"><input type="number" value={form.cost_price||''} onChange={e=>setForm(f=>({...f,cost_price:e.target.value}))} placeholder="Buy price" style={INP}/></Field>
             <Field label="Sell Price (Rs.)"><input type="number" value={form.sell_price||''} onChange={e=>setForm(f=>({...f,sell_price:e.target.value}))} placeholder="Sell price" style={INP}/></Field>
-            <Field label="Quantity"><input type="number" value={form.quantity||''} onChange={e=>setForm(f=>({...f,quantity:e.target.value}))} placeholder="e.g. 5" style={INP}/></Field>
+            <Field label="Quantity"><input type="number" value={form.quantity||''} onChange={e=>{
+              const v=e.target.value;
+              setForm(f=>({...f,quantity:v}));
+              // Sync to first color variant if only one variant
+              setColorVariants(cv=>cv.map((x,i)=>i===0?{...x,qty:v}:x));
+            }} placeholder="e.g. 5" style={INP}/></Field>
             <Field label="Min Alert"><input type="number" value={form.min_quantity||''} onChange={e=>setForm(f=>({...f,min_quantity:e.target.value}))} placeholder="e.g. 2" style={INP}/></Field>
           </div>
           {/* ── Colour variants ─────────────────────────────── */}
           <div style={{ marginTop:4, background:C.cream, borderRadius:12, padding:'14px 16px' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
               <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>🎨 Colours & Quantities</div>
-              <button onClick={()=>setColorVariants(v=>[...v,{color:'Black',qty:'1',image:null}])}
+              <button onClick={()=>setColorVariants(v=>[...v,{color:'Black',qty:form.quantity||'1',image:null}])}
                 style={{ padding:'5px 12px', background:C.navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                 + Add colour
               </button>
