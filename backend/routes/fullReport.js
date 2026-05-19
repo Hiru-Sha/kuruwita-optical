@@ -24,6 +24,8 @@ router.get('/', auth, async (req, res) => {
       depositStats,
       stockPurchases,
       lensJobStats,
+      labBillStats,
+      kalutotaStats,
       topFrames,
       topLensTypes,
       dailyRevenue,
@@ -174,6 +176,30 @@ router.get('/', auth, async (req, res) => {
           AND lens_company IS NOT NULL
         GROUP BY lens_company
         ORDER BY lab_total DESC
+      `, [from, to]),
+
+      // ── Lab bill stats ──────────────────────────────────────
+      pool.query(`
+        SELECT
+          lens_company                      AS lab_name,
+          COUNT(*)                          AS total_jobs,
+          SUM(total_amount)                 AS lab_total,
+          SUM(advance_amount)               AS total_paid,
+          SUM(balance_amount)               AS total_unpaid
+        FROM orders
+        WHERE created_at BETWEEN $1 AND $2
+          AND lens_company IS NOT NULL
+        GROUP BY lens_company
+        ORDER BY lab_total DESC
+      `, [from, to]),
+
+      // ── Kalutota / shop stats (placeholder) ─────────────────
+      pool.query(`
+        SELECT
+          COUNT(DISTINCT customer_id) AS total_customers,
+          COUNT(*)                    AS total_orders
+        FROM orders
+        WHERE created_at BETWEEN $1 AND $2
       `, [from, to]),
 
       // ── Top frames ──────────────────────────────────────────
