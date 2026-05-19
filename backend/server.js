@@ -20,6 +20,7 @@ app.use('/api/dealer-purchases',   require('./routes/dealerPurchases'));
 app.use('/api/repairs',            require('./routes/repairs'));
 app.use('/api/dashboard-today',    require('./routes/dashboardToday'));  // ← fast single-request dashboard
 app.use('/api/full-report',         require('./routes/fullReport'));        // ← NEW            // ← NEW
+app.use('/api/scan-session', require('./routes/scanSession'));
 app.get('/api/health', (req,res)=>res.json({ status:'ok', time:new Date() }));
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, ()=>console.log(`✅ Kuruwita Optical on port ${PORT}`));

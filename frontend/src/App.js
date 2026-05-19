@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login      from './pages/Login';
 import Layout     from './components/Layout';
+import MobileScan from './pages/MobileScan';
 import Dashboard  from './pages/Dashboard';
 import Orders     from './pages/Orders';
 import NewOrder   from './pages/NewOrder';
@@ -47,6 +48,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/scan" element={<MobileScan />}/>
           <Route path="/" element={<Protected><Layout /></Protected>}>
             <Route index                  element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard"       element={<Dashboard />} />
