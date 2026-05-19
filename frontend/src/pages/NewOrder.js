@@ -75,30 +75,7 @@ const SEL = { ...INP, cursor:'pointer' };
 export default function NewOrder() {
   const navigate = useNavigate();
   const [step,   setStep]   = useState(1);
-  const [scannedFromQR, setScannedFromQR] = useState(false);
   const location = useLocation();
-
-  // Pre-fill frame from QR scan URL params
-  useEffect(()=>{
-    const p = new URLSearchParams(location.search);
-    const frameId    = p.get('frame_id');
-    const frameName  = p.get('frame_name');
-    const frameColor = p.get('frame_color');
-    const frameType  = p.get('frame_type');
-    const framePrice = p.get('frame_price');
-    if (frameName) {
-      setFrameDetails(f=>({
-        ...f,
-        name:     decodeURIComponent(frameName),
-        color:    decodeURIComponent(frameColor||f.color),
-        type:     decodeURIComponent(frameType||f.type),
-        sellPrice:framePrice || f.sellPrice,
-        inventoryId: frameId || null,
-      }));
-      // Jump straight to step 1 with frame pre-filled
-      setScannedFromQR(true);
-    }
-  },[]);
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState('');
 
@@ -130,7 +107,29 @@ export default function NewOrder() {
   const [frameDetails, setFrameDetails] = useState({
     name:'', type:'Full rim', material:'Plastic', color:'Black',
     buyPrice:0, sellPrice:0, frameDiscount:0, inventoryId:null,
-  });
+  })
+
+  // Pre-fill frame from QR scan URL params — AFTER frameDetails is declared
+  const [scannedFromQR, setScannedFromQR] = useState(false);
+  useEffect(()=>{
+    const p = new URLSearchParams(location.search);
+    const frameId    = p.get('frame_id');
+    const frameName  = p.get('frame_name');
+    const frameColor = p.get('frame_color');
+    const frameType  = p.get('frame_type');
+    const framePrice = p.get('frame_price');
+    if (frameName) {
+      setFrameDetails(f=>({
+        ...f,
+        name:         decodeURIComponent(frameName),
+        color:        decodeURIComponent(frameColor||f.color||''),
+        type:         decodeURIComponent(frameType||f.type||'Full rim'),
+        sellPrice:    parseFloat(framePrice)||f.sellPrice||0,
+        inventoryId:  frameId || null,
+      }));
+      setScannedFromQR(true);
+    }
+  },[location.search]);;
 
   // ── Lens ─────────────────────────────────────────────────
   const [lensDetails, setLensDetails] = useState({

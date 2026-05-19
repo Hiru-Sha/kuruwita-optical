@@ -4,6 +4,7 @@
 //  On mobile: single column, sticky total bar at bottom
 // ============================================================
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { getInventory } from '../api';
 
 const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b' };
@@ -141,6 +142,27 @@ export default function QuickSale() {
   const [error,    setError]   = useState('');
   const [done,     setDone]    = useState(null);
   const [doneItems,setDoneItems]=useState([]);
+  const location = useLocation();
+
+  // Pre-fill from QR scan URL params
+  useEffect(()=>{
+    const p = new URLSearchParams(location.search);
+    const itemName = p.get('item_name');
+    const price    = p.get('price');
+    const itemId   = p.get('item_id');
+    if (itemName && itemId) {
+      // Add scanned item directly to cart
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      fetch(`${BASE}/inventory/${itemId}`, { headers:{ Authorization:`Bearer ${token}` } })
+        .then(r=>r.json())
+        .then(item=>{
+          if (item?.id) {
+            setCart([{ ...item, qty:1, unitPrice: parseFloat(price)||item.sell_price }]);
+          }
+        }).catch(()=>{});
+    }
+  },[location.search]);
   const [mob,      setMob]     = useState(window.innerWidth < 640);
   const [activeTab,setActiveTab]= useState('sale');
   const [pastMode, setPastMode] = useState(false);

@@ -276,7 +276,14 @@ export default function Dashboard() {
               </div>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
-              <button onClick={()=>{ navigate(`/orders/new?frame_id=${scanItem.id}&frame_name=${encodeURIComponent(scanItem.name)}&frame_color=${encodeURIComponent(scanItem.frame_color||'')}&frame_type=${encodeURIComponent(scanItem.frame_type||'')}&frame_price=${scanItem.sell_price}`); setScanItem(null); }}
+              <button onClick={async ()=>{
+                  // Post to scan-session so PC picks it up too
+                  const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+                  const token = localStorage.getItem('ko_token');
+                  try { await fetch(`${BASE}/scan-session`,{ method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`}, body:JSON.stringify({inventory_id:scanItem.id,action:'new_order'}) }); } catch(e){}
+                  navigate(`/orders/new?frame_id=${scanItem.id}&frame_name=${encodeURIComponent(scanItem.name)}&frame_color=${encodeURIComponent(scanItem.frame_color||'')}&frame_type=${encodeURIComponent(scanItem.frame_type||'')}&frame_price=${scanItem.sell_price}`);
+                  setScanItem(null);
+                }}
                 style={{ padding:'14px 8px', background:'#0f1f3d', color:'white', border:'none',
                   borderRadius:12, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
                   display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
@@ -284,7 +291,13 @@ export default function Dashboard() {
                 <span>New Order</span>
                 <span style={{fontSize:10,fontWeight:400,opacity:.7}}>With Rx + customer</span>
               </button>
-              <button onClick={()=>{ navigate(`/quick-sale?item_id=${scanItem.id}&item_name=${encodeURIComponent(scanItem.name)}&price=${scanItem.sell_price}`); setScanItem(null); }}
+              <button onClick={async ()=>{
+                  const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+                  const token = localStorage.getItem('ko_token');
+                  try { await fetch(`${BASE}/scan-session`,{ method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`}, body:JSON.stringify({inventory_id:scanItem.id,action:'quick_sale'}) }); } catch(e){}
+                  navigate(`/quick-sale?item_id=${scanItem.id}&item_name=${encodeURIComponent(scanItem.name)}&price=${scanItem.sell_price}`);
+                  setScanItem(null);
+                }}
                 style={{ padding:'14px 8px', background:'#166534', color:'white', border:'none',
                   borderRadius:12, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
                   display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
