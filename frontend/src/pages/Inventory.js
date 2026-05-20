@@ -72,7 +72,7 @@ const CAT_ICON  = { Frames:'🕶️', Sunglasses:'😎', 'Reading Glasses':'👓
 const FR_SHAPES = ['Round','Oval','Rectangle','Square','Cat-eye','Aviator','Wayfarer','Butterfly','Hexagon','Geometric'];
 const FR_TYPES  = ['Full rim','Half rim','Rimless'];
 const FR_MATS   = ['Plastic','Metal','TR90','Titanium','Acetate','Mixed'];
-const FR_COLORS = ['Black','Gold','Silver','Brown','Gunmetal','Blue','Red','Pink','Tortoise','Crystal','Green','Purple','White','Multicolor'];
+const FR_COLORS = ['Black','Gold','Silver','Brown','Gunmetal','Blue','Red','Pink','Tortoise','Crystal','Green','Purple','White','Multicolor','Other'];
 const FR_SIZES  = ['Extra Small','Small','Medium','Large','Extra Large','48mm','50mm','52mm','54mm','56mm','58mm'];
 const SG_TYPES  = ['Polarised','Local'];
 const RG_TYPES  = ['Single Vision','Bifocal'];
@@ -132,7 +132,24 @@ const buildName = (form) => {
 
 function CategoryFields({ form, set, suggestions }) {
   const inp = (key, placeholder) => <input value={form[key]||''} onChange={e=>set(f=>({...f,[key]:e.target.value}))} placeholder={placeholder} style={INP}/>;
-  const sel = (key, options) => <select value={form[key]||''} onChange={e=>set(f=>({...f,[key]:e.target.value}))} style={SEL}>{options.map(o=><option key={o}>{o}</option>)}</select>;
+  const sel = (key, options) => (
+    <>
+      <select value={options.includes(form[key]||'') ? (form[key]||'') : 'Other'}
+        onChange={e => {
+          if (e.target.value === 'Other') set(f=>({...f,[key]:''}));
+          else set(f=>({...f,[key]:e.target.value}));
+        }} style={SEL}>
+        {options.map(o=><option key={o}>{o}</option>)}
+      </select>
+      {/* Show text input when Other selected or value not in list */}
+      {(!options.includes(form[key]||'') || form[key] === '') && key === 'frame_color' && (
+        <input value={form[key]||''} onChange={e=>set(f=>({...f,[key]:e.target.value}))}
+          placeholder="Type custom color..."
+          style={{ ...INP, marginTop:4, border:'1.5px solid #f59e0b', background:'#fffbeb' }}
+          autoFocus/>
+      )}
+    </>
+  );
   const common = (sugg) => <>
     <Field label="Brand">
       <AutoInput value={form.brand||''} onChange={v=>set(f=>({...f,brand:v}))} placeholder="Brand name" style={INP}
@@ -858,7 +875,7 @@ export default function Inventory() {
               </button>
             </div>
             {colorVariants.map((v,i)=>(
-              <div key={i} style={{ display:'grid', gridTemplateColumns:'44px 1fr 100px 44px 36px', gap:8, marginBottom:8, alignItems:'center' }}>
+              <div key={i} style={{ display:'grid', gridTemplateColumns:'44px 1fr 100px 44px 36px', gap:8, marginBottom:8, alignItems:'flex-start' }}>
                 {/* Image picker per variant */}
                 <label style={{ width:44, height:44, border:`2px dashed ${v.image?C.gold:C.border}`, borderRadius:8, cursor:'pointer', background:v.image?'#fdf9f0':C.cream, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative', flexShrink:0 }}>
                   {v.image
@@ -872,11 +889,21 @@ export default function Inventory() {
                       setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,image:b64}:x));
                     }}/>
                 </label>
-                <select value={v.color}
-                  onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:e.target.value}:x))}
-                  style={{ ...INP, padding:'8px 10px' }}>
-                  {FR_COLORS.map(col=><option key={col}>{col}</option>)}
-                </select>
+                <div style={{ flex:1 }}>
+                  <select value={FR_COLORS.includes(v.color) ? v.color : 'Other'}
+                    onChange={e=>{
+                      if(e.target.value==='Other') setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:''}:x));
+                      else setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:e.target.value}:x));
+                    }}
+                    style={{ ...INP, padding:'8px 10px', width:'100%' }}>
+                    {FR_COLORS.map(col=><option key={col}>{col}</option>)}
+                  </select>
+                  {(!FR_COLORS.includes(v.color) || v.color==='') && (
+                    <input value={v.color} onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:e.target.value}:x))}
+                      placeholder="Type color e.g. Dark Brown, Navy..."
+                      style={{ ...INP, padding:'8px 10px', marginTop:4, border:'1.5px solid #f59e0b', background:'#fffbeb' }}/>
+                  )}
+                </div>
                 <input type="number" min="0" value={v.qty} placeholder="Qty"
                   onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,qty:e.target.value}:x))}
                   style={{ ...INP, padding:'8px 10px', fontWeight:700 }}/>
