@@ -107,6 +107,12 @@ export default function KalutotaAccount() {
   const [imgData,  setImgData] = useState(null);
   const [invResult,setInvResult]=useState(null);
 
+  const [showCashPay,  setShowCashPay]  = useState(false);
+  const [cashPayForm,  setCashPayForm]  = useState({
+    date: today(), amount:'', method:'cash', reference:'', notes:'', bill_name:'',
+  });
+  const [savingCash,   setSavingCash]   = useState(false);
+
   const [form, setForm] = useState({
     date: today(), direction:'out', category:'Frames',
     description:'', quantity:'1', unit_price:'',
@@ -197,10 +203,16 @@ export default function KalutotaAccount() {
           <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:C.navy,margin:0}}>🏪 Kalutota Opticals Account</h1>
           <p style={{fontSize:13,color:C.muted,margin:'4px 0 0'}}>Trade account — goods exchanged and payments between shops</p>
         </div>
-        <button onClick={()=>{setShowAdd(s=>!s);setError('');setInvResult(null);}}
-          style={{padding:'9px 22px',background:showAdd?C.cream:C.gold,color:showAdd?C.muted:C.navy,border:showAdd?`1.5px solid ${C.border}`:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
-          {showAdd?'✕ Cancel':'+ Add Transaction'}
-        </button>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>{ setShowCashPay(s=>!s); setShowAdd(false); }}
+            style={{padding:'9px 18px',background:showCashPay?C.cream:'#166534',color:showCashPay?C.muted:'white',border:showCashPay?`1.5px solid ${C.border}`:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+            {showCashPay?'✕ Cancel':'💵 Pay Kalutota'}
+          </button>
+          <button onClick={()=>{setShowAdd(s=>!s);setShowCashPay(false);setError('');setInvResult(null);}}
+            style={{padding:'9px 22px',background:showAdd?C.cream:C.gold,color:showAdd?C.muted:C.navy,border:showAdd?`1.5px solid ${C.border}`:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+            {showAdd?'✕ Cancel':'+ Add Transaction'}
+          </button>
+        </div>
       </div>
 
       {/* Net balance */}
@@ -237,6 +249,91 @@ export default function KalutotaAccount() {
           </div>
         ))}
       </div>
+
+      {/* Cash Payment Form */}
+      {showCashPay && (
+        <div style={{background:'white',border:`2px solid #166534`,borderRadius:14,padding:20,marginBottom:16}}>
+          <div style={{fontSize:14,fontWeight:700,color:'#166534',marginBottom:14}}>
+            💵 Record Cash/Cheque Payment to Kalutota
+          </div>
+          <div style={{background:'#f0fdf4',borderRadius:10,padding:'10px 14px',marginBottom:14,fontSize:13,color:'#166534'}}>
+            Use this to record cash or cheques you give to Kalutota — whether for a specific bill or general payment.
+          </div>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+            <div><label style={LBL}>Date</label>
+              <input type="date" value={cashPayForm.date} onChange={e=>setCashPayForm(f=>({...f,date:e.target.value}))} style={INP}/>
+            </div>
+            <div><label style={LBL}>Amount (Rs.) *</label>
+              <input type="number" value={cashPayForm.amount} onChange={e=>setCashPayForm(f=>({...f,amount:e.target.value}))}
+                placeholder="e.g. 60000" style={{...INP,fontSize:16,fontWeight:700}}/>
+            </div>
+          </div>
+
+          <div style={{marginBottom:10}}>
+            <label style={LBL}>Bill / Purpose *</label>
+            <input value={cashPayForm.bill_name} onChange={e=>setCashPayForm(f=>({...f,bill_name:e.target.value}))}
+              placeholder="e.g. Aswar invoice Rs.245,670 — 1st installment"
+              style={INP}/>
+          </div>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+            <div><label style={LBL}>Payment Method</label>
+              <select value={cashPayForm.method} onChange={e=>setCashPayForm(f=>({...f,method:e.target.value}))} style={SEL}>
+                <option value="cash">💵 Cash</option>
+                <option value="cheque">📋 Cheque</option>
+                <option value="bank">🏦 Bank Transfer</option>
+              </select>
+            </div>
+            <div><label style={LBL}>Reference / Cheque No.</label>
+              <input value={cashPayForm.reference} onChange={e=>setCashPayForm(f=>({...f,reference:e.target.value}))}
+                placeholder="Cheque #, bank ref..." style={INP}/>
+            </div>
+          </div>
+
+          <div style={{marginBottom:14}}>
+            <label style={LBL}>Notes (optional)</label>
+            <input value={cashPayForm.notes} onChange={e=>setCashPayForm(f=>({...f,notes:e.target.value}))}
+              placeholder="Any extra details..." style={INP}/>
+          </div>
+
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={async()=>{
+              if (!cashPayForm.amount || parseFloat(cashPayForm.amount)<=0) return alert('Enter amount');
+              if (!cashPayForm.bill_name.trim()) return alert('Enter bill/purpose');
+              setSavingCash(true);
+              try {
+                await apiPost('/kalutota', {
+                  date:             cashPayForm.date,
+                  direction:        'payment',
+                  category:         'Payment',
+                  description:      cashPayForm.bill_name,
+                  quantity:         1,
+                  unit_price:       parseFloat(cashPayForm.amount),
+                  payment_status:   'paid',
+                  paid_amount:      parseFloat(cashPayForm.amount),
+                  paid_date:        cashPayForm.date,
+                  payment_method:   cashPayForm.method,
+                  notes:            cashPayForm.reference ? `Ref: ${cashPayForm.reference}${cashPayForm.notes?' · '+cashPayForm.notes:''}` : cashPayForm.notes,
+                  update_inventory: false,
+                });
+                showToast('Payment recorded!');
+                setCashPayForm({ date:today(), amount:'', method:'cash', reference:'', notes:'', bill_name:'' });
+                setShowCashPay(false);
+                load();
+              } catch(e) { alert('Failed: '+e.message); }
+              finally { setSavingCash(false); }
+            }} disabled={savingCash}
+              style={{padding:'11px 24px',background:savingCash?C.muted:'#166534',color:'white',border:'none',borderRadius:9,fontSize:14,fontWeight:700,cursor:savingCash?'not-allowed':'pointer',fontFamily:'inherit'}}>
+              {savingCash?'Saving...':'💾 Save Payment'}
+            </button>
+            <button onClick={()=>setShowCashPay(false)}
+              style={{padding:'11px 16px',background:C.cream,border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,cursor:'pointer',fontFamily:'inherit',color:C.muted}}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Inventory result toast */}
       {invResult && (
@@ -376,6 +473,77 @@ export default function KalutotaAccount() {
         </div>
       )}
 
+      {/* Print Report Button */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,flexWrap:'wrap',gap:8}}>
+        <div style={{fontSize:13,fontWeight:700,color:C.navy}}>Transaction History</div>
+        <button onClick={()=>{
+          const win = window.open('','_blank','width=900,height=700');
+          const rows = txs.map((tx,i)=>{
+            const isOut=tx.direction==='out', isPay=tx.direction==='payment';
+            return `<tr style="background:${i%2?'#f8f8f8':'white'}">
+              <td style="padding:8px 10px;border:1px solid #ddd;font-size:12px">${i+1}</td>
+              <td style="padding:8px 10px;border:1px solid #ddd;font-size:12px">${tx.date}</td>
+              <td style="padding:8px 10px;border:1px solid #ddd;font-size:12px"><span style="background:${isPay?'#dcfce7':isOut?'#f5f3ff':'#e0f2fe'};color:${isPay?'#166534':isOut?'#7c3aed':'#0891b2'};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${isPay?'PAYMENT':isOut?'TAKEN':'GIVEN'}</span></td>
+              <td style="padding:8px 10px;border:1px solid #ddd;font-size:12px">${tx.description}${tx.notes?'<br><span style="color:#888;font-size:11px">'+tx.notes+'</span>':''}</td>
+              <td style="padding:8px 10px;border:1px solid #ddd;font-size:12px;text-align:center">${tx.quantity||1}</td>
+              <td style="padding:8px 10px;border:1px solid #ddd;font-size:13px;font-weight:700;text-align:right;color:${isPay?'#166534':isOut?'#7c3aed':'#0891b2'}">Rs.${parseFloat(tx.total_amount||0).toLocaleString()}</td>
+              <td style="padding:8px 10px;border:1px solid #ddd;font-size:12px;text-align:right;color:${tx.payment_status==='paid'?'#166534':'#c0392b'}">${tx.payment_status==='paid'?'Paid':'Rs.'+parseFloat(Math.max(0,parseFloat(tx.total_amount||0)-parseFloat(tx.paid_amount||0))).toLocaleString()+' due'}</td>
+            </tr>`;
+          }).join('');
+          const totalOut = txs.filter(t=>t.direction==='out').reduce((s,t)=>s+parseFloat(t.total_amount||0),0);
+          const totalIn  = txs.filter(t=>t.direction==='in').reduce((s,t)=>s+parseFloat(t.total_amount||0),0);
+          const totalPay = txs.filter(t=>t.direction==='payment').reduce((s,t)=>s+parseFloat(t.total_amount||0),0);
+          const net      = totalOut - totalIn - totalPay;
+          win.document.write(`<!DOCTYPE html><html><head>
+<title>Kalutota Account Report</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;padding:20px;}
+  @page{size:A4;margin:15mm;}
+  @media print{body{padding:0;}}
+</style></head><body>
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #0f1f3d">
+  <div>
+    <div style="font-size:20px;font-weight:700;color:#0f1f3d">Wickramakalutota Opticals</div>
+    <div style="font-size:13px;color:#666;margin-top:2px">No.57, Kurunegala Road, Chilaw · Tel: 032 222 1211</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:16px;font-weight:700;color:#0f1f3d">Kalutota Account Report</div>
+    <div style="font-size:12px;color:#888">Printed: ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})}</div>
+    ${month?`<div style="font-size:12px;color:#0f1f3d;font-weight:700">Month: ${month}</div>`:''}
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+  <div style="background:#f5f3ff;border-radius:8px;padding:12px;text-align:center"><div style="font-size:10px;color:#7c3aed;font-weight:700;text-transform:uppercase">Goods Taken</div><div style="font-size:20px;font-weight:700;color:#7c3aed">Rs.${totalOut.toLocaleString()}</div></div>
+  <div style="background:#e0f2fe;border-radius:8px;padding:12px;text-align:center"><div style="font-size:10px;color:#0891b2;font-weight:700;text-transform:uppercase">Goods Given</div><div style="font-size:20px;font-weight:700;color:#0891b2">Rs.${totalIn.toLocaleString()}</div></div>
+  <div style="background:#dcfce7;border-radius:8px;padding:12px;text-align:center"><div style="font-size:10px;color:#166534;font-weight:700;text-transform:uppercase">Cash Paid</div><div style="font-size:20px;font-weight:700;color:#166534">Rs.${totalPay.toLocaleString()}</div></div>
+  <div style="background:${net>0?'#fef2f2':'#dcfce7'};border-radius:8px;padding:12px;text-align:center"><div style="font-size:10px;color:${net>0?'#c0392b':'#166534'};font-weight:700;text-transform:uppercase">${net>0?'They Owe You':'You Owe Them'}</div><div style="font-size:20px;font-weight:700;color:${net>0?'#c0392b':'#166534'}">Rs.${Math.abs(net).toLocaleString()}</div></div>
+</div>
+<table style="width:100%;border-collapse:collapse">
+  <thead><tr style="background:#0f1f3d;color:white">
+    <th style="padding:8px;text-align:left;font-size:11px">#</th>
+    <th style="padding:8px;text-align:left;font-size:11px">Date</th>
+    <th style="padding:8px;text-align:left;font-size:11px">Type</th>
+    <th style="padding:8px;text-align:left;font-size:11px">Description</th>
+    <th style="padding:8px;text-align:center;font-size:11px">Qty</th>
+    <th style="padding:8px;text-align:right;font-size:11px">Amount</th>
+    <th style="padding:8px;text-align:right;font-size:11px">Status</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div style="margin-top:16px;padding:12px;background:#f0f4f8;border-radius:8px;display:flex;justify-content:space-between;font-weight:700;font-size:14px">
+  <span>${txs.length} transactions</span>
+  <span style="color:${net>0?'#c0392b':'#166534'}">${net>0?'Kalutota owes you':'You owe Kalutota'}: Rs.${Math.abs(net).toLocaleString()}</span>
+</div>
+<script>window.onload=function(){window.print();};<\/script>
+</body></html>`);
+          win.document.close();
+        }}
+          style={{padding:'9px 18px',background:'#0f1f3d',color:'#c9a84c',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+          🖨️ Print Report
+        </button>
+      </div>
+
       {/* Filters */}
       <div style={{display:'flex',gap:8,marginBottom:14,flexWrap:'wrap'}}>
         <input type="month" value={month} onChange={e=>setMonth(e.target.value)}
@@ -425,14 +593,14 @@ export default function KalutotaAccount() {
                   <div>
                     <div style={{fontSize:13,fontWeight:600,color:C.navy}}>{tx.description}</div>
                     <div style={{fontSize:11,color:C.muted,marginTop:2}}>
-                      <span style={{background:isOut?'#f5f3ff':'#e0f2fe',color:isOut?C.out:C.in,padding:'1px 7px',borderRadius:20,fontSize:10,fontWeight:600,marginRight:6}}>
-                        {isOut?'Taken':'Given'}
+                      <span style={{background:isPay?'#dcfce7':isOut?'#f5f3ff':'#e0f2fe',color:isPay?'#166534':isOut?C.out:C.in,padding:'1px 7px',borderRadius:20,fontSize:10,fontWeight:600,marginRight:6}}>
+                        {isPay?'Payment':isOut?'Taken':'Given'}
                       </span>
                       {tx.category}{tx.notes&&` · ${tx.notes}`}
                     </div>
                   </div>
                   <div style={{fontSize:13,color:C.muted}}>{tx.quantity}</div>
-                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:isOut?C.out:C.in}}>{fmt(tx.total_amount)}</div>
+                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:isPay?'#166534':isOut?C.out:C.in}}>{fmt(tx.total_amount)}</div>
                   <div style={{fontSize:12}}>
                     {parseFloat(tx.paid_amount||0)>0&&<div style={{color:C.success,fontWeight:600}}>+{fmt(tx.paid_amount)}</div>}
                     {outstanding>0&&!isPaid&&<div style={{color:C.danger,fontSize:11}}>{fmt(outstanding)} due</div>}
