@@ -149,7 +149,11 @@ export default function NewOrder() {
   // ── Payment ──────────────────────────────────────────────
   const [advance,        setAdvance]       = useState('');
   const [payMethod,      setPayMethod]     = useState('cash'); // cash | bank | card
-  const [overallDiscount,setOverallDiscount] = useState(0);
+  const [overallDiscount,   setOverallDiscount]    = useState(0);
+  const [discountPct,       setDiscountPct]         = useState('');   // discount percentage
+  const [freeItems,         setFreeItems]           = useState([]);   // {inventory_id, name, qty, category}
+  const [invSearch,         setInvSearch]           = useState('');
+  const [invResults,        setInvResults]          = useState([]);
   const [deliverDate,    setDeliverDate]   = useState(
     new Date(Date.now()+7*86400000).toISOString().split('T')[0]
   );
@@ -177,7 +181,8 @@ export default function NewOrder() {
     ? 0
     : Math.max(0,(lensDetails.sellPrice||0)-(lensDetails.lensDiscount||0));
   const subTotal      = frameFinal + lensFinal;
-  const totalAmount   = Math.max(0, subTotal - (parseFloat(overallDiscount)||0));
+  const pctDiscount   = parseFloat(discountPct) > 0 ? Math.round(subTotal * parseFloat(discountPct) / 100) : 0;
+  const totalAmount   = Math.max(0, subTotal - (parseFloat(overallDiscount)||0) - pctDiscount);
   const balanceAmount = Math.max(0,totalAmount-(parseFloat(advance)||0));
 
   // ── Lens price lookup from DB ────────────────────────────
@@ -316,6 +321,17 @@ export default function NewOrder() {
   };
 
   // ── Save order ───────────────────────────────────────────
+  const searchInventory = async (q) => {
+    if (!q || q.length < 2) { setInvResults([]); return; }
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/inventory?search=${encodeURIComponent(q)}&limit=8&no_images=1`, { headers:{ Authorization:`Bearer ${token}` } });
+      const data  = await res.json();
+      setInvResults(Array.isArray(data) ? data : data.data || []);
+    } catch(e) { setInvResults([]); }
+  };
+
   const handleSave = async () => {
     const err = validate(4);
     if (err) return setError(err);
@@ -364,6 +380,8 @@ export default function NewOrder() {
         advance_amount:       parseFloat(advance) || 0,
         balance_amount:       balanceAmount,
         discount_amount:      (parseFloat(overallDiscount)||0) + (frameDetails.frameDiscount||0) + (lensDetails.lensDiscount||0),
+        discount_percent:     parseFloat(discountPct)||0,
+        free_items:           freeItems,
         payment_method:       payMethod,
         customer_own_frame:   customerOwnFrame,
         order_type:           orderType,
@@ -387,6 +405,27 @@ export default function NewOrder() {
         l_va:   ref.l_va,   l_pd:  ref.l_pd || null,
         ref_notes: ref.notes || null,
       });
+
+      // Deduct free gift items from inventory stock
+      if (freeItems.length > 0) {
+        const BASE2  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token2 = localStorage.getItem('ko_token');
+        for (const fi of freeItems) {
+          try {
+            await fetch(`${BASE2}/stock-adjustments`, {
+              method: 'POST',
+              headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token2}` },
+              body: JSON.stringify({
+                inventory_id:    fi.inventory_id,
+                change_type:     'remove',
+                quantity_change: fi.qty,
+                reason:          'Given free with order',
+                notes:           `Free gift with order`,
+              }),
+            });
+          } catch(e2) { console.warn('Stock deduction failed:', fi.name); }
+        }
+      }
 
       navigate('/orders');
     } catch(e) {
@@ -928,12 +967,61 @@ export default function NewOrder() {
               </div>
             )}
 
-            {/* Overall discount */}
-            <div style={{ background:'white', borderRadius:9, padding:'11px 14px', marginBottom:10, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-              <span style={{ fontSize:13, fontWeight:600, color:C.navy, minWidth:130 }}>💰 Overall Discount</span>
-              <input type="number" value={overallDiscount||''} onChange={e=>setOverallDiscount(parseFloat(e.target.value)||0)}
-                placeholder="0" style={{ ...INP, width:120, padding:'6px 10px', fontSize:13 }}/>
-              {parseFloat(overallDiscount)>0 && <span style={{ fontSize:13, color:C.success, fontWeight:700 }}>- {fmtMoney(overallDiscount)}</span>}
+            {/* Free Gift Items */}
+            <div style={{ background:'#f0fdf4', border:`1.5px solid #86efac`, borderRadius:10, padding:'12px 14px', marginBottom:12 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:'#166534', marginBottom:8 }}>🎁 Free Gift Items</div>
+              <input value={invSearch} onChange={e=>{ setInvSearch(e.target.value); searchInventory(e.target.value); }}
+                placeholder="Search lens cleaner, chain, pouch..."
+                style={{ width:'100%', padding:'7px 10px', border:`1.5px solid #86efac`, borderRadius:7, fontSize:13, fontFamily:'inherit', outline:'none', background:'white', marginBottom:6 }}/>
+              {invResults.length > 0 && (
+                <div style={{ background:'white', border:`1px solid #86efac`, borderRadius:7, marginBottom:6, overflow:'hidden', maxHeight:160, overflowY:'auto' }}>
+                  {invResults.map(item=>(
+                    <div key={item.id} onClick={()=>{
+                      if (freeItems.find(f=>f.inventory_id===item.id)) return;
+                      setFreeItems(prev=>[...prev,{inventory_id:item.id,name:item.name,qty:1,category:item.category,stock:item.quantity}]);
+                      setInvSearch(''); setInvResults([]);
+                    }} style={{ display:'flex', justifyContent:'space-between', padding:'7px 10px', cursor:'pointer', borderBottom:`1px solid #f0fdf4`, fontSize:13 }}
+                      onMouseEnter={e=>e.currentTarget.style.background='#f0fdf4'}
+                      onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                      <span style={{ color:'#0f1f3d', fontWeight:600 }}>{item.name}</span>
+                      <span style={{ color:'#6b7280', fontSize:11 }}>Stock: {item.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {freeItems.map((fi,i)=>(
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, background:'white', borderRadius:7, padding:'6px 10px', marginBottom:5 }}>
+                  <span style={{ fontSize:13, flex:1, color:'#166534', fontWeight:600 }}>{fi.name}</span>
+                  <input type="number" min="1" max={fi.stock} value={fi.qty}
+                    onChange={e=>setFreeItems(prev=>prev.map((x,j)=>j===i?{...x,qty:parseInt(e.target.value)||1}:x))}
+                    style={{ width:52, padding:'4px 6px', border:`1px solid #86efac`, borderRadius:6, fontSize:13, fontFamily:'inherit', textAlign:'center' }}/>
+                  <span style={{ fontSize:11, color:'#9ca3af' }}>/{fi.stock}</span>
+                  <button onClick={()=>setFreeItems(prev=>prev.filter((_,j)=>j!==i))}
+                    style={{ background:'#fef2f2', color:'#c0392b', border:'none', borderRadius:5, padding:'3px 7px', cursor:'pointer', fontSize:12 }}>✕</button>
+                </div>
+              ))}
+              {freeItems.length===0 && !invSearch && <div style={{ fontSize:11, color:'#86efac' }}>Type to search and add free items</div>}
+            </div>
+
+            {/* Discount % + Fixed discount */}
+            <div style={{ background:'white', borderRadius:9, padding:'11px 14px', marginBottom:10 }}>
+              <div style={{ fontSize:13, fontWeight:600, color:C.navy, marginBottom:8 }}>💰 Discount</div>
+              <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <label style={{ fontSize:12, color:C.muted }}>%</label>
+                  <input type="number" min="0" max="100" value={discountPct}
+                    onChange={e=>setDiscountPct(e.target.value)}
+                    placeholder="0"
+                    style={{ width:70, padding:'6px 8px', border:`1.5px solid ${C.border}`, borderRadius:7, fontSize:14, fontFamily:'inherit', outline:'none', background:C.cream, fontWeight:700, textAlign:'center' }}/>
+                  {parseFloat(discountPct)>0 && <span style={{ fontSize:12, color:C.danger, fontWeight:700 }}>= -{fmtMoney(pctDiscount)}</span>}
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <label style={{ fontSize:12, color:C.muted }}>Rs.</label>
+                  <input type="number" value={overallDiscount||''} onChange={e=>setOverallDiscount(parseFloat(e.target.value)||0)}
+                    placeholder="0" style={{ width:100, padding:'6px 8px', border:`1.5px solid ${C.border}`, borderRadius:7, fontSize:14, fontFamily:'inherit', outline:'none', background:C.cream, fontWeight:700, textAlign:'center' }}/>
+                  {parseFloat(overallDiscount)>0 && <span style={{ fontSize:12, color:C.danger, fontWeight:700 }}>-{fmtMoney(overallDiscount)}</span>}
+                </div>
+              </div>
             </div>
 
             {/* Total */}
@@ -1013,7 +1101,9 @@ export default function NewOrder() {
                 {l:'Lens',        v:`${lensDetails.type} · ${lensDetails.coating}`},
                 {l:'Frame price', v:customerOwnFrame?'No charge':fmtMoney(frameFinal)},
                 {l:'Lens price',  v:fmtMoney(lensFinal)},
-                ...(parseFloat(overallDiscount)>0?[{l:'Discount',  v:`-${fmtMoney(overallDiscount)}`, red:false}]:[]),
+                ...(freeItems.length>0?freeItems.map(fi=>({l:`🎁 ${fi.name} ×${fi.qty}`, v:'FREE', green:true})):[]),
+                ...(parseFloat(discountPct)>0?[{l:`Discount ${discountPct}%`, v:`-${fmtMoney(pctDiscount)}`, red:true}]:[]),
+                ...(parseFloat(overallDiscount)>0?[{l:'Discount (Rs.)', v:`-${fmtMoney(overallDiscount)}`, red:true}]:[]),
                 {l:'Total',       v:fmtMoney(totalAmount), bold:true},
                 {l:'Advance',     v:`${fmtMoney(parseFloat(advance)||0)} (${payMethod})`, bold:false},
                 {l:'Balance',     v:fmtMoney(balanceAmount), red:balanceAmount>0},
