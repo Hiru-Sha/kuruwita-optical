@@ -160,19 +160,18 @@ function Sticker({ item, onReady, stickerNum }) {
 const ARM_CATS = ['Frames','Sunglasses','Reading Glasses'];
 
 // ── Flat label sticker for accessories ───────────────────────
-// 40mm × 20mm flat label — name wraps, bigger number
+// 30mm × 15mm flat label — no color shown
+// 30mm × 15mm flat label — no color shown
 function AccessorySticker({ item, onReady, stickerNum }) {
   const qrUrl = useQRDataUrl(encodeItem(item));
   const name  = item.item_name || item.brand || item.name?.split(' · ')[0] || item.name || '';
-  const color = item.frame_color || '';
-  // Auto font size based on length
-  const nameFontSize = name.length > 20 ? '4.5pt' : name.length > 14 ? '5.5pt' : '7pt';
+  const nameFontSize = name.length > 20 ? '4pt' : name.length > 14 ? '5pt' : '6.5pt';
 
   useEffect(() => { if (qrUrl && onReady) onReady(); }, [qrUrl]);
 
   return (
     <div style={{
-      width:'40mm', height:'20mm',
+      width:'30mm', height:'15mm',
       display:'flex',
       fontFamily:"'Arial',sans-serif",
       background:'white',
@@ -180,58 +179,43 @@ function AccessorySticker({ item, onReady, stickerNum }) {
       pageBreakInside:'avoid',
       border:'0.3mm dashed #aaa',
     }}>
-      {/* LEFT — QR 20×20mm */}
       <div style={{
-        width:'20mm', height:'20mm', flexShrink:0,
+        width:'15mm', height:'15mm', flexShrink:0,
         display:'flex', alignItems:'center', justifyContent:'center',
         borderRight:'0.4mm solid #ddd',
-        padding:'1.5mm', boxSizing:'border-box',
+        padding:'1mm', boxSizing:'border-box',
         position:'relative',
       }}>
         {qrUrl
-          ? <img src={qrUrl} alt="QR" style={{ width:'15mm', height:'15mm', display:'block' }}/>
-          : <div style={{ width:'15mm', height:'15mm', background:'#f5f5f5',
+          ? <img src={qrUrl} alt="QR" style={{ width:'11mm', height:'11mm', display:'block' }}/>
+          : <div style={{ width:'11mm', height:'11mm', background:'#f5f5f5',
               display:'flex', alignItems:'center', justifyContent:'center',
-              fontSize:'4pt', color:'#bbb' }}>QR...</div>
+              fontSize:'3pt', color:'#bbb' }}>QR...</div>
         }
-        {/* Bigger sequence number */}
-        <div style={{ position:'absolute', bottom:'1mm', right:'1mm',
-          fontSize:'7pt', fontWeight:'bold', color:'#333',
-          background:'#f0f0f0', borderRadius:'3px', padding:'0 2px',
+        <div style={{ position:'absolute', bottom:'0.5mm', right:'0.8mm',
+          fontSize:'6pt', fontWeight:'bold', color:'#333',
+          background:'#f0f0f0', borderRadius:'2px', padding:'0 1.5px',
           lineHeight:1.3 }}>{stickerNum}</div>
       </div>
-
-      {/* RIGHT — Name + Price */}
       <div style={{
-        flex:1, padding:'2mm 2mm',
+        flex:1, padding:'1.5mm 1.5mm',
         boxSizing:'border-box',
         display:'flex', flexDirection:'column',
         justifyContent:'space-between',
         overflow:'hidden',
       }}>
-        {/* Item name — wraps to 2 lines */}
         <div style={{
           fontSize: nameFontSize,
-          fontWeight:'bold', color:'#0f1f3d', lineHeight:1.25,
+          fontWeight:'bold', color:'#0f1f3d', lineHeight:1.2,
           overflow:'hidden',
           display:'-webkit-box',
           WebkitLineClamp:2,
           WebkitBoxOrient:'vertical',
           wordBreak:'break-word',
         }}>{name}</div>
-
-        {/* Color */}
-        {color ? (
-          <div style={{ fontSize:'4.5pt', color:'#888',
-            overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-            {color}
-          </div>
-        ) : null}
-
-        {/* Price */}
         <div style={{
-          fontSize:'9.5pt', fontWeight:'bold', color:'#0f1f3d',
-          borderTop:'0.2mm solid #eee', paddingTop:'1mm',
+          fontSize:'9pt', fontWeight:'bold', color:'#0f1f3d',
+          borderTop:'0.2mm solid #eee', paddingTop:'0.8mm',
           lineHeight:1,
         }}>{fmt(item.sell_price)}</div>
       </div>
@@ -445,7 +429,7 @@ export function StickerModal({ items, onClose }) {
 
                 {/* FLAT LABELS — Boxes, Pouches, Chains, Cleaners, Ear Tips */}
                 {flatItems.length > 0 && (() => {
-                  const PER = 45; // 5 cols × 9 rows at 40mm×20mm
+                  const PER = 72; // 6 cols × 12 rows at 30mm×15mm
                   const flatPages = [];
                   for (let i=0; i<flatItems.length; i+=PER) flatPages.push(flatItems.slice(i,i+PER));
                   return flatPages.map((pageItems, pi) => (
@@ -453,12 +437,12 @@ export function StickerModal({ items, onClose }) {
                       <div className="no-print" style={{ fontSize:10, color:C.muted, marginBottom:6, textAlign:'center' }}>
                         📦 Flat Labels — Page {pi+1} · {pageItems.length} labels (stick directly on item)
                       </div>
-                      <div style={{ display:'grid', gridTemplateColumns:'repeat(5, 40mm)', gap:'0', width:'200mm', margin:'0 auto' }}>
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(6, 30mm)', gap:'0', width:'200mm', margin:'0 auto' }}>
                         {pageItems.map((item,idx) => (
                           <AccessorySticker key={`f-${item.id}-${pi}-${idx}`} item={item} stickerNum={item._seq} onReady={()=>setReadyCount(n=>n+1)}/>
                         ))}
                         {Array(Math.max(0,PER-pageItems.length)).fill(null).map((_,ei) => (
-                          <div key={`fe-${ei}`} style={{ width:'40mm', height:'20mm', border:'0.3mm dashed #eee', boxSizing:'border-box', background:'white' }}/>
+                          <div key={`fe-${ei}`} style={{ width:'30mm', height:'15mm', border:'0.3mm dashed #eee', boxSizing:'border-box', background:'white' }}/>
                         ))}
                       </div>
                     </div>
