@@ -5,15 +5,6 @@ if (typeof document !== 'undefined' && !document.getElementById('ko-no-spinners'
   s.textContent = 'input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}';
   document.head.appendChild(s);
 }
-// ============================================================
-//  NewOrder.js — Professional redesign of Step 3 & Step 4
-//  ✅ Frame name free-type + search combined
-//  ✅ Lens supplier selector + auto price fill
-//  ✅ Professional lens card UI
-//  ✅ Professional payment UI (cash/bank/card)
-//  ✅ Discount % and Rs. side-by-side
-//  ✅ All supplier prices as fallback
-// ============================================================
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createCustomer, createOrder, getCustomers, getInventory } from '../api';
@@ -40,7 +31,6 @@ const LENS_COMPANIES = ['Lanka Optic','MR Lens','Neo Vision','Omega','Murano','G
 const fmtMoney = (n) => 'Rs. '+parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 const pct = (a,b) => b>0 ? Math.round((a/b)*100) : 0;
 
-// ── Supplier reference prices (fallback when DB has no match) ─
 const SUPPLIER_PRICES = [
   { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'UC',              sell_price:1200 },
   { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'Multi Coded',     sell_price:1600 },
@@ -159,13 +149,12 @@ function findSupplierPrice(supplier, lens_type, lens_index, coating) {
   return m ? m.sell_price : null;
 }
 
-// ── Step bar ──────────────────────────────────────────────────
 function StepBar({ step }) {
   const steps = ['Customer','Refraction','Frame & Lens','Payment'];
   return (
     <div style={{ display:'flex', alignItems:'center', background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 20px', marginBottom:20, overflowX:'auto' }}>
       {steps.map((s,i) => {
-        const n=i+1; const done=step>n; const active=step===n;
+        const n=i+1, done=step>n, active=step===n;
         return (
           <React.Fragment key={s}>
             <div style={{ display:'flex', alignItems:'center', gap:8, whiteSpace:'nowrap' }}>
@@ -183,7 +172,7 @@ function StepBar({ step }) {
 }
 
 const Field = ({ label, children, span }) => (
-  <div style={{ display:'flex', flexDirection:'column', gap:5, gridColumn: span?'1/-1':undefined }}>
+  <div style={{ display:'flex', flexDirection:'column', gap:5, gridColumn:span?'1/-1':undefined }}>
     <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted }}>{label}</label>
     {children}
   </div>
@@ -192,12 +181,6 @@ const Field = ({ label, children, span }) => (
 const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%' };
 const SEL = { ...INP, cursor:'pointer' };
 
-// ── Small badge ───────────────────────────────────────────────
-const Badge = ({ children, color='#1e40af', bg='#dbeafe' }) => (
-  <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, background:bg, color, display:'inline-block', marginLeft:6 }}>{children}</span>
-);
-
-// ── Section card ─────────────────────────────────────────────
 const Card = ({ children, style={} }) => (
   <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'18px 20px', marginBottom:14, ...style }}>
     {children}
@@ -214,23 +197,20 @@ const SectionTitle = ({ icon, title, sub }) => (
   </div>
 );
 
-// ═══════════════════════════════════════════════════════════════
 export default function NewOrder() {
   const navigate = useNavigate();
-  const [step,   setStep]   = useState(1);
+  const [step,    setStep]   = useState(1);
   const location = useLocation();
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState('');
+  const [saving,  setSaving] = useState(false);
+  const [error,   setError]  = useState('');
 
-  // ── Customer ─────────────────────────────────────────────
-  const [custMode,     setCustMode]     = useState('search');
-  const [custSearch,   setCustSearch]   = useState('');
-  const [custResults,  setCustResults]  = useState([]);
-  const [selectedCust, setSelectedCust] = useState(null);
-  const [newCust, setNewCust] = useState({ title:'Mr.', name:'', phone:'', age:'' });
+  const [custMode,     setCustMode]    = useState('search');
+  const [custSearch,   setCustSearch]  = useState('');
+  const [custResults,  setCustResults] = useState([]);
+  const [selectedCust, setSelectedCust]= useState(null);
+  const [newCust,      setNewCust]     = useState({ title:'Mr.', name:'', phone:'', age:'' });
   const searchTimer = useRef(null);
 
-  // ── Refraction ───────────────────────────────────────────
   const [ref, setRef] = useState({
     r_sph_s:'-', r_sph:'0.00', r_cyl_s:'-', r_cyl:'0.00', r_axis:'0', r_add:'0.00', r_va:'6/6', r_pd:'',
     l_sph_s:'-', l_sph:'0.00', l_cyl_s:'-', l_cyl:'0.00', l_axis:'0', l_add:'0.00', l_va:'6/6', l_pd:'',
@@ -241,7 +221,6 @@ export default function NewOrder() {
   const [rxDate,     setRxDate]     = useState('');
   const [rxDoctor,   setRxDoctor]   = useState('');
 
-  // ── Frame ────────────────────────────────────────────────
   const [frameSearch,   setFrameSearch]   = useState('');
   const [frameResults,  setFrameResults]  = useState([]);
   const [selectedFrame, setSelectedFrame] = useState(null);
@@ -252,24 +231,24 @@ export default function NewOrder() {
     buyPrice:0, sellPrice:0, frameDiscount:0, inventoryId:null,
   });
 
-  // Pre-fill frame from QR scan URL params
+  // Pre-fill from QR scan URL params
   useEffect(()=>{
     const p = new URLSearchParams(location.search);
-    const frameName  = p.get('frame_name');
+    const frameName = p.get('frame_name');
     if (frameName) {
+      const decoded = decodeURIComponent(frameName);
       setFrameDetails(f=>({
         ...f,
-        name:        decodeURIComponent(frameName),
+        name:        decoded,
         color:       decodeURIComponent(p.get('frame_color')||f.color||''),
         type:        decodeURIComponent(p.get('frame_type')||f.type||'Full rim'),
         sellPrice:   parseFloat(p.get('frame_price'))||f.sellPrice||0,
         inventoryId: p.get('frame_id') || null,
       }));
-      setFrameSearch(decodeURIComponent(frameName));
+      setFrameSearch(decoded);
     }
   },[location.search]);
 
-  // ── Lens ─────────────────────────────────────────────────
   const [lensDetails, setLensDetails] = useState({
     type:'Single Vision', coating:'HMC', lens_index:'Default',
     lens_company:'Lanka Optic', color:'White',
@@ -277,31 +256,25 @@ export default function NewOrder() {
     matchedRange:'', matched:false, matchSource:'',
   });
 
-  // ── Segment height ───────────────────────────────────────
   const [segHeightR, setSegHeightR] = useState('');
   const [segHeightL, setSegHeightL] = useState('');
-
-  // ── Past record mode ─────────────────────────────────────
-  const [pastMode,  setPastMode]  = useState(false);
-  const [orderDate, setOrderDate] = useState('');
-
-  // ── Payment ──────────────────────────────────────────────
-  const [advance,         setAdvance]        = useState('');
-  const [payMethod,       setPayMethod]      = useState('cash');
-  const [overallDiscount, setOverallDiscount]= useState('');
-  const [discountPct,     setDiscountPct]    = useState('');
-  const [freeItems,       setFreeItems]      = useState([]);
-  const [invSearch,       setInvSearch]      = useState('');
-  const [invResults,      setInvResults]     = useState([]);
+  const [pastMode,   setPastMode]   = useState(false);
+  const [orderDate,  setOrderDate]  = useState('');
+  const [advance,    setAdvance]    = useState('');
+  const [payMethod,  setPayMethod]  = useState('cash');
+  const [overallDiscount, setOverallDiscount] = useState('');
+  const [discountPct,     setDiscountPct]     = useState('');
+  const [freeItems,  setFreeItems]  = useState([]);
+  const [invSearch,  setInvSearch]  = useState('');
+  const [invResults, setInvResults] = useState([]);
   const [deliverDate, setDeliverDate] = useState(
     new Date(Date.now()+7*86400000).toISOString().split('T')[0]
   );
-  const [notes, setNotes] = useState('');
-  const [orderType, setOrderType] = useState('normal');
-  const [customerOwnFrame, setCustomerOwnFrame] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
+  const [notes,            setNotes]           = useState('');
+  const [orderType,        setOrderType]       = useState('normal');
+  const [customerOwnFrame, setCustomerOwnFrame]= useState(false);
+  const [showScanner,      setShowScanner]     = useState(false);
 
-  // ── Computed totals ──────────────────────────────────────
   const frameFinal  = (orderType==='frame_replace_free'||orderType==='lens_warranty') ? 0
     : Math.max(0,(frameDetails.sellPrice||0)-(frameDetails.frameDiscount||0));
   const lensFinal   = orderType==='lens_warranty' ? 0
@@ -315,7 +288,6 @@ export default function NewOrder() {
   const lensMargin  = lensDetails.buyPrice>0 ? pct(lensDetails.sellPrice-lensDetails.buyPrice, lensDetails.sellPrice) : null;
   const frameMargin = frameDetails.buyPrice>0 ? pct(frameDetails.sellPrice-frameDetails.buyPrice, frameDetails.sellPrice) : null;
 
-  // ── Lens lookup (DB first, supplier fallback) ────────────
   const lookupLens = useCallback(async (type, coating, _sph, lens_index, company, color) => {
     const detColor = color || (coating.toLowerCase().includes('photo')||coating.toLowerCase().includes('photochromic') ? 'Photo-Gray' : 'White');
     try {
@@ -334,7 +306,6 @@ export default function NewOrder() {
         return;
       }
     } catch(e) {}
-    // Supplier prices fallback
     const sp = findSupplierPrice(company, type, lens_index, coating);
     if (sp) {
       setLensDetails(l => ({ ...l, type, coating, lens_index:lens_index||l.lens_index, lens_company:company||l.lens_company, color:detColor,
@@ -345,18 +316,16 @@ export default function NewOrder() {
       buyPrice:0, sellPrice:0, matchedRange:'', matched:false, lensDiscount:0, matchSource:'' }));
   }, []);
 
-  // ── QR scan ──────────────────────────────────────────────
   const handleQRScan = (item) => {
     setShowScanner(false);
     setSelectedFrame({ ...item, image_url:null, quantity:1 });
     setFrameSearch(item.name);
     setFrameResults([]);
-    setFrameDetails({ name:item.name, type:item.type||'Full rim', material:item.mat||'Plastic',
-      color:item.color||'Black', buyPrice:parseFloat(item.cost)||0, sellPrice:parseFloat(item.price)||0,
+    setFrameDetails({ name:item.name, type:item.frame_type||'Full rim', material:item.frame_material||'Plastic',
+      color:item.frame_color||'Black', buyPrice:parseFloat(item.cost_price)||0, sellPrice:parseFloat(item.sell_price)||0,
       frameDiscount:0, inventoryId:item.id });
   };
 
-  // ── Customer search ──────────────────────────────────────
   const handleCustSearch = (v) => {
     setCustSearch(v); setSelectedCust(null);
     clearTimeout(searchTimer.current);
@@ -368,17 +337,16 @@ export default function NewOrder() {
   };
   const pickCustomer = (c) => { setSelectedCust(c); setCustSearch(c.name); setCustResults([]); };
 
-  // ── Frame search ─────────────────────────────────────────
   const handleFrameSearch = (v) => {
     setFrameSearch(v);
-    setFrameDetails(f => ({ ...f, name:v })); // ← allow free-type name
+    setFrameDetails(f => ({ ...f, name:v }));
     setSelectedFrame(null);
     clearTimeout(frameTimer.current);
     if (v.length < 2) return setFrameResults([]);
     frameTimer.current = setTimeout(async () => {
       try {
         const res = await getInventory({ search:v, category:'Frames' });
-        setFrameResults(res.data.filter(i=>i.quantity>0).slice(0,8));
+        setFrameResults((res.data||[]).filter(i=>i.quantity>0).slice(0,8));
       } catch { setFrameResults([]); }
     }, 400);
   };
@@ -407,18 +375,17 @@ export default function NewOrder() {
     } catch { setInvResults([]); }
   };
 
-  // ── Validate ─────────────────────────────────────────────
   const validate = (s) => {
     if (s===1) {
-      if (custMode==='search' && !selectedCust)     return 'Please select an existing customer or switch to add new';
-      if (custMode==='new' && !newCust.name.trim()) return 'Please enter customer name';
-      if (custMode==='new' && !newCust.phone.trim())return 'Please enter phone number';
+      if (custMode==='search' && !selectedCust)      return 'Please select an existing customer or switch to add new';
+      if (custMode==='new' && !newCust.name.trim())  return 'Please enter customer name';
+      if (custMode==='new' && !newCust.phone.trim()) return 'Please enter phone number';
     }
     if (s===3 && !frameDetails.name.trim()) return 'Please enter or select a frame';
     if (s===4) {
-      if (pastMode && !orderDate) return 'Please set the original order date';
-      if (totalAmount<=0) return 'Total amount must be greater than 0';
-      if (!deliverDate)   return 'Please set a delivery date';
+      if (pastMode && !orderDate)  return 'Please set the original order date';
+      if (totalAmount<=0)          return 'Total amount must be greater than 0';
+      if (!deliverDate)            return 'Please set a delivery date';
       if (advanceAmt > totalAmount) return 'Advance cannot exceed total amount';
     }
     return null;
@@ -432,7 +399,6 @@ export default function NewOrder() {
     setStep(s=>s+1);
   };
 
-  // ── Save ─────────────────────────────────────────────────
   const handleSave = async () => {
     const err = validate(4);
     if (err) return setError(err);
@@ -452,9 +418,8 @@ export default function NewOrder() {
         customerId = cj?.data?.id || cj?.id;
         if (!customerId) throw new Error('Failed to create customer: '+JSON.stringify(cj));
       }
-      const comb = (s,v) => (!v||v==='0.00')?'Plano':s+v;
+      const comb    = (s,v) => (!v||v==='0.00')?'Plano':s+v;
       const combCyl = (s,v) => (!v||v==='0.00')?'0.00':s+v;
-
       await createOrder({
         customer_id:        customerId,
         frame:              customerOwnFrame?(frameDetails.name||'Customer Frame'):frameDetails.name,
@@ -473,7 +438,7 @@ export default function NewOrder() {
         total_amount:       totalAmount,
         advance_amount:     advanceAmt,
         balance_amount:     balanceAmount,
-        discount_amount:    pctAmt + rsAmt + (frameDetails.frameDiscount||0) + (lensDetails.lensDiscount||0),
+        discount_amount:    pctAmt+rsAmt+(frameDetails.frameDiscount||0)+(lensDetails.lensDiscount||0),
         discount_percent:   parseFloat(discountPct)||0,
         free_items:         freeItems,
         payment_method:     payMethod,
@@ -497,7 +462,6 @@ export default function NewOrder() {
         l_va:   ref.l_va,   l_pd:  ref.l_pd||null,
         ref_notes: ref.notes||null,
       });
-
       if (freeItems.length>0) {
         const BASE2 = process.env.REACT_APP_API_URL||'http://localhost:5000/api';
         const tk2   = localStorage.getItem('ko_token');
@@ -516,11 +480,10 @@ export default function NewOrder() {
     } finally { setSaving(false); }
   };
 
-  // ═══════════════════════════════════════════════════════════
   return (
     <div style={{ fontFamily:"'DM Sans',sans-serif", maxWidth:740, margin:'0 auto' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4, flexWrap:'wrap', gap:8 }}>
-        <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, margin:0 }}>➕ New Order</h1>
+        <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, margin:0 }}>New Order</h1>
         <button onClick={()=>navigate('/orders')}
           style={{ padding:'8px 18px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
           ← Back
@@ -531,17 +494,16 @@ export default function NewOrder() {
 
       {error && (
         <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:10, padding:'11px 16px', fontSize:13, marginBottom:16 }}>
-          ⚠️ {error}
+          {error}
         </div>
       )}
 
-      {/* ══════════════ STEP 1 — CUSTOMER ══════════════════ */}
+      {/* STEP 1 */}
       {step===1 && (
         <Card>
           <SectionTitle icon="👤" title="Customer Details" sub="Search existing or add a new customer"/>
-
           <div style={{ display:'flex', gap:6, marginBottom:18 }}>
-            {[['search','🔍 Existing'],['new','➕ New customer']].map(([mode,label])=>(
+            {[['search','Search Existing'],['new','New Customer']].map(([mode,label])=>(
               <button key={mode} onClick={()=>{ setCustMode(mode); setError(''); }}
                 style={{ padding:'8px 18px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
                   border:`1.5px solid ${custMode===mode?C.navy:C.border}`,
@@ -550,7 +512,6 @@ export default function NewOrder() {
               </button>
             ))}
           </div>
-
           {custMode==='search' && (
             <div style={{ position:'relative' }}>
               <Field label="Search by name or phone">
@@ -570,7 +531,7 @@ export default function NewOrder() {
               {selectedCust && (
                 <div style={{ marginTop:10, background:'#dcfce7', border:`1px solid #86efac`, borderRadius:10, padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                   <div>
-                    <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>✅ {selectedCust.name}</div>
+                    <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>✓ {selectedCust.name}</div>
                     <div style={{ fontSize:12, color:C.muted }}>📞 {selectedCust.phone} · {selectedCust.total_orders} previous orders</div>
                   </div>
                   <button onMouseDown={()=>{ setSelectedCust(null); setCustSearch(''); setCustResults([]); }}
@@ -579,13 +540,15 @@ export default function NewOrder() {
               )}
               {!selectedCust && !custResults.length && custSearch.length>1 && (
                 <div style={{ marginTop:8, fontSize:13, color:C.muted }}>
-                  Not found — <button onMouseDown={()=>setCustMode('new')}
-                    style={{ background:'none', border:'none', color:C.navy, cursor:'pointer', fontWeight:700, fontFamily:'inherit', textDecoration:'underline' }}>add as new customer</button>
+                  Not found —{' '}
+                  <button onMouseDown={()=>setCustMode('new')}
+                    style={{ background:'none', border:'none', color:C.navy, cursor:'pointer', fontWeight:700, fontFamily:'inherit', textDecoration:'underline' }}>
+                    add as new customer
+                  </button>
                 </div>
               )}
             </div>
           )}
-
           {custMode==='new' && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
               <Field label="Title"><select value={newCust.title} onChange={e=>setNewCust(c=>({...c,title:e.target.value}))} style={SEL}>{TITLES.map(t=><option key={t}>{t}</option>)}</select></Field>
@@ -594,7 +557,6 @@ export default function NewOrder() {
               <Field label="Age"><input value={newCust.age} onChange={e=>setNewCust(c=>({...c,age:e.target.value}))} placeholder="e.g. 34" type="number" style={INP}/></Field>
             </div>
           )}
-
           <div style={{ display:'flex', justifyContent:'flex-end', marginTop:20 }}>
             <button onClick={goNext} style={{ padding:'11px 28px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
               Next: Refraction →
@@ -603,11 +565,10 @@ export default function NewOrder() {
         </Card>
       )}
 
-      {/* ══════════════ STEP 2 — REFRACTION ════════════════ */}
+      {/* STEP 2 */}
       {step===2 && (
         <Card>
           <SectionTitle icon="🔭" title="Refraction Results" sub="Enter the patient's prescription details"/>
-
           {[{label:'Right Eye (R)',p:'r'},{label:'Left Eye (L)',p:'l'}].map(eye=>(
             <div key={eye.p} style={{ background:C.cream, borderRadius:10, padding:14, marginBottom:12 }}>
               <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:10 }}>{eye.label}</div>
@@ -631,15 +592,12 @@ export default function NewOrder() {
               </div>
             </div>
           ))}
-
           <button onClick={copyEye} style={{ background:C.cream, border:`1px solid ${C.border}`, borderRadius:7, padding:'6px 14px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted, marginBottom:14 }}>
-            ↓ Copy Right Eye to Left Eye
+            Copy Right Eye to Left Eye
           </button>
-
           <Field label="Remarks / Clinical Notes">
             <textarea value={ref.notes} onChange={e=>setRef(r=>({...r,notes:e.target.value}))} placeholder="e.g. Presbyopia, recommend progressive lenses..." style={{ ...INP, resize:'vertical', minHeight:72, lineHeight:1.6 }}/>
           </Field>
-
           <div style={{ background:'#f0f9ff', borderRadius:10, padding:'14px 16px', marginTop:14 }}>
             <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
               <div onClick={()=>setHasRx(h=>!h)} style={{ width:44, height:24, borderRadius:12, background:hasRx?C.navy:C.border, position:'relative', cursor:'pointer', transition:'background .2s', flexShrink:0 }}>
@@ -651,13 +609,10 @@ export default function NewOrder() {
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:14 }}>
                 <Field label="Hospital / Clinic"><input value={rxHospital} onChange={e=>setRxHospital(e.target.value)} placeholder="e.g. Colombo National Hospital" style={INP}/></Field>
                 <Field label="Prescription Date"><input type="date" value={rxDate} onChange={e=>setRxDate(e.target.value)} style={INP}/></Field>
-                <div style={{ gridColumn:'1/-1' }}>
-                  <Field label="Doctor's Name (optional)"><input value={rxDoctor} onChange={e=>setRxDoctor(e.target.value)} placeholder="e.g. Dr. Perera" style={INP}/></Field>
-                </div>
+                <div style={{ gridColumn:'1/-1' }}><Field label="Doctor's Name (optional)"><input value={rxDoctor} onChange={e=>setRxDoctor(e.target.value)} placeholder="e.g. Dr. Perera" style={INP}/></Field></div>
               </div>
             )}
           </div>
-
           <div style={{ display:'flex', justifyContent:'space-between', marginTop:20 }}>
             <button onClick={()=>setStep(1)} style={{ padding:'11px 20px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>← Back</button>
             <button onClick={goNext} style={{ padding:'11px 28px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Next: Frame & Lens →</button>
@@ -665,25 +620,23 @@ export default function NewOrder() {
         </Card>
       )}
 
-      {/* ══════════════ STEP 3 — FRAME & LENS ══════════════ */}
+      {/* STEP 3 */}
       {step===3 && (
         <div>
-          {/* Order Type */}
           <Card>
             <SectionTitle icon="📋" title="Order Type" sub="Select what kind of order this is"/>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {[
-                { v:'normal',             icon:'📋', label:'Normal Order',          sub:'Standard paid order',              col:C.navy,    bg:'#f0f4ff' },
-                { v:'lens_warranty',      icon:'🔁', label:'Lens Free Replacement', sub:'Our fault — no charge',            col:'#166534', bg:'#f0fdf4' },
-                { v:'lens_paid',          icon:'🔬', label:'Lens Paid Replacement', sub:'Customer pays for new lens',       col:'#1d4ed8', bg:'#eff6ff' },
-                { v:'frame_replace_free', icon:'🎁', label:'Frame Replace Free',    sub:'One-to-one, no charge',            col:'#7c3aed', bg:'#f5f3ff' },
-                { v:'frame_replace_paid', icon:'💰', label:'Frame Replace Paid',    sub:'Replacement with payment',         col:'#b45309', bg:'#fffbeb' },
+                { v:'normal',             icon:'📋', label:'Normal Order',          sub:'Standard paid order',         col:C.navy,    bg:'#f0f4ff' },
+                { v:'lens_warranty',      icon:'🔁', label:'Lens Free Replacement', sub:'Our fault — no charge',       col:'#166534', bg:'#f0fdf4' },
+                { v:'lens_paid',          icon:'🔬', label:'Lens Paid Replacement', sub:'Customer pays for new lens',  col:'#1d4ed8', bg:'#eff6ff' },
+                { v:'frame_replace_free', icon:'🎁', label:'Frame Replace Free',    sub:'One-to-one, no charge',       col:'#7c3aed', bg:'#f5f3ff' },
+                { v:'frame_replace_paid', icon:'💰', label:'Frame Replace Paid',    sub:'Replacement with payment',    col:'#b45309', bg:'#fffbeb' },
               ].map(t=>(
                 <button key={t.v} onClick={()=>setOrderType(t.v)}
                   style={{ padding:'10px 12px', borderRadius:10, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
                     border:`2px solid ${orderType===t.v?t.col:C.border}`,
-                    background:orderType===t.v?t.bg:'white',
-                    color:orderType===t.v?t.col:C.muted,
+                    background:orderType===t.v?t.bg:'white', color:orderType===t.v?t.col:C.muted,
                     display:'flex', alignItems:'center', gap:8, textAlign:'left', transition:'all .15s' }}>
                   <span style={{ fontSize:20 }}>{t.icon}</span>
                   <div><div>{t.label}</div><div style={{ fontSize:10, opacity:.7, fontWeight:400 }}>{t.sub}</div></div>
@@ -692,42 +645,32 @@ export default function NewOrder() {
             </div>
           </Card>
 
-          {/* Frame */}
           <Card>
             <SectionTitle icon="🕶️" title="Frame" sub="Search from stock, scan QR, or type a name manually"/>
-
-            {/* Frame source */}
             <div style={{ display:'flex', gap:8, marginBottom:16 }}>
-              {[
-                { v:false, icon:'🏪', label:'From our stock' },
-                { v:true,  icon:'👤', label:"Customer's frame" },
-              ].map(opt=>(
+              {[{v:false,icon:'🏪',label:'From our stock'},{v:true,icon:'👤',label:"Customer's frame"}].map(opt=>(
                 <button key={String(opt.v)} onClick={()=>{ setCustomerOwnFrame(opt.v); if(opt.v) setFrameDetails(f=>({...f,inventoryId:null,buyPrice:0})); }}
                   style={{ flex:1, padding:'10px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
                     border:`2px solid ${customerOwnFrame===opt.v?C.navy:C.border}`,
-                    background:customerOwnFrame===opt.v?C.navy:'white',
-                    color:customerOwnFrame===opt.v?'white':C.muted,
+                    background:customerOwnFrame===opt.v?C.navy:'white', color:customerOwnFrame===opt.v?'white':C.muted,
                     display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
                   <span>{opt.icon}</span>{opt.label}
                 </button>
               ))}
             </div>
-
-            {/* Frame search + QR */}
             <div style={{ position:'relative', marginBottom:14 }}>
               <div style={{ display:'flex', gap:8 }}>
                 <div style={{ flex:1, position:'relative' }}>
-                  <Field label={customerOwnFrame ? "Frame Brand / Model Name" : "Search or type frame name"}>
+                  <Field label={customerOwnFrame?"Frame Brand / Model Name":"Search or type frame name"}>
                     <input value={frameSearch} onChange={e=>handleFrameSearch(e.target.value)}
-                      placeholder={customerOwnFrame ? "e.g. RayBan RB3025, Titan..." : "Type model name or search stock..."}
+                      placeholder={customerOwnFrame?"e.g. RayBan RB3025, Titan...":"Type model name or search stock..."}
                       style={INP}/>
                   </Field>
                   {frameResults.length>0 && (
                     <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white', border:`1px solid ${C.border}`, borderRadius:10, boxShadow:'0 8px 32px rgba(0,0,0,.14)', zIndex:50, overflow:'hidden', marginTop:4 }}>
                       {frameResults.map(i=>(
                         <div key={i.id} onMouseDown={()=>pickFrame(i)}
-                          style={{ padding:'10px 14px', cursor:'pointer', borderBottom:`1px solid ${C.cream}`, display:'flex', alignItems:'center', gap:10,
-                            transition:'background .1s' }}
+                          style={{ padding:'10px 14px', cursor:'pointer', borderBottom:`1px solid ${C.cream}`, display:'flex', alignItems:'center', gap:10 }}
                           onMouseEnter={e=>e.currentTarget.style.background='#f8f5ef'}
                           onMouseLeave={e=>e.currentTarget.style.background='white'}>
                           {i.image_url && <img src={i.image_url} alt="" style={{ width:38, height:38, objectFit:'cover', borderRadius:6 }}/>}
@@ -740,10 +683,9 @@ export default function NewOrder() {
                           </div>
                         </div>
                       ))}
-                      {/* Allow keeping typed name */}
-                      <div onMouseDown={()=>{ setFrameResults([]); }}
+                      <div onMouseDown={()=>setFrameResults([])}
                         style={{ padding:'9px 14px', cursor:'pointer', fontSize:12, color:C.muted, background:C.cream, borderTop:`1px solid ${C.border}` }}>
-                        ✍️ Use "{frameSearch}" as frame name without selecting from stock
+                        Use "{frameSearch}" as frame name without selecting from stock
                       </div>
                     </div>
                   )}
@@ -751,25 +693,21 @@ export default function NewOrder() {
                 {!customerOwnFrame && (
                   <div style={{ display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
                     <button onClick={()=>setShowScanner(true)}
-                      style={{ padding:'10px 14px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:5, whiteSpace:'nowrap' }}>
-                      📷 Scan QR
+                      style={{ padding:'10px 14px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      Scan QR
                     </button>
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Selected frame photo */}
             {!customerOwnFrame && selectedFrame?.image_url && (
               <div style={{ marginBottom:14, borderRadius:10, overflow:'hidden', border:`1px solid ${C.border}` }}>
                 <img src={selectedFrame.image_url} alt={selectedFrame.name} style={{ width:'100%', height:140, objectFit:'cover' }}/>
                 <div style={{ padding:'8px 12px', background:'#dcfce7', fontSize:12, fontWeight:600, color:C.success }}>
-                  ✅ {selectedFrame.name}{selectedFrame.frame_color?` · ${selectedFrame.frame_color}`:''}{selectedFrame.frame_type?` · ${selectedFrame.frame_type}`:''}
+                  ✓ {selectedFrame.name}{selectedFrame.frame_color?` · ${selectedFrame.frame_color}`:''}
                 </div>
               </div>
             )}
-
-            {/* Frame attributes */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
               <Field label="Frame Type">
                 <select value={frameDetails.type} onChange={e=>setFrameDetails(f=>({...f,type:e.target.value}))} style={SEL}>
@@ -786,31 +724,29 @@ export default function NewOrder() {
                   {FRAME_COLORS.map(c=><option key={c}>{c}</option>)}
                 </select>
               </Field>
-              {!customerOwnFrame && <>
-                <Field label="Buy Price (Rs.)">
-                  <input type="number" value={frameDetails.buyPrice} onChange={e=>setFrameDetails(f=>({...f,buyPrice:parseFloat(e.target.value)||0}))} style={INP}/>
-                </Field>
-                <Field label="Sell Price (Rs.)">
-                  <input type="number" value={frameDetails.sellPrice} onChange={e=>setFrameDetails(f=>({...f,sellPrice:parseFloat(e.target.value)||0}))} style={INP}/>
-                </Field>
-                {frameMargin!==null && (
-                  <div style={{ display:'flex', alignItems:'flex-end', paddingBottom:2 }}>
-                    <div style={{ background: frameMargin>=40?'#dcfce7':frameMargin>=20?'#fef9c3':'#fee2e2', borderRadius:9, padding:'10px 14px', width:'100%' }}>
-                      <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', color:C.muted }}>Margin</div>
-                      <div style={{ fontSize:20, fontWeight:700, color: frameMargin>=40?C.success:frameMargin>=20?'#b45309':C.danger }}>{frameMargin}%</div>
-                      <div style={{ fontSize:11, color:C.muted }}>+{fmtMoney(frameDetails.sellPrice-frameDetails.buyPrice)}</div>
+              {!customerOwnFrame && (
+                <>
+                  <Field label="Buy Price (Rs.)">
+                    <input type="number" value={frameDetails.buyPrice} onChange={e=>setFrameDetails(f=>({...f,buyPrice:parseFloat(e.target.value)||0}))} style={INP}/>
+                  </Field>
+                  <Field label="Sell Price (Rs.)">
+                    <input type="number" value={frameDetails.sellPrice} onChange={e=>setFrameDetails(f=>({...f,sellPrice:parseFloat(e.target.value)||0}))} style={INP}/>
+                  </Field>
+                  {frameMargin!==null && (
+                    <div style={{ display:'flex', alignItems:'flex-end' }}>
+                      <div style={{ background:frameMargin>=40?'#dcfce7':frameMargin>=20?'#fef9c3':'#fee2e2', borderRadius:9, padding:'10px 14px', width:'100%' }}>
+                        <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted }}>Margin</div>
+                        <div style={{ fontSize:20, fontWeight:700, color:frameMargin>=40?C.success:frameMargin>=20?'#b45309':C.danger }}>{frameMargin}%</div>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </>}
+                  )}
+                </>
+              )}
             </div>
           </Card>
 
-          {/* Lens */}
           <Card>
             <SectionTitle icon="🔬" title="Lens" sub="Select supplier, type, coating and index — price auto-fills"/>
-
-            {/* Supplier + Index row */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
               <Field label="Lens Supplier">
                 <select value={lensDetails.lens_company}
@@ -827,8 +763,6 @@ export default function NewOrder() {
                 </select>
               </Field>
             </div>
-
-            {/* Type + Coating + Color row */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, marginBottom:14 }}>
               <Field label="Lens Type">
                 <select value={lensDetails.type}
@@ -854,13 +788,11 @@ export default function NewOrder() {
                 </select>
               </Field>
             </div>
-
-            {/* Price match banner */}
             {lensDetails.matched ? (
-              <div style={{ background: lensDetails.matchSource==='db'?'#dbeafe':'#fef9c3', border:`1px solid ${lensDetails.matchSource==='db'?'#93c5fd':'#fde68a'}`, borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
+              <div style={{ background:lensDetails.matchSource==='db'?'#dbeafe':'#fef9c3', border:`1px solid ${lensDetails.matchSource==='db'?'#93c5fd':'#fde68a'}`, borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
                 <div>
-                  <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color: lensDetails.matchSource==='db'?'#1e40af':'#92400e', marginBottom:4 }}>
-                    {lensDetails.matchSource==='db' ? '✅ Price from your price list' : '📋 Supplier reference price'} · {lensDetails.matchedRange}
+                  <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:lensDetails.matchSource==='db'?'#1e40af':'#92400e', marginBottom:4 }}>
+                    {lensDetails.matchSource==='db' ? 'Price from your price list' : 'Supplier reference price'} · {lensDetails.matchedRange}
                   </div>
                   <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
                     {lensDetails.buyPrice>0 && <span style={{ fontSize:13 }}>Buy: <b>{fmtMoney(lensDetails.buyPrice)}</b></span>}
@@ -870,16 +802,14 @@ export default function NewOrder() {
                 </div>
                 <button onClick={()=>setLensDetails(l=>({...l,matched:false}))}
                   style={{ fontSize:11, color:C.muted, background:'none', border:`1px solid ${C.border}`, borderRadius:6, padding:'4px 10px', cursor:'pointer', fontFamily:'inherit' }}>
-                  ✏️ Override
+                  Override
                 </button>
               </div>
             ) : (
               <div style={{ background:'#fff7ed', border:`1px solid #fed7aa`, borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:12, color:'#c2410c' }}>
-                ⚠️ No price match found — enter manually below or change supplier/coating/index
+                No price match found — enter manually below or change supplier/coating/index
               </div>
             )}
-
-            {/* Manual price entry */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
               <Field label="Buy Price (Rs.)">
                 <input type="number" value={lensDetails.buyPrice} onChange={e=>setLensDetails(l=>({...l,buyPrice:parseFloat(e.target.value)||0,matched:true,matchSource:'manual'}))} style={INP}/>
@@ -888,19 +818,13 @@ export default function NewOrder() {
                 <input type="number" value={lensDetails.sellPrice} onChange={e=>setLensDetails(l=>({...l,sellPrice:parseFloat(e.target.value)||0,matched:true,matchSource:'manual'}))} style={INP}/>
               </Field>
             </div>
-
-            {/* Seg heights for Progressive */}
             {lensDetails.type==='Progressive' && (
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginTop:12, background:'#e0f2fe', borderRadius:9, padding:'12px 14px' }}>
-                <div style={{ gridColumn:'1/-1', fontSize:12, fontWeight:700, color:'#0369a1', marginBottom:4 }}>📐 Segment Height (mm)</div>
+                <div style={{ gridColumn:'1/-1', fontSize:12, fontWeight:700, color:'#0369a1', marginBottom:4 }}>Segment Height (mm)</div>
                 <Field label="Right Eye"><input type="number" value={segHeightR} onChange={e=>setSegHeightR(e.target.value)} placeholder="e.g. 20" style={INP}/></Field>
                 <Field label="Left Eye"><input type="number"  value={segHeightL} onChange={e=>setSegHeightL(e.target.value)} placeholder="e.g. 20" style={INP}/></Field>
               </div>
             )}
-
-            <div style={{ marginTop:12, background:'#fef9c3', border:`1px solid #fde68a`, borderRadius:8, padding:'9px 13px', fontSize:12, color:'#854d0e' }}>
-              🔬 Lab assignment will be done tomorrow from the <b>Grinding</b> tab
-            </div>
           </Card>
 
           <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
@@ -910,53 +834,39 @@ export default function NewOrder() {
         </div>
       )}
 
-      {/* ══════════════ STEP 4 — PAYMENT ═══════════════════ */}
+      {/* STEP 4 */}
       {step===4 && (
         <div>
-          {/* Header + past order toggle */}
           <Card>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
               <div>
-                <div style={{ fontSize:15, fontWeight:700, color:C.navy }}>💰 Payment & Delivery</div>
+                <div style={{ fontSize:15, fontWeight:700, color:C.navy }}>Payment & Delivery</div>
                 <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>Set prices, discounts and advance payment</div>
               </div>
-              <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <button onClick={()=>{ setPastMode(p=>!p); setOrderDate(''); }}
-                  style={{ padding:'7px 14px', borderRadius:9, fontSize:12, fontWeight
+                  style={{ padding:'7px 14px', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
                     border:`1.5px solid ${pastMode?'#b45309':C.border}`,
                     background:pastMode?'#fffbeb':'white', color:pastMode?'#b45309':C.muted }}>
-                  📅 {pastMode?'Backdating ON ✓':'Entering a past order?'}
+                  {pastMode?'Backdating ON':'Entering a past order?'}
                 </button>
                 {pastMode && <input type="date" value={orderDate} onChange={e=>setOrderDate(e.target.value)}
-                  style={{ padding:'7px 12px', border:`1.5px solid #f59e0b`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'#fffbeb', color:'#92400e', fontWeight:700 }}/>}
+                  style={{ padding:'7px 12px', border:`1.5px solid #f59e0b`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'#fffbeb', color:'#92400e' }}/>}
               </div>
             </div>
-            {pastMode && !orderDate && (
-              <div style={{ background:'#fef3c7', border:`1px solid #fde68a`, borderRadius:9, padding:'9px 14px', marginTop:12, fontSize:13, color:'#92400e' }}>
-                ⬆️ Set the original order date before saving
-              </div>
-            )}
           </Card>
 
-          {/* Price breakdown */}
           <Card>
-            <SectionTitle icon="🧾" title="Price Breakdown" sub="Adjust selling prices and apply per-item discounts"/>
-
-            {/* Frame row */}
+            <SectionTitle icon="🧾" title="Price Breakdown" sub="Adjust selling prices and apply discounts"/>
             {!customerOwnFrame && (
               <div style={{ background:C.cream, borderRadius:11, padding:'14px 16px', marginBottom:12 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                    <span style={{ fontSize:22 }}>🕶️</span>
-                    <div>
-                      <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{frameDetails.name||'Frame'}</div>
-                      <div style={{ fontSize:11, color:C.muted }}>{frameDetails.color} · {frameDetails.type}
-                        {orderType==='frame_replace_free'&&<Badge color="#7c3aed" bg="#f5f3ff">🎁 Free Replace</Badge>}
-                      </div>
-                    </div>
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{frameDetails.name||'Frame'}</div>
+                    <div style={{ fontSize:11, color:C.muted }}>{frameDetails.color} · {frameDetails.type}</div>
                   </div>
                   <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:orderType==='frame_replace_free'?C.muted:C.navy }}>
-                    {orderType==='frame_replace_free' ? 'Rs. 0' : fmtMoney(frameFinal)}
+                    {orderType==='frame_replace_free'?'Rs. 0':fmtMoney(frameFinal)}
                   </div>
                 </div>
                 {orderType!=='frame_replace_free' && (
@@ -971,27 +881,19 @@ export default function NewOrder() {
                       <input type="number" value={frameDetails.frameDiscount||''} onChange={e=>setFrameDetails(f=>({...f,frameDiscount:parseFloat(e.target.value)||0}))}
                         placeholder="0" style={{ ...INP, padding:'7px 10px', fontSize:13 }}/>
                     </div>
-                    {frameDetails.frameDiscount>0&&<span style={{ fontSize:12, color:C.danger, fontWeight:700, whiteSpace:'nowrap' }}>-{fmtMoney(frameDetails.frameDiscount)}</span>}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Lens row */}
             <div style={{ background:'#f0f9ff', borderRadius:11, padding:'14px 16px', marginBottom:12 }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                  <span style={{ fontSize:22 }}>🔬</span>
-                  <div>
-                    <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{lensDetails.type}</div>
-                    <div style={{ fontSize:11, color:C.muted }}>
-                      {lensDetails.coating} · {lensDetails.lens_company}{lensDetails.lens_index&&lensDetails.lens_index!=='Default'?` · ${lensDetails.lens_index}`:''}
-                      {orderType==='lens_warranty'&&<Badge color="#166534" bg="#dcfce7">🔁 Free Replace</Badge>}
-                    </div>
-                  </div>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{lensDetails.type}</div>
+                  <div style={{ fontSize:11, color:C.muted }}>{lensDetails.coating} · {lensDetails.lens_company}{lensDetails.lens_index&&lensDetails.lens_index!=='Default'?` · ${lensDetails.lens_index}`:''}</div>
                 </div>
                 <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:orderType==='lens_warranty'?C.muted:C.navy }}>
-                  {orderType==='lens_warranty' ? 'Rs. 0' : fmtMoney(lensFinal)}
+                  {orderType==='lens_warranty'?'Rs. 0':fmtMoney(lensFinal)}
                 </div>
               </div>
               {orderType!=='lens_warranty' && (
@@ -1006,22 +908,18 @@ export default function NewOrder() {
                     <input type="number" value={lensDetails.lensDiscount||''} onChange={e=>setLensDetails(l=>({...l,lensDiscount:parseFloat(e.target.value)||0}))}
                       placeholder="0" style={{ ...INP, padding:'7px 10px', fontSize:13 }}/>
                   </div>
-                  {lensDetails.lensDiscount>0&&<span style={{ fontSize:12, color:C.danger, fontWeight:700, whiteSpace:'nowrap' }}>-{fmtMoney(lensDetails.lensDiscount)}</span>}
                 </div>
               )}
             </div>
 
             {/* Free gift items */}
             <div style={{ background:'#f0fdf4', border:`1px solid #86efac`, borderRadius:11, padding:'14px 16px', marginBottom:12 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:'#166534', marginBottom:10, display:'flex', alignItems:'center', gap:6 }}>
-                🎁 <span>Free Gift Items</span>
-                <span style={{ fontSize:11, fontWeight:400, color:C.muted }}>(optional — stock will be deducted)</span>
-              </div>
+              <div style={{ fontSize:13, fontWeight:700, color:'#166534', marginBottom:10 }}>Free Gift Items</div>
               <input value={invSearch} onChange={e=>{ setInvSearch(e.target.value); searchInventory(e.target.value); }}
                 placeholder="Search: lens cleaner, chain, pouch..."
-                style={{ ...INP, background:'white', border:`1.5px solid #86efac`, marginBottom:invResults.length||freeItems.length?8:0 }}/>
+                style={{ ...INP, background:'white', border:`1.5px solid #86efac`, marginBottom:6 }}/>
               {invResults.length>0 && (
-                <div style={{ background:'white', border:`1px solid #86efac`, borderRadius:7, marginBottom:8, overflow:'hidden', maxHeight:160, overflowY:'auto' }}>
+                <div style={{ background:'white', border:`1px solid #86efac`, borderRadius:7, marginBottom:6, overflow:'hidden', maxHeight:160, overflowY:'auto' }}>
                   {invResults.map(item=>(
                     <div key={item.id} onClick={()=>{ if(!freeItems.find(f=>f.inventory_id===item.id)) setFreeItems(p=>[...p,{inventory_id:item.id,name:item.name,qty:1,category:item.category,stock:item.quantity}]); setInvSearch(''); setInvResults([]); }}
                       style={{ display:'flex', justifyContent:'space-between', padding:'8px 12px', cursor:'pointer', borderBottom:`1px solid #f0fdf4`, fontSize:13 }}
@@ -1048,7 +946,7 @@ export default function NewOrder() {
 
             {/* Discount */}
             <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:11, padding:'14px 16px', marginBottom:12 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:10 }}>💸 Overall Discount</div>
+              <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:10 }}>Discount</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                 <div>
                   <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:5 }}>Percentage (%)</div>
@@ -1061,57 +959,41 @@ export default function NewOrder() {
                 </div>
                 <div>
                   <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:5 }}>Fixed Amount (Rs.)</div>
-                  <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                    <input type="number" value={overallDiscount||''} onChange={e=>setOverallDiscount(e.target.value)} placeholder="0"
-                      style={{ ...INP, fontSize:18, fontWeight:700, textAlign:'center', padding:'10px' }}/>
-                  </div>
+                  <input type="number" value={overallDiscount||''} onChange={e=>setOverallDiscount(e.target.value)} placeholder="0"
+                    style={{ ...INP, fontSize:18, fontWeight:700, textAlign:'center', padding:'10px' }}/>
                   {rsAmt>0 && <div style={{ fontSize:12, color:C.danger, fontWeight:700, marginTop:4 }}>-{fmtMoney(rsAmt)}</div>}
                 </div>
               </div>
             </div>
 
-            {/* Total bar */}
             <div style={{ background:C.navy, borderRadius:12, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <div>
                 <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.gold, marginBottom:2 }}>Order Total</div>
-                {subTotal!==totalAmount && <div style={{ fontSize:11, color:'rgba(255,255,255,.5)' }}>Sub: {fmtMoney(subTotal)} − {fmtMoney(pctAmt+rsAmt)} disc</div>}
+                {subTotal!==totalAmount && <div style={{ fontSize:11, color:'rgba(255,255,255,.5)' }}>Sub: {fmtMoney(subTotal)} − {fmtMoney(pctAmt+rsAmt)}</div>}
               </div>
               <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:'white' }}>{fmtMoney(totalAmount)}</div>
             </div>
           </Card>
 
-          {/* Payment method + advance */}
           <Card>
             <SectionTitle icon="💵" title="Advance Payment" sub="Select payment method and record advance received"/>
-
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:18 }}>
               {[
-                { v:'cash', icon:'💵', label:'Cash',         sub:'Physical cash'  },
-                { v:'bank', icon:'🏦', label:'Bank Transfer', sub:'Pan Asia Bank'  },
-                { v:'card', icon:'💳', label:'Card',          sub:'Debit / Credit' },
+                { v:'cash', icon:'💵', label:'Cash',          sub:'Physical cash'   },
+                { v:'bank', icon:'🏦', label:'Bank Transfer',  sub:'Pan Asia Bank'  },
+                { v:'card', icon:'💳', label:'Card',           sub:'Debit / Credit' },
               ].map(pm=>(
                 <button key={pm.v} onClick={()=>setPayMethod(pm.v)}
                   style={{ padding:'14px 10px', borderRadius:12, cursor:'pointer', fontFamily:'inherit',
                     border:`2px solid ${payMethod===pm.v?C.navy:C.border}`,
-                    background:payMethod===pm.v?C.navy:'white',
-                    color:payMethod===pm.v?'white':C.muted,
-                    display:'flex', flexDirection:'column', alignItems:'center', gap:4, transition:'all .15s' }}>
+                    background:payMethod===pm.v?C.navy:'white', color:payMethod===pm.v?'white':C.muted,
+                    display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
                   <span style={{ fontSize:26 }}>{pm.icon}</span>
                   <span style={{ fontSize:13, fontWeight:700 }}>{pm.label}</span>
                   <span style={{ fontSize:10, opacity:.7 }}>{pm.sub}</span>
                 </button>
               ))}
             </div>
-            {payMethod==='bank' && (
-              <div style={{ background:'#eff6ff', border:`1px solid #93c5fd`, borderRadius:9, padding:'10px 14px', marginBottom:14, fontSize:12, color:'#1e40af' }}>
-                🏦 This advance will be recorded as a <b>Pan Asia Bank</b> deposit automatically
-              </div>
-            )}
-            {payMethod==='card' && (
-              <div style={{ background:'#faf5ff', border:`1px solid #d8b4fe`, borderRadius:9, padding:'10px 14px', marginBottom:14, fontSize:12, color:'#7c3aed' }}>
-                💳 Card payment recorded. Add a note if there is a service charge.
-              </div>
-            )}
 
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
               <div>
@@ -1134,63 +1016,47 @@ export default function NewOrder() {
               <div style={{ background:balanceAmount===0?'#dcfce7':C.cream, borderRadius:12, padding:'16px', display:'flex', flexDirection:'column', justifyContent:'center', border:`1px solid ${balanceAmount===0?'#86efac':C.border}` }}>
                 <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:balanceAmount===0?C.success:C.muted, marginBottom:6 }}>Balance Due</div>
                 <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26, fontWeight:700, color:balanceAmount===0?C.success:C.navy }}>{fmtMoney(balanceAmount)}</div>
-                {balanceAmount===0 && <div style={{ fontSize:12, color:C.success, marginTop:4, fontWeight:600 }}>✅ Fully paid</div>}
-                {advanceAmt>0 && balanceAmount>0 && <div style={{ fontSize:11, color:C.muted, marginTop:4 }}>Advance: {fmtMoney(advanceAmt)}</div>}
+                {balanceAmount===0 && <div style={{ fontSize:12, color:C.success, marginTop:4, fontWeight:600 }}>Fully paid</div>}
               </div>
             </div>
           </Card>
 
-          {/* Delivery + notes */}
           <Card>
             <SectionTitle icon="📦" title="Delivery & Notes" sub="Set delivery date and any internal notes"/>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
               <Field label="Delivery Date *">
                 <input type="date" value={deliverDate} onChange={e=>setDeliverDate(e.target.value)} style={INP}/>
               </Field>
-              <div>
-                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, marginBottom:5 }}>Order Status</div>
-                <div style={{ padding:'10px 16px', background:'#dbeafe', border:`2px solid #93c5fd`, borderRadius:9, fontSize:13, fontWeight:600, color:'#1e40af' }}>📝 Created</div>
-              </div>
             </div>
             <Field label="Internal Notes (optional)" span>
               <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Any notes about this order..." style={{ ...INP, resize:'vertical', minHeight:72, lineHeight:1.6 }}/>
             </Field>
           </Card>
 
-          {/* Order summary */}
-          <Card style={{ background:C.cream, border:`1px solid ${C.border}` }}>
-            <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:12 }}>📋 Order Summary</div>
+          <Card style={{ background:C.cream }}>
+            <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:12 }}>Order Summary</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, fontSize:13 }}>
               {[
-                ...(pastMode&&orderDate?[{l:'📅 Order Date',v:new Date(orderDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),bold:true}]:[]),
-                {l:'Customer',   v:custMode==='new'?`${newCust.title} ${newCust.name}`:selectedCust?.name},
-                {l:'Phone',      v:custMode==='new'?newCust.phone:selectedCust?.phone},
-                {l:'Order Type', v:{normal:'Normal',lens_warranty:'🔁 Lens Free',lens_paid:'🔬 Lens Paid',frame_replace_free:'🎁 Frame Free',frame_replace_paid:'💰 Frame Paid'}[orderType], bold:orderType!=='normal'},
-                {l:'Frame',      v:customerOwnFrame?`${frameDetails.name||'Customer Frame'} (Own)`:frameDetails.name||'—'},
-                {l:'Lens',       v:`${lensDetails.type} · ${lensDetails.coating}`},
-                {l:'Supplier',   v:lensDetails.lens_company},
-                {l:'Index',      v:lensDetails.lens_index},
-                {l:'Frame price',v:customerOwnFrame?'No charge':fmtMoney(frameFinal)},
-                {l:'Lens price', v:fmtMoney(lensFinal)},
-                ...freeItems.map(fi=>({l:`🎁 ${fi.name} x${fi.qty}`,v:'FREE',green:true})),
+                {l:'Customer',    v:custMode==='new'?`${newCust.title} ${newCust.name}`:selectedCust?.name},
+                {l:'Order Type',  v:{normal:'Normal',lens_warranty:'Lens Free',lens_paid:'Lens Paid',frame_replace_free:'Frame Free',frame_replace_paid:'Frame Paid'}[orderType]},
+                {l:'Frame',       v:customerOwnFrame?`${frameDetails.name} (Own)`:frameDetails.name||'—'},
+                {l:'Lens',        v:`${lensDetails.type} · ${lensDetails.coating}`},
+                {l:'Supplier',    v:lensDetails.lens_company},
+                {l:'Frame price', v:customerOwnFrame?'No charge':fmtMoney(frameFinal)},
+                {l:'Lens price',  v:fmtMoney(lensFinal)},
+                ...freeItems.map(fi=>({l:`Gift: ${fi.name} x${fi.qty}`,v:'FREE',green:true})),
                 ...(pctAmt>0?[{l:`Discount ${discountPct}%`,v:`-${fmtMoney(pctAmt)}`,red:true}]:[]),
-                ...(rsAmt>0?[{l:'Discount (Rs.)',v:`-${fmtMoney(rsAmt)}`,red:true}]:[]),
-                {l:'Total',      v:fmtMoney(totalAmount), bold:true},
-                {l:'Advance',    v:`${fmtMoney(advanceAmt)} (${payMethod})`, bold:false},
-                {l:'Balance',    v:fmtMoney(balanceAmount), red:balanceAmount>0},
-                {l:'Delivery',   v:deliverDate?new Date(deliverDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—'},
+                ...(rsAmt>0?[{l:'Discount Rs.',v:`-${fmtMoney(rsAmt)}`,red:true}]:[]),
+                {l:'Total',       v:fmtMoney(totalAmount), bold:true},
+                {l:'Advance',     v:`${fmtMoney(advanceAmt)} (${payMethod})`},
+                {l:'Balance Due', v:fmtMoney(balanceAmount), red:balanceAmount>0},
+                {l:'Delivery',    v:deliverDate?new Date(deliverDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—'},
               ].map(item=>(
                 <div key={item.l}>
                   <span style={{ color:C.muted, fontSize:12 }}>{item.l}: </span>
                   <b style={{ color:item.red?C.danger:item.green?C.success:item.bold?C.navy:'#374151' }}>{item.v||'—'}</b>
                 </div>
               ))}
-              {lensDetails.type==='Progressive'&&(segHeightR||segHeightL)&&(
-                <div style={{ gridColumn:'1/-1' }}>
-                  <span style={{ color:C.muted, fontSize:12 }}>Seg. Height: </span>
-                  <b>R: {segHeightR||'—'} mm · L: {segHeightL||'—'} mm</b>
-                </div>
-              )}
             </div>
           </Card>
 
