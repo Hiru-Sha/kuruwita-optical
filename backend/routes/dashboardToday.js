@@ -25,70 +25,42 @@ router.get('/', auth, async (req, res) => {
       reminders,
     ] = await Promise.all([
 
-      // Month revenue summary — orders + quick sales + repairs
+      // Month revenue — orders only (always safe)
       pool.query(`
         SELECT
-          COALESCE(SUM(o.total_amount),0)   AS total,
-          COALESCE(SUM(o.advance_amount),0) AS collected,
-          COALESCE(SUM(o.balance_amount),0) AS owed,
-          COUNT(o.id)                        AS order_count,
-          COALESCE(
-            (SELECT SUM(total) FROM quick_sales
-             WHERE TO_CHAR(created_at,'YYYY-MM') = $1), 0
-          ) AS qs_total,
-          COALESCE(
-            (SELECT COUNT(*) FROM quick_sales
-             WHERE TO_CHAR(created_at,'YYYY-MM') = $1), 0
-          ) AS qs_count,
-          COALESCE(
-            (SELECT SUM(charge) FROM repairs
-             WHERE TO_CHAR(created_at,'YYYY-MM') = $1
-             AND status = 'completed'), 0
-          ) AS repair_total,
-          COALESCE(
-            (SELECT COUNT(*) FROM repairs
-             WHERE TO_CHAR(created_at,'YYYY-MM') = $1
-             AND status = 'completed'), 0
-          ) AS repair_count
-        FROM orders o
-        WHERE TO_CHAR(o.created_at,'YYYY-MM') = $1
+          COALESCE(SUM(total_amount),0)   AS total,
+          COALESCE(SUM(advance_amount),0) AS collected,
+          COALESCE(SUM(balance_amount),0) AS owed,
+          COUNT(id)                        AS order_count
+        FROM orders
+        WHERE TO_CHAR(created_at,'YYYY-MM') = $1
       `, [month]),
 
-      // Today's orders (advance only)
+      // Today's orders
       pool.query(`
-        SELECT advance_amount, created_at
-        FROM orders
-        WHERE created_at::date = $1
+        SELECT advance_amount FROM orders WHERE created_at::date = $1
       `, [today]),
 
-      // Today's quick sales
+      // Today's quick sales — safe
       pool.query(`
-        SELECT total, created_at
-        FROM quick_sales
-        WHERE created_at::date = $1
-      `, [today]),
+        SELECT total FROM quick_sales WHERE created_at::date = $1
+      `, [today]).catch(()=>({ rows:[] })),
 
-      // Today's expenses
+      // Today's expenses — safe
       pool.query(`
-        SELECT amount, date
-        FROM expenses
-        WHERE date = $1
-      `, [today]),
+        SELECT amount FROM expenses WHERE date = $1
+      `, [today]).catch(()=>({ rows:[] })),
 
-      // Today's deposits
+      // Today's deposits — safe
       pool.query(`
-        SELECT amount
-        FROM cash_deposits
-        WHERE date = $1
-      `, [today]),
+        SELECT amount FROM cash_deposits WHERE date = $1
+      `, [today]).catch(()=>({ rows:[] })),
 
-      // Today's repairs (paid only)
+      // Today's repairs — safe
       pool.query(`
-        SELECT charge
-        FROM repairs
-        WHERE created_at::date = $1
-          AND payment_method != 'free'
-      `, [today]),
+        SELECT charge FROM repairs
+        WHERE created_at::date = $1 AND status != 'cancelled'
+      `, [today]).catch(()=>({ rows:[] })),
 
       // Total outstanding balance
       pool.query(`
@@ -126,12 +98,32 @@ router.get('/', auth, async (req, res) => {
     ]);
 
     const mr = monthRevenue.rows[0];
-    // Add grand total (orders + QS + repairs)
-    mr.qs_total     = parseFloat(mr.qs_total     || 0);
-    mr.qs_count     = parseInt(mr.qs_count       || 0);
-    mr.repair_total = parseFloat(mr.repair_total || 0);
-    mr.repair_count = parseInt(mr.repair_count   || 0);
-    mr.grand_total  = parseFloat(mr.total || 0) + mr.qs_total + mr.repair_total;
+
+    // Fetch month QS and repairs separately with safe fallback
+    let qs_month_total = 0, qs_month_count = 0;
+    let rep_month_total = 0, rep_month_count = 0;
+    try {
+      const qsM = await pool.query(
+        `SELECT COALESCE(SUM(total),0) AS t, COUNT(*) AS c
+         FROM quick_sales WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [month]);
+      qs_month_total = parseFloat(qsM.rows[0].t||0);
+      qs_month_count = parseInt(qsM.rows[0].c||0);
+    } catch(e) {}
+    try {
+      const repM = await pool.query(
+        `SELECT COALESCE(SUM(charge),0) AS t, COUNT(*) AS c
+         FROM repairs WHERE TO_CHAR(created_at,'YYYY-MM')=$1
+         AND status NOT IN ('cancelled','pending')`, [month]);
+      rep_month_total = parseFloat(repM.rows[0].t||0);
+      rep_month_count = parseInt(repM.rows[0].c||0);
+    } catch(e) {}
+
+    mr.qs_total     = qs_month_total;
+    mr.qs_count     = qs_month_count;
+    mr.repair_total = rep_month_total;
+    mr.repair_count = rep_month_count;
+    mr.grand_total  = parseFloat(mr.total||0) + qs_month_total + rep_month_total;
+    mr.collected    = parseFloat(mr.collected||0) + qs_month_total + rep_month_total;
 
     // Daily cash summary
     const orderIncome  = todayOrders.rows.reduce((s,r)=>s+parseFloat(r.advance_amount||0),0);
