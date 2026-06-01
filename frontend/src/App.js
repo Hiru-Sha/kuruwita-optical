@@ -67,6 +67,7 @@ export default function App() {
             <Route path="kalutota"          element={<KalutotaAccount />} />
             <Route path="bulk-import"       element={<BulkImport />} />
             <Route path="report-pdf"       element={<ReportPDF />} />
+            <Route path="walkin-rx"        element={<WalkInRx />} />
             {/* Admin-only routes */}
             <Route path="grinding"  element={<AdminOnly><Grinding /></AdminOnly>} />
             <Route path="reports"   element={<AdminOnly><Reports  /></AdminOnly>} />
