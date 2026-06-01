@@ -7,19 +7,29 @@ const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({ baseURL: BASE });
 
+// Attach token to every request
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('ko_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
+// Only redirect to login if the LOGIN endpoint itself returns 401
+// NOT on every API call — that was causing the tab-switching logout
 api.interceptors.response.use(
   res => res,
   err => {
+    // Only clear session if the token is truly expired (JWT error from /auth/me)
+    // Do NOT clear on random 401s from other endpoints
     if (err.response?.status === 401) {
-      localStorage.removeItem('ko_token');
-      localStorage.removeItem('ko_user');
-      window.location.href = '/login';
+      const url = err.config?.url || '';
+      const isAuthCheck = url.includes('/auth/me') || url.includes('/auth/login');
+      if (isAuthCheck) {
+        localStorage.removeItem('ko_token');
+        localStorage.removeItem('ko_user');
+        window.location.href = '/login';
+      }
+      // For all other 401s (e.g. scan-session, permissions) — just reject silently
     }
     return Promise.reject(err);
   }
@@ -56,13 +66,6 @@ export const getDealers         = ()          => api.get('/dealers');
 export const createDealer       = (data)      => api.post('/dealers', data);
 export const getDealerPurchases = (id)        => api.get(`/dealers/${id}/purchases`);
 export const addPurchase        = (id, data)  => api.post(`/dealers/${id}/purchases`, data);
-
-// ---- Lens Prices ----
-export const getLensPrices      = (params)    => api.get('/lens-prices', { params });
-export const matchLensPrice     = (params)    => api.get('/lens-prices/match', { params });
-export const createLensPrice    = (data)      => api.post('/lens-prices', data);
-export const updateLensPrice    = (id, data)  => api.patch(`/lens-prices/${id}`, data);
-export const deleteLensPrice    = (id)        => api.delete(`/lens-prices/${id}`);
 
 // ---- Reports ----
 export const getDashboard    = ()         => api.get('/reports/dashboard');

@@ -1,61 +1,38 @@
-/* eslint-disable */
+// ============================================================
+//  AuthContext.js — Login state, persists across tab changes
+// ============================================================
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { login as apiLogin } from '../api';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user,    setUser]    = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // On app load — restore from localStorage ONLY, never re-fetch
   useEffect(() => {
-    const token = localStorage.getItem('ko_token');
-    const saved = localStorage.getItem('ko_user');
-    if (token && saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setUser(parsed);
-        // Verify token still valid by fetching /me
-        const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-        fetch(`${BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-          .then(r => r.json())
-          .then(data => {
-            if (data.id) {
-              // Update user with fresh data including role
-              const fresh = { id: data.id, username: data.username, name: data.name, role: data.role || 'admin' };
-              setUser(fresh);
-              localStorage.setItem('ko_user', JSON.stringify(fresh));
-            } else {
-              // Token invalid
-              localStorage.removeItem('ko_token');
-              localStorage.removeItem('ko_user');
-              setUser(null);
-            }
-          })
-          .catch(() => {
-            // Network error — keep cached user
-          })
-          .finally(() => setLoading(false));
-      } catch {
-        setLoading(false);
+    try {
+      const saved = localStorage.getItem('ko_user');
+      const token = localStorage.getItem('ko_token');
+      if (saved && token) {
+        setUser(JSON.parse(saved));
       }
-    } else {
-      setLoading(false);
+    } catch(e) {
+      localStorage.removeItem('ko_user');
+      localStorage.removeItem('ko_token');
     }
+    setLoading(false);
   }, []);
 
   const login = async (username, password) => {
-    const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-    const res  = await fetch(`${BASE}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Login failed');
-    localStorage.setItem('ko_token', data.token);
-    localStorage.setItem('ko_user',  JSON.stringify(data.user));
-    setUser(data.user);
-    return data.user;
+    const res = await apiLogin({ username, password });
+    const token = res.data.token;
+    const userData = res.data.user;
+    localStorage.setItem('ko_token', token);
+    localStorage.setItem('ko_user', JSON.stringify(userData));
+    setUser(userData);
+    return userData;
   };
 
   const logout = () => {
@@ -65,7 +42,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
