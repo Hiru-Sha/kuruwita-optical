@@ -579,6 +579,7 @@ export default function KalutotaAccount() {
             </div>
             :txs.map(tx=>{
               const isOut=tx.direction==='out';
+              const isPay=tx.direction==='payment';
               const outstanding=parseFloat(tx.total_amount)-parseFloat(tx.paid_amount||0);
               const isPaid=tx.payment_status==='paid';
               return (

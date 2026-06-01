@@ -196,6 +196,100 @@ function PowerTrendChart({ refractions }) {
   );
 }
 
+// ── Order card with PD/seg height editor ─────────────────────
+function OrderCard({ o, customerId, onRefresh }) {
+  const st = STATUS_STYLE[o.status] || { bg:'#f3f4f6', color:muted };
+  const [showMeas, setShowMeas] = useState(false);
+  const [rPd,  setRPd]  = useState(o.r_pd||'');
+  const [lPd,  setLPd]  = useState(o.l_pd||'');
+  const [segR, setSegR] = useState(o.seg_height_r||'');
+  const [segL, setSegL] = useState(o.seg_height_l||'');
+  const [saving, setSaving] = useState(false);
+
+  const saveMeasurements = async () => {
+    setSaving(true);
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      await fetch(`${BASE}/customers/${customerId}/order-measurements`, {
+        method:'PATCH',
+        headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+        body: JSON.stringify({ order_id:o.id, r_pd:rPd, l_pd:lPd, seg_height_r:segR, seg_height_l:segL }),
+      });
+      setShowMeas(false);
+      onRefresh();
+    } catch(e) { alert('Failed to save'); }
+    finally { setSaving(false); }
+  };
+
+  const INP_S = { padding:'7px 10px', border:`1.5px solid ${border}`, borderRadius:7, fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:'none', background:cream, color:navy, width:'100%' };
+
+  return (
+    <div style={{ background:cream, borderRadius:10, padding:'12px 14px', marginBottom:10 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+        <span style={{ fontSize:12, fontWeight:700, color:muted }}>{o.order_number}</span>
+        <span style={{ background:st.bg, color:st.color, fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:20 }}>{o.status}</span>
+      </div>
+      <div style={{ fontSize:14, fontWeight:600, color:navy, marginBottom:4 }}>{o.frame||'—'}</div>
+      <div style={{ fontSize:12, color:muted, marginBottom:6 }}>
+        {o.lens_type} · {o.lens_company||'—'} ·{' '}
+        <span style={{ color:parseFloat(o.balance_amount)>0?danger:success, fontWeight:700 }}>
+          {parseFloat(o.balance_amount)>0?`Rs. ${parseFloat(o.balance_amount).toLocaleString()} owed`:'Paid ✓'}
+        </span>
+      </div>
+      {o.deliver_date && <div style={{ fontSize:11, color:muted, marginBottom:6 }}>Deliver: {o.deliver_date?.slice(0,10)}</div>}
+
+      {/* PD & Seg height summary */}
+      <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:6 }}>
+        {(o.r_pd||o.l_pd) && (
+          <span style={{ background:'#e0f2fe', color:'#0369a1', fontSize:11, padding:'2px 8px', borderRadius:20, fontWeight:600 }}>
+            PD R:{o.r_pd||'—'} L:{o.l_pd||'—'}
+          </span>
+        )}
+        {(o.seg_height_r||o.seg_height_l) && (
+          <span style={{ background:'#f0fdf4', color:success, fontSize:11, padding:'2px 8px', borderRadius:20, fontWeight:600 }}>
+            Seg R:{o.seg_height_r||'—'} L:{o.seg_height_l||'—'}
+          </span>
+        )}
+      </div>
+
+      {/* Add/Edit PD & Seg height button */}
+      <button onClick={()=>setShowMeas(s=>!s)}
+        style={{ padding:'4px 10px', background:showMeas?'#fee2e2':'#eff6ff', color:showMeas?danger:'#1e40af', border:`1px solid ${showMeas?'#fca5a5':'#93c5fd'}`, borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+        {showMeas?'✕ Cancel':'📐 Add PD & Seg Height'}
+      </button>
+
+      {showMeas && (
+        <div style={{ marginTop:10, background:'white', borderRadius:9, padding:'12px 14px', border:`1px solid #93c5fd` }}>
+          <div style={{ fontSize:12, fontWeight:700, color:'#1e40af', marginBottom:10 }}>📐 PD & Segment Height</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
+            <div>
+              <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:muted, display:'block', marginBottom:3 }}>PD — Right</label>
+              <input value={rPd} onChange={e=>setRPd(e.target.value)} placeholder="e.g. 32" style={INP_S}/>
+            </div>
+            <div>
+              <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:muted, display:'block', marginBottom:3 }}>PD — Left</label>
+              <input value={lPd} onChange={e=>setLPd(e.target.value)} placeholder="e.g. 31" style={INP_S}/>
+            </div>
+            <div>
+              <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:muted, display:'block', marginBottom:3 }}>Seg Height — Right (mm)</label>
+              <input value={segR} onChange={e=>setSegR(e.target.value)} placeholder="e.g. 20" style={INP_S}/>
+            </div>
+            <div>
+              <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:muted, display:'block', marginBottom:3 }}>Seg Height — Left (mm)</label>
+              <input value={segL} onChange={e=>setSegL(e.target.value)} placeholder="e.g. 20" style={INP_S}/>
+            </div>
+          </div>
+          <button onClick={saveMeasurements} disabled={saving}
+            style={{ padding:'8px 18px', background:saving?muted:'#1e40af', color:'white', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+            {saving?'Saving...':'💾 Save'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Customers() {
   const [customers, setCusts]   = useState([]);
   const [search,    setSearch]  = useState('');
@@ -433,20 +527,7 @@ export default function Customers() {
                       : selected.orders.map(o => {
                           const st = STATUS_STYLE[o.status] || { bg:'#f3f4f6', color:muted };
                           return (
-                            <div key={o.id} style={{ background:cream, borderRadius:10, padding:'12px 14px', marginBottom:10 }}>
-                              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-                                <span style={{ fontSize:12, fontWeight:700, color:muted }}>{o.order_number}</span>
-                                <span style={{ background:st.bg, color:st.color, fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:20 }}>{o.status}</span>
-                              </div>
-                              <div style={{ fontSize:14, fontWeight:600, color:navy, marginBottom:4 }}>{o.frame||'—'}</div>
-                              <div style={{ fontSize:12, color:muted }}>
-                                {o.lens_type} · {o.lens_company||'—'} ·{' '}
-                                <span style={{ color:parseFloat(o.balance_amount)>0?danger:success, fontWeight:700 }}>
-                                  {parseFloat(o.balance_amount)>0?`Rs. ${parseFloat(o.balance_amount).toLocaleString()} owed`:'Paid ✓'}
-                                </span>
-                              </div>
-                              {o.deliver_date && <div style={{ fontSize:11, color:muted, marginTop:3 }}>Deliver: {o.deliver_date?.slice(0,10)}</div>}
-                            </div>
+                            <OrderCard key={o.id} o={o} customerId={selected.id} onRefresh={()=>openCustomer(selected.id)}/>
                           );
                         })
                   )}
@@ -460,7 +541,17 @@ export default function Customers() {
                         <div style={{ textAlign:'center', padding:'32px 0', color:muted }}>
                           <div style={{ fontSize:36, marginBottom:12 }}>👁️</div>
                           <div style={{ fontSize:14, fontWeight:600, marginBottom:4 }}>No refraction records yet</div>
-                          <div style={{ fontSize:13 }}>Records are saved automatically when a new order is created with refraction data</div>
+                          <div style={{ fontSize:13, marginBottom:16 }}>Add an order with Rx data through Bulk Import or New Order</div>
+                          <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap' }}>
+                            <button onClick={()=>window.location.href='/bulk-import'}
+                              style={{ padding:'9px 18px', background:navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                              📋 Bulk Import
+                            </button>
+                            <button onClick={()=>{ window.location.href=`/orders/new?customer_id=${selected.id}&customer_name=${encodeURIComponent(selected.name||'')}`; }}
+                              style={{ padding:'9px 18px', background:gold, color:navy, border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                              ➕ New Order with Rx
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <>
@@ -475,11 +566,23 @@ export default function Customers() {
                               <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'white', fontWeight:700 }}>
                                 {selected.refractions?.[0]?.r_sph||'Plano'}
                               </div>
+                              <div style={{ fontSize:10, color:'#ede9e0', marginTop:2 }}>
+                                CYL {selected.refractions?.[0]?.r_cyl||'0.00'} × {selected.refractions?.[0]?.r_axis||'0'}
+                              </div>
+                              <div style={{ fontSize:10, color:'#ede9e0', marginTop:2 }}>
+                                CYL {selected.refractions?.[0]?.r_cyl||'0.00'} × {selected.refractions?.[0]?.r_axis||'0'}
+                              </div>
                             </div>
                             <div>
                               <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Latest Left</div>
                               <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'white', fontWeight:700 }}>
                                 {selected.refractions?.[0]?.l_sph||'Plano'}
+                              </div>
+                              <div style={{ fontSize:10, color:'#ede9e0', marginTop:2 }}>
+                                CYL {selected.refractions?.[0]?.l_cyl||'0.00'} × {selected.refractions?.[0]?.l_axis||'0'}
+                              </div>
+                              <div style={{ fontSize:10, color:'#ede9e0', marginTop:2 }}>
+                                CYL {selected.refractions?.[0]?.l_cyl||'0.00'} × {selected.refractions?.[0]?.l_axis||'0'}
                               </div>
                             </div>
                           </div>

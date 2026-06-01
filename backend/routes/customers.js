@@ -10,14 +10,35 @@ const auth   = require('../middleware/auth');
 router.get('/', auth, async (req, res) => {
   const { search, limit = 200 } = req.query;
   try {
-    let sql = `SELECT * FROM customers WHERE 1=1`;
     const params = [];
+    let where = 'WHERE 1=1';
     if (search) {
       params.push(`%${search}%`);
-      sql += ` AND (name ILIKE $${params.length} OR phone ILIKE $${params.length})`;
+      where += ` AND (c.name ILIKE $${params.length} OR c.phone ILIKE $${params.length})`;
     }
     params.push(parseInt(limit));
-    sql += ` ORDER BY name ASC LIMIT $${params.length}`;
+    const sql = `
+      SELECT
+        c.*,
+        COALESCE(o.total_orders, 0)   AS total_orders,
+        COALESCE(o.total_spent, 0)    AS total_spent,
+        COALESCE(o.total_balance, 0)  AS total_balance,
+        COALESCE(o.rx_held, false)    AS rx_held
+      FROM customers c
+      LEFT JOIN (
+        SELECT
+          customer_id,
+          COUNT(*)                          AS total_orders,
+          COALESCE(SUM(total_amount), 0)    AS total_spent,
+          COALESCE(SUM(balance_amount), 0)  AS total_balance,
+          BOOL_OR(has_rx AND NOT COALESCE(rx_returned, false)) AS rx_held
+        FROM orders
+        GROUP BY customer_id
+      ) o ON o.customer_id = c.id
+      ${where}
+      ORDER BY c.name ASC
+      LIMIT $${params.length}
+    `;
     const result = await pool.query(sql, params);
     res.json(result.rows);
   } catch(err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
@@ -122,6 +143,23 @@ router.patch('/:id', auth, async (req, res) => {
     );
     res.json({ data: result.rows[0] });
   } catch(err) { res.status(500).json({ error: 'Failed' }); }
+});
+
+// PATCH /api/customers/:id/order-measurements — update PD and seg height on existing order
+router.patch('/:id/order-measurements', auth, async (req, res) => {
+  const { order_id, r_pd, l_pd, seg_height_r, seg_height_l } = req.body;
+  if (!order_id) return res.status(400).json({ error: 'order_id required' });
+  try {
+    const fields = [], vals = [];
+    if (r_pd        !== undefined) { fields.push(`r_pd = $${fields.length+1}`);          vals.push(r_pd); }
+    if (l_pd        !== undefined) { fields.push(`l_pd = $${fields.length+1}`);          vals.push(l_pd); }
+    if (seg_height_r!== undefined) { fields.push(`seg_height_r = $${fields.length+1}`); vals.push(seg_height_r); }
+    if (seg_height_l!== undefined) { fields.push(`seg_height_l = $${fields.length+1}`); vals.push(seg_height_l); }
+    if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
+    vals.push(order_id);
+    await pool.query(`UPDATE orders SET ${fields.join(', ')} WHERE id = $${vals.length}`, vals);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 module.exports = router;
