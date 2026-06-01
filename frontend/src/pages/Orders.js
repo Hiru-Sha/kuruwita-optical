@@ -153,7 +153,7 @@ export default function Orders() {
   const [showPrint,    setShowPrint]    = useState(false);
   const [showPay,      setShowPay]      = useState(false);
   const [showLensCost, setShowLensCost] = useState(false);
-  const [lensCostForm, setLensCostForm] = useState({ buy:'', sell:'', company:'' });
+  const [lensCostForm, setLensCostForm] = useState({ frameBuy:'', lensBuy:'', lensSell:'', company:'' });
   const [savingLens,   setSavingLens]   = useState(false);
   const [showGifts,    setShowGifts]    = useState(false);
   const [giftSearch,   setGiftSearch]   = useState('');
@@ -231,18 +231,19 @@ export default function Orders() {
     setSavingLens(true);
     try {
       const updates = {};
-      if (lensCostForm.buy)     updates.lens_buy_price  = parseFloat(lensCostForm.buy);
-      if (lensCostForm.sell)    updates.lens_sell_price = parseFloat(lensCostForm.sell);
-      if (lensCostForm.company) updates.lens_company    = lensCostForm.company;
+      if (lensCostForm.frameBuy !== '') updates.frame_buy_price = parseFloat(lensCostForm.frameBuy)||0;
+      if (lensCostForm.lensBuy  !== '') updates.lens_buy_price  = parseFloat(lensCostForm.lensBuy)||0;
+      if (lensCostForm.lensSell !== '') updates.lens_sell_price = parseFloat(lensCostForm.lensSell)||0;
+      if (lensCostForm.company)         updates.lens_company    = lensCostForm.company;
       if (!Object.keys(updates).length) return;
       await updateOrder(selected.id, updates);
-      // Recalculate total if sell price changed
+      // Recalculate total if lens sell price changed
       if (updates.lens_sell_price) {
-        const newTotal = parseFloat(selected.frame_sell_price||0) + parseFloat(updates.lens_sell_price);
+        const newTotal   = parseFloat(selected.frame_sell_price||0) + parseFloat(updates.lens_sell_price);
         const newBalance = Math.max(0, newTotal - parseFloat(selected.advance_amount||0));
         await updateOrder(selected.id, { total_amount: newTotal, balance_amount: newBalance });
       }
-      showToast('Lens cost updated');
+      showToast('Costs updated ✓');
       setShowLensCost(false);
       const r = await getOrder(selected.id);
       setSelected(r.data);
@@ -507,50 +508,69 @@ export default function Orders() {
               </div>
             </div>
 
-            {/* Lens Cost Update */}
+            {/* Cost of Goods */}
             <div style={{ marginBottom:20 }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>
-                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted }}>Lens Cost</div>
-                <button onClick={()=>{ setShowLensCost(s=>!s); setLensCostForm({ buy:selected.lens_buy_price||'', sell:selected.lens_sell_price||'', company:selected.lens_company||'' }); }}
+                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted }}>Cost of Goods</div>
+                <button onClick={()=>{ setShowLensCost(s=>!s); setLensCostForm({ frameBuy:selected.frame_buy_price||'', lensBuy:selected.lens_buy_price||'', lensSell:selected.lens_sell_price||'', company:selected.lens_company||'' }); }}
                   style={{ padding:'4px 12px', background:showLensCost?'#fee2e2':'#eff6ff', color:showLensCost?C.danger:'#1e40af', border:`1px solid ${showLensCost?'#fca5a5':'#93c5fd'}`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                  {showLensCost?'✕ Cancel':'✏️ Update Lens Cost'}
+                  {showLensCost?'✕ Cancel':'✏️ Update Costs'}
                 </button>
               </div>
 
-              {/* Current lens cost summary */}
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:showLensCost?10:0 }}>
-                <div style={{ background:C.cream, borderRadius:8, padding:'8px 10px' }}>
-                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Supplier</div>
-                  <div style={{ fontSize:12, fontWeight:600, color:C.navy }}>{selected.lens_company||'—'}</div>
+              {/* Current cost summary — frame + lens */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:showLensCost?10:0 }}>
+                <div style={{ background:parseFloat(selected.frame_buy_price)>0?C.cream:'#fef9c3', borderRadius:8, padding:'8px 10px', border:parseFloat(selected.frame_buy_price)>0?'none':'1px solid #fde68a' }}>
+                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Frame Buy</div>
+                  <div style={{ fontSize:12, fontWeight:700, color:parseFloat(selected.frame_buy_price)>0?C.success:'#92400e' }}>
+                    {parseFloat(selected.frame_buy_price)>0?fmtMoney(selected.frame_buy_price):'Not set'}
+                  </div>
                 </div>
-                <div style={{ background:C.cream, borderRadius:8, padding:'8px 10px' }}>
-                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Buy Price</div>
-                  <div style={{ fontSize:12, fontWeight:700, color:parseFloat(selected.lens_buy_price)>0?C.navy:C.muted }}>
-                    {parseFloat(selected.lens_buy_price)>0?fmtMoney(selected.lens_buy_price):'Not set yet'}
+                <div style={{ background:parseFloat(selected.lens_buy_price)>0?C.cream:'#fef9c3', borderRadius:8, padding:'8px 10px', border:parseFloat(selected.lens_buy_price)>0?'none':'1px solid #fde68a' }}>
+                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Lens Buy</div>
+                  <div style={{ fontSize:12, fontWeight:700, color:parseFloat(selected.lens_buy_price)>0?C.success:'#92400e' }}>
+                    {parseFloat(selected.lens_buy_price)>0?fmtMoney(selected.lens_buy_price):'Not set'}
                   </div>
                 </div>
                 <div style={{ background:C.cream, borderRadius:8, padding:'8px 10px' }}>
-                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Sell Price</div>
-                  <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>{fmtMoney(selected.lens_sell_price||0)}</div>
+                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Total COGS</div>
+                  <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>
+                    {fmtMoney((parseFloat(selected.frame_buy_price)||0)+(parseFloat(selected.lens_buy_price)||0))}
+                  </div>
+                </div>
+                <div style={{ background:C.cream, borderRadius:8, padding:'8px 10px' }}>
+                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Lab</div>
+                  <div style={{ fontSize:12, fontWeight:600, color:C.navy }}>{selected.lens_company||'—'}</div>
                 </div>
               </div>
 
               {/* Update form */}
               {showLensCost && (
                 <div style={{ background:'#eff6ff', border:`1px solid #93c5fd`, borderRadius:10, padding:'14px 16px' }}>
-                  <div style={{ fontSize:12, fontWeight:700, color:'#1e40af', marginBottom:12 }}>
-                    Update after receiving lab bill
+                  <div style={{ fontSize:12, fontWeight:700, color:'#1e40af', marginBottom:6 }}>
+                    Enter frame cost from your receipt + lens cost from lab bill
+                  </div>
+                  <div style={{ fontSize:11, color:'#92400e', background:'#fef9c3', borderRadius:7, padding:'6px 10px', marginBottom:12 }}>
+                    ⚠️ Only enter frame cost here for <b>old orders or orders where frame is not in inventory</b>. If frame was selected from inventory, cost is already set automatically.
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
                     <div>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Lab Buy Price (Rs.)</label>
-                      <input type="number" value={lensCostForm.buy} onChange={e=>setLensCostForm(f=>({...f,buy:e.target.value}))}
-                        placeholder="What lab charged you"
-                        style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #93c5fd`, borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Frame Buy Price (Rs.)</label>
+                      <input type="number" value={lensCostForm.frameBuy} onChange={e=>setLensCostForm(f=>({...f,frameBuy:e.target.value}))}
+                        placeholder="What you paid for frame"
+                        style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #86efac`, borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
+                      <div style={{ fontSize:10, color:C.muted, marginTop:3 }}>From dealer / Kalutota receipt</div>
                     </div>
                     <div>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Sell Price (Rs.)</label>
-                      <input type="number" value={lensCostForm.sell} onChange={e=>setLensCostForm(f=>({...f,sell:e.target.value}))}
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Lens Buy Price (Rs.)</label>
+                      <input type="number" value={lensCostForm.lensBuy} onChange={e=>setLensCostForm(f=>({...f,lensBuy:e.target.value}))}
+                        placeholder="What lab charged you"
+                        style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #93c5fd`, borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
+                      <div style={{ fontSize:10, color:C.muted, marginTop:3 }}>Lanka Optic / Negombo / Solex bill</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Lens Sell Price (Rs.)</label>
+                      <input type="number" value={lensCostForm.lensSell} onChange={e=>setLensCostForm(f=>({...f,lensSell:e.target.value}))}
                         placeholder="What you charge customer"
                         style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #93c5fd`, borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
                     </div>
@@ -576,7 +596,7 @@ export default function Orders() {
                   )}
                   <button onClick={handleLensCostSave} disabled={savingLens}
                     style={{ padding:'10px 22px', background:savingLens?C.muted:'#1e40af', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:savingLens?'not-allowed':'pointer', fontFamily:'inherit' }}>
-                    {savingLens?'Saving...':'💾 Save Lens Cost'}
+                    {savingLens?'Saving...':'💾 Save Costs'}
                   </button>
                 </div>
               )}

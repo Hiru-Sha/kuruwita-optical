@@ -316,6 +316,18 @@ export default function Expenses() {
   const handleAddExpense = async () => {
     if (expForm.category === 'Other' && !customCat.trim()) return setExpError('Please enter the expense name');
     if (!expForm.description.trim() && expForm.category !== 'Other') return setExpError('Please enter a description');
+    // Warn if adding frame/lens purchase as expense — this causes double counting
+    if (expForm.category === 'Frame Purchase' || expForm.category === 'Lens Purchase') {
+      const ok = window.confirm(
+        '⚠️ Double-counting warning!\n\n' +
+        'Frame and lens costs are already recorded through:\n' +
+        '• Frame → added to Inventory with buy price\n' +
+        '• Lens → entered via Orders → Update Costs\n\n' +
+        'Adding them here as expenses will count the cost TWICE in your profit report.\n\n' +
+        'Only continue if this is a special case (e.g. damaged stock, samples).\n\nContinue anyway?'
+      );
+      if (!ok) return;
+    }
     // Build final description
     const finalDesc = expForm.category === 'Other' && customCat.trim()
       ? customCat.trim() + (expForm.description.trim() ? ': ' + expForm.description.trim() : '')
