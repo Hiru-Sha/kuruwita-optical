@@ -39,7 +39,7 @@ const EXPENSE_CATS = [
   { key:'Other',           icon:'📦', color:'#6b7280' },
 ];
 const BANKS = ['Pan Asia Bank','People\'s Bank','Bank of Ceylon (BOC)','Commercial Bank','HNB','Sampath Bank','NSB','Seylan Bank','Other'];
-const getCat = (key) => EXPENSE_CATS.find(c=>c.key===key) || EXPENSE_CATS[EXPENSE_CATS.length-1];
+const _getCat = (key) => EXPENSE_CATS.find(c=>c.key===key) || EXPENSE_CATS[EXPENSE_CATS.length-1];
 
 function apiGet(path) {
   const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -99,7 +99,158 @@ export default function Expenses() {
   const [depError,    setDepError]    = useState('');
 
   const [toast, setToast] = useState('');
+
+  // Custom categories stored in localStorage
+  const [customCats, setCustomCats] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ko_custom_expense_cats') || '[]'); }
+    catch { return []; }
+  });
+  const [showManageCats, setShowManageCats] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('📌');
+
+  const CAT_ICONS = ['📌','🏷️','💡','🛒','🎯','🔑','📦','💼','🎁','🔌','🚿','🧹','📋','🖨️','🚚','🌐','💊','🏥','📚','🎓'];
+
+  const saveCustomCats = (cats) => {
+    setCustomCats(cats);
+    localStorage.setItem('ko_custom_expense_cats', JSON.stringify(cats));
+  };
+
+  const addCustomCategory = () => {
+    if (!newCatName.trim()) return;
+    const key = newCatName.trim();
+    if (EXPENSE_CATS.find(c=>c.key===key) || customCats.find(c=>c.key===key)) return alert('Category already exists');
+    const colors = ['#0ea5e9','#8b5cf6','#f43f5e','#10b981','#f59e0b','#6366f1','#ec4899','#14b8a6'];
+    const newCat = { key, icon:newCatIcon, color:colors[customCats.length % colors.length] };
+    saveCustomCats([...customCats, newCat]);
+    setNewCatName(''); setNewCatIcon('📌');
+  };
+
+  const deleteCustomCategory = (key) => {
+    if (!window.confirm(`Delete category "${key}"?`)) return;
+    saveCustomCats(customCats.filter(c=>c.key!==key));
+  };
+
+  const allCats = [...EXPENSE_CATS, ...customCats];
+  const getCatAll = (key) => allCats.find(c=>c.key===key) || EXPENSE_CATS[EXPENSE_CATS.length-1];
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(''),3000); };
+
+  // ── Generate PDF expense report ─────────────────────────────
+  const generatePDF = async (period, value) => {
+    // Determine date range
+    let fromDate, toDate, title;
+    const now = new Date();
+    if (period === 'month') {
+      const [y,m] = (value||month).split('-');
+      fromDate = `${y}-${m}-01`;
+      const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+      toDate   = `${y}-${m}-${String(lastDay).padStart(2,'0')}`;
+      title    = `Monthly Expenses — ${new Date(fromDate+'T00:00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'})}`;
+    } else if (period === 'week') {
+      const start = new Date(now); start.setDate(now.getDate()-now.getDay());
+      fromDate = start.toISOString().split('T')[0];
+      const end = new Date(start); end.setDate(start.getDate()+6);
+      toDate   = end.toISOString().split('T')[0];
+      title    = `Weekly Expenses — ${start.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})} to ${end.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}`;
+    } else if (period === 'year') {
+      const yr = value || String(now.getFullYear());
+      fromDate = `${yr}-01-01`;
+      toDate   = `${yr}-12-31`;
+      title    = `Annual Expenses — ${yr}`;
+    }
+
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/expenses?from=${fromDate}&to=${toDate}&limit=1000`, { headers:{ Authorization:`Bearer ${token}` } });
+      const exps  = await res.json();
+      const list  = Array.isArray(exps) ? exps : [];
+
+      // Group by category
+      const byCat = list.reduce((acc,e)=>{
+        const k = e.category||'Other';
+        if (!acc[k]) acc[k] = { total:0, count:0, items:[] };
+        acc[k].total += parseFloat(e.amount||0);
+        acc[k].count++;
+        acc[k].items.push(e);
+        return acc;
+      }, {});
+      const grandTotal = list.reduce((s,e)=>s+parseFloat(e.amount||0),0);
+
+      const fmtRs = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2});
+      const fmtD  = (d) => d ? new Date(d.slice(0,10)+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
+
+      const catRows = Object.entries(byCat).sort((a,b)=>b[1].total-a[1].total).map(([cat,data])=>`
+        <tr style="background:#f8f5ef">
+          <td colspan="3" style="padding:6px 10px;font-weight:700;color:#0f1f3d;font-size:12px;border:1px solid #e0ddd6">${getCatAll(cat).icon} ${cat}</td>
+          <td style="padding:6px 10px;font-weight:700;color:#0f1f3d;text-align:right;border:1px solid #e0ddd6">${fmtRs(data.total)}</td>
+        </tr>
+        ${data.items.map(e=>`
+        <tr>
+          <td style="padding:5px 10px 5px 22px;font-size:11px;color:#6b7280;border:1px solid #e0ddd6">${fmtD(e.date)}</td>
+          <td style="padding:5px 10px;font-size:12px;color:#0f1f3d;border:1px solid #e0ddd6">${e.description||cat}</td>
+          <td style="padding:5px 10px;font-size:11px;color:#6b7280;text-align:center;border:1px solid #e0ddd6">${e.payment_method==='bank'?'Bank':'Cash'}</td>
+          <td style="padding:5px 10px;font-size:12px;font-weight:600;color:#c0392b;text-align:right;border:1px solid #e0ddd6">− ${fmtRs(e.amount)}</td>
+        </tr>`).join('')}
+      `).join('');
+
+      const win = window.open('','_blank','width=900,height=700');
+      win.document.write(`<!DOCTYPE html><html><head>
+<title>${title}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Arial,sans-serif;padding:20px;color:#0f1f3d;}
+  @page{size:A4;margin:15mm;}
+  @media print{body{padding:0;}.no-print{display:none;}}
+  table{width:100%;border-collapse:collapse;}
+  th{background:#0f1f3d;color:#c9a84c;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;}
+  th:last-child{text-align:right;}
+</style></head><body>
+<div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:2px solid #0f1f3d;margin-bottom:18px">
+  <div>
+    <div style="font-size:20px;font-weight:700;color:#0f1f3d">Wickramakalutota Opticals</div>
+    <div style="font-size:13px;color:#666;margin-top:2px">No.57, Kurunegala Road, Chilaw · 032 222 1211</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:16px;font-weight:700;color:#0f1f3d">${title}</div>
+    <div style="font-size:11px;color:#888">${fromDate} to ${toDate}</div>
+    <div style="font-size:11px;color:#888">Printed: ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})}</div>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
+  <div style="background:#fee2e2;border-radius:8px;padding:12px;text-align:center">
+    <div style="font-size:10px;color:#c0392b;font-weight:700;text-transform:uppercase">Total Expenses</div>
+    <div style="font-size:22px;font-weight:700;color:#c0392b">${fmtRs(grandTotal)}</div>
+  </div>
+  <div style="background:#f3f4f6;border-radius:8px;padding:12px;text-align:center">
+    <div style="font-size:10px;color:#374151;font-weight:700;text-transform:uppercase">Transactions</div>
+    <div style="font-size:22px;font-weight:700;color:#0f1f3d">${list.length}</div>
+  </div>
+  <div style="background:#f3f4f6;border-radius:8px;padding:12px;text-align:center">
+    <div style="font-size:10px;color:#374151;font-weight:700;text-transform:uppercase">Categories</div>
+    <div style="font-size:22px;font-weight:700;color:#0f1f3d">${Object.keys(byCat).length}</div>
+  </div>
+</div>
+<table>
+  <thead><tr>
+    <th style="width:100px">Date</th>
+    <th>Description</th>
+    <th style="width:70px;text-align:center">Payment</th>
+    <th style="width:130px;text-align:right">Amount</th>
+  </tr></thead>
+  <tbody>
+    ${catRows}
+    <tr style="background:#0f1f3d">
+      <td colspan="3" style="padding:10px;font-weight:700;color:white;font-size:14px;border:1px solid #0f1f3d">GRAND TOTAL</td>
+      <td style="padding:10px;font-weight:700;color:#c9a84c;text-align:right;font-size:16px;border:1px solid #0f1f3d">${fmtRs(grandTotal)}</td>
+    </tr>
+  </tbody>
+</table>
+<script>window.onload=function(){window.print();};<\/script>
+</body></html>`);
+      win.document.close();
+    } catch(e) { alert('Failed to generate report: '+e.message); }
+  };
 
   // ── Load daily data ─────────────────────────────────────────
   const loadDaily = useCallback(async () => {
@@ -311,7 +462,7 @@ export default function Expenses() {
                   <div style={{ marginBottom:10 }}>
                     <label style={LBL}>Category</label>
                     <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                      {EXPENSE_CATS.map(cat=>(
+                      {allCats.map(cat=>(
                         <button key={cat.key} onClick={()=>setExpForm(f=>({...f,category:cat.key}))}
                           style={{ padding:'5px 10px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${expForm.category===cat.key?cat.color:C.border}`, background:expForm.category===cat.key?cat.color+'18':'white', color:expForm.category===cat.key?cat.color:C.muted }}>
                           {cat.icon} {cat.key}
@@ -348,7 +499,7 @@ export default function Expenses() {
                   <div style={{ marginBottom:10 }}>
                     <label style={LBL}>{expForm.category === 'Other' ? 'Additional Notes (optional)' : 'Description'}</label>
                     <input value={expForm.description} onChange={e=>setExpForm(f=>({...f,description:e.target.value}))}
-                      placeholder={expForm.category === 'Other' ? 'Any extra details...' : `e.g. ${getCat(expForm.category).icon} ${expForm.category}`}
+                      placeholder={expForm.category === 'Other' ? 'Any extra details...' : `e.g. ${getCatAll(expForm.category).icon} ${expForm.category}`}
                       style={INP}/>
                   </div>
 
@@ -367,7 +518,7 @@ export default function Expenses() {
                       No expenses recorded for this day
                     </div>
                   : dailyExpenses.map(exp=>{
-                      const cat = getCat(exp.category);
+                      const cat = getCatAll(exp.category);
                       return (
                         <div key={exp.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderBottom:`1px solid ${C.cream}` }}>
                           <div style={{ width:36, height:36, borderRadius:9, background:cat.color+'15', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
@@ -559,19 +710,77 @@ export default function Expenses() {
           </div>
 
           {/* Add button */}
-          <div style={{ marginBottom:14 }}>
+          <div style={{ marginBottom:14, display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
             <button onClick={()=>{ setExpForm(f=>({...f,date:today()})); setShowAddExp(s=>!s); }}
               style={{ padding:'9px 20px', background:showAddExp?C.cream:C.gold, color:showAddExp?C.muted:C.navy, border:showAddExp?`1.5px solid ${C.border}`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               {showAddExp?'✕ Cancel':'+ Add Expense'}
             </button>
+            <button onClick={()=>setShowManageCats(s=>!s)}
+              style={{ padding:'9px 16px', background:showManageCats?C.cream:'#7c3aed', color:showManageCats?C.muted:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              {showManageCats?'✕ Close':'⚙️ Manage Categories'}
+            </button>
+            <div style={{ display:'flex', gap:6 }}>
+              {[
+                { label:'This Month', fn:()=>generatePDF('month', month) },
+                { label:'This Week',  fn:()=>generatePDF('week',  null)  },
+                { label:'Full Year',  fn:()=>generatePDF('year',  month.slice(0,4)) },
+              ].map(btn=>(
+                <button key={btn.label} onClick={btn.fn}
+                  style={{ padding:'9px 14px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>
+                  🖨️ {btn.label}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Manage Categories panel */}
+          {showManageCats && (
+            <div style={{ background:'white', border:`1.5px solid #7c3aed`, borderRadius:14, padding:20, marginBottom:16 }}>
+              <div style={{ fontSize:14, fontWeight:700, color:'#7c3aed', marginBottom:14 }}>⚙️ Manage Custom Categories</div>
+              {/* Add new category */}
+              <div style={{ display:'flex', gap:8, marginBottom:14, alignItems:'flex-end' }}>
+                <div style={{ flex:1 }}>
+                  <label style={LBL}>Category Name</label>
+                  <input value={newCatName} onChange={e=>setNewCatName(e.target.value)}
+                    placeholder="e.g. Lab Equipment, Marketing..."
+                    style={INP} onKeyDown={e=>e.key==='Enter'&&addCustomCategory()}/>
+                </div>
+                <div>
+                  <label style={LBL}>Icon</label>
+                  <select value={newCatIcon} onChange={e=>setNewCatIcon(e.target.value)}
+                    style={{ ...INP, width:80 }}>
+                    {CAT_ICONS.map(i=><option key={i} value={i}>{i}</option>)}
+                  </select>
+                </div>
+                <button onClick={addCustomCategory}
+                  style={{ padding:'10px 18px', background:'#7c3aed', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                  + Add
+                </button>
+              </div>
+              {/* Custom categories list */}
+              {customCats.length===0
+                ? <div style={{ fontSize:13, color:C.muted, textAlign:'center', padding:'10px 0' }}>No custom categories yet — add one above</div>
+                : <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                    {customCats.map(cat=>(
+                      <div key={cat.key} style={{ display:'flex', alignItems:'center', gap:6, background:cat.color+'15', border:`1px solid ${cat.color}`, borderRadius:20, padding:'5px 12px', fontSize:13 }}>
+                        <span>{cat.icon}</span>
+                        <span style={{ fontWeight:600, color:cat.color }}>{cat.key}</span>
+                        <button onClick={()=>deleteCustomCategory(cat.key)}
+                          style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, fontSize:12, padding:'0 0 0 4px' }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+              }
+              <div style={{ fontSize:11, color:C.muted, marginTop:10 }}>Custom categories are saved locally on this device</div>
+            </div>
+          )}
 
           {/* Add form */}
           {showAddExp && (
             <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:20 }}>
               {expError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:8, padding:'10px 12px', fontSize:13, marginBottom:12 }}>⚠️ {expError}</div>}
               <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginBottom:14 }}>
-                {EXPENSE_CATS.map(cat=>(
+                {allCats.map(cat=>(
                   <button key={cat.key} onClick={()=>setExpForm(f=>({...f,category:cat.key}))}
                     style={{ padding:'6px 12px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${expForm.category===cat.key?cat.color:C.border}`, background:expForm.category===cat.key?cat.color+'15':'white', color:expForm.category===cat.key?cat.color:C.muted }}>
                     {cat.icon} {cat.key}
@@ -611,7 +820,7 @@ export default function Expenses() {
               {!summary?.by_category?.length
                 ? <div style={{ padding:20, textAlign:'center', color:C.muted, fontSize:13 }}>No expenses</div>
                 : summary.by_category.map(cat=>{
-                    const info = getCat(cat.category);
+                    const info = getCatAll(cat.category);
                     const max  = parseFloat(summary.by_category[0]?.total)||1;
                     return (
                       <div key={cat.category} onClick={()=>setCatFilter(catFilter===cat.category?'all':cat.category)}
@@ -643,13 +852,13 @@ export default function Expenses() {
             {/* Expense list */}
             <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
               <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, display:'flex', justifyContent:'space-between' }}>
-                <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{catFilter==='all'?'All Expenses':`${getCat(catFilter).icon} ${catFilter}`}</span>
+                <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{catFilter==='all'?'All Expenses':`${getCatAll(catFilter).icon} ${catFilter}`}</span>
                 <span style={{ fontSize:12, color:C.muted }}>{allExpenses.length} records</span>
               </div>
               {!allExpenses.length
                 ? <div style={{ padding:40, textAlign:'center', color:C.muted }}><div style={{ fontSize:32, marginBottom:8 }}>💸</div>No expenses</div>
                 : allExpenses.map((exp,idx)=>{
-                    const cat = getCat(exp.category);
+                    const cat = getCatAll(exp.category);
                     const prev = allExpenses[idx-1];
                     const showD = !prev || prev.date?.slice(0,10) !== exp.date?.slice(0,10);
                     return (
