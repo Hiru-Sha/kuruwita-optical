@@ -24,6 +24,7 @@ import LabReceivings   from './pages/LabReceivings';
 import KalutotaAccount from './pages/KalutotaAccount';
 import BulkImport     from './pages/BulkImport';
 import ReportPDF       from './pages/ReportPDF';
+import WalkInRx        from './pages/WalkInRx';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
