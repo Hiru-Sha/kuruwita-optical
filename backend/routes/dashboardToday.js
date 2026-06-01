@@ -25,15 +25,33 @@ router.get('/', auth, async (req, res) => {
       reminders,
     ] = await Promise.all([
 
-      // Month revenue summary
+      // Month revenue summary — orders + quick sales + repairs
       pool.query(`
         SELECT
-          COALESCE(SUM(total_amount),0)   AS total,
-          COALESCE(SUM(advance_amount),0) AS collected,
-          COALESCE(SUM(balance_amount),0) AS owed,
-          COUNT(*)                        AS order_count
-        FROM orders
-        WHERE TO_CHAR(created_at,'YYYY-MM') = $1
+          COALESCE(SUM(o.total_amount),0)   AS total,
+          COALESCE(SUM(o.advance_amount),0) AS collected,
+          COALESCE(SUM(o.balance_amount),0) AS owed,
+          COUNT(o.id)                        AS order_count,
+          COALESCE(
+            (SELECT SUM(total) FROM quick_sales
+             WHERE TO_CHAR(created_at,'YYYY-MM') = $1), 0
+          ) AS qs_total,
+          COALESCE(
+            (SELECT COUNT(*) FROM quick_sales
+             WHERE TO_CHAR(created_at,'YYYY-MM') = $1), 0
+          ) AS qs_count,
+          COALESCE(
+            (SELECT SUM(charge) FROM repairs
+             WHERE TO_CHAR(created_at,'YYYY-MM') = $1
+             AND status = 'completed'), 0
+          ) AS repair_total,
+          COALESCE(
+            (SELECT COUNT(*) FROM repairs
+             WHERE TO_CHAR(created_at,'YYYY-MM') = $1
+             AND status = 'completed'), 0
+          ) AS repair_count
+        FROM orders o
+        WHERE TO_CHAR(o.created_at,'YYYY-MM') = $1
       `, [month]),
 
       // Today's orders (advance only)
@@ -108,6 +126,12 @@ router.get('/', auth, async (req, res) => {
     ]);
 
     const mr = monthRevenue.rows[0];
+    // Add grand total (orders + QS + repairs)
+    mr.qs_total     = parseFloat(mr.qs_total     || 0);
+    mr.qs_count     = parseInt(mr.qs_count       || 0);
+    mr.repair_total = parseFloat(mr.repair_total || 0);
+    mr.repair_count = parseInt(mr.repair_count   || 0);
+    mr.grand_total  = parseFloat(mr.total || 0) + mr.qs_total + mr.repair_total;
 
     // Daily cash summary
     const orderIncome  = todayOrders.rows.reduce((s,r)=>s+parseFloat(r.advance_amount||0),0);

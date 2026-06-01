@@ -183,8 +183,8 @@ export default function Dashboard() {
 
       {/* KPIs — 2 cols on mobile */}
       <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(auto-fit,minmax(140px,1fr))',gap:10,marginBottom:14}}>
-        <KPI label="This Month"    value={fmt(mr.total)}            sub={`${mr.order_count||0} orders`} dark/>
-        <KPI label="Collected"     value={fmt(mr.collected)}        sub="Advances"    color={success}/>
+        <KPI label="This Month"    value={fmt(mr.grand_total||mr.total)} sub={`${mr.order_count||0} orders · ${mr.qs_count||0} sales · ${mr.repair_count||0} repairs`} dark/>
+        <KPI label="Collected"     value={fmt(parseFloat(mr.collected||0)+parseFloat(mr.qs_total||0)+parseFloat(mr.repair_total||0))} sub="Orders + Sales + Repairs" color={success}/>
         <KPI label="Balance Due"   value={fmt(data?.total_balance)} sub="Outstanding" color={danger}/>
         <KPI label="Active Orders" value={data?.active_orders||0}   sub="In progress" color='#2563eb'/>
       </div>
@@ -222,10 +222,10 @@ export default function Dashboard() {
         </div>
         <div style={{padding:12,display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
           {[
-            {l:'Total billed',v:fmt(mr.total),    c:navy   },
-            {l:'Collected',   v:fmt(mr.collected),c:success},
-            {l:'Still owed', v:fmt(mr.owed),     c:danger },
-            {l:'Orders',     v:mr.order_count||0,c:'#2563eb'},
+            {l:'Total billed',  v:fmt(mr.grand_total||mr.total),                                                                               c:navy   },
+            {l:'Collected',     v:fmt(parseFloat(mr.collected||0)+parseFloat(mr.qs_total||0)+parseFloat(mr.repair_total||0)),                  c:success},
+            {l:'Still owed',    v:fmt(mr.owed),                                                                                                c:danger },
+            {l:'Orders',        v:`${mr.order_count||0} / ${mr.qs_count||0} QS / ${mr.repair_count||0} rep`,                                  c:'#2563eb'},
           ].map(item=>(
             <div key={item.l} style={{background:cream,borderRadius:10,padding:'12px 12px',textAlign:'center'}}>
               <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.8px',color:muted,marginBottom:4}}>{item.l}</div>
