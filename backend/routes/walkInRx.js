@@ -6,27 +6,7 @@ const router = require('express').Router();
 const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 
-// Ensure table exists
-pool.query(`
-  CREATE TABLE IF NOT EXISTS walkin_rx (
-    id            SERIAL PRIMARY KEY,
-    customer_name VARCHAR(200) NOT NULL,
-    phone         VARCHAR(30),
-    age           INTEGER,
-    r_sph         VARCHAR(10), r_cyl VARCHAR(10), r_axis VARCHAR(6),
-    r_add         VARCHAR(10), r_va  VARCHAR(10), r_pd   VARCHAR(10),
-    l_sph         VARCHAR(10), l_cyl VARCHAR(10), l_axis VARCHAR(6),
-    l_add         VARCHAR(10), l_va  VARCHAR(10), l_pd   VARCHAR(10),
-    notes         TEXT,
-    quoted_frame  VARCHAR(200),
-    quoted_lens   VARCHAR(200),
-    quoted_price  NUMERIC(10,2),
-    follow_up     BOOLEAN DEFAULT false,
-    followed_up   BOOLEAN DEFAULT false,
-    created_at    TIMESTAMP DEFAULT NOW(),
-    created_by    INTEGER REFERENCES users(id)
-  )
-`).catch(e => console.error('walkin_rx table error:', e.message));
+// Table created via Supabase SQL migration — see README
 
 // GET — list all walk-in Rx records
 router.get('/', auth, async (req, res) => {
