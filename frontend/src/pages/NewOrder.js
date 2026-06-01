@@ -17,8 +17,40 @@ const VA_OPTIONS   = ['6/6','6/9','6/12','6/18','6/24','6/36','6/60','CF','HM','
 const FRAME_TYPES  = ['Full rim','Half rim','Rimless','Sunglass'];
 const FRAME_MATS   = ['Plastic','Metal','TR90','Titanium','Acetate'];
 const FRAME_COLORS = ['Black','Gold','Silver','Brown','Gunmetal','Blue','Red','Pink','Tortoise','Crystal','Other'];
-const LENS_TYPES   = ['Single Vision','Progressive','Bifocal','Office Lens','Reading (ready)'];
-const LENS_COATINGS= ['UC','CR (White)','HMC','HMC Grey','Hard Coat','Blue Cut','Blue Cut HMC','Blue Cut PG HMC','Blue Cut DSC','HMC DSC','Photo HMC DSC','BC PG','BC PG DSC','Polarized','Polarized DSC','Mirror Coating','Photochromic','Blue + Photochromic','Multi Coded','CR MC'];
+const LENS_TYPES   = ['Single Vision','Progressive','Bifocal','Office Lens','Reading (ready)','Progressive Bifocal'];
+const LENS_COATINGS= [
+  // ── CR39 basics (most common) ──
+  'CR White (UC)',
+  'CR Blue Cut',
+  'CR Blue Cut PG',
+  'CR HMC',
+  'CR HMC PG',
+  // ── Progressive coatings ──
+  'Progressive White',
+  'Progressive Blue Cut',
+  'Progressive Blue Cut PG',
+  'Progressive HMC',
+  'Progressive HMC PG',
+  'Progressive Polarized',
+  'Progressive Photo Gray',
+  // ── High index / specialty ──
+  'HMC',
+  'HMC PG',
+  'HMC Grey',
+  'Blue Cut HMC',
+  'Blue Cut PG HMC',
+  'BC PG',
+  'BC PG DSC',
+  'HMC DSC',
+  'Photo HMC DSC',
+  'Blue Cut DSC',
+  'Polarized',
+  'Polarized DSC',
+  'UC',
+  'Multi Coded',
+  'Mirror Coating',
+  'Photochromic',
+];
 const LENS_INDEXES = ['Default','CR39','1.49','1.56','1.59','1.6','1.61','1.67','1.74','Poly'];
 const LENS_COMPANIES = ['Lanka Optic','MR Lens','Neo Vision','Omega','Murano','Generic','Other'];
 
