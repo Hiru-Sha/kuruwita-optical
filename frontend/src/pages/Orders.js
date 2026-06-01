@@ -143,9 +143,10 @@ function PaymentModal({ order, onClose, onSave }) {
 // ── Main Orders component ────────────────────────────────────
 export default function Orders() {
   const [orders,    setOrders]    = useState([]);
-  const [filter,    setFilter]    = useState('all');
-  const [dateFilter,setDateFilter]= useState('all');
-  const [search,    setSearch]    = useState('');
+  const [filter,       setFilter]      = useState('all');
+  const [dateFilter,   setDateFilter]   = useState('all');
+  const [search,       setSearch]       = useState('');
+  const [missingCosts, setMissingCosts] = useState(false);
   const [loading,   setLoading]   = useState(true);
   const [selected,  setSelected]  = useState(null);
   const [logNote,   setLogNote]   = useState('');
@@ -177,8 +178,13 @@ export default function Orders() {
   // Client-side date filter
   const filteredOrders = orders.filter(o => {
     const cutoff = getDateRange(dateFilter);
-    if (!cutoff) return true;
-    return new Date(o.created_at) >= cutoff;
+    if (cutoff && new Date(o.created_at) < cutoff) return false;
+    if (missingCosts) {
+      const noFrameCost = !parseFloat(o.frame_buy_price) && !o.customer_own_frame;
+      const noLensCost  = !parseFloat(o.lens_buy_price);
+      return noFrameCost || noLensCost;
+    }
+    return true;
   });
 
   const openOrder = async (id) => {
@@ -338,8 +344,16 @@ export default function Orders() {
             {df.label}
           </button>
         ))}
+        <button onClick={()=>setMissingCosts(s=>!s)}
+          style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+            border:`1.5px solid ${missingCosts?'#f97316':C.border}`,
+            background:missingCosts?'#fff7ed':'white',
+            color:missingCosts?'#c2410c':C.muted }}>
+          {missingCosts ? '⚠️ Missing Costs ✓' : '⚠️ Missing Costs'}
+        </button>
         <span style={{ fontSize:12, color:C.muted, alignSelf:'center', marginLeft:4 }}>
           {filteredOrders.length} order{filteredOrders.length!==1?'s':''}
+          {missingCosts && <span style={{ marginLeft:6, color:'#c2410c', fontWeight:700 }}>— need costs entered</span>}
         </span>
       </div>
 
@@ -383,6 +397,11 @@ export default function Orders() {
                     <Badge status={o.status}/>
                     {o.has_rx && !o.rx_returned && (
                       <span style={{ background:'#e0f2fe', color:'#0369a1', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>Rx</span>
+                    )}
+                    {(!parseFloat(o.lens_buy_price) || (!parseFloat(o.frame_buy_price) && !o.customer_own_frame)) && (
+                      <span style={{ background:'#fff7ed', color:'#c2410c', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, border:'1px solid #fed7aa' }}>
+                        ⚠️ No cost
+                      </span>
                     )}
                   </div>
                   <span style={{ fontSize:11, color:C.muted, flexShrink:0 }}>{o.deliver_date?.slice(0,10)}</span>
