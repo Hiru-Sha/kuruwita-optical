@@ -154,6 +154,11 @@ export default function Orders() {
   const [showLensCost, setShowLensCost] = useState(false);
   const [lensCostForm, setLensCostForm] = useState({ buy:'', sell:'', company:'' });
   const [savingLens,   setSavingLens]   = useState(false);
+  const [showGifts,    setShowGifts]    = useState(false);
+  const [giftSearch,   setGiftSearch]   = useState('');
+  const [giftResults,  setGiftResults]  = useState([]);
+  const [giftItems,    setGiftItems]    = useState([]);
+  const [savingGifts,  setSavingGifts]  = useState(false);
   const [toast,        setToast]        = useState('');
   const navigate = useNavigate();
 
@@ -238,6 +243,52 @@ export default function Orders() {
       load();
     } catch(e) { showToast('Failed to update'); }
     finally { setSavingLens(false); }
+  };
+
+  const searchGiftItems = async (q) => {
+    if (!q || q.length < 2) return setGiftResults([]);
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/inventory?search=${encodeURIComponent(q)}&limit=8&no_images=1`, { headers:{ Authorization:`Bearer ${token}` } });
+      const data  = await res.json();
+      setGiftResults(Array.isArray(data)?data:data.data||[]);
+    } catch { setGiftResults([]); }
+  };
+
+  const handleSaveGifts = async () => {
+    if (!giftItems.length) return;
+    setSavingGifts(true);
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      // Deduct stock for each gift item
+      for (const gi of giftItems) {
+        await fetch(`${BASE}/stock-adjustments`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+          body: JSON.stringify({
+            inventory_id:  gi.id,
+            change_type:   'remove',
+            quantity_change: gi.qty,
+            reason: `Free gift with order ${selected?.order_number}`,
+          }),
+        });
+      }
+      // Save gift note on order
+      const giftNote = giftItems.map(g=>`${g.name} ×${g.qty}`).join(', ');
+      const existing = selected?.notes ? selected.notes + '\n' : '';
+      await updateOrder(selected.id, { notes: existing + `Gifts given: ${giftNote}` });
+      showToast(`Gifts recorded — stock deducted`);
+      setShowGifts(false);
+      setGiftItems([]);
+      setGiftSearch('');
+      setGiftResults([]);
+      const r = await getOrder(selected.id);
+      setSelected(r.data);
+      load();
+    } catch(e) { showToast('Failed to save gifts'); }
+    finally { setSavingGifts(false); }
   };
 
   const handlePaymentSaved = async (msg) => {
@@ -578,6 +629,102 @@ export default function Orders() {
                   onKeyDown={e=>e.key==='Enter'&&handleAddLog()}/>
                 <button onClick={handleAddLog} style={{ padding:'8px 14px', background:C.navy, color:'white', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Add</button>
               </div>
+            </div>
+
+            {/* Free Gifts */}
+            <div style={{ marginBottom:20 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>
+                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted }}>Free Gifts</div>
+                <button onClick={()=>{ setShowGifts(s=>!s); setGiftItems([]); setGiftSearch(''); setGiftResults([]); }}
+                  style={{ padding:'4px 12px', background:showGifts?'#fee2e2':'#f0fdf4', color:showGifts?C.danger:'#166534', border:`1px solid ${showGifts?'#fca5a5':'#86efac'}`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  {showGifts?'✕ Cancel':'+ Add Gift'}
+                </button>
+              </div>
+
+              {/* Show existing gift notes */}
+              {selected.notes?.includes('Gifts given:') && (
+                <div style={{ background:'#f0fdf4', border:`1px solid #86efac`, borderRadius:8, padding:'8px 12px', marginBottom:showGifts?10:0, fontSize:12, color:'#166534' }}>
+                  {selected.notes.split('\n').filter(l=>l.startsWith('Gifts given:')).map((l,i)=>(
+                    <div key={i}>🎁 {l.replace('Gifts given: ','')}</div>
+                  ))}
+                </div>
+              )}
+
+              {showGifts && (
+                <div style={{ background:'#f0fdf4', border:`1px solid #86efac`, borderRadius:10, padding:'14px' }}>
+                  <div style={{ fontSize:12, color:'#166534', fontWeight:700, marginBottom:10 }}>
+                    Search items to give as free gift — stock will be deducted automatically
+                  </div>
+
+                  {/* Search */}
+                  <div style={{ position:'relative', marginBottom:10 }}>
+                    <input value={giftSearch}
+                      onChange={e=>{ setGiftSearch(e.target.value); searchGiftItems(e.target.value); }}
+                      placeholder="Search: lens cleaner, chain, pouch, box..."
+                      style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #86efac`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:'white', color:C.navy, boxSizing:'border-box' }}/>
+                    {giftResults.length>0 && (
+                      <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white', border:`1px solid #86efac`, borderRadius:8, boxShadow:'0 4px 16px rgba(0,0,0,.1)', zIndex:50, overflow:'hidden', marginTop:4 }}>
+                        {giftResults.map(item=>(
+                          <div key={item.id}
+                            onMouseDown={()=>{
+                              if (!giftItems.find(g=>g.id===item.id)) {
+                                setGiftItems(p=>[...p,{ id:item.id, name:item.name||item.item_name, qty:1, stock:item.quantity }]);
+                              }
+                              setGiftSearch(''); setGiftResults([]);
+                            }}
+                            style={{ padding:'9px 12px', cursor:'pointer', borderBottom:`1px solid #f0fdf4`, display:'flex', justifyContent:'space-between', alignItems:'center' }}
+                            onMouseEnter={e=>e.currentTarget.style.background='#f0fdf4'}
+                            onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                            <span style={{ fontSize:13, fontWeight:600, color:C.navy }}>{item.name||item.item_name}</span>
+                            <span style={{ fontSize:11, color:item.quantity>0?C.success:C.danger, fontWeight:600 }}>
+                              {item.quantity} in stock
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Selected gift items */}
+                  {giftItems.length>0 && (
+                    <div style={{ marginBottom:10 }}>
+                      {giftItems.map((gi,i)=>(
+                        <div key={i} style={{ display:'flex', alignItems:'center', gap:8, background:'white', borderRadius:7, padding:'7px 10px', marginBottom:6, border:`1px solid #86efac` }}>
+                          <span style={{ flex:1, fontSize:13, fontWeight:600, color:'#166534' }}>🎁 {gi.name}</span>
+                          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                            <button onClick={()=>setGiftItems(p=>p.map((x,j)=>j===i?{...x,qty:Math.max(1,x.qty-1)}:x))}
+                              style={{ width:24, height:24, border:`1px solid #86efac`, borderRadius:5, background:'white', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit' }}>−</button>
+                            <span style={{ fontSize:13, fontWeight:700, minWidth:20, textAlign:'center' }}>{gi.qty}</span>
+                            <button onClick={()=>setGiftItems(p=>p.map((x,j)=>j===i?{...x,qty:Math.min(x.stock,x.qty+1)}:x))}
+                              style={{ width:24, height:24, border:`1px solid #86efac`, borderRadius:5, background:'white', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit' }}>+</button>
+                          </div>
+                          <span style={{ fontSize:11, color:C.muted }}>/{gi.stock}</span>
+                          <button onClick={()=>setGiftItems(p=>p.filter((_,j)=>j!==i))}
+                            style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:5, padding:'3px 8px', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Quick pick common gifts */}
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:11, color:'#166534', fontWeight:600, marginBottom:6 }}>Quick add common gifts:</div>
+                    <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                      {['Lens Cleaner','Chain','Temple Tip','Box','Pouch','Cloth'].map(name=>(
+                        <button key={name} onClick={()=>searchGiftItems(name)}
+                          style={{ padding:'4px 10px', background:'white', border:`1px solid #86efac`, borderRadius:20, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#166534' }}>
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button onClick={handleSaveGifts} disabled={savingGifts||!giftItems.length}
+                    style={{ width:'100%', padding:'10px', background:savingGifts||!giftItems.length?C.muted:'#166534', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:savingGifts||!giftItems.length?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                    {savingGifts?'Saving...':giftItems.length?`Save ${giftItems.length} Gift Item${giftItems.length>1?'s':''}  — Deduct from Stock`:'Search and add items above'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Actions */}
