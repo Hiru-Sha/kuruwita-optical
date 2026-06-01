@@ -43,10 +43,11 @@ function getDateRange(key) {
 
 // ── Record Payment Modal ──────────────────────────────────────
 function PaymentModal({ order, onClose, onSave }) {
-  const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('cash');
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState('');
+  const [amount,    setAmount]    = useState('');
+  const [method,    setMethod]    = useState('cash');
+  const [payDate,   setPayDate]   = useState(new Date().toISOString().split('T')[0]);
+  const [saving,    setSaving]    = useState(false);
+  const [error,     setError]     = useState('');
   const balance = parseFloat(order.balance_amount || 0);
 
   const handlePay = async () => {
@@ -56,10 +57,12 @@ function PaymentModal({ order, onClose, onSave }) {
     setSaving(true);
     try {
       await updateOrder(order.id, {
-        advance_amount: parseFloat(order.advance_amount || 0) + amt,
-        balance_amount: Math.max(0, balance - amt),
+        advance_amount:  parseFloat(order.advance_amount || 0) + amt,
+        balance_amount:  Math.max(0, balance - amt),
+        last_payment_date: payDate,
+        last_payment_method: method,
       });
-      onSave(`Payment of ${fmtMoney(amt)} recorded. New balance: ${fmtMoney(Math.max(0,balance-amt))}`);
+      onSave(`Payment of ${fmtMoney(amt)} recorded on ${new Date(payDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}. New balance: ${fmtMoney(Math.max(0,balance-amt))}`);
     } catch(e) { setError('Failed to record payment.'); }
     finally { setSaving(false); }
   };
@@ -96,13 +99,35 @@ function PaymentModal({ order, onClose, onSave }) {
                 ))}
               </div>
             </div>
-            <div style={{ display:'flex', gap:8, marginBottom:20 }}>
-              {[['cash','Cash'],['bank','Bank'],['card','Card']].map(([val,label])=>(
-                <button key={val} onClick={()=>setMethod(val)}
-                  style={{ flex:1, padding:'9px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${method===val?C.navy:C.border}`, background:method===val?C.navy:'white', color:method===val?'white':C.muted }}>
-                  {label}
-                </button>
-              ))}
+            {/* Payment Date */}
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:5 }}>Payment Date</label>
+              <input type="date" value={payDate} onChange={e=>setPayDate(e.target.value)}
+                style={{ width:'100%', padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy, fontWeight:600 }}/>
+              <div style={{ display:'flex', gap:6, marginTop:6 }}>
+                {[
+                  { label:'Today',     val:new Date().toISOString().split('T')[0] },
+                  { label:'Yesterday', val:new Date(Date.now()-86400000).toISOString().split('T')[0] },
+                ].map(d=>(
+                  <button key={d.label} onClick={()=>setPayDate(d.val)}
+                    style={{ padding:'4px 12px', background:payDate===d.val?C.navy:C.cream, color:payDate===d.val?'white':C.muted, border:`1px solid ${payDate===d.val?C.navy:C.border}`, borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Payment Method */}
+            <div style={{ marginBottom:20 }}>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:5 }}>Payment Method</label>
+              <div style={{ display:'flex', gap:8 }}>
+                {[['cash','💵 Cash'],['bank','🏦 Bank'],['card','💳 Card']].map(([val,label])=>(
+                  <button key={val} onClick={()=>setMethod(val)}
+                    style={{ flex:1, padding:'9px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${method===val?C.navy:C.border}`, background:method===val?C.navy:'white', color:method===val?'white':C.muted }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
             <button onClick={handlePay} disabled={saving}
               style={{ width:'100%', padding:'13px', background:saving?C.muted:C.success, color:'white', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
@@ -370,6 +395,12 @@ export default function Orders() {
                   <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:parseFloat(selected.balance_amount)>0?C.danger:C.success }}>
                     {fmtMoney(selected.balance_amount)}
                   </div>
+                  {selected.last_payment_date && (
+                    <div style={{ fontSize:11, color:C.muted, marginTop:4 }}>
+                      Last paid: {new Date(selected.last_payment_date+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+                      {selected.last_payment_method && ` · ${selected.last_payment_method}`}
+                    </div>
+                  )}
                 </div>
                 {parseFloat(selected.balance_amount)>0
                   ? <button onClick={()=>setShowPay(true)} style={{ padding:'10px 18px', background:C.success, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Record Payment</button>
