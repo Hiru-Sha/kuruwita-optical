@@ -154,7 +154,7 @@ router.patch('/:id', auth, async (req, res) => {
     'total_amount','advance_amount','balance_amount','deliver_date','status',
     'has_rx','rx_hospital','rx_date','rx_doctor','rx_returned','notes',
     'lab_bill_amount','lab_paid','lab_paid_date','lab_payment_method','lab_notes',
-    'last_payment_date','last_payment_method',
+    'last_payment_date','last_payment_method','lens_buy_price','lens_sell_price','lens_company',
   ];
   const fields = [], values = [];
   allowed.forEach(f => {
