@@ -13,7 +13,7 @@ router.post('/login', async (req, res) => {
   if (!username || !password)
     return res.status(400).json({ error: 'Username and password required' });
   try {
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const result = await pool.query('SELECT id, username, full_name, password, role, COALESCE(permissions, \'[]\'::jsonb) as permissions FROM users WHERE username = $1', [username]);
     const user   = result.rows[0];
     if (!user) return res.status(401).json({ error: 'Invalid username or password' });
 
@@ -56,10 +56,18 @@ router.get('/me', auth, (req, res) => { res.json({ user: req.user }); });
 router.get('/users', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
   try {
-    const result = await pool.query(
-      'SELECT id, username, full_name, role, permissions, created_at FROM users ORDER BY created_at ASC'
-    );
-    // Parse permissions JSON for each user
+    // Try with permissions column, fall back if column doesn't exist yet
+    let result;
+    try {
+      result = await pool.query(
+        'SELECT id, username, full_name, role, permissions, created_at FROM users ORDER BY created_at ASC'
+      );
+    } catch(e) {
+      // permissions column doesn't exist yet - return without it
+      result = await pool.query(
+        'SELECT id, username, full_name, role, created_at FROM users ORDER BY created_at ASC'
+      );
+    }
     const users = result.rows.map(u => ({
       ...u,
       permissions: u.permissions
@@ -80,11 +88,21 @@ router.post('/users', auth, async (req, res) => {
     const exists = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
     if (exists.rows.length) return res.status(409).json({ error: 'Username already taken' });
     const hashed = await bcrypt.hash(password, 10);
-    const result = await pool.query(
-      `INSERT INTO users (username, full_name, password, role, permissions)
-       VALUES ($1,$2,$3,$4,$5) RETURNING id, username, full_name, role, permissions`,
-      [username.toLowerCase(), full_name, hashed, role, JSON.stringify(permissions)]
-    );
+    let result;
+    try {
+      result = await pool.query(
+        `INSERT INTO users (username, full_name, password, role, permissions)
+         VALUES ($1,$2,$3,$4,$5) RETURNING id, username, full_name, role`,
+        [username.toLowerCase(), full_name, hashed, role, JSON.stringify(permissions)]
+      );
+    } catch(e) {
+      // permissions column doesn't exist yet
+      result = await pool.query(
+        `INSERT INTO users (username, full_name, password, role)
+         VALUES ($1,$2,$3,$4) RETURNING id, username, full_name, role`,
+        [username.toLowerCase(), full_name, hashed, role]
+      );
+    }
     res.status(201).json(result.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed to create user' }); }
 });
@@ -95,7 +113,12 @@ router.patch('/users/:id/permissions', auth, async (req, res) => {
   const { permissions } = req.body;
   if (!Array.isArray(permissions)) return res.status(400).json({ error: 'permissions must be an array' });
   try {
-    await pool.query('UPDATE users SET permissions = $1 WHERE id = $2', [JSON.stringify(permissions), req.params.id]);
+    try {
+      await pool.query('UPDATE users SET permissions = $1 WHERE id = $2', [JSON.stringify(permissions), req.params.id]);
+    } catch(e) {
+      // Column may not exist yet - run migration first
+      return res.status(500).json({ error: 'Run SQL migration first: ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT \'[]\'::jsonb' });
+    }
     res.json({ ok: true });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
