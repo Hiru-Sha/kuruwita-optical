@@ -107,8 +107,14 @@ router.post('/', auth, async (req, res) => {
         lens_type, lens_coating, lens_company,
         total_amount, advance_amount, balance_amount,
         deliver_date, status,
-        has_rx, rx_hospital, rx_date, rx_doctor, notes
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+        has_rx, rx_hospital, rx_date, rx_doctor, notes,
+        frame_sell_price, lens_sell_price,
+        frame_buy_price, lens_buy_price,
+        frame_color, frame_inventory_id, customer_own_frame,
+        lens_index, discount_amount, discount_percent,
+        payment_method, order_type, seg_height_r, seg_height_l
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
+                $19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33)
       RETURNING *
     `, [
       orderNum, customer_id,
@@ -117,6 +123,20 @@ router.post('/', auth, async (req, res) => {
       total, advance, balance,
       deliver_date||null, import_date ? 'delivered' : (status||'created'),
       has_rx||false, rx_hospital||null, rx_date||null, rx_doctor||null, notes||null,
+      parseFloat(req.body.frame_sell_price)||0,
+      parseFloat(req.body.lens_sell_price)||0,
+      parseFloat(req.body.frame_buy_price)||0,
+      parseFloat(req.body.lens_buy_price)||0,
+      req.body.frame_color||null,
+      req.body.frame_inventory_id||null,
+      req.body.customer_own_frame||false,
+      req.body.lens_index||null,
+      parseFloat(req.body.discount_amount)||0,
+      parseFloat(req.body.discount_percent)||0,
+      req.body.payment_method||'cash',
+      req.body.order_type||'normal',
+      req.body.seg_height_r||null,
+      req.body.seg_height_l||null,
     ]);
 
     if (importTs) {
@@ -150,11 +170,17 @@ router.post('/', auth, async (req, res) => {
 // PATCH /api/orders/:id
 router.patch('/:id', auth, async (req, res) => {
   const allowed = [
-    'frame','frame_type','lens_type','lens_coating','lens_company','lens_step',
+    'frame','frame_type','frame_color','frame_material','lens_type','lens_coating',
+    'lens_company','lens_step','lens_index',
     'total_amount','advance_amount','balance_amount','deliver_date','status',
     'has_rx','rx_hospital','rx_date','rx_doctor','rx_returned','notes',
     'lab_bill_amount','lab_paid','lab_paid_date','lab_payment_method','lab_notes',
-    'last_payment_date','last_payment_method','lens_buy_price','lens_sell_price','lens_company',
+    'last_payment_date','last_payment_method',
+    'frame_buy_price','frame_sell_price',
+    'lens_buy_price','lens_sell_price',
+    'order_type','customer_own_frame',
+    'seg_height_r','seg_height_l',
+    'discount_amount','discount_percent',
   ];
   const fields = [], values = [];
   allowed.forEach(f => {
@@ -170,8 +196,14 @@ router.patch('/:id', auth, async (req, res) => {
     if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    console.error('Update order error:', err);
-    res.status(500).json({ error: 'Failed to update order' });
+    console.error('Update order error:', err.message);
+    // If column doesn't exist, try without it and return partial success
+    if (err.message.includes('column') && err.message.includes('does not exist')) {
+      return res.status(500).json({ 
+        error: `DB column missing. Run: ALTER TABLE orders ADD COLUMN IF NOT EXISTS ${err.message.match(/column "([^"]+)"/)?.[1]||'unknown'} VARCHAR(50);` 
+      });
+    }
+    res.status(500).json({ error: 'Failed to update order: ' + err.message });
   }
 });
 
