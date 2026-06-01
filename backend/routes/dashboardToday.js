@@ -43,7 +43,8 @@ router.get('/', auth, async (req, res) => {
 
       // Today's quick sales — safe
       pool.query(`
-        SELECT total FROM quick_sales WHERE created_at::date = $1
+        SELECT COALESCE(total,0) AS total FROM quick_sales
+        WHERE created_at::date = $1
       `, [today]).catch(()=>({ rows:[] })),
 
       // Today's expenses — safe
@@ -56,10 +57,10 @@ router.get('/', auth, async (req, res) => {
         SELECT amount FROM cash_deposits WHERE date = $1
       `, [today]).catch(()=>({ rows:[] })),
 
-      // Today's repairs — safe
+      // Today's repairs — safe, no status filter
       pool.query(`
-        SELECT charge FROM repairs
-        WHERE created_at::date = $1 AND status != 'cancelled'
+        SELECT COALESCE(charge,0) AS charge FROM repairs
+        WHERE created_at::date = $1
       `, [today]).catch(()=>({ rows:[] })),
 
       // Total outstanding balance
@@ -108,15 +109,14 @@ router.get('/', auth, async (req, res) => {
          FROM quick_sales WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [month]);
       qs_month_total = parseFloat(qsM.rows[0].t||0);
       qs_month_count = parseInt(qsM.rows[0].c||0);
-    } catch(e) {}
+    } catch(e) { console.log('QS month skip:', e.message); }
     try {
       const repM = await pool.query(
-        `SELECT COALESCE(SUM(charge),0) AS t, COUNT(*) AS c
-         FROM repairs WHERE TO_CHAR(created_at,'YYYY-MM')=$1
-         AND status NOT IN ('cancelled','pending')`, [month]);
+        `SELECT COALESCE(SUM(COALESCE(charge,0)),0) AS t, COUNT(*) AS c
+         FROM repairs WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [month]);
       rep_month_total = parseFloat(repM.rows[0].t||0);
       rep_month_count = parseInt(repM.rows[0].c||0);
-    } catch(e) {}
+    } catch(e) { console.log('Repairs month skip:', e.message); }
 
     mr.qs_total     = qs_month_total;
     mr.qs_count     = qs_month_count;
