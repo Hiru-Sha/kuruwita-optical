@@ -129,7 +129,7 @@ export default function Dashboard() {
           {cash.cashInHand>0&&cash.totalDep===0&&(
             <div style={{padding:'9px 14px',background:'#fef9c3',borderTop:`1px solid #fde68a`,fontSize:12,color:'#854d0e',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <span>💡 {fmt(cash.cashInHand)} ready to deposit</span>
-              <a href="/expenses" style={{color:'#854d0e',fontWeight:700,fontSize:12,textDecoration:'none'}}>Record →</a>
+              <button onClick={()=>navigate('/expenses')} style={{color:'#854d0e',fontWeight:700,fontSize:12,background:'none',border:'none',cursor:'pointer',fontFamily:"'DM Sans',sans-serif",textDecoration:'underline'}}>Record →</button>
             </div>
           )}
           {cash.cashInHand<0&&(
@@ -165,19 +165,19 @@ export default function Dashboard() {
       {/* Quick actions — 2 cols on mobile, 3 on desktop */}
       <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(3,1fr)',gap:8,marginBottom:14}}>
         {[
-          {label:'+ New Order',  href:'/orders/new',  bg:gold,     color:navy,   icon:'📋'},
-          {label:'Quick Sale',   href:'/quick-sale',  bg:success,  color:'white',icon:'🛍️'},
-          {label:'🔧 Repair',    href:'/repairs',     bg:'#0891b2',color:'white',icon:'🔧'},
-          {label:'Add Expense',  href:'/expenses',    bg:'#7c3aed',color:'white',icon:'💸'},
-          {label:'Deposit Cash', href:'/expenses',    bg:'#2563eb',color:'white',icon:'🏦'},
-          {label:'All Orders',   href:'/orders',      bg:navy,     color:'white',icon:'📋'},
-          {label:'Inventory',    href:'/inventory',   bg:cream,    color:navy,   icon:'📦',bord:border},
+          {label:'+ New Order',  path:'/orders/new',  bg:gold,     color:navy,   icon:'📋'},
+          {label:'Quick Sale',   path:'/quick-sale',  bg:success,  color:'white',icon:'🛍️'},
+          {label:'Repair',       path:'/repairs',     bg:'#0891b2',color:'white',icon:'🔧'},
+          {label:'Add Expense',  path:'/expenses',    bg:'#7c3aed',color:'white',icon:'💸'},
+          {label:'Deposit Cash', path:'/expenses',    bg:'#2563eb',color:'white',icon:'🏦'},
+          {label:'All Orders',   path:'/orders',      bg:navy,     color:'white',icon:'📋'},
+          {label:'Inventory',    path:'/inventory',   bg:cream,    color:navy,   icon:'📦',bord:border},
         ].map(a=>(
-          <a key={a.label} href={a.href}
-            style={{padding:mob?'14px 8px':'10px 14px',background:a.bg,color:a.color,border:a.bord?`1.5px solid ${a.bord}`:'none',borderRadius:10,fontSize:13,fontWeight:600,textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center',gap:6,textAlign:'center'}}>
+          <button key={a.label} onClick={()=>navigate(a.path)}
+            style={{padding:mob?'14px 8px':'10px 14px',background:a.bg,color:a.color,border:a.bord?`1.5px solid ${a.bord}`:'none',borderRadius:10,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',justifyContent:'center',gap:6,textAlign:'center'}}>
             <span style={{fontSize:mob?20:15}}>{a.icon}</span>
             <span style={{fontSize:mob?12:13}}>{a.label}</span>
-          </a>
+          </button>
         ))}
       </div>
 
