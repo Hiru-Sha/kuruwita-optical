@@ -1,0 +1,119 @@
+/* ============================================================
+   Dark Mode — applied via [data-theme="dark"] on body
+   All pages inherit these automatically
+   ============================================================ */
+
+[data-theme="dark"] {
+  --bg:      #0d1117;
+  --surface: #161b22;
+  --border:  #30363d;
+  --muted:   #8b949e;
+  --text:    #c9d1d9;
+  --cream:   #161b22;
+  --gold:    #c9a84c;
+  --input-bg:#0d1117;
+}
+
+/* Body & root */
+[data-theme="dark"] body,
+[data-theme="dark"] #root {
+  background: #0d1117!important;
+  color: #c9d1d9!important;
+}
+
+/* All white cards → dark surface */
+[data-theme="dark"] div[style*="background:white"],
+[data-theme="dark"] div[style*="background: white"],
+[data-theme="dark"] div[style*='background:"white"'],
+[data-theme="dark"] div[style*="background:#ffffff"],
+[data-theme="dark"] div[style*="background: #ffffff"] {
+  background: #161b22!important;
+  color: #c9d1d9!important;
+}
+
+/* Cream backgrounds → dark */
+[data-theme="dark"] div[style*="background:#f8f5ef"],
+[data-theme="dark"] div[style*="background: #f8f5ef"],
+[data-theme="dark"] div[style*="background:C.cream"] {
+  background: #21262d!important;
+}
+
+/* Borders */
+[data-theme="dark"] div[style*="border:1px solid #e0ddd6"],
+[data-theme="dark"] div[style*="border: 1px solid #e0ddd6"],
+[data-theme="dark"] div[style*="borderBottom:1px solid #e0ddd6"],
+[data-theme="dark"] div[style*="borderTop:1px solid #e0ddd6"] {
+  border-color: #30363d!important;
+}
+
+/* Text colors */
+[data-theme="dark"] *[style*="color:#0f1f3d"],
+[data-theme="dark"] *[style*="color: #0f1f3d"] {
+  color: #e6edf3!important;
+}
+[data-theme="dark"] *[style*="color:#6b7280"],
+[data-theme="dark"] *[style*="color: #6b7280"] {
+  color: #8b949e!important;
+}
+
+/* Inputs */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: #0d1117!important;
+  color: #c9d1d9!important;
+  border-color: #30363d!important;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #484f58!important;
+}
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  border-color: #c9a84c!important;
+  outline: none!important;
+}
+
+/* Tables */
+[data-theme="dark"] table {
+  background: #161b22!important;
+}
+[data-theme="dark"] th {
+  background: #21262d!important;
+  color: #8b949e!important;
+  border-color: #30363d!important;
+}
+[data-theme="dark"] td {
+  color: #c9d1d9!important;
+  border-color: #21262d!important;
+}
+[data-theme="dark"] tr:hover td {
+  background: #1c2128!important;
+}
+
+/* Modals and overlays */
+[data-theme="dark"] *[style*="background:rgba(15,31,61"] {
+  background: rgba(0,0,0,0.7)!important;
+}
+
+/* Buttons — navy buttons stay recognisable */
+[data-theme="dark"] button[style*="background:#0f1f3d"] {
+  background: #21262d!important;
+  color: #e8c96a!important;
+  border: 1px solid #30363d!important;
+}
+
+/* Keep gold/success/danger buttons as-is */
+[data-theme="dark"] button[style*="background:#c9a84c"],
+[data-theme="dark"] button[style*="background:#2d7a4f"],
+[data-theme="dark"] button[style*="background:#c0392b"],
+[data-theme="dark"] button[style*="background:#2563eb"] {
+  opacity: 0.9;
+}
+
+/* Scrollbar */
+[data-theme="dark"] ::-webkit-scrollbar { width:6px; height:6px; }
+[data-theme="dark"] ::-webkit-scrollbar-track { background:#0d1117; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background:#30363d; border-radius:3px; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background:#484f58; }

@@ -53,6 +53,17 @@ export default function Layout() {
   const [scanMsg,   setScanMsg]   = useState('');
   const role = user?.role || 'admin';
 
+  // ── Dark mode ──────────────────────────────────────────────
+  const [dark, setDark] = useState(() => localStorage.getItem('ko_theme') === 'dark');
+  useEffect(() => {
+    document.body.setAttribute('data-theme', dark ? 'dark' : 'light');
+    localStorage.setItem('ko_theme', dark ? 'dark' : 'light');
+  }, [dark]);
+  // Apply on first load
+  useEffect(() => {
+    document.body.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }, []);
+
   // Poll for mobile scan sessions every 2 seconds
   const [mobileScanned, setMobileScanned] = useState(null); // { item, action }
   useEffect(()=>{
@@ -101,10 +112,10 @@ export default function Layout() {
   const bottomNavItems= role==='admin' ? BOTTOM_NAV_ADMIN : BOTTOM_NAV_STAFF;
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', minHeight:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#f8f5ef' }}>
+    <div style={{ display:'flex', flexDirection:'column', minHeight:'100vh', fontFamily:"'DM Sans',sans-serif", background:dark?'#0d1117':'#f8f5ef', color:dark?'#c9d1d9':'#0f1f3d', transition:'background .2s,color .2s' }}>
 
       {/* ── Top header ── */}
-      <header style={{ background:'#0f1f3d', height:52, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 14px', position:'sticky', top:0, zIndex:100 }}>
+      <header style={{ background:dark?'#161b22':'#0f1f3d', height:52, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 14px', position:'sticky', top:0, zIndex:100 }}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           {/* Hamburger — always show on mobile, show on desktop too for full nav */}
           <button onClick={()=>setOpen(o=>!o)} style={{ background:'none', border:'none', color:'white', fontSize:20, cursor:'pointer', padding:'4px 6px', lineHeight:1 }}>☰</button>
@@ -125,6 +136,13 @@ export default function Layout() {
             style={{ background:'rgba(201,168,76,0.15)', color:'#e8c96a', border:'1px solid rgba(201,168,76,0.3)', borderRadius:8, padding:'5px 10px', fontSize:15, cursor:'pointer', lineHeight:1 }}>
             📷
           </button>
+
+          {/* Dark / Light mode toggle */}
+          <button onClick={()=>setDark(d=>!d)}
+            title={dark?'Switch to light mode':'Switch to dark mode'}
+            style={{ background:'rgba(201,168,76,0.15)', color:'#e8c96a', border:'1px solid rgba(201,168,76,0.3)', borderRadius:8, padding:'5px 10px', fontSize:15, cursor:'pointer', lineHeight:1 }}>
+            {dark ? '☀️' : '🌙'}
+          </button>
           <button onClick={()=>{ logout(); navigate('/login'); }}
             style={{ background:'rgba(201,168,76,0.2)', color:'#e8c96a', border:'1px solid rgba(201,168,76,0.3)', borderRadius:8, padding:'5px 10px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
             {mob ? '↩' : 'Logout'}
@@ -137,9 +155,9 @@ export default function Layout() {
         {open && <div onClick={()=>setOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:40 }}/>}
 
         {/* ── Sidebar ── */}
-        <nav style={{ width:230, background:'white', borderRight:'1px solid #ede9e0', position:'fixed', top:52, left:0, bottom:0, overflowY:'auto', zIndex:50, transform:open?'translateX(0)':'translateX(-100%)', transition:'transform .25s ease', boxShadow:open?'4px 0 20px rgba(0,0,0,.12)':'none' }}>
+        <nav style={{ width:230, background:dark?'#161b22':'white', borderRight:`1px solid ${dark?'#30363d':'#ede9e0'}`, position:'fixed', top:52, left:0, bottom:0, overflowY:'auto', zIndex:50, transform:open?'translateX(0)':'translateX(-100%)', transition:'transform .25s ease', boxShadow:open?'4px 0 20px rgba(0,0,0,.12)':'none' }}>
           {/* User info at top of sidebar */}
-          <div style={{ padding:'14px 16px', borderBottom:'1px solid #ede9e0', display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ padding:'14px 16px', borderBottom:`1px solid ${dark?'#30363d':'#ede9e0'}`, display:'flex', alignItems:'center', gap:10 }}>
             <div style={{ width:36, height:36, borderRadius:'50%', background:'#0f1f3d', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:700, color:'#e8c96a', flexShrink:0 }}>
               {user?.name?.charAt(0)||'?'}
             </div>
@@ -157,7 +175,7 @@ export default function Layout() {
                 <div style={{ padding:'14px 16px 5px', fontSize:10, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'1.5px' }}>{sl}</div>
                 {items.map(n=>(
                   <NavLink key={n.to} to={n.to} onClick={()=>setOpen(false)}
-                    style={({isActive})=>({ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', margin:'2px 8px', borderRadius:10, textDecoration:'none', fontSize:14, fontWeight:500, color:isActive?'white':'#6b7280', background:isActive?'#0f1f3d':'transparent', transition:'all .15s' })}>
+                    style={({isActive})=>({ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', margin:'2px 8px', borderRadius:10, textDecoration:'none', fontSize:14, fontWeight:500, color:isActive?(dark?'#e8c96a':'white'):(dark?'#8b949e':'#6b7280'), background:isActive?(dark?'#21262d':'#0f1f3d'):'transparent', transition:'all .15s' })}>
                     <span style={{ fontSize:16, width:20, textAlign:'center' }}>{n.icon}</span>{n.label}
                   </NavLink>
                 ))}
@@ -165,7 +183,7 @@ export default function Layout() {
             );
           })}
 
-          <div style={{ padding:'14px 16px', borderTop:'1px solid #ede9e0', marginTop:8 }}>
+          <div style={{ padding:'14px 16px', borderTop:`1px solid ${dark?'#30363d':'#ede9e0'}`, marginTop:8 }}>
             <button onClick={()=>{ logout(); navigate('/login'); }}
               style={{ width:'100%', padding:'9px', background:'#fee2e2', color:'#c0392b', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
               Logout
@@ -186,7 +204,7 @@ export default function Layout() {
 
       {/* ── Mobile bottom nav bar ── */}
       {mob && (
-        <nav style={{ position:'fixed', bottom:0, left:0, right:0, background:'white', borderTop:'1px solid #e0ddd6', display:'flex', zIndex:90, height:'calc(60px + env(safe-area-inset-bottom))', paddingBottom:'env(safe-area-inset-bottom)' }}>
+        <nav style={{ position:'fixed', bottom:0, left:0, right:0, background:dark?'#161b22':'white', borderTop:`1px solid ${dark?'#30363d':'#e0ddd6'}`, display:'flex', zIndex:90, height:'calc(60px + env(safe-area-inset-bottom))', paddingBottom:'env(safe-area-inset-bottom)' }}>
           {bottomNavItems.map(n=>(
             <NavLink key={n.to} to={n.to}
               style={({isActive})=>({ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, textDecoration:'none', color:isActive?'#0f1f3d':'#9ca3af', background:isActive?'#f8f5ef':'white', borderTop:isActive?'2px solid #c9a84c':'2px solid transparent', fontSize:10, fontWeight:isActive?700:400, transition:'all .15s', padding:'4px 0' })}>
@@ -206,6 +224,52 @@ export default function Layout() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap');
         *{box-sizing:border-box}
+        :root {
+          --bg:        #f8f5ef;
+          --surface:   #ffffff;
+          --navy:      #0f1f3d;
+          --gold:      #c9a84c;
+          --border:    #e0ddd6;
+          --muted:     #6b7280;
+          --text:      #0f1f3d;
+          --cream:     #f8f5ef;
+          --danger:    #c0392b;
+          --success:   #2d7a4f;
+          --sidebar-bg:#ffffff;
+          --sidebar-border:#ede9e0;
+          --nav-active:#0f1f3d;
+          --nav-active-text:#ffffff;
+          --header-bg: #0f1f3d;
+          --input-bg:  #f8f5ef;
+          --card-bg:   #ffffff;
+          --modal-bg:  #ffffff;
+        }
+        [data-theme="dark"] {
+          --bg:        #0d1117;
+          --surface:   #161b22;
+          --navy:      #e8c96a;
+          --gold:      #c9a84c;
+          --border:    #30363d;
+          --muted:     #8b949e;
+          --text:      #c9d1d9;
+          --cream:     #161b22;
+          --danger:    #f85149;
+          --success:   #3fb950;
+          --sidebar-bg:#161b22;
+          --sidebar-border:#30363d;
+          --nav-active:#21262d;
+          --nav-active-text:#e8c96a;
+          --header-bg: #161b22;
+          --input-bg:  #0d1117;
+          --card-bg:   #161b22;
+          --modal-bg:  #161b22;
+        }
+        [data-theme="dark"] body,
+        [data-theme="dark"] #root {
+          background: #0d1117 !important;
+          color: #c9d1d9 !important;
+        }
+        body { background: var(--bg); color: var(--text); transition: background .2s, color .2s; }
         @media(max-width:640px){
           button,select,input,textarea{min-height:44px!important;font-size:15px!important;}
           *{touch-action:manipulation;}
