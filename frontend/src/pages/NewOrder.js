@@ -1,10 +1,4 @@
 /* eslint-disable */
-if (typeof document !== 'undefined' && !document.getElementById('ko-no-spinners')) {
-  const s = document.createElement('style');
-  s.id = 'ko-no-spinners';
-  s.textContent = 'input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}';
-  document.head.appendChild(s);
-}
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createCustomer, createOrder, getCustomers, getInventory } from '../api';
@@ -199,6 +193,16 @@ const SectionTitle = ({ icon, title, sub }) => (
 
 export default function NewOrder() {
   const navigate = useNavigate();
+
+  // Inject no-spinner styles once
+  useEffect(()=>{
+    if (!document.getElementById('ko-no-spinners')) {
+      const s = document.createElement('style');
+      s.id = 'ko-no-spinners';
+      s.textContent = 'input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}';
+      document.head.appendChild(s);
+    }
+  },[]);
   const [step,    setStep]   = useState(1);
   const location = useLocation();
   const [saving,  setSaving] = useState(false);
