@@ -121,13 +121,9 @@ router.post('/', auth, async (req, res) => {
         total_amount, advance_amount, balance_amount,
         deliver_date, status,
         has_rx, rx_hospital, rx_date, rx_doctor, notes,
-        frame_sell_price, lens_sell_price,
-        frame_buy_price, lens_buy_price,
-        frame_color, customer_own_frame,
-        lens_index, discount_amount, discount_percent,
-        payment_method, order_type, seg_height_r, seg_height_l
+        frame_buy_price, lens_buy_price
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
-                $19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32)
+                $19,$20)
       RETURNING *
     `, [
       orderNum, customer_id,
@@ -136,19 +132,8 @@ router.post('/', auth, async (req, res) => {
       total, advance, balance,
       deliver_date||null, import_date ? 'delivered' : (status||'created'),
       has_rx||false, rx_hospital||null, rx_date||null, rx_doctor||null, notes||null,
-      parseFloat(req.body.frame_sell_price)||0,
-      parseFloat(req.body.lens_sell_price)||0,
       parseFloat(req.body.frame_buy_price)||0,
       parseFloat(req.body.lens_buy_price)||0,
-      req.body.frame_color||null,
-      req.body.customer_own_frame||false,
-      req.body.lens_index||null,
-      parseFloat(req.body.discount_amount)||0,
-      parseFloat(req.body.discount_percent)||0,
-      req.body.payment_method||'cash',
-      req.body.order_type||'normal',
-      req.body.seg_height_r||null,
-      req.body.seg_height_l||null,
     ]);
 
     if (importTs) {
