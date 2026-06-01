@@ -1,107 +1,125 @@
 // ============================================================
-//  Auth Routes — /api/auth
-//  login, me, change-password, admin user management
+//  Auth Routes — /api/auth  (with permissions support)
 // ============================================================
 const router = require('express').Router();
-const pool   = require('../db/pool');
-const jwt    = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const jwt    = require('jsonwebtoken');
+const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 
-const SECRET = process.env.JWT_SECRET || 'kuruwita-optical-secret';
-
-const adminOnly = (req, res, next) => {
-  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
-  next();
-};
-
-// POST /api/auth/login
+// ── Login ─────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+  if (!username || !password)
+    return res.status(400).json({ error: 'Username and password required' });
   try {
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username.trim()]);
-    if (!result.rows.length) return res.status(401).json({ error: 'Invalid username or password' });
-    const user  = result.rows[0];
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const user   = result.rows[0];
+    if (!user) return res.status(401).json({ error: 'Invalid username or password' });
+
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid username or password' });
+
+    // Parse permissions
+    let permissions = [];
+    try { permissions = user.permissions ? (typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions) : []; }
+    catch(e) { permissions = []; }
+
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role || 'admin' },
-      SECRET, { expiresIn: '30d' }
+      { id:user.id, username:user.username, role:user.role, name:user.full_name, permissions },
+      process.env.JWT_SECRET,
+      { expiresIn:'12h' }
     );
-    res.json({ token, user: { id: user.id, username: user.username, name: user.full_name, role: user.role || 'admin' } });
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Login failed' }); }
+    res.json({ token, user:{ id:user.id, username:user.username, role:user.role, name:user.full_name, permissions } });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
-// GET /api/auth/me
-router.get('/me', async (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: 'No token' });
-  try {
-    const decoded = jwt.verify(authHeader.split(' ')[1], SECRET);
-    const result  = await pool.query('SELECT id, username, full_name, role FROM users WHERE id = $1', [decoded.id]);
-    if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
-    const u = result.rows[0];
-    res.json({ id: u.id, username: u.username, name: u.full_name, role: u.role || 'admin' });
-  } catch { res.status(401).json({ error: 'Invalid token' }); }
-});
-
-// POST /api/auth/change-password
+// ── Change own password ───────────────────────────────────────
 router.post('/change-password', auth, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both passwords required' });
-  if (newPassword.length < 6) return res.status(400).json({ error: 'Min 6 characters' });
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both fields required' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
   try {
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
-    if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
-    const match = await bcrypt.compare(currentPassword, result.rows[0].password);
+    const match  = await bcrypt.compare(currentPassword, result.rows[0].password);
     if (!match) return res.status(401).json({ error: 'Current password is incorrect' });
-    await pool.query('UPDATE users SET password = $1 WHERE id = $2', [await bcrypt.hash(newPassword, 12), req.user.id]);
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashed, req.user.id]);
     res.json({ message: 'Password changed successfully' });
-  } catch { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
-// GET /api/auth/users — admin only
-router.get('/users', auth, adminOnly, async (req, res) => {
+// ── Verify token ──────────────────────────────────────────────
+router.get('/me', auth, (req, res) => { res.json({ user: req.user }); });
+
+// ── List all users (admin only) ───────────────────────────────
+router.get('/users', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
   try {
-    const result = await pool.query('SELECT id, username, full_name, role, created_at FROM users ORDER BY id');
-    res.json(result.rows);
-  } catch { res.status(500).json({ error: 'Failed' }); }
+    const result = await pool.query(
+      'SELECT id, username, full_name, role, permissions, created_at FROM users ORDER BY created_at ASC'
+    );
+    // Parse permissions JSON for each user
+    const users = result.rows.map(u => ({
+      ...u,
+      permissions: u.permissions
+        ? (typeof u.permissions === 'string' ? JSON.parse(u.permissions) : u.permissions)
+        : [],
+    }));
+    res.json(users);
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
 
-// POST /api/auth/users — create user, admin only
-router.post('/users', auth, adminOnly, async (req, res) => {
-  const { username, full_name, password, role } = req.body;
-  if (!username || !full_name || !password) return res.status(400).json({ error: 'username, full_name and password required' });
+// ── Create user (admin only) ──────────────────────────────────
+router.post('/users', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const { username, full_name, password, role='staff', permissions=[] } = req.body;
+  if (!username || !full_name || !password) return res.status(400).json({ error: 'username, full_name, password required' });
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
   try {
-    const exists = await pool.query('SELECT id FROM users WHERE username = $1', [username.trim()]);
+    const exists = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
     if (exists.rows.length) return res.status(409).json({ error: 'Username already taken' });
+    const hashed = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      'INSERT INTO users (username, full_name, password, role) VALUES ($1,$2,$3,$4) RETURNING id, username, full_name, role',
-      [username.trim().toLowerCase(), full_name.trim(), await bcrypt.hash(password, 12), role || 'staff']
+      `INSERT INTO users (username, full_name, password, role, permissions)
+       VALUES ($1,$2,$3,$4,$5) RETURNING id, username, full_name, role, permissions`,
+      [username.toLowerCase(), full_name, hashed, role, JSON.stringify(permissions)]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed to create user' }); }
 });
 
-// POST /api/auth/users/:id/reset-password — admin only
-router.post('/users/:id/reset-password', auth, adminOnly, async (req, res) => {
-  const { newPassword } = req.body;
-  if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: 'Min 6 characters' });
+// ── Update permissions (admin only) ──────────────────────────
+router.patch('/users/:id/permissions', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const { permissions } = req.body;
+  if (!Array.isArray(permissions)) return res.status(400).json({ error: 'permissions must be an array' });
   try {
-    await pool.query('UPDATE users SET password = $1 WHERE id = $2', [await bcrypt.hash(newPassword, 12), req.params.id]);
-    res.json({ message: 'Password reset successfully' });
-  } catch { res.status(500).json({ error: 'Failed' }); }
+    await pool.query('UPDATE users SET permissions = $1 WHERE id = $2', [JSON.stringify(permissions), req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
 
-// DELETE /api/auth/users/:id — admin only, cannot delete self
-router.delete('/users/:id', auth, adminOnly, async (req, res) => {
+// ── Reset another user's password (admin only) ────────────────
+router.post('/users/:id/reset-password', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  try {
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashed, req.params.id]);
+    res.json({ message: 'Password reset' });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+});
+
+// ── Delete user (admin only) ──────────────────────────────────
+router.delete('/users/:id', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
   if (parseInt(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot delete your own account' });
   try {
     await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
-    res.json({ message: 'Deleted' });
-  } catch { res.status(500).json({ error: 'Failed' }); }
+    res.json({ message: 'User deleted' });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
 
 module.exports = router;
