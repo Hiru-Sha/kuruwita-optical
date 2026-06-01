@@ -510,6 +510,29 @@ export default function NewOrder() {
           } catch {}
         }
       }
+      // ── Learn lens price: if manually entered, save to lens prices for future auto-fill ──
+      if (lensDetails.buyPrice > 0 && lensDetails.sellPrice > 0 && lensDetails.matchSource === 'manual') {
+        try {
+          const BASE3  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+          const tk3    = localStorage.getItem('ko_token');
+          await fetch(`${BASE3}/lens-prices/learn`, {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json', Authorization:`Bearer ${tk3}` },
+            body: JSON.stringify({
+              brand:       lensDetails.lens_company || 'Generic',
+              lens_type:   lensDetails.type,
+              lens_index:  lensDetails.lens_index !== 'Default' ? lensDetails.lens_index : null,
+              color:       lensDetails.color || 'White',
+              coating:     lensDetails.coating,
+              buy_price:   lensDetails.buyPrice,
+              sell_price:  lensDetails.sellPrice,
+              power_range: ref.r_sph_s + ref.r_sph + ' / ' + ref.r_cyl_s + ref.r_cyl,
+              notes:       `Auto-learned from order`,
+            }),
+          });
+        } catch(e2) { /* silently ignore — don't block order save */ }
+      }
+
       navigate('/orders');
     } catch(e) {
       setError(e.response?.data?.error||'Failed to save order. Please try again.');

@@ -119,6 +119,94 @@ function apiDel(path) {
 }
 
 // ══════════════════════════════════════════════════════════════
+
+// ── Print JOB CARD (given to customer when dropping off repair) ──
+const printRepairJobCard = (repair) => {
+  const today   = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+  const time    = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const dueDate = repair.due_date
+    ? new Date(repair.due_date+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})
+    : '—';
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Job Card — ${repair.repair_number||'NEW'}</title>
+<style>
+  @page{size:A6 landscape;margin:6mm}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;color:#0f1f3d;font-size:12px}
+  .label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:3px}
+  .val{font-size:13px;font-weight:600;color:#0f1f3d;min-height:18px;border-bottom:1px dotted #ccc;padding-bottom:2px;margin-bottom:8px}
+  .big{font-size:16px;font-weight:700}
+  table{width:100%;border-collapse:collapse}
+  td{padding:5px 8px;border:1px solid #ddd;font-size:12px}
+  .th{background:#0f1f3d;color:white;font-size:10px;font-weight:700;text-transform:uppercase;padding:5px 8px}
+</style></head><body>
+<table style="border:2px solid #0f1f3d;border-radius:0;width:100%;margin-bottom:8px">
+  <tr>
+    <td colspan="3" style="background:#0f1f3d;padding:8px 12px;border:none">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:white">Wickramakalutota Opticals</div>
+          <div style="font-size:10px;color:#c9a84c">No.57 Kurunegala Road, Chilaw · 032 222 1211</div>
+        </div>
+        <div style="text-align:right">
+          <div style="background:#c9a84c;color:#0f1f3d;font-weight:700;font-size:14px;padding:4px 10px;border-radius:6px">${repair.repair_number||'REPAIR'}</div>
+          <div style="font-size:9px;color:#ede9e0;margin-top:2px">${today} ${time}</div>
+        </div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td style="width:50%;vertical-align:top;border:1px solid #ddd">
+      <div class="label">Customer Name</div>
+      <div class="val big">${repair.customer_name||'—'}</div>
+      <div class="label">Phone</div>
+      <div class="val">${repair.phone||'—'}</div>
+    </td>
+    <td style="width:50%;vertical-align:top;border:1px solid #ddd">
+      <div class="label">Date Received</div>
+      <div class="val">${today}</div>
+      <div class="label">Expected Ready Date</div>
+      <div class="val" style="color:#c0392b;font-weight:700">${dueDate}</div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" style="border:1px solid #ddd;vertical-align:top">
+      <div class="label">Repair Type</div>
+      <div class="val big">${repair.repair_type||'—'}</div>
+      <div class="label">Frame / Item Description</div>
+      <div class="val">${repair.frame_description||repair.description||'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</div>
+      <div class="label">Problem / Notes</div>
+      <div class="val">${repair.notes||'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</div>
+    </td>
+  </tr>
+  <tr>
+    <td style="border:1px solid #ddd;background:#f8f5ef">
+      <div class="label">Quoted Price</div>
+      <div style="font-family:Georgia,serif;font-size:20px;font-weight:700;color:#0f1f3d">Rs. ${parseFloat(repair.charge||0).toLocaleString('en-LK',{minimumFractionDigits:2})}</div>
+    </td>
+    <td style="border:1px solid #ddd;background:#f8f5ef">
+      <div class="label">Advance Paid</div>
+      <div style="font-size:20px;font-weight:700;color:#6b7280">Rs. ${parseFloat(repair.advance||0).toLocaleString('en-LK',{minimumFractionDigits:2})}</div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" style="border:1px solid #ddd;padding:6px 8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:10px;color:#6b7280">Customer signature / acknowledgement: ___________________________</div>
+        <div style="font-size:9px;color:#9ca3af;text-align:right">Please bring this card when collecting your item.</div>
+      </div>
+    </td>
+  </tr>
+</table>
+<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
+</body></html>`;
+
+  const win = window.open('','_blank','width=700,height=500');
+  if (!win) { alert('Please allow popups to print job card.'); return; }
+  win.document.open(); win.document.write(html); win.document.close();
+};
+
 export default function Repairs() {
   const [repairs,   setRepairs]  = useState([]);
   const [summary,   setSummary]  = useState(null);
@@ -134,14 +222,17 @@ export default function Repairs() {
   const [lastDone,  setLastDone] = useState(null); // just-saved repair for print prompt
 
   const [form, setForm] = useState({
-    repair_type:    '',
-    customer_name:  '',
-    phone:          '',
-    description:    '',
-    charge:         '',
-    payment_method: 'cash',
-    status:         'done',
-    notes:          '',
+    repair_type:       '',
+    customer_name:     '',
+    phone:             '',
+    frame_description: '',
+    description:       '',
+    charge:            '',
+    advance:           '',
+    payment_method:    'cash',
+    status:            'pending',
+    due_date:          new Date(Date.now()+3*86400000).toISOString().split('T')[0],
+    notes:             '',
   });
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(''),3000); };
@@ -171,12 +262,13 @@ export default function Repairs() {
     try {
       const res = await apiPost('/repairs', {
         ...form,
-        charge: parseFloat(form.charge)||0,
+        charge:  parseFloat(form.charge)||0,
+        advance: parseFloat(form.advance)||0,
         import_date: pastMode && repairDate ? repairDate : null,
       });
       if (res.error) throw new Error(res.error);
       setLastDone(res);
-      setForm({ repair_type:'', customer_name:'', phone:'', description:'', charge:'', payment_method:'cash', status:'done', notes:'' });
+      setForm({ repair_type:'', customer_name:'', phone:'', frame_description:'', description:'', charge:'', advance:'', payment_method:'cash', status:'pending', due_date: new Date(Date.now()+3*86400000).toISOString().split('T')[0], notes:'' });
       setShowAdd(false);
       showToast(`Repair recorded — ${res.repair_number}`);
       load();
@@ -219,7 +311,11 @@ export default function Repairs() {
             <b>{lastDone.repair_number}</b> recorded — {form.customer_name||'walk-in'}
           </div>
           <div style={{ display:'flex', gap:8 }}>
-            <button onClick={()=>{ printRepairReceipt(lastDone); setLastDone(null); }}
+            <button onClick={()=>{ printRepairJobCard(lastDone); setLastDone(null); }}
+                style={{ padding:'9px 18px', background:'#eff6ff', color:'#1e40af', border:`1px solid #93c5fd`, borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                🗂️ Print Job Card
+              </button>
+              <button onClick={()=>{ printRepairReceipt(lastDone); setLastDone(null); }}
               style={{ padding:'8px 18px', background:C.gold, color:C.navy, border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               🖨️ Print Receipt
             </button>
@@ -456,6 +552,10 @@ export default function Repairs() {
                           )}
 
                           {/* Print */}
+                          <button onClick={()=>printRepairJobCard(repair)}
+                            style={{ padding:'5px 10px', background:'#eff6ff', color:'#1e40af', border:`1px solid #93c5fd`, borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                            🗂️ Job Card
+                          </button>
                           <button onClick={()=>printRepairReceipt(repair)}
                             style={{ padding:'4px 11px', background:C.gold+'30', color:'#92400e', border:`1px solid ${C.gold}`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                             🖨️ Print

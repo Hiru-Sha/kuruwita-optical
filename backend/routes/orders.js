@@ -27,8 +27,21 @@ async function nextOrderNumber(dateStr) {
   return 'KO-' + String(last + 1).padStart(4, '0');
 }
 
+// Auto-mark overdue orders (deliver_date passed, not delivered yet)
+async function markOverdueOrders() {
+  try {
+    await pool.query(`
+      UPDATE orders SET status = 'overdue'
+      WHERE deliver_date < CURRENT_DATE
+        AND status IN ('created','called')
+        AND deliver_date IS NOT NULL
+    `);
+  } catch(e) {}
+}
+
 // GET /api/orders
 router.get('/', auth, async (req, res) => {
+  await markOverdueOrders().catch(()=>{});
   const { search, status, limit = 100, offset = 0 } = req.query;
   try {
     let query = `
