@@ -270,6 +270,23 @@ export default function Layout() {
           color: #c9d1d9 !important;
         }
         body { background: var(--bg); color: var(--text); transition: background .2s, color .2s; }
+
+        /* ── Dark mode overrides ── */
+        [data-theme="dark"] body, [data-theme="dark"] #root {
+          background: #0d1117 !important; color: #c9d1d9 !important;
+        }
+        [data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea {
+          background: #0d1117 !important; color: #c9d1d9 !important; border-color: #30363d !important;
+        }
+        [data-theme="dark"] input::placeholder, [data-theme="dark"] textarea::placeholder {
+          color: #484f58 !important;
+        }
+        [data-theme="dark"] table { background: #161b22 !important; }
+        [data-theme="dark"] th { background: #21262d !important; color: #8b949e !important; border-color: #30363d !important; }
+        [data-theme="dark"] td { color: #c9d1d9 !important; border-color: #21262d !important; }
+        [data-theme="dark"] ::-webkit-scrollbar { width:6px; height:6px; }
+        [data-theme="dark"] ::-webkit-scrollbar-track { background:#0d1117; }
+        [data-theme="dark"] ::-webkit-scrollbar-thumb { background:#30363d; border-radius:3px; }
         @media(max-width:640px){
           button,select,input,textarea{min-height:44px!important;font-size:15px!important;}
           *{touch-action:manipulation;}
