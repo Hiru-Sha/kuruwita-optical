@@ -79,6 +79,7 @@ export default function Dashboard() {
   return (
     <div style={{fontFamily:"'DM Sans',sans-serif"}}>
       <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:mob?19:24,color:navy,margin:0}}>
+        <span style={{fontSize:10,background:'#dcfce7',color:'#166534',padding:'2px 8px',borderRadius:20,fontFamily:"'DM Sans',sans-serif",fontWeight:700,marginRight:8}}>BUILD v2.6</span>
         {greeting}, {user?.name?.split(' ')[0]}! 👋
       </h1>
       <p style={{fontSize:12,color:muted,margin:'3px 0 14px'}}>{dateStr}</p>
