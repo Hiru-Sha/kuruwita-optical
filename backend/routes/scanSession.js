@@ -61,6 +61,7 @@ module.exports = router;
 // PC polls and receives the photo
 
 const photoSessions = {}; // token → { image, timestamp, userId }
+const userPending   = {}; // userId → token  (active PC waiting session)
 
 // PC calls this to create a photo session token
 router.post('/photo-session', auth, (req, res) => {
@@ -70,11 +71,35 @@ router.post('/photo-session', auth, (req, res) => {
     userId:    req.user.id,
     timestamp: Date.now(),
   };
+  // Link this token to the user — so phone can find it without knowing the token
+  userPending[req.user.id] = token;
   // Clean old sessions (older than 10 min)
   Object.keys(photoSessions).forEach(k => {
-    if (Date.now() - photoSessions[k].timestamp > 600000) delete photoSessions[k];
+    if (Date.now() - photoSessions[k].timestamp > 600000) {
+      if (userPending[photoSessions[k].userId] === k) delete userPending[photoSessions[k].userId];
+      delete photoSessions[k];
+    }
   });
   res.json({ token });
+});
+
+// Phone checks if PC is waiting for a photo from this user
+router.get('/photo-session/pending', auth, (req, res) => {
+  const token = userPending[req.user.id];
+  if (!token || !photoSessions[token]) return res.json({ pending: false });
+  res.json({ pending: true, token });
+});
+
+// Phone uploads directly using its auth token (no need to know session token)
+router.post('/photo-session/upload-from-phone', auth, async (req, res) => {
+  const token = userPending[req.user.id];
+  if (!token || !photoSessions[token]) return res.status(404).json({ error: 'No PC waiting. Click "Add from Phone" on PC first.' });
+  const { image } = req.body;
+  if (!image) return res.status(400).json({ error: 'No image' });
+  photoSessions[token].image     = image;
+  photoSessions[token].timestamp = Date.now();
+  delete userPending[req.user.id]; // clear pending — only one photo per session
+  res.json({ ok: true });
 });
 
 // PC polls this to check if photo has arrived — MUST be before /:token route

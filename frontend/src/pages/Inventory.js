@@ -766,25 +766,33 @@ export default function Inventory() {
     const b64 = await toBase64(f);
     setImgData(b64);
 
-    // Check if there's a pending PC session waiting for a photo
-    const pendingToken = localStorage.getItem('ko_pending_photo_session');
-    if (pendingToken) {
-      try {
-        const BASE_  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-        const token_ = localStorage.getItem('ko_token');
-        const res    = await fetch(`${BASE_}/scan-session/photo-session/${pendingToken}/upload`, {
+    // Check if PC is waiting for a photo from this user account
+    try {
+      const BASE_  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token_ = localStorage.getItem('ko_token');
+      // First check if PC is waiting
+      const check = await fetch(`${BASE_}/scan-session/photo-session/pending`, {
+        headers: { Authorization:`Bearer ${token_}` },
+      }).then(r=>r.json()).catch(()=>({ pending:false }));
+
+      if (check.pending) {
+        // PC is waiting — push photo to it automatically
+        const res = await fetch(`${BASE_}/scan-session/photo-session/upload-from-phone`, {
           method: 'POST',
           headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token_}` },
           body: JSON.stringify({ image: b64 }),
         });
         const data = await res.json();
         if (data.ok) {
-          localStorage.removeItem('ko_pending_photo_session');
-          // Show brief success message
-          alert('✅ Photo sent to PC! Fill in the details there.');
+          // Show a toast-style message
+          const toast = document.createElement('div');
+          toast.textContent = '✅ Photo sent to PC!';
+          toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0f1f3d;color:#c9a84c;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;z-index:9999;font-family:inherit';
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 3000);
         }
-      } catch(e) { /* non-critical — photo still saved locally */ }
-    }
+      }
+    } catch(e) { /* non-critical */ }
   };
 
   // Start a PC session so phone (logged in on same account) can push a photo here
@@ -801,7 +809,7 @@ export default function Inventory() {
         setPcSessionId(data.token);
         setPcPolling(true);
         // Store in localStorage so the SAME browser on phone can find it
-        localStorage.setItem('ko_pending_photo_session', data.token);
+        // Session stored server-side — no localStorage needed
         return data.token;
       }
     } catch(e) { console.error('Session error', e); }
