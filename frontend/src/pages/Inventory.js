@@ -649,124 +649,6 @@ function AddVariantPanel({ item, items, onDone }) {
 }
 
 // ── Phone Photo QR Component ─────────────────────────────────
-function PhonePhotoQR({ onImage, onClose }) {
-  const [token,   setToken]   = React.useState(null);
-  const [qrUrl,   setQrUrl]   = React.useState('');
-  const [status,  setStatus]  = React.useState('Generating QR...');
-  const [polling, setPolling] = React.useState(false);
-  const pollRef               = React.useRef(null);
-
-  const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-  const token_ = localStorage.getItem('ko_token');
-
-  React.useEffect(() => {
-    // Create a photo session
-    fetch(`${BASE}/scan-session/photo-session`, {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token_}` },
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (!data.token) return setStatus('Failed to create session');
-        setToken(data.token);
-
-        // Build the phone URL — use the app's base URL
-        const appBase = window.location.origin;
-        const phoneUrl = `${appBase.replace('vercel.app', 'vercel.app')}/api/scan-session/photo-session/${data.token}`.replace('/api/scan-session',
-          (process.env.REACT_APP_API_URL||'http://localhost:5000/api').replace('/api','') + '/api/scan-session'
-        );
-        // Simpler: just use the backend URL directly
-        const backendBase = (process.env.REACT_APP_API_URL||'http://localhost:5000/api').replace('/api','');
-        const url = `${backendBase}/api/scan-session/photo-session/${data.token}`;
-        setQrUrl(url);
-        setStatus('Scan with your phone camera');
-        setPolling(true);
-      })
-      .catch(() => setStatus('Failed to connect'));
-  }, []);
-
-  // Poll for photo
-  React.useEffect(() => {
-    if (!polling || !token) return;
-    pollRef.current = setInterval(async () => {
-      try {
-        const r = await fetch(`${BASE}/scan-session/photo-session/${token}/poll`, {
-          headers: { Authorization:`Bearer ${token_}` },
-        });
-        const data = await r.json();
-        if (data.expired) { setStatus('Session expired — close and try again'); setPolling(false); clearInterval(pollRef.current); return; }
-        if (data.ready && data.image) {
-          clearInterval(pollRef.current);
-          setPolling(false);
-          setStatus('✅ Photo received!');
-          setTimeout(() => { onImage(data.image); onClose(); }, 800);
-        }
-      } catch(e) {}
-    }, 1500);
-    return () => clearInterval(pollRef.current);
-  }, [polling, token]);
-
-  // Generate QR code using a free API
-  const qrSrc = qrUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrUrl)}` : null;
-
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.75)', zIndex:600,
-      display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-      <div style={{ background:'white', borderRadius:16, padding:28, maxWidth:360, width:'100%',
-        textAlign:'center', boxShadow:'0 24px 60px rgba(0,0,0,.3)', fontFamily:"'DM Sans',sans-serif" }}>
-
-        <div style={{ fontSize:32, marginBottom:8 }}>📱</div>
-        <div style={{ fontSize:17, fontWeight:700, color:'#0f1f3d', marginBottom:4 }}>
-          Take Photo from Phone
-        </div>
-        <div style={{ fontSize:13, color:'#6b7280', marginBottom:20 }}>
-          Scan QR with your phone camera → take photo → it appears here automatically
-        </div>
-
-        {/* QR Code */}
-        {qrSrc && (
-          <div style={{ background:'#f8f5ef', borderRadius:12, padding:16, marginBottom:16, display:'inline-block' }}>
-            <img src={qrSrc} alt="QR Code" style={{ width:200, height:200, display:'block' }}/>
-          </div>
-        )}
-
-        {/* Status */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-          fontSize:14, fontWeight:600, color: status.includes('✅')?'#2d7a4f':'#6b7280', marginBottom:16 }}>
-          {polling && !status.includes('✅') && (
-            <div style={{ width:10, height:10, borderRadius:'50%', background:'#c9a84c',
-              animation:'pulse 1s infinite' }}/>
-          )}
-          {status}
-        </div>
-
-        {polling && !status.includes('✅') && (
-          <div style={{ fontSize:12, color:'#9ca3af', marginBottom:16 }}>
-            Waiting for photo from phone...
-          </div>
-        )}
-
-        {/* URL fallback */}
-        {qrUrl && (
-          <div style={{ background:'#f8f5ef', borderRadius:8, padding:'8px 12px', marginBottom:16,
-            fontSize:11, color:'#6b7280', wordBreak:'break-all', textAlign:'left' }}>
-            Or open this link on your phone:<br/>
-            <a href={qrUrl} target="_blank" rel="noreferrer"
-              style={{ color:'#1e40af', fontWeight:600 }}>{qrUrl}</a>
-          </div>
-        )}
-
-        <button onClick={onClose}
-          style={{ padding:'10px 24px', background:'#f3f4f6', border:'none', borderRadius:9,
-            fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#374151' }}>
-          Cancel
-        </button>
-      </div>
-      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }`}</style>
-    </div>
-  );
-}
-
 // ══════════════════════════════════════════════════════════════
 export default function Inventory() {
   const [items,        setItems]       = useState([]);
@@ -795,8 +677,11 @@ export default function Inventory() {
   const [form,         setForm]        = useState(defaults('Frames'));
   const [showStickers,  setShowStickers] = useState(false);
   const [showScanner,   setShowScanner]  = useState(false);
-  const [showPhoneQR,   setShowPhoneQR]  = useState(false);
-  const [phoneQRTarget, setPhoneQRTarget]= useState('main'); // 'main' | variant index
+  // Phone→PC photo session
+  const [pcSessionId,   setPcSessionId]  = useState(null);
+  const [pcPolling,     setPcPolling]    = useState(false);
+  const pollIntervalRef = React.useRef(null);
+
   const [scanResult,   setScanResult]  = useState(null); // last scanned item
   const [showFullImg,  setShowFullImg] = useState(false);
   const [stickerItems, setStickerItems]= useState([]);
@@ -876,6 +761,51 @@ export default function Inventory() {
 
   const handleCatChange = (cat) => { setAddCat(cat); setForm(defaults(cat)); setImgData(null); setColorVariants([{ color:'Black', qty:'1', image:null }]); };
   const handleImgPick   = async (e) => { const f=e.target.files[0]; if(!f) return; setImgData(await toBase64(f)); };
+
+  // Start a PC session so phone (logged in on same account) can push a photo here
+  const startPCPhotoSession = async () => {
+    const BASE_  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    const token_ = localStorage.getItem('ko_token');
+    try {
+      const r    = await fetch(`${BASE_}/scan-session/photo-session`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token_}` },
+      });
+      const data = await r.json();
+      if (data.token) {
+        setPcSessionId(data.token);
+        setPcPolling(true);
+        return data.token;
+      }
+    } catch(e) { console.error('Session error', e); }
+    return null;
+  };
+
+  // Poll for photo from phone
+  useEffect(() => {
+    if (!pcPolling || !pcSessionId) return;
+    const BASE_  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    const token_ = localStorage.getItem('ko_token');
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const r    = await fetch(`${BASE_}/scan-session/photo-session/${pcSessionId}/poll`, {
+          headers: { Authorization:`Bearer ${token_}` },
+        });
+        const data = await r.json();
+        if (data.expired) { setPcPolling(false); setPcSessionId(null); clearInterval(pollIntervalRef.current); return; }
+        if (data.ready && data.image) {
+          clearInterval(pollIntervalRef.current);
+          setPcPolling(false);
+          setImgData(data.image);       // → sets main form image
+          setShowAdd(true);             // → open add form if not open
+          // flash success
+          setPcSessionId('done');
+          setTimeout(() => setPcSessionId(null), 3000);
+        }
+      } catch(e) {}
+    }, 1500);
+    return () => clearInterval(pollIntervalRef.current);
+  }, [pcPolling, pcSessionId]);
 
   // Check for duplicates when name/model changes
   const checkDuplicates = React.useCallback(async (name) => {
@@ -1117,12 +1047,48 @@ export default function Inventory() {
             style={{ padding:'9px 16px', background:'#7c3aed', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
             🤖 AI Photo Add
           </button>
+          {/* Phone photo button — starts session so phone can push photo to PC */}
+          <button onClick={async ()=>{
+            const sid = await startPCPhotoSession();
+            if (!sid) return alert('Failed to start session');
+          }}
+            style={{ padding:'9px 16px', background:pcPolling?'#dcfce7':pcSessionId==='done'?'#dcfce7':'#0f1f3d',
+              color:pcPolling?'#166534':pcSessionId==='done'?'#166534':'#c9a84c',
+              border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+              display:'flex', alignItems:'center', gap:6 }}>
+            {pcSessionId==='done' ? '✅ Photo received!' : pcPolling ? '⏳ Waiting for phone...' : '📱 Add from Phone'}
+          </button>
           <button onClick={()=>setShowAdd(s=>!s)}
             style={{ padding:'9px 20px', background:showAdd?C.cream:C.gold, color:showAdd?C.muted:C.navy, border:showAdd?`1.5px solid ${C.border}`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
             {showAdd?'✕ Cancel':'+ Add Item'}
           </button>
         </div>
       </div>
+
+      {/* Phone photo session status banner */}
+      {pcPolling && (
+        <div style={{ background:'#eff6ff', border:'1.5px solid #93c5fd', borderRadius:12, padding:'12px 16px',
+          marginBottom:16, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ width:10, height:10, borderRadius:'50%', background:'#3b82f6',
+              animation:'pcPulse 1s infinite' }}/>
+            <div>
+              <div style={{ fontSize:14, fontWeight:700, color:'#1e40af' }}>
+                Waiting for photo from phone...
+              </div>
+              <div style={{ fontSize:12, color:'#3b82f6', marginTop:2 }}>
+                Open the web app on your phone → go to Inventory → tap 📷 camera button → take photo → it appears here
+              </div>
+            </div>
+          </div>
+          <button onClick={()=>{ setPcPolling(false); setPcSessionId(null); clearInterval(pollIntervalRef.current); }}
+            style={{ padding:'6px 12px', background:'white', border:'1px solid #93c5fd', borderRadius:8,
+              fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'#1e40af', flexShrink:0 }}>
+            Cancel
+          </button>
+        </div>
+      )}
+      <style>{'.pcPulse,@keyframes pcPulse{0%,100%{opacity:1}50%{opacity:.2}}'}</style>
 
       {/* Stats + Category Counts */}
       {(() => {
@@ -1238,11 +1204,7 @@ export default function Inventory() {
                 {imgData ? <img src={imgData} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <><span style={{ fontSize:22 }}>📷</span><span style={{ fontSize:10, color:C.muted, marginTop:4 }}>From PC</span></>}
                 <input type="file" accept="image/*" onChange={handleImgPick} style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer' }}/>
               </label>
-              <button type="button" onClick={()=>{ setPhoneQRTarget('main'); setShowPhoneQR(true); }}
-                style={{ padding:'10px 14px', background:'#0f1f3d', color:'#c9a84c', border:'none', borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', height:90, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4 }}>
-                <span style={{ fontSize:22 }}>📱</span>
-                <span style={{ fontSize:11 }}>From Phone</span>
-              </button>
+
               {imgData && (
                 <button type="button" onClick={()=>setImgData(null)}
                   style={{ padding:'6px 10px', background:'#fee2e2', color:C.danger, border:'none', borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:'inherit', alignSelf:'flex-start' }}>
@@ -1290,10 +1252,7 @@ export default function Inventory() {
                         setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,image:b64}:x));
                       }}/>
                   </label>
-                  <button type="button" onClick={()=>{ setPhoneQRTarget(String(i)); setShowPhoneQR(true); }}
-                    style={{ width:44, height:22, background:'#0f1f3d', color:'#c9a84c', border:'none', borderRadius:5, fontSize:9, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                    📱
-                  </button>
+
                 </div>
                 <div style={{ flex:1 }}>
                   <select value={FR_COLORS.includes(v.color) ? v.color : 'Other'}
@@ -1844,21 +1803,7 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Phone Photo QR Modal */}
-      {showPhoneQR && (
-        <PhonePhotoQR
-          onImage={(img) => {
-            if (phoneQRTarget === 'main') {
-              setImgData(img);
-            } else {
-              // Update specific variant image
-              const idx = parseInt(phoneQRTarget);
-              setColorVariants(cv => cv.map((v,i) => i===idx ? {...v, image:img} : v));
-            }
-          }}
-          onClose={()=>setShowPhoneQR(false)}
-        />
-      )}
+
 
       {/* QR Scanner modal */}
       {showScanner && (

@@ -103,98 +103,170 @@ router.post('/photo-session/:token/upload', (req, res) => {
 // Phone opens this URL (no auth needed — token is the secret)
 router.get('/photo-session/:token', (req, res) => {
   const s = photoSessions[req.params.token];
-  if (!s) return res.status(404).send('<h2>Session expired. Please scan the QR again.</h2>');
-  // Return a simple mobile upload page
+  if (!s) return res.status(404).send(`
+    <!DOCTYPE html><html><head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Expired</title>
+    <style>body{font-family:Arial;text-align:center;padding:40px;background:#0f1f3d;color:white}</style>
+    </head><body>
+    <div style="font-size:60px">⏱</div>
+    <h2>Session Expired</h2>
+    <p style="color:#c9a84c">Go back to the PC and click "Add from Phone" again.</p>
+    </body></html>`);
+
+  const tok = req.params.token;
   res.send(`<!DOCTYPE html>
-<html><head>
+<html>
+<head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Upload Photo — Wickramakalutota Opticals</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Add Frame Photo — Wickramakalutota Opticals</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,sans-serif;background:#0f1f3d;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .card{background:white;border-radius:16px;padding:28px 24px;width:100%;max-width:380px;text-align:center}
-  h2{font-size:18px;color:#0f1f3d;margin-bottom:6px}
-  p{font-size:13px;color:#6b7280;margin-bottom:20px}
-  .btn{display:block;width:100%;padding:14px;border-radius:12px;border:none;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:12px;font-family:inherit}
-  .btn-primary{background:#c9a84c;color:#0f1f3d}
-  .btn-secondary{background:#f3f4f6;color:#374151}
-  .preview{width:100%;border-radius:10px;margin-bottom:16px;display:none}
-  .status{font-size:13px;color:#6b7280;margin-top:8px}
-  .success{color:#2d7a4f;font-weight:700;font-size:16px}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#0f1f3d;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+  .card{background:white;border-radius:20px;width:100%;max-width:380px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .hdr{background:#0f1f3d;padding:16px 20px;text-align:center}
+  .hdr-shop{font-size:11px;color:#c9a84c;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+  .hdr-title{font-size:18px;color:white;font-weight:700}
+  .body{padding:24px 20px}
+  .preview-wrap{width:100%;aspect-ratio:4/3;background:#f8f5ef;border-radius:14px;overflow:hidden;margin-bottom:20px;display:flex;align-items:center;justify-content:center;border:2px dashed #e0ddd6;position:relative}
+  .preview-wrap img{width:100%;height:100%;object-fit:cover}
+  .preview-wrap .placeholder{text-align:center;color:#9ca3af}
+  .placeholder-icon{font-size:48px;display:block;margin-bottom:8px}
+  .placeholder-text{font-size:14px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s}
+  .btn:active{opacity:.8}
+  .btn-take{background:#0f1f3d;color:#c9a84c;margin-bottom:12px}
+  .btn-send{background:#c9a84c;color:#0f1f3d;margin-bottom:12px;display:none}
+  .btn-retake{background:#f3f4f6;color:#374151;font-size:14px;padding:12px;display:none;margin-bottom:12px}
+  .status{text-align:center;font-size:14px;min-height:20px;color:#6b7280}
+  .done-screen{text-align:center;padding:32px 20px}
 </style>
 </head>
 <body>
 <div class="card">
-  <div style="font-size:40px;margin-bottom:12px">📷</div>
-  <h2>Upload Frame Photo</h2>
-  <p>Wickramakalutota Opticals<br>Take or choose a photo to add to inventory</p>
-  <img id="preview" class="preview"/>
-  <label class="btn btn-primary" style="display:block;cursor:pointer">
-    📷 Take / Choose Photo
-    <input type="file" accept="image/*" id="fileInput" style="display:none"/>
-  </label>
-  <button class="btn btn-secondary" id="uploadBtn" style="display:none">✅ Send to PC</button>
-  <div class="status" id="status"></div>
+  <div class="hdr">
+    <div class="hdr-shop">Wickramakalutota Opticals</div>
+    <div class="hdr-title">📷 Add Frame Photo</div>
+  </div>
+  <div class="body" id="mainBody">
+    <!-- Preview area -->
+    <div class="preview-wrap" id="previewWrap">
+      <div class="placeholder" id="placeholder">
+        <span class="placeholder-icon">🕶️</span>
+        <span class="placeholder-text">Photo will appear here</span>
+      </div>
+      <img id="previewImg" style="display:none" alt="preview"/>
+    </div>
+
+    <!-- Camera input — opens phone camera -->
+    <input type="file" accept="image/*" capture="environment" id="fileInput" style="display:none">
+
+    <button class="btn btn-take" id="btnTake" onclick="document.getElementById('fileInput').click()">
+      📷 Take Photo
+    </button>
+    <button class="btn btn-send" id="btnSend">
+      ✅ Send to PC
+    </button>
+    <button class="btn btn-retake" id="btnRetake">
+      🔄 Retake
+    </button>
+
+    <div class="status" id="status">Tap "Take Photo" to open your camera</div>
+  </div>
 </div>
+
 <script>
-  const token = '${req.params.token}';
-  const fileInput = document.getElementById('fileInput');
-  const preview   = document.getElementById('preview');
-  const uploadBtn = document.getElementById('uploadBtn');
-  const status    = document.getElementById('status');
-  let   b64image  = null;
+const tok = '${tok}';
+let b64 = null;
 
-  fileInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      // Compress image
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxW = 800;
-        const ratio = Math.min(1, maxW / img.width);
-        canvas.width  = img.width  * ratio;
-        canvas.height = img.height * ratio;
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        b64image = canvas.toDataURL('image/jpeg', 0.8);
-        preview.src = b64image;
-        preview.style.display = 'block';
-        uploadBtn.style.display = 'block';
-        status.textContent = 'Photo ready — tap Send to PC';
-      };
-      img.src = ev.target.result;
+const fileInput = document.getElementById('fileInput');
+const previewImg = document.getElementById('previewImg');
+const placeholder = document.getElementById('placeholder');
+const btnTake = document.getElementById('btnTake');
+const btnSend = document.getElementById('btnSend');
+const btnRetake = document.getElementById('btnRetake');
+const status = document.getElementById('status');
+
+fileInput.onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  status.textContent = 'Processing photo...';
+
+  // Read file
+  const raw = await new Promise(res => {
+    const r = new FileReader();
+    r.onload = ev => res(ev.target.result);
+    r.readAsDataURL(file);
+  });
+
+  // Compress: max 1000px, 85% quality
+  await new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1000;
+      const ratio = Math.min(1, MAX / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width  = Math.round(img.width  * ratio);
+      c.height = Math.round(img.height * ratio);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      b64 = c.toDataURL('image/jpeg', 0.85);
+
+      // Show preview
+      previewImg.src = b64;
+      previewImg.style.display = 'block';
+      placeholder.style.display = 'none';
+      btnTake.style.display = 'none';
+      btnSend.style.display = 'flex';
+      btnRetake.style.display = 'flex';
+      status.textContent = 'Photo ready — tap Send to PC';
+      res();
     };
-    reader.readAsDataURL(file);
+    img.src = raw;
   });
+};
 
-  uploadBtn.addEventListener('click', async () => {
-    if (!b64image) return;
-    uploadBtn.disabled = true;
-    status.textContent = 'Sending...';
-    try {
-      const res = await fetch('/api/scan-session/photo-session/${req.params.token}/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: b64image }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        status.innerHTML = '<span class="success">✅ Photo sent to PC!</span>';
-        uploadBtn.style.display = 'none';
-      } else {
-        status.textContent = 'Failed: ' + (data.error || 'Unknown error');
-        uploadBtn.disabled = false;
-      }
-    } catch(e) {
-      status.textContent = 'Error: ' + e.message;
-      uploadBtn.disabled = false;
+btnRetake.onclick = () => {
+  b64 = null;
+  previewImg.style.display = 'none';
+  placeholder.style.display = 'block';
+  btnSend.style.display = 'none';
+  btnRetake.style.display = 'none';
+  btnTake.style.display = 'flex';
+  status.textContent = 'Tap "Take Photo" to open your camera';
+  fileInput.value = '';
+};
+
+btnSend.onclick = async () => {
+  if (!b64) return;
+  btnSend.disabled = true;
+  btnRetake.disabled = true;
+  status.textContent = 'Sending to PC...';
+  try {
+    const res = await fetch('/api/scan-session/photo-session/' + tok + '/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: b64 }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('mainBody').innerHTML = \`
+        <div class="done-screen">
+          <div style="font-size:72px;margin-bottom:16px">✅</div>
+          <div style="font-size:22px;font-weight:700;color:#0f1f3d;margin-bottom:10px">Photo Sent!</div>
+          <div style="font-size:15px;color:#6b7280;line-height:1.6">The photo has appeared on the PC.<br>You can close this tab.</div>
+        </div>\`;
+    } else {
+      status.textContent = 'Failed: ' + (data.error || 'Unknown');
+      btnSend.disabled = btnRetake.disabled = false;
     }
-  });
+  } catch(e) {
+    status.textContent = 'Error — check internet connection';
+    btnSend.disabled = btnRetake.disabled = false;
+  }
+};
 </script>
-</body></html>`);
+</body>
+</html>`);
 });
-
 // Routes moved above /:token to fix Express route matching order
