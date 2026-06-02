@@ -1404,19 +1404,14 @@ export default function Inventory() {
               </div>
               <div style={{ fontSize:12, color:'#166534' }}>Send all low/out stock items to dealers via WhatsApp</div>
             </div>
-            <a href={`https://wa.me/?text=${encodeURIComponent(
-              `Hi, I need to reorder the following items:
-
-` +
-              items.filter(i=>i.quantity<=i.min_quantity && i.dealer).map((i,idx)=>
-                `${idx+1}. ${i.name}${i.brand?' ('+i.brand+')':''} — Stock: ${i.quantity} — Dealer: ${i.dealer}`
-              ).join('
-') +
-              `
-
-Kindly confirm availability. Thank you!
-Wickramakalutota Opticals, Chilaw`
-            )}`}
+            <a href={(() => {
+              const msg = 'Hi, I need to reorder the following items:\n\n' +
+                items.filter(i=>i.quantity<=i.min_quantity && i.dealer)
+                  .map((i,idx) => (idx+1) + '. ' + i.name + (i.brand ? ' (' + i.brand + ')' : '') + ' - Stock: ' + i.quantity + ' - Dealer: ' + i.dealer)
+                  .join('\n') +
+                '\n\nKindly confirm availability. Thank you!\nWickramakalutota Opticals, Chilaw';
+              return 'https://wa.me/?text=' + encodeURIComponent(msg);
+            })()}
               target="_blank" rel="noreferrer"
               style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'9px 18px', background:'#25D366', color:'white', borderRadius:9, fontSize:13, fontWeight:700, textDecoration:'none', whiteSpace:'nowrap' }}>
               💬 WhatsApp Reorder All
