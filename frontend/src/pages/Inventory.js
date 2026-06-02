@@ -386,6 +386,268 @@ function AdjustmentPanel({ item, onDone }) {
   );
 }
 
+// ── Add Colour Variant Panel ─────────────────────────────────
+function AddVariantPanel({ item, items, onDone }) {
+  const [variants,  setVariants]  = React.useState([{ color:'Black', qty:'1', image:null, cost_price:'', sell_price:'' }]);
+  const [saving,    setSaving]    = React.useState(false);
+  const [error,     setError]     = React.useState('');
+  const [toast,     setToast]     = React.useState('');
+  const [existing,  setExisting]  = React.useState([]); // same model different colours
+
+  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(''),3000); };
+
+  // Find all items with same brand + model name (different colours of same frame)
+  React.useEffect(() => {
+    const sameModel = items.filter(i =>
+      i.id !== item.id &&
+      i.brand === item.brand &&
+      i.category === item.category &&
+      // Match on frame_name part of the name
+      i.name.toLowerCase().includes((item.brand||'').toLowerCase()) &&
+      (item.frame_type ? i.frame_type === item.frame_type : true)
+    );
+    setExisting(sameModel);
+  }, [item, items]);
+
+  const handleSave = async () => {
+    if (!variants.length) return;
+    const invalid = variants.find(v => !v.color.trim() || parseInt(v.qty||0) < 0);
+    if (invalid) return setError('Please fill in color and quantity for all variants');
+    setError(''); setSaving(true);
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      let saved = 0;
+      for (const v of variants) {
+        if (!v.color.trim()) continue;
+        // Build new item name — same as existing but with new color
+        const newName = item.name.replace(
+          new RegExp(item.frame_color || 'Black', 'i'),
+          v.color
+        );
+        // Use new name only if color was found in old name; else append color
+        const finalName = newName !== item.name
+          ? newName
+          : `${item.name.split(' · ').slice(0,-1).join(' · ')} · ${v.color}`;
+
+        // Check if this exact color variant already exists
+        const alreadyExists = items.find(i =>
+          i.name.toLowerCase() === finalName.toLowerCase() ||
+          (i.brand === item.brand && i.frame_color === v.color &&
+           i.category === item.category && i.frame_type === item.frame_type &&
+           i.id !== item.id)
+        );
+
+        if (alreadyExists) {
+          // Just update quantity of existing variant
+          await fetch(`${BASE}/inventory/${alreadyExists.id}`, {
+            method:'PATCH',
+            headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+            body: JSON.stringify({
+              quantity: alreadyExists.quantity + parseInt(v.qty||0),
+              cost_price: parseFloat(v.cost_price)||parseFloat(item.cost_price)||0,
+              sell_price: parseFloat(v.sell_price)||parseFloat(item.sell_price)||0,
+              ...(v.image ? { image_url: v.image } : {}),
+            }),
+          });
+          showToast(`Updated ${v.color} — added ${v.qty} to existing stock`);
+        } else {
+          // Create brand new variant
+          await fetch(`${BASE}/inventory`, {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+            body: JSON.stringify({
+              name:           finalName,
+              category:       item.category,
+              brand:          item.brand,
+              dealer:         item.dealer,
+              frame_type:     item.frame_type,
+              frame_color:    v.color,
+              frame_shape:    item.frame_shape,
+              frame_material: item.frame_material,
+              frame_size:     item.frame_size,
+              sg_type:        item.sg_type,
+              rg_lens_type:   item.rg_lens_type,
+              rg_material:    item.rg_material,
+              rg_power:       item.rg_power,
+              cost_price:     parseFloat(v.cost_price)||parseFloat(item.cost_price)||0,
+              sell_price:     parseFloat(v.sell_price)||parseFloat(item.sell_price)||0,
+              quantity:       parseInt(v.qty)||0,
+              min_quantity:   item.min_quantity||2,
+              image_url:      v.image||null,
+              display_number: null,
+              stock_number:   null,
+            }),
+          });
+          saved++;
+        }
+      }
+      showToast(`Saved ${saved} new colour variant${saved!==1?'s':''} ✓`);
+      setTimeout(onDone, 1200);
+    } catch(e) { setError(e.message||'Failed to save'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div>
+      {toast && (
+        <div style={{ background:C.navy, color:'white', padding:'10px 14px', borderRadius:9,
+          fontSize:13, fontWeight:600, marginBottom:14, borderLeft:`3px solid ${C.gold}` }}>
+          ✅ {toast}
+        </div>
+      )}
+
+      {/* Current item reference */}
+      <div style={{ background:C.cream, borderRadius:12, padding:'12px 14px', marginBottom:16 }}>
+        <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, letterSpacing:'.8px', marginBottom:6 }}>
+          Adding variants of
+        </div>
+        <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{item.name}</div>
+        <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>
+          {item.brand} · {item.frame_type} · Current colour: <b style={{color:C.navy}}>{item.frame_color}</b>
+        </div>
+        <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>
+          Cost: Rs.{parseFloat(item.cost_price||0).toLocaleString()} · Sell: Rs.{parseFloat(item.sell_price||0).toLocaleString()}
+        </div>
+      </div>
+
+      {/* Existing colour variants of same model */}
+      {existing.length > 0 && (
+        <div style={{ background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:10, padding:'10px 14px', marginBottom:16 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:'#1e40af', marginBottom:8 }}>
+            🎨 Other colours already in stock for this model:
+          </div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+            {existing.map(e=>(
+              <span key={e.id} style={{ background:'white', border:'1px solid #bae6fd', borderRadius:20,
+                padding:'3px 10px', fontSize:12, color:'#1e40af', fontWeight:600 }}>
+                {e.frame_color} ({e.quantity} in stock)
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Variant rows */}
+      <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:10 }}>
+        New Colour Variants to Add
+      </div>
+
+      {variants.map((v, i) => (
+        <div key={i} style={{ background:'white', border:`1.5px solid ${C.border}`, borderRadius:12,
+          padding:'14px', marginBottom:10 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Variant {i+1}</div>
+            {variants.length > 1 && (
+              <button onClick={()=>setVariants(vs=>vs.filter((_,j)=>j!==i))}
+                style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7,
+                  padding:'4px 10px', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                ✕ Remove
+              </button>
+            )}
+          </div>
+
+          {/* Color + Image row */}
+          <div style={{ display:'flex', gap:10, marginBottom:10, alignItems:'flex-start' }}>
+            {/* Image picker */}
+            <label style={{ width:64, height:64, border:`2px dashed ${v.image?C.gold:C.border}`,
+              borderRadius:9, cursor:'pointer', background:v.image?'#fdf9f0':C.cream,
+              display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+              overflow:'hidden', position:'relative', flexShrink:0 }}>
+              {v.image
+                ? <img src={v.image} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                : <><span style={{ fontSize:20 }}>📷</span><span style={{ fontSize:9, color:C.muted }}>Photo</span></>
+              }
+              <input type="file" accept="image/*" style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer' }}
+                onChange={async e=>{
+                  const f=e.target.files[0]; if(!f) return;
+                  const b64=await compressImage(f);
+                  setVariants(vs=>vs.map((x,j)=>j===i?{...x,image:b64}:x));
+                }}/>
+            </label>
+
+            {/* Color select */}
+            <div style={{ flex:1 }}>
+              <label style={LBL}>Colour *</label>
+              <select value={FR_COLORS.includes(v.color)?v.color:'Other'}
+                onChange={e=>{
+                  if(e.target.value==='Other') setVariants(vs=>vs.map((x,j)=>j===i?{...x,color:''}:x));
+                  else setVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x));
+                }}
+                style={{ ...INP, marginBottom:4 }}>
+                {FR_COLORS.map(col=><option key={col}>{col}</option>)}
+              </select>
+              {(!FR_COLORS.includes(v.color)||v.color==='') && (
+                <input value={v.color}
+                  onChange={e=>setVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x))}
+                  placeholder="Type colour e.g. Dark Brown..."
+                  style={{ ...INP, border:'1.5px solid #f59e0b', background:'#fffbeb' }}/>
+              )}
+            </div>
+          </div>
+
+          {/* Qty + Price row */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+            <div>
+              <label style={LBL}>Qty *</label>
+              <input type="number" min="0" value={v.qty}
+                onChange={e=>setVariants(vs=>vs.map((x,j)=>j===i?{...x,qty:e.target.value}:x))}
+                placeholder="e.g. 3"
+                style={{ ...INP, fontWeight:700 }}/>
+            </div>
+            <div>
+              <label style={LBL}>Cost Price</label>
+              <input type="number" value={v.cost_price}
+                onChange={e=>setVariants(vs=>vs.map((x,j)=>j===i?{...x,cost_price:e.target.value}:x))}
+                placeholder={`${item.cost_price||0} (same)`}
+                style={INP}/>
+            </div>
+            <div>
+              <label style={LBL}>Sell Price</label>
+              <input type="number" value={v.sell_price}
+                onChange={e=>setVariants(vs=>vs.map((x,j)=>j===i?{...x,sell_price:e.target.value}:x))}
+                placeholder={`${item.sell_price||0} (same)`}
+                style={INP}/>
+            </div>
+          </div>
+
+          {/* Preview name */}
+          {v.color && (
+            <div style={{ marginTop:8, background:C.cream, borderRadius:7, padding:'6px 10px', fontSize:11, color:C.muted }}>
+              Will save as: <b style={{color:C.navy}}>
+                {item.name.replace(new RegExp(item.frame_color||'Black','i'),v.color)!==item.name
+                  ? item.name.replace(new RegExp(item.frame_color||'Black','i'),v.color)
+                  : `${item.name.split(' · ').slice(0,-1).join(' · ')} · ${v.color}`}
+              </b>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {error && (
+        <div style={{ background:'#fef2f2', border:'1px solid #fca5a5', color:C.danger,
+          borderRadius:8, padding:'9px 13px', fontSize:13, marginBottom:12 }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      <button onClick={()=>setVariants(vs=>[...vs,{ color:'', qty:'1', image:null, cost_price:'', sell_price:'' }])}
+        style={{ width:'100%', padding:'10px', background:C.cream, border:`1.5px dashed ${C.border}`,
+          borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+          color:C.muted, marginBottom:12 }}>
+        + Add Another Colour
+      </button>
+
+      <button onClick={handleSave} disabled={saving}
+        style={{ width:'100%', padding:'12px', background:saving?C.muted:C.navy,
+          color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700,
+          cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+        {saving ? '⏳ Saving...' : `💾 Save ${variants.length} Colour Variant${variants.length!==1?'s':''}`}
+      </button>
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════════════════════
 export default function Inventory() {
   const [items,        setItems]       = useState([]);
@@ -508,10 +770,16 @@ export default function Inventory() {
       const json  = await res.json();
       const arr   = Array.isArray(json) ? json : Array.isArray(json.data) ? json.data : [];
       // Find items where name is very similar
-      const matches = arr.filter(item =>
-        item.name.toLowerCase().includes(name.toLowerCase()) ||
-        name.toLowerCase().includes(item.name.toLowerCase().split(' ')[0])
-      );
+      // Only warn if model name/number actually matches — not just brand
+      const searchLower = name.toLowerCase();
+      const matches = arr.filter(item => {
+        const itemLower = item.name.toLowerCase();
+        // Must match on model number or full name — NOT just brand
+        const modelMatch = form.frame_name && form.frame_name.length >= 3
+          && itemLower.includes(form.frame_name.toLowerCase());
+        const fullMatch  = itemLower === searchLower;
+        return modelMatch || fullMatch;
+      });
       setDupMatches(matches);
     } catch { setDupMatches([]); }
     finally { setDupChecking(false); }
@@ -580,11 +848,9 @@ export default function Inventory() {
         const newCost  = parseFloat(form.cost_price)||0;
         const newQty   = parseInt(variant.qty)||0;
 
-        // Check for exact match (same name, same color) — merge stock
+        // Only merge if EXACT same name match — different models must be separate items
         const exact = items.find(i =>
-          i.name.toLowerCase() === variantName.toLowerCase() ||
-          (i.brand === form.brand && i.frame_color === variant.color &&
-           i.category === form.category && i.frame_type === form.frame_type)
+          i.name.toLowerCase() === variantName.toLowerCase()
         );
 
         if (exact) {
@@ -988,6 +1254,37 @@ export default function Inventory() {
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Search items..." style={{ ...INP, maxWidth:380 }}/>
       </div>
 
+      {/* Bulk reorder banner — shows when low/out stock items exist */}
+      {!loading && items.filter(i=>i.quantity<=i.min_quantity).length > 0 && (
+        <div style={{ background:'#f0fdf4', border:'1px solid #86efac', borderRadius:12, padding:'12px 16px', marginBottom:14 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10 }}>
+            <div>
+              <div style={{ fontSize:13, fontWeight:700, color:'#166534', marginBottom:2 }}>
+                📦 {items.filter(i=>i.quantity===0).length} out of stock · {items.filter(i=>i.quantity>0&&i.quantity<=i.min_quantity).length} low stock
+              </div>
+              <div style={{ fontSize:12, color:'#166534' }}>Send all low/out stock items to dealers via WhatsApp</div>
+            </div>
+            <a href={`https://wa.me/?text=${encodeURIComponent(
+              `Hi, I need to reorder the following items:
+
+` +
+              items.filter(i=>i.quantity<=i.min_quantity && i.dealer).map((i,idx)=>
+                `${idx+1}. ${i.name}${i.brand?' ('+i.brand+')':''} — Stock: ${i.quantity} — Dealer: ${i.dealer}`
+              ).join('
+') +
+              `
+
+Kindly confirm availability. Thank you!
+Wickramakalutota Opticals, Chilaw`
+            )}`}
+              target="_blank" rel="noreferrer"
+              style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'9px 18px', background:'#25D366', color:'white', borderRadius:9, fontSize:13, fontWeight:700, textDecoration:'none', whiteSpace:'nowrap' }}>
+              💬 WhatsApp Reorder All
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Grid */}
       {loading ? <p style={{ color:C.muted, fontSize:13 }}>Loading...</p>
         : !items.length
@@ -1047,11 +1344,46 @@ export default function Inventory() {
                 {selected.quantity>0&&selected.quantity<=selected.min_quantity && <span style={{ fontSize:11, color:C.danger, fontWeight:600 }}>• Low stock</span>}
               </div>
 
+              {/* Quick Reorder button — shows when low or out of stock */}
+              {(selected.quantity===0 || selected.quantity<=selected.min_quantity) && selected.dealer && (
+                <div style={{ background:'#f0fdf4', border:'1px solid #86efac', borderRadius:10, padding:'11px 14px', marginBottom:14 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#166534', marginBottom:8 }}>
+                    📦 Low stock — reorder from {selected.dealer}?
+                  </div>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `Hi, I need to reorder the following item from Wickramakalutota Opticals:
+
+` +
+                      `Item: ${selected.name}
+` +
+                      `Brand: ${selected.brand||'—'}
+` +
+                      `Category: ${selected.category}
+` +
+                      `Current stock: ${selected.quantity} (minimum: ${selected.min_quantity})
+` +
+                      `Qty needed: ${Math.max(selected.min_quantity*2, 5)}
+
+` +
+                      `Please let us know your availability and price. Thank you!`
+                    )}`}
+                    target="_blank" rel="noreferrer"
+                    style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'8px 16px', background:'#25D366', color:'white', borderRadius:8, fontSize:13, fontWeight:700, textDecoration:'none' }}>
+                    💬 WhatsApp Reorder Message
+                  </a>
+                  <div style={{ fontSize:11, color:'#166534', marginTop:6 }}>
+                    Opens WhatsApp with item details pre-filled · Dealer: {selected.dealer}
+                  </div>
+                </div>
+              )}
+
               {/* Panel tabs */}
               <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, margin:'0 -22px', padding:'0 22px' }}>
                 {[
                   { key:'details',    label:'📋 Details'    },
                   { key:'adjust',     label:'📦 Adjust Stock'},
+                  { key:'variant',    label:'🎨 Add Colour'  },
                 ].map(t=>(
                   <button key={t.key} onClick={()=>setPanelTab(t.key)}
                     style={{ padding:'10px 14px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:panelTab===t.key?C.navy:C.muted, borderBottom:`2.5px solid ${panelTab===t.key?C.gold:'transparent'}`, marginBottom:-1 }}>
@@ -1180,6 +1512,11 @@ export default function Inventory() {
               {/* ── ADJUST STOCK TAB ── */}
               {panelTab==='adjust' && (
                 <AdjustmentPanel item={selected} onDone={handleAdjDone}/>
+              )}
+
+              {/* ── ADD COLOUR VARIANT TAB ── */}
+              {panelTab==='variant' && (
+                <AddVariantPanel item={selected} items={items} onDone={()=>{ load(); setPanelTab('details'); }} />
               )}
             </div>
           </div>
