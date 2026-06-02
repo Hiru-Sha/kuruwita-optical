@@ -77,6 +77,29 @@ router.post('/photo-session', auth, (req, res) => {
   res.json({ token });
 });
 
+// PC polls this to check if photo has arrived — MUST be before /:token route
+router.get('/photo-session/:token/poll', auth, (req, res) => {
+  const s = photoSessions[req.params.token];
+  if (!s) return res.json({ expired: true });
+  if (s.image) {
+    const image = s.image;
+    s.image = null; // consume once
+    return res.json({ ready: true, image });
+  }
+  res.json({ ready: false });
+});
+
+// Phone POSTs the image here — MUST be before /:token route
+router.post('/photo-session/:token/upload', (req, res) => {
+  const s = photoSessions[req.params.token];
+  if (!s) return res.status(404).json({ error: 'Session expired' });
+  const { image } = req.body;
+  if (!image) return res.status(400).json({ error: 'No image' });
+  s.image     = image;
+  s.timestamp = Date.now();
+  res.json({ ok: true });
+});
+
 // Phone opens this URL (no auth needed — token is the secret)
 router.get('/photo-session/:token', (req, res) => {
   const s = photoSessions[req.params.token];
@@ -174,25 +197,4 @@ router.get('/photo-session/:token', (req, res) => {
 </body></html>`);
 });
 
-// Phone POSTs the image here
-router.post('/photo-session/:token/upload', (req, res) => {
-  const s = photoSessions[req.params.token];
-  if (!s) return res.status(404).json({ error: 'Session expired' });
-  const { image } = req.body;
-  if (!image) return res.status(400).json({ error: 'No image' });
-  s.image     = image;
-  s.timestamp = Date.now();
-  res.json({ ok: true });
-});
-
-// PC polls this to check if photo has arrived
-router.get('/photo-session/:token/poll', auth, (req, res) => {
-  const s = photoSessions[req.params.token];
-  if (!s) return res.json({ expired: true });
-  if (s.image) {
-    const image = s.image;
-    s.image = null; // consume once
-    return res.json({ ready: true, image });
-  }
-  res.json({ ready: false });
-});
+// Routes moved above /:token to fix Express route matching order
