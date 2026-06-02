@@ -760,7 +760,32 @@ export default function Inventory() {
   },[form.frame_color]);
 
   const handleCatChange = (cat) => { setAddCat(cat); setForm(defaults(cat)); setImgData(null); setColorVariants([{ color:'Black', qty:'1', image:null }]); };
-  const handleImgPick   = async (e) => { const f=e.target.files[0]; if(!f) return; setImgData(await toBase64(f)); };
+  const handleImgPick = async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const b64 = await toBase64(f);
+    setImgData(b64);
+
+    // Check if there's a pending PC session waiting for a photo
+    const pendingToken = localStorage.getItem('ko_pending_photo_session');
+    if (pendingToken) {
+      try {
+        const BASE_  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token_ = localStorage.getItem('ko_token');
+        const res    = await fetch(`${BASE_}/scan-session/photo-session/${pendingToken}/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token_}` },
+          body: JSON.stringify({ image: b64 }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          localStorage.removeItem('ko_pending_photo_session');
+          // Show brief success message
+          alert('✅ Photo sent to PC! Fill in the details there.');
+        }
+      } catch(e) { /* non-critical — photo still saved locally */ }
+    }
+  };
 
   // Start a PC session so phone (logged in on same account) can push a photo here
   const startPCPhotoSession = async () => {
@@ -775,6 +800,8 @@ export default function Inventory() {
       if (data.token) {
         setPcSessionId(data.token);
         setPcPolling(true);
+        // Store in localStorage so the SAME browser on phone can find it
+        localStorage.setItem('ko_pending_photo_session', data.token);
         return data.token;
       }
     } catch(e) { console.error('Session error', e); }
@@ -1081,7 +1108,7 @@ export default function Inventory() {
               </div>
             </div>
           </div>
-          <button onClick={()=>{ setPcPolling(false); setPcSessionId(null); clearInterval(pollIntervalRef.current); }}
+          <button onClick={()=>{ setPcPolling(false); setPcSessionId(null); clearInterval(pollIntervalRef.current); localStorage.removeItem('ko_pending_photo_session'); }}
             style={{ padding:'6px 12px', background:'white', border:'1px solid #93c5fd', borderRadius:8,
               fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'#1e40af', flexShrink:0 }}>
             Cancel
