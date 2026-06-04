@@ -3,7 +3,7 @@
 //  Orders.js — Row numbers + date filter (Today/Week/Month/All)
 // ============================================================
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getOrders, getOrder, updateOrder, deleteOrder, addCallLog } from '../api';
 import PrintReceipt from '../components/PrintReceipt';
 
@@ -12,7 +12,7 @@ const C = {
   border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
 };
 const fmtMoney = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
-const STATUSES = ['all','created','called','delivered','overdue'];
+const STATUSES = ['all','created','called','delivered','overdue','balance_due'];
 const STATUS_STYLE = {
   created:   { bg:'#dbeafe', color:'#1e40af' },
   called:    { bg:'#fef9c3', color:'#854d0e' },
@@ -147,6 +147,17 @@ export default function Orders() {
   const [dateFilter,   setDateFilter]   = useState('all');
   const [search,       setSearch]       = useState('');
   const [missingCosts, setMissingCosts] = useState(false);
+
+  // Read URL params from dashboard KPI clicks
+  useEffect(() => {
+    const p = new URLSearchParams(location.search);
+    const f = p.get('filter');
+    const m = p.get('month');
+    if (f === 'balance')   { setFilter('balance_due'); }
+    if (f === 'active')    { setFilter('created'); }
+    if (f === 'collected') { setFilter('delivered'); }
+    if (m)                 { setDateFilter('month'); }
+  }, [location.search]);
   const [loading,   setLoading]   = useState(true);
   const [selected,  setSelected]  = useState(null);
   const [logNote,   setLogNote]   = useState('');
@@ -170,7 +181,7 @@ export default function Orders() {
 
   const load = useCallback(() => {
     setLoading(true);
-    getOrders({ status: filter!=='all'?filter:undefined, search:search||undefined })
+    getOrders({ status: (filter!=='all'&&filter!=='balance_due')?filter:undefined, search:search||undefined })
       .then(r => setOrders(r.data))
       .catch(() => setOrders([]))
       .finally(() => setLoading(false));
@@ -187,6 +198,8 @@ export default function Orders() {
       const noLensCost  = !parseFloat(o.lens_buy_price);
       return noFrameCost || noLensCost;
     }
+    // balance_due filter — show orders with outstanding balance
+    if (filter === 'balance_due') return parseFloat(o.balance_amount) > 0;
     return true;
   });
 
@@ -378,7 +391,7 @@ export default function Orders() {
               border:`1.5px solid ${filter===s?C.gold:C.border}`,
               background:filter===s?C.gold:'white',
               color:filter===s?C.navy:C.muted }}>
-            {s.charAt(0).toUpperCase()+s.slice(1)}
+            {s==='balance_due'?'💰 Balance Due':s==='all'?'All':s.charAt(0).toUpperCase()+s.slice(1)}
           </button>
         ))}
       </div>

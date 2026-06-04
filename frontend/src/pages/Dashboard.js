@@ -68,9 +68,17 @@ export default function Dashboard() {
 
   const mr = data?.month_revenue||{};
 
-  const KPI = ({label,value,sub,dark,color}) => (
-    <div style={{background:dark?navy:'white',border:`1px solid ${dark?navy:border}`,borderRadius:12,padding:'12px 14px'}}>
-      <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.8px',color:dark?gold:muted,marginBottom:4}}>{label}</div>
+  const KPI = ({label,value,sub,dark,color,onClick}) => (
+    <div onClick={onClick}
+      style={{background:dark?navy:'white',border:`1px solid ${dark?navy:border}`,borderRadius:12,padding:'12px 14px',
+        cursor:onClick?'pointer':'default',transition:'transform .1s, box-shadow .1s',
+        boxShadow:onClick?'0 1px 3px rgba(0,0,0,.08)':'none'}}
+      onMouseEnter={e=>{ if(onClick){ e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.15)'; }}}
+      onMouseLeave={e=>{ e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow=onClick?'0 1px 3px rgba(0,0,0,.08)':'none'; }}>
+      <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.8px',color:dark?gold:muted,marginBottom:4,display:'flex',alignItems:'center',gap:4}}>
+        {label}
+        {onClick&&<span style={{fontSize:9,opacity:.5}}>↗</span>}
+      </div>
       <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?17:22,fontWeight:700,color:dark?'white':(color||navy),lineHeight:1}}>{value}</div>
       {sub&&<div style={{fontSize:11,color:dark?'#ede9e0':muted,marginTop:3}}>{sub}</div>}
     </div>
@@ -205,12 +213,28 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* KPIs — 2 cols on mobile */}
+      {/* KPIs — 2 cols on mobile — all clickable */}
       <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(auto-fit,minmax(140px,1fr))',gap:10,marginBottom:14}}>
-        <KPI label="This Month"    value={fmt(mr.grand_total||mr.total)} sub={`${mr.order_count||0} orders · ${mr.qs_count||0} sales · ${mr.repair_count||0} repairs`} dark/>
-        <KPI label="Collected"     value={fmt(parseFloat(mr.collected||0)+parseFloat(mr.qs_total||0)+parseFloat(mr.repair_total||0))} sub="Orders + Sales + Repairs" color={success}/>
-        <KPI label="Balance Due"   value={fmt(data?.total_balance)} sub="Outstanding" color={danger}/>
-        <KPI label="Active Orders" value={data?.active_orders||0}   sub="In progress" color='#2563eb'/>
+        <KPI label="This Month"
+          value={fmt(mr.grand_total||mr.total)}
+          sub={`${mr.order_count||0} orders · ${mr.qs_count||0} sales · ${mr.repair_count||0} repairs`}
+          dark
+          onClick={()=>navigate('/orders?month='+new Date().toISOString().slice(0,7))}/>
+        <KPI label="Collected"
+          value={fmt(parseFloat(mr.collected||0)+parseFloat(mr.qs_total||0)+parseFloat(mr.repair_total||0))}
+          sub="Orders + Sales + Repairs"
+          color={success}
+          onClick={()=>navigate('/orders?filter=collected&month='+new Date().toISOString().slice(0,7))}/>
+        <KPI label="Balance Due"
+          value={fmt(data?.total_balance)}
+          sub="Outstanding"
+          color={danger}
+          onClick={()=>navigate('/orders?filter=balance')}/>
+        <KPI label="Active Orders"
+          value={data?.active_orders||0}
+          sub="In progress"
+          color='#2563eb'
+          onClick={()=>navigate('/orders?filter=active')}/>
       </div>
 
       {/* Reminders */}
