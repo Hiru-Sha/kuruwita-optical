@@ -152,9 +152,12 @@ export default function Orders() {
   const [logNote,   setLogNote]   = useState('');
   const [showPrint,    setShowPrint]    = useState(false);
   const [showPay,      setShowPay]      = useState(false);
-  const [showLensCost, setShowLensCost] = useState(false);
-  const [lensCostForm, setLensCostForm] = useState({ frameBuy:'', lensBuy:'', lensSell:'', company:'' });
-  const [savingLens,   setSavingLens]   = useState(false);
+  const [showLensCost,  setShowLensCost]  = useState(false);
+  const [lensCostForm,  setLensCostForm]  = useState({ frameBuy:'', lensBuy:'', lensSell:'', company:'' });
+  const [savingLens,    setSavingLens]    = useState(false);
+  const [bankReceipt,   setBankReceipt]   = useState(null);   // linked bank receipt
+  const [showEditBank,  setShowEditBank]  = useState(false);  // edit/cancel bank receipt
+  const [bankEditAmt,   setBankEditAmt]   = useState('');
   const [showGifts,    setShowGifts]    = useState(false);
   const [giftSearch,   setGiftSearch]   = useState('');
   const [giftResults,  setGiftResults]  = useState([]);
@@ -188,8 +191,17 @@ export default function Orders() {
   });
 
   const openOrder = async (id) => {
-    try { const r = await getOrder(id); setSelected(r.data); }
-    catch { setSelected(orders.find(o=>o.id===id)||null); }
+    try {
+      const r = await getOrder(id);
+      setSelected(r.data);
+      setBankReceipt(null); setShowEditBank(false);
+      if (r.data?.payment_method && r.data.payment_method !== 'cash') {
+        const BASE_  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token_ = localStorage.getItem('ko_token');
+        fetch(`${BASE_}/cash-deposits/by-order/${id}`,{ headers:{ Authorization:`Bearer ${token_}` }})
+          .then(res=>res.json()).then(d=>{ if(d?.id) setBankReceipt(d); }).catch(()=>{});
+      }
+    } catch(e) { setSelected(orders.find(o=>o.id===id)||null); }
   };
 
   const handleStatus = async (id, status) => {
@@ -507,6 +519,100 @@ export default function Orders() {
                 }
               </div>
             </div>
+
+            {/* Bank Receipt Status — shows if order was paid by bank/card */}
+            {(selected.payment_method && selected.payment_method !== 'cash') && (
+              <div style={{ marginBottom:20 }}>
+                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:10, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>
+                  Bank / Card Receipt
+                </div>
+                {bankReceipt ? (
+                  <div style={{ background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:10, padding:'12px 14px' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:'#1e40af', marginBottom:2 }}>
+                          ✅ Bank receipt recorded automatically
+                        </div>
+                        <div style={{ fontSize:12, color:'#3b82f6' }}>
+                          {bankReceipt.payment_type?.toUpperCase()} · {new Date(bankReceipt.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+                          {bankReceipt.bank_name ? ` · ${bankReceipt.bank_name}` : ''}
+                        </div>
+                      </div>
+                      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:'#1e40af' }}>
+                        {fmtMoney(bankReceipt.amount)}
+                      </div>
+                    </div>
+                    {!showEditBank ? (
+                      <div style={{ display:'flex', gap:8 }}>
+                        <button onClick={()=>{ setShowEditBank(true); setBankEditAmt(String(bankReceipt.amount)); }}
+                          style={{ padding:'6px 14px', background:'white', border:'1px solid #93c5fd', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#1e40af' }}>
+                          ✏️ Edit Amount
+                        </button>
+                        <button onClick={async()=>{
+                          if(!window.confirm('Remove this bank receipt? The payment method on the order stays the same.')) return;
+                          const BASE_=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
+                          const tk_=localStorage.getItem('ko_token');
+                          await fetch(`${BASE_}/cash-deposits/${bankReceipt.id}`,{method:'DELETE',headers:{Authorization:`Bearer ${tk_}`}});
+                          setBankReceipt(null);
+                          showToast('Bank receipt removed');
+                        }}
+                          style={{ padding:'6px 14px', background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
+                          ✕ Cancel Receipt
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display:'flex', gap:8, alignItems:'center', marginTop:8 }}>
+                        <input type="number" value={bankEditAmt} onChange={e=>setBankEditAmt(e.target.value)}
+                          style={{ flex:1, padding:'8px 12px', border:'1.5px solid #93c5fd', borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none' }}/>
+                        <button onClick={async()=>{
+                          const BASE_=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
+                          const tk_=localStorage.getItem('ko_token');
+                          const r=await fetch(`${BASE_}/cash-deposits/${bankReceipt.id}`,{
+                            method:'PATCH',headers:{'Content-Type':'application/json',Authorization:`Bearer ${tk_}`},
+                            body:JSON.stringify({amount:parseFloat(bankEditAmt)})
+                          }).then(r=>r.json());
+                          setBankReceipt(r); setShowEditBank(false);
+                          showToast('Bank receipt updated');
+                        }}
+                          style={{ padding:'8px 16px', background:'#1e40af', color:'white', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                          Save
+                        </button>
+                        <button onClick={()=>setShowEditBank(false)}
+                          style={{ padding:'8px 12px', background:'white', border:'1px solid #93c5fd', borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ background:'#fef9c3', border:'1px solid #fde68a', borderRadius:10, padding:'12px 14px' }}>
+                    <div style={{ fontSize:13, fontWeight:600, color:'#92400e', marginBottom:8 }}>
+                      ⚠️ No bank receipt found for this {selected.payment_method} payment
+                    </div>
+                    <button onClick={async()=>{
+                      const BASE_=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
+                      const tk_=localStorage.getItem('ko_token');
+                      const r=await fetch(`${BASE_}/cash-deposits`,{
+                        method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${tk_}`},
+                        body:JSON.stringify({
+                          amount:      parseFloat(selected.advance_amount||0),
+                          payment_type:selected.payment_method,
+                          bank_name:   'Pan Asia Bank',
+                          notes:       'Manual: Order ' + selected.order_number,
+                          order_id:    selected.id,
+                          date:        selected.created_at?.slice(0,10),
+                        })
+                      }).then(r=>r.json());
+                      setBankReceipt(r);
+                      showToast('Bank receipt created');
+                    }}
+                      style={{ padding:'8px 16px', background:'#1e40af', color:'white', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                      + Create Bank Receipt
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Cost of Goods */}
             <div style={{ marginBottom:20 }}>

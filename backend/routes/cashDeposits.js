@@ -1,11 +1,12 @@
 // ============================================================
 //  Cash Deposits Routes — /api/cash-deposits
+//  Updated: account_no, payment_type (cash/online/cheque), cheque fields
 // ============================================================
 const router = require('express').Router();
 const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 
-// GET /api/cash-deposits — list with optional date/month filter
+// GET /api/cash-deposits
 router.get('/', auth, async (req, res) => {
   const { month, date } = req.query;
   try {
@@ -13,33 +14,71 @@ router.get('/', auth, async (req, res) => {
                   FROM cash_deposits d LEFT JOIN users u ON d.added_by = u.id
                   WHERE 1=1`;
     const params = [];
-    if (month) {
-      params.push(month);
-      query += ` AND TO_CHAR(d.date,'YYYY-MM') = $${params.length}`;
-    }
-    if (date) {
-      params.push(date);
-      query += ` AND d.date = $${params.length}`;
-    }
+    if (month) { params.push(month); query += ` AND TO_CHAR(d.date,'YYYY-MM') = $${params.length}`; }
+    if (date)  { params.push(date);  query += ` AND d.date = $${params.length}`; }
     query += ` ORDER BY d.date DESC, d.created_at DESC`;
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
 
-// POST /api/cash-deposits — add deposit
+// POST /api/cash-deposits
 router.post('/', auth, async (req, res) => {
-  const { date, amount, bank_name, reference, notes } = req.body;
+  const { date, amount, bank_name, account_no, payment_type, reference, notes } = req.body;
   if (!amount || parseFloat(amount) <= 0) return res.status(400).json({ error: 'Amount required' });
   try {
+    const { order_id } = req.body;
     const result = await pool.query(
-      `INSERT INTO cash_deposits (date, amount, bank_name, reference, notes, added_by)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      `INSERT INTO cash_deposits
+         (date, amount, bank_name, account_no, payment_type, reference, notes, added_by, order_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
       [date || new Date().toISOString().split('T')[0],
-       parseFloat(amount), bank_name||null, reference||null, notes||null, req.user.id]
-    );
+       parseFloat(amount),
+       bank_name    || null,
+       account_no   || null,
+       payment_type || 'online',
+       reference    || null,
+       notes        || null,
+       req.user.id,
+       order_id     || null]
+    ).catch(async () => {
+      // order_id column may not exist yet — insert without it
+      return pool.query(
+        `INSERT INTO cash_deposits
+           (date, amount, bank_name, account_no, payment_type, reference, notes, added_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [date || new Date().toISOString().split('T')[0],
+         parseFloat(amount),
+         bank_name    || null,
+         account_no   || null,
+         payment_type || 'online',
+         reference    || null,
+         notes        || null,
+         req.user.id]
+      );
+    });
     res.status(201).json(result.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+});
+
+// PATCH /api/cash-deposits/:id — edit amount, date, notes
+router.patch('/:id', auth, async (req, res) => {
+  const { amount, date, bank_name, reference, notes, payment_type } = req.body;
+  const fields = [], vals = [];
+  if (amount    !== undefined) { fields.push(`amount=$${fields.length+1}`);       vals.push(parseFloat(amount)); }
+  if (date      !== undefined) { fields.push(`date=$${fields.length+1}`);         vals.push(date); }
+  if (bank_name !== undefined) { fields.push(`bank_name=$${fields.length+1}`);    vals.push(bank_name); }
+  if (reference !== undefined) { fields.push(`reference=$${fields.length+1}`);    vals.push(reference); }
+  if (notes     !== undefined) { fields.push(`notes=$${fields.length+1}`);        vals.push(notes); }
+  if (payment_type!==undefined){ fields.push(`payment_type=$${fields.length+1}`); vals.push(payment_type); }
+  if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
+  vals.push(req.params.id);
+  try {
+    const r = await pool.query(
+      `UPDATE cash_deposits SET ${fields.join(',')} WHERE id=$${vals.length} RETURNING *`, vals
+    );
+    res.json(r.rows[0]);
+  } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
 // DELETE /api/cash-deposits/:id
@@ -48,6 +87,20 @@ router.delete('/:id', auth, async (req, res) => {
     await pool.query('DELETE FROM cash_deposits WHERE id = $1', [req.params.id]);
     res.json({ message: 'Deleted' });
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+
+// GET /api/cash-deposits/by-order/:order_id — find deposit linked to an order
+router.get('/by-order/:order_id', auth, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT * FROM cash_deposits WHERE order_id=$1 LIMIT 1`,
+      [req.params.order_id]
+    );
+    res.json(r.rows[0] || null);
+  } catch(err) {
+    // order_id column may not exist yet
+    res.json(null);
+  }
 });
 
 module.exports = router;

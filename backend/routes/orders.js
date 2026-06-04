@@ -156,7 +156,46 @@ router.post('/', auth, async (req, res) => {
     }
 
     await client.query('COMMIT');
-    res.status(201).json({ ...orderRes.rows[0], order_number: orderNum });
+    const newOrder = { ...orderRes.rows[0], order_number: orderNum };
+
+    // Auto-create bank receipt if payment method is bank or card
+    const pm     = (req.body.payment_method||'cash').toLowerCase();
+    const advAmt = parseFloat(req.body.advance_amount)||0;
+    if ((pm==='bank'||pm==='card'||pm==='transfer') && advAmt > 0) {
+      try {
+        await pool.query(
+          `INSERT INTO cash_deposits
+             (date, amount, bank_name, payment_type, notes, added_by, order_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [
+            req.body.import_date || new Date().toISOString().split('T')[0],
+            advAmt,
+            'Pan Asia Bank',
+            pm === 'card' ? 'card' : 'online',
+            'Auto: Order ' + orderNum + (req.body.frame ? ' — ' + req.body.frame : ''),
+            req.user.id,
+            newOrder.id,
+          ]
+        );
+      } catch(e) {
+        // order_id column may not exist yet — try without it
+        try {
+          await pool.query(
+            `INSERT INTO cash_deposits (date, amount, bank_name, payment_type, notes, added_by)
+             VALUES ($1,$2,$3,$4,$5,$6)`,
+            [
+              req.body.import_date || new Date().toISOString().split('T')[0],
+              advAmt, 'Pan Asia Bank',
+              pm === 'card' ? 'card' : 'online',
+              'Auto: Order ' + orderNum,
+              req.user.id,
+            ]
+          );
+        } catch(e2) { console.warn('Auto bank receipt failed:', e2.message); }
+      }
+    }
+
+    res.status(201).json(newOrder);
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Create order error:', err);
