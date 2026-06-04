@@ -378,13 +378,21 @@ export default function NewOrder() {
     setFrameDetails(f => ({ ...f, name:v }));
     setSelectedFrame(null);
     clearTimeout(frameTimer.current);
-    if (v.length < 2) return setFrameResults([]);
+    if (v.length < 1) { setFrameResults([]); return; }
     frameTimer.current = setTimeout(async () => {
       try {
-        const res = await getInventory({ search:v, category:'Frames' });
-        setFrameResults((res.data||[]).filter(i=>i.quantity>0).slice(0,8));
-      } catch { setFrameResults([]); }
-    }, 400);
+        const res  = await getInventory({ search:v, limit:'20', no_images:'1' });
+        // backend returns { data: rows } — axios wraps in res.data
+        const rows = res.data?.data || res.data || [];
+        const arr  = Array.isArray(rows) ? rows : [];
+        // Show frames and sunglasses only, with stock
+        setFrameResults(
+          arr.filter(i => i.quantity > 0 &&
+            ['Frames','Sunglasses','Reading Glasses'].includes(i.category)
+          ).slice(0, 10)
+        );
+      } catch(e) { console.error('Frame search error:', e); setFrameResults([]); }
+    }, 300);
   };
 
   const pickFrame = (item) => {
@@ -726,25 +734,37 @@ export default function NewOrder() {
                       style={INP}/>
                   </Field>
                   {frameResults.length>0 && (
-                    <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white', border:`1px solid ${C.border}`, borderRadius:10, boxShadow:'0 8px 32px rgba(0,0,0,.14)', zIndex:50, overflow:'hidden', marginTop:4 }}>
+                    <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white', border:`1.5px solid ${C.gold}`, borderRadius:10, boxShadow:'0 8px 32px rgba(0,0,0,.18)', zIndex:100, overflow:'hidden', marginTop:4, maxHeight:320, overflowY:'auto' }}>
+                      <div style={{ padding:'6px 12px', background:C.cream, fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, borderBottom:`1px solid ${C.border}` }}>
+                        {frameResults.length} items found — click to select
+                      </div>
                       {frameResults.map(i=>(
                         <div key={i.id} onMouseDown={()=>pickFrame(i)}
-                          style={{ padding:'10px 14px', cursor:'pointer', borderBottom:`1px solid ${C.cream}`, display:'flex', alignItems:'center', gap:10 }}
+                          style={{ padding:'10px 14px', cursor:'pointer', borderBottom:`1px solid ${C.cream}`, display:'flex', alignItems:'center', gap:10, background:'white' }}
                           onMouseEnter={e=>e.currentTarget.style.background='#f8f5ef'}
                           onMouseLeave={e=>e.currentTarget.style.background='white'}>
-                          {i.image_url && <img src={i.image_url} alt="" style={{ width:38, height:38, objectFit:'cover', borderRadius:6 }}/>}
+                          <div style={{ width:10, height:10, borderRadius:'50%', background:i.quantity>2?C.success:i.quantity>0?'#f59e0b':C.danger, flexShrink:0 }}/>
                           <div style={{ flex:1, minWidth:0 }}>
                             <div style={{ fontSize:13, fontWeight:700, color:C.navy, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{i.name}</div>
-                            <div style={{ fontSize:11, color:C.muted }}>
-                              {i.frame_color&&`${i.frame_color} · `}{i.frame_type&&`${i.frame_type} · `}
-                              Sell: {fmtMoney(i.sell_price)} · <b style={{ color:i.quantity>0?C.success:C.danger }}>{i.quantity} in stock</b>
+                            <div style={{ fontSize:11, color:C.muted, display:'flex', gap:8, flexWrap:'wrap', marginTop:2 }}>
+                              {i.frame_color && <span>{i.frame_color}</span>}
+                              {i.frame_type  && <span>{i.frame_type}</span>}
+                              {i.category    && <span style={{ color:'#7c3aed' }}>{i.category}</span>}
+                              <span style={{ fontWeight:700, color:i.quantity>0?C.success:C.danger }}>
+                                {i.quantity > 0 ? `${i.quantity} in stock` : 'Out of stock'}
+                              </span>
+                              <span style={{ color:C.navy, fontWeight:600 }}>{fmtMoney(i.sell_price)}</span>
                             </div>
+                          </div>
+                          <div style={{ fontSize:11, color:C.muted, textAlign:'right', flexShrink:0 }}>
+                            {i.display_number ? `🏪#${i.display_number}` : ''}
+                            {i.stock_number   ? ` 📦#${i.stock_number}` : ''}
                           </div>
                         </div>
                       ))}
                       <div onMouseDown={()=>setFrameResults([])}
-                        style={{ padding:'9px 14px', cursor:'pointer', fontSize:12, color:C.muted, background:C.cream, borderTop:`1px solid ${C.border}` }}>
-                        Use "{frameSearch}" as frame name without selecting from stock
+                        style={{ padding:'9px 14px', cursor:'pointer', fontSize:12, color:C.muted, background:'#f8f5ef', borderTop:`1px solid ${C.border}` }}>
+                        ✏️ Use "<b>{frameSearch}</b>" as typed — without selecting from stock
                       </div>
                     </div>
                   )}
