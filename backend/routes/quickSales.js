@@ -12,15 +12,38 @@ async function nextSaleNumber() {
   return 'QS-' + String(last + 1).padStart(4, '0');
 }
 
+// GET /api/quick-sales — list with item_count
 router.get('/', auth, async (req, res) => {
+  const { limit = 100 } = req.query;
   try {
-    const result = await pool.query('SELECT * FROM quick_sales ORDER BY created_at DESC LIMIT 100');
+    const result = await pool.query(`
+      SELECT *,
+        jsonb_array_length(items::jsonb) AS item_count
+      FROM quick_sales
+      ORDER BY created_at DESC
+      LIMIT $1
+    `, [parseInt(limit)]);
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
 });
 
+// GET /api/quick-sales/:id — single sale with items
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM quick_sales WHERE id = $1', [req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
+    const sale = result.rows[0];
+    // Parse items from JSON column
+    let items = [];
+    try { items = typeof sale.items === 'string' ? JSON.parse(sale.items) : sale.items || []; }
+    catch(e) { items = []; }
+    res.json({ ...sale, items });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+
+// POST /api/quick-sales — create sale
 router.post('/', auth, async (req, res) => {
-  const { customer_name, customer_phone, items, subtotal, discount, total, payment_method, amount_paid, change_given, notes, import_date } = req.body;
+  const { customer_name, customer_phone, items, subtotal, discount, total, payment_method, amount_paid, change_given, notes } = req.body;
   if (!items || !items.length) return res.status(400).json({ error: 'No items in sale' });
   const client = await pool.connect();
   try {
@@ -39,42 +62,25 @@ router.post('/', auth, async (req, res) => {
         await client.query('UPDATE inventory SET quantity = GREATEST(0, quantity - $1) WHERE id = $2', [item.qty||1, item.inventory_id]);
       }
     }
-        // Auto-create Old Stock inventory for each item in past quick sales
-    if (import_date && items && items.length) {
-      for (const item of items) {
-        if (!item.inventory_id && item.name && item.name.trim()) {
-          try {
-            // Map item to inventory category
-            const name = item.name.trim();
-            const cat  = item.category || 'Old Stock';
-            const existing = await client.query(
-              `SELECT id FROM inventory WHERE name ILIKE $1 AND category=$2 LIMIT 1`,
-              [name, cat]
-            );
-            if (existing.rows.length) {
-              await client.query(`UPDATE inventory SET quantity = quantity + $1 WHERE id = $2`,
-                [item.qty||1, existing.rows[0].id]);
-            } else {
-              await client.query(`
-                INSERT INTO inventory (name, category, sell_price, cost_price, quantity, brand, dealer)
-                VALUES ($1, $2, $3, 0, 0, '', 'Past stock')
-                ON CONFLICT DO NOTHING`,
-                [name, cat, parseFloat(item.price)||0]
-              );
-            }
-          } catch(e) { /* non-critical */ }
-        }
-      }
+    await client.query('COMMIT');
+    const newSale = { ...result.rows[0], sale_number: saleNum };
+
+    // Auto-create bank receipt if paid by bank or card
+    const pm  = (payment_method||'cash').toLowerCase();
+    const amt = parseFloat(total)||0;
+    if ((pm==='bank'||pm==='card'||pm==='transfer') && amt > 0) {
+      try {
+        await pool.query(
+          `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [new Date().toISOString().split('T')[0], amt, 'Pan Asia Bank',
+           pm==='card'?'card':'online',
+           'Auto: Quick Sale ' + saleNum, req.user.id]
+        );
+      } catch(e) { console.warn('QS bank receipt failed:', e.message); }
     }
 
-    // Backdate created_at if past sale
-    if (import_date) {
-      const importTs = new Date(import_date + 'T12:00:00');
-      await client.query(`UPDATE quick_sales SET created_at=$1 WHERE id=$2`,
-        [importTs, result.rows[0].id]);
-    }
-    await client.query('COMMIT');
-    res.status(201).json({ ...result.rows[0], sale_number: saleNum });
+    res.status(201).json(newSale);
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(err);
@@ -82,6 +88,7 @@ router.post('/', auth, async (req, res) => {
   } finally { client.release(); }
 });
 
+// GET /api/quick-sales/stats
 router.get('/stats', auth, async (req, res) => {
   try {
     const [today, month] = await Promise.all([
@@ -90,39 +97,6 @@ router.get('/stats', auth, async (req, res) => {
     ]);
     res.json({ today: today.rows[0], month: month.rows[0] });
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
-});
-
-
-// POST /api/quick-sales/import — backdate a quick sale
-router.post('/import', auth, async (req, res) => {
-  const { customer_name, items, subtotal, discount, total, payment_method, import_date } = req.body;
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const dateObj = new Date(import_date || Date.now());
-    const y = dateObj.getFullYear().toString().slice(2);
-    const m = String(dateObj.getMonth()+1).padStart(2,'0');
-    const countRes = await client.query(
-      `SELECT COUNT(*) FROM quick_sales WHERE TO_CHAR(created_at,'YYMM') = $1`, [y+m]
-    );
-    const seq = parseInt(countRes.rows[0].count) + 1;
-    const sale_number = `QS-${y}${m}-${String(seq).padStart(3,'0')}`;
-    const importTs = import_date ? new Date(import_date + 'T12:00:00') : new Date();
-    const tot = parseFloat(total)||0;
-
-    const result = await client.query(
-      `INSERT INTO quick_sales (sale_number,customer_name,items,subtotal,discount,total,payment_method,amount_paid,change_given,created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,0,$9) RETURNING *`,
-      [sale_number, customer_name||null, JSON.stringify(items||[]),
-       parseFloat(subtotal)||tot, parseFloat(discount)||0, tot,
-       payment_method||'cash', tot, importTs]
-    );
-    await client.query('COMMIT');
-    res.status(201).json({ ...result.rows[0], sale_number });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    res.status(500).json({ error: 'Failed: ' + err.message });
-  } finally { client.release(); }
 });
 
 module.exports = router;

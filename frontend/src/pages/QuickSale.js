@@ -263,6 +263,11 @@ export default function QuickSale() {
         <div style={{fontSize:44,marginBottom:6}}>✅</div>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:C.navy}}>Sale Complete!</div>
         <div style={{fontSize:13,color:C.muted,marginTop:3}}>{done.sale_number} · {fmtM(done.total)}</div>
+        {done.payment_method && done.payment_method !== 'cash' && (
+          <div style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:8,background:'#eff6ff',border:'1px solid #bae6fd',borderRadius:20,padding:'5px 14px',fontSize:12,fontWeight:600,color:'#1e40af'}}>
+            🏦 Bank receipt auto-recorded · {fmtM(done.total)}
+          </div>
+        )}
       </div>
       <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:mob?16:24,marginBottom:14}}>
         <Receipt sale={done} items={doneItems}/>

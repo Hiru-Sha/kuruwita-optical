@@ -52,7 +52,7 @@ router.get('/summary', auth, async (req, res) => {
 
 // POST /api/repairs — create repair
 router.post('/', auth, async (req, res) => {
-  const { customer_name, phone, repair_type, description, charge, payment_method, status, notes, import_date } = req.body;
+  const { customer_name, phone, repair_type, description, charge, payment_method, status, notes } = req.body;
   if (!repair_type) return res.status(400).json({ error: 'repair_type required' });
   const client = await pool.connect();
   try {
@@ -69,13 +69,25 @@ router.post('/', auth, async (req, res) => {
        status||'done', notes?.trim()||null, req.user.id,
        (status||'done')==='done' ? new Date() : null]
     );
-    if (import_date) {
-      const importTs = new Date(import_date + 'T12:00:00');
-      await client.query(`UPDATE repairs SET created_at=$1, completed_at=$1 WHERE id=$2`,
-        [importTs, result.rows[0].id]);
-    }
     await client.query('COMMIT');
-    res.status(201).json(result.rows[0]);
+    const newRepair = result.rows[0];
+
+    // Auto-create bank receipt if paid by bank or card
+    const pm_r  = (payment_method||'cash').toLowerCase();
+    const amt_r = parseFloat(charge)||0;
+    if ((pm_r==='bank'||pm_r==='card'||pm_r==='transfer') && amt_r > 0) {
+      try {
+        await pool.query(
+          `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [new Date().toISOString().split('T')[0], amt_r, 'Pan Asia Bank',
+           pm_r==='card'?'card':'online',
+           'Auto: Repair ' + repair_number, req.user.id]
+        );
+      } catch(e) { console.warn('Repair bank receipt failed:', e.message); }
+    }
+
+    res.status(201).json(newRepair);
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(err);
@@ -105,33 +117,6 @@ router.delete('/:id', auth, async (req, res) => {
     await pool.query('DELETE FROM repairs WHERE id=$1', [req.params.id]);
     res.json({ message: 'Deleted' });
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
-});
-
-
-// POST /api/repairs/import — backdate a repair
-router.post('/import', auth, async (req, res) => {
-  const { customer_name, repair_type, description, charge, payment_method, import_date } = req.body;
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const repair_number = 'REP-' + String(
-      (await client.query("SELECT NEXTVAL('repair_number_seq') AS n")).rows[0].n
-    ).padStart(4,'0');
-    const importTs = import_date ? new Date(import_date + 'T12:00:00') : new Date();
-
-    const result = await client.query(`
-      INSERT INTO repairs (repair_number,customer_name,repair_type,description,charge,payment_method,status,notes,added_by,created_at,completed_at)
-      VALUES ($1,$2,$3,$4,$5,$6,'collected','Imported from past records',$7,$8,$8) RETURNING *`,
-      [repair_number, customer_name||null, repair_type||'Other Repair',
-       description||null, parseFloat(charge)||0, payment_method||'cash',
-       req.user.id, importTs]
-    );
-    await client.query('COMMIT');
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    await client.query('ROLLBACK');
-    res.status(500).json({ error: 'Failed: ' + err.message });
-  } finally { client.release(); }
 });
 
 module.exports = router;

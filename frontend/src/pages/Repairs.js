@@ -307,8 +307,15 @@ export default function Repairs() {
       {/* Print prompt after saving */}
       {lastDone && (
         <div style={{ background:'#dcfce7', border:`1.5px solid #86efac`, borderRadius:12, padding:'14px 18px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10 }}>
-          <div style={{ fontSize:14, color:C.success }}>
-            <b>{lastDone.repair_number}</b> recorded — {form.customer_name||'walk-in'}
+          <div>
+            <div style={{ fontSize:14, color:C.success, fontWeight:600 }}>
+              <b>{lastDone.repair_number}</b> recorded — {lastDone.customer_name||'walk-in'}
+            </div>
+            {lastDone.payment_method && lastDone.payment_method !== 'cash' && (
+              <div style={{ fontSize:12, color:'#1e40af', marginTop:4, display:'flex', alignItems:'center', gap:5 }}>
+                🏦 Bank receipt auto-recorded · Rs.{parseFloat(lastDone.charge||0).toLocaleString()}
+              </div>
+            )}
           </div>
           <div style={{ display:'flex', gap:8 }}>
             <button onClick={()=>{ printRepairJobCard(lastDone); setLastDone(null); }}
