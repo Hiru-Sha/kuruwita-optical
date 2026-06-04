@@ -114,6 +114,24 @@ router.patch('/:id', auth, async (req, res) => {
 // DELETE /api/repairs/:id
 router.delete('/:id', auth, async (req, res) => {
   try {
+    // Get repair details first so we can clean up deposits
+    const rep = await pool.query('SELECT * FROM repairs WHERE id=$1', [req.params.id]);
+    if (!rep.rows.length) return res.status(404).json({ error: 'Not found' });
+    const repair = rep.rows[0];
+
+    // If bank/card payment — delete matching bank receipt
+    if (repair.payment_method && repair.payment_method !== 'cash') {
+      await pool.query(
+        `DELETE FROM cash_deposits
+         WHERE notes ILIKE $1
+           AND amount = $2
+           AND date = $3`,
+        [`%Repair ${repair.repair_number}%`,
+         parseFloat(repair.charge||0),
+         repair.created_at?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]]
+      ).catch(()=>{});
+    }
+
     await pool.query('DELETE FROM repairs WHERE id=$1', [req.params.id]);
     res.json({ message: 'Deleted' });
   } catch (err) { res.status(500).json({ error: 'Failed' }); }

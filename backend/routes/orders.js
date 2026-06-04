@@ -246,6 +246,11 @@ router.patch('/:id', auth, async (req, res) => {
 // DELETE /api/orders/:id
 router.delete('/:id', auth, async (req, res) => {
   try {
+    // Delete linked bank receipt first
+    await pool.query(
+      'DELETE FROM cash_deposits WHERE order_id = $1', [req.params.id]
+    ).catch(()=>{});  // ignore if order_id column doesn't exist yet
+    // Then delete the order
     await pool.query('DELETE FROM orders WHERE id = $1', [req.params.id]);
     res.json({ message: 'Order deleted' });
   } catch (err) { res.status(500).json({ error: 'Failed to delete order' }); }

@@ -88,6 +88,42 @@ router.post('/', auth, async (req, res) => {
   } finally { client.release(); }
 });
 
+// DELETE /api/quick-sales/:id
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    // Get sale first so we can clean up deposits
+    const sale = await pool.query('SELECT * FROM quick_sales WHERE id=$1', [req.params.id]);
+    if (!sale.rows.length) return res.status(404).json({ error: 'Not found' });
+    const s = sale.rows[0];
+
+    // If bank/card payment — delete matching bank receipt
+    if (s.payment_method && s.payment_method !== 'cash') {
+      await pool.query(
+        `DELETE FROM cash_deposits
+         WHERE notes ILIKE $1
+           AND amount = $2`,
+        [`%Quick Sale ${s.sale_number}%`, parseFloat(s.total||0)]
+      ).catch(()=>{});
+    }
+
+    // Restore inventory stock
+    try {
+      const items = typeof s.items === 'string' ? JSON.parse(s.items) : s.items || [];
+      for (const item of items) {
+        if (item.inventory_id) {
+          await pool.query(
+            'UPDATE inventory SET quantity = quantity + $1 WHERE id = $2',
+            [item.qty||1, item.inventory_id]
+          );
+        }
+      }
+    } catch(e) { /* non-critical */ }
+
+    await pool.query('DELETE FROM quick_sales WHERE id=$1', [req.params.id]);
+    res.json({ message: 'Sale deleted' });
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
 // GET /api/quick-sales/stats
 router.get('/stats', auth, async (req, res) => {
   try {

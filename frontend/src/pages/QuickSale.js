@@ -616,7 +616,7 @@ export default function QuickSale() {
                           </span>
                         </div>}
                         <div style={{textAlign:'right',fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:C.navy}}>{fmtM(sale.total)}</div>
-                        <div style={{textAlign:'center'}}>
+                        <div style={{textAlign:'center',display:'flex',gap:4,justifyContent:'center'}}>
                           <button onClick={async()=>{
                             try {
                               const BASE=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
@@ -628,6 +628,16 @@ export default function QuickSale() {
                           }}
                             style={{background:C.gold+'30',color:'#92400e',border:`1px solid ${C.gold}`,borderRadius:7,padding:'5px 10px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
                             🖨️
+                          </button>
+                          <button onClick={async()=>{
+                            if(!window.confirm(`Delete sale ${sale.sale_number}? This will also remove any bank receipt.`)) return;
+                            const BASE=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
+                            const token=localStorage.getItem('ko_token');
+                            await fetch(`${BASE}/quick-sales/${sale.id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});
+                            loadHistory();
+                          }}
+                            style={{background:'#fee2e2',color:'#c0392b',border:'1px solid #fca5a5',borderRadius:7,padding:'5px 8px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                            🗑️
                           </button>
                         </div>
                       </div>
