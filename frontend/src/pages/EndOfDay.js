@@ -23,7 +23,18 @@ export default function EndOfDay() {
   const [viewDate, setViewDate] = useState(today());
   const [data,     setData]     = useState(null);
   const [loading,  setLoading]  = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(() => {
+    // Restore opening balance for today from localStorage
+    const saved = localStorage.getItem(`ko_opening_bal_${today()}`);
+    return saved || '';
+  });
+
+  // Save opening balance to localStorage whenever it changes
+  const handleDrawerOpen = (val) => {
+    setDrawerOpen(val);
+    if (val) localStorage.setItem(`ko_opening_bal_${viewDate}`, val);
+    else localStorage.removeItem(`ko_opening_bal_${viewDate}`);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,7 +54,8 @@ export default function EndOfDay() {
 
       // Orders today
       const todayOrders = (Array.isArray(orders)?orders:[]).filter(o => o.created_at?.slice(0,10)===d);
-      const orderCash   = todayOrders.reduce((s,o)=>s+parseFloat(o.advance_amount||0),0);
+      const orderCash   = todayOrders.filter(o=>!o.payment_method||o.payment_method==='cash').reduce((s,o)=>s+parseFloat(o.advance_amount||0),0);
+      const orderBank   = todayOrders.filter(o=>o.payment_method&&o.payment_method!=='cash').reduce((s,o)=>s+parseFloat(o.advance_amount||0),0);
       const orderBal    = todayOrders.reduce((s,o)=>s+parseFloat(o.balance_amount||0),0);
 
       // Balance payments received today (orders created earlier, paid today)
@@ -72,18 +84,19 @@ export default function EndOfDay() {
       const dep       = Array.isArray(deposits)?deposits:[];
       const depCash   = dep.reduce((s,d)=>s+parseFloat(d.amount||0),0);
 
-      const totalIn   = orderCash + qsCash + repCash;
-      const cashInHand= totalIn - expCash - depCash;
+      const totalIn     = orderCash + orderBank + qsCash + repCash;
+      const cashOnlyIn  = orderCash + qsCash + repCash;
+      const cashInHand  = cashOnlyIn - expCash - depCash;
 
       setData({
         date: d,
-        orders:      { list:todayOrders, cash:orderCash, count:todayOrders.length, outstanding:orderBal },
+        orders:      { list:todayOrders, cash:orderCash, bank:orderBank, total:orderCash+orderBank, count:todayOrders.length, outstanding:orderBal },
         quickSales:  { list:todayQS,     cash:qsCash,    count:todayQS.length },
         repairs:     { list:todayRep,    cash:repCash,   count:todayRep.length },
         expenses:    { list:todayExp,    cashOut:expCash, bankOut:expBank },
         deposits:    { list:dep,         total:depCash,  count:dep.length },
         summary: {
-          totalIn, cashInHand,
+          totalIn, cashInHand, bankToday: orderBank,
           toDeposit: Math.max(0, cashInHand),
         },
       });
@@ -92,6 +105,12 @@ export default function EndOfDay() {
   }, [viewDate]);
 
   useEffect(() => { load(); }, [load]);
+
+  // When date changes, reload opening balance for that date
+  useEffect(() => {
+    const saved = localStorage.getItem(`ko_opening_bal_${viewDate}`);
+    setDrawerOpen(saved || '');
+  }, [viewDate]);
 
   const printSlip = () => {
     if (!data) return;
@@ -133,9 +152,10 @@ export default function EndOfDay() {
 <div class="row"><span>Cash Deposited (${data.deposits.count})</span><span>− ${fmt(data.deposits.total)}</span></div>
 
 <div class="line"></div>
+${drawerOpen ? `<div class="row"><span>Opening Balance</span><span>${fmt(parseFloat(drawerOpen))}</span></div>` : ''}
 <div class="row bold big">
-  <span>Cash in Drawer</span>
-  <span style="color:${s.cashInHand>=0?'#2d7a4f':'#c0392b'}">${fmt(s.cashInHand)}</span>
+  <span>${drawerOpen ? 'Closing Balance' : 'Cash in Drawer'}</span>
+  <span style="color:${(parseFloat(drawerOpen||0)+s.cashInHand)>=0?'#2d7a4f':'#c0392b'}">${fmt(parseFloat(drawerOpen||0)+s.cashInHand)}</span>
 </div>
 ${s.toDeposit > 0 ? `
 <div class="line"></div>
@@ -205,12 +225,17 @@ ${data.orders.outstanding > 0 ? `
           <div style={{ background:data.summary.cashInHand>=0?C.navy:'#fee2e2', borderRadius:14, padding:'20px 24px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
             <div>
               <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:data.summary.cashInHand>=0?C.gold:'#c0392b', marginBottom:4 }}>
-                Cash in Drawer
+                {drawerOpen ? 'Closing Balance' : 'Cash from Today'}
               </div>
               <div style={{ fontFamily:"'Playfair Display',serif", fontSize:36, fontWeight:700, color:data.summary.cashInHand>=0?'white':C.danger }}>
-                {fmt(data.summary.cashInHand)}
+                {fmt(parseFloat(drawerOpen||0) + data.summary.cashInHand)}
               </div>
-              {data.summary.cashInHand < 0 && (
+              {drawerOpen && (
+                <div style={{ fontSize:12, color:'rgba(255,255,255,0.7)', marginTop:2 }}>
+                  {fmt(drawerOpen)} opening + {fmt(data.summary.cashInHand)} today
+                </div>
+              )}
+              {(parseFloat(drawerOpen||0)+data.summary.cashInHand) < 0 && (
                 <div style={{ fontSize:12, color:C.danger, marginTop:4 }}>⚠️ Negative — check your entries</div>
               )}
             </div>
@@ -227,6 +252,10 @@ ${data.orders.outstanding > 0 ? `
 
           {/* Formula */}
           <div style={{ background:C.cream, borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', fontSize:13 }}>
+            {drawerOpen && <>
+              <span style={{ color:C.muted, fontWeight:700 }}>{fmt(drawerOpen)} opening</span>
+              <span style={{ color:C.muted }}>+</span>
+            </>}
             <span style={{ color:C.success, fontWeight:700 }}>{fmt(data.orders.cash)} orders</span>
             <span style={{ color:C.muted }}>+</span>
             <span style={{ color:'#0891b2', fontWeight:700 }}>{fmt(data.quickSales.cash)} sales</span>
@@ -237,23 +266,34 @@ ${data.orders.outstanding > 0 ? `
             <span style={{ color:C.muted }}>−</span>
             <span style={{ color:'#2563eb', fontWeight:700 }}>{fmt(data.deposits.total)} deposited</span>
             <span style={{ color:C.muted }}>=</span>
-            <span style={{ fontWeight:700, fontSize:15, color:data.summary.cashInHand>=0?C.success:C.danger }}>{fmt(data.summary.cashInHand)}</span>
+            <span style={{ fontWeight:700, fontSize:15, color:(parseFloat(drawerOpen||0)+data.summary.cashInHand)>=0?C.success:C.danger }}>
+              {fmt(parseFloat(drawerOpen||0)+data.summary.cashInHand)} closing
+            </span>
           </div>
 
           {/* Drawer opening balance */}
           <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px', marginBottom:16, display:'flex', gap:10, alignItems:'center' }}>
-            <span style={{ fontSize:13, color:C.muted }}>Opening balance / cash in drawer before today:</span>
-            <input type="number" value={drawerOpen} onChange={e=>setDrawerOpen(e.target.value)}
+            <span style={{ fontSize:13, color:C.navy, fontWeight:600 }}>💵 Opening balance (cash in drawer at start of day):</span>
+            <input type="number" value={drawerOpen} onChange={e=>handleDrawerOpen(e.target.value)}
               placeholder="0" style={{ padding:'6px 10px', border:`1.5px solid ${C.border}`, borderRadius:7, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:C.cream, width:120 }}/>
-            {drawerOpen && <span style={{ fontSize:13, fontWeight:700, color:C.success }}>
-              End total: {fmt(parseFloat(drawerOpen||0)+data.summary.cashInHand)}
-            </span>}
+            {drawerOpen
+              ? <span style={{ fontSize:13, fontWeight:700, color:C.success }}>
+                  Closing total: {fmt(parseFloat(drawerOpen||0)+data.summary.cashInHand)}
+                  <span style={{ fontSize:11, fontWeight:400, color:C.muted, marginLeft:6 }}>saved ✓</span>
+                </span>
+              : <span style={{ fontSize:11, color:C.muted }}>Enter to calculate closing balance</span>
+            }
           </div>
 
           {/* Breakdown cards */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
             {[
-              { icon:'📋', label:'Orders',      cash:data.orders.cash,      count:data.orders.count,      color:C.success,   sub:`${fmt(data.orders.outstanding)} outstanding` },
+              { icon:'📋', label:'Orders',
+              cash:data.orders.total||data.orders.cash,
+              count:data.orders.count, color:C.success,
+              sub:(data.orders.bank||0)>0
+                ? `${fmt(data.orders.cash)} cash · ${fmt(data.orders.bank)} bank · ${fmt(data.orders.outstanding)} owed`
+                : `${fmt(data.orders.outstanding)} outstanding` },
               { icon:'⚡', label:'Quick Sales', cash:data.quickSales.cash,  count:data.quickSales.count,  color:'#0891b2' },
               { icon:'🔧', label:'Repairs',     cash:data.repairs.cash,     count:data.repairs.count,     color:'#7c3aed' },
               { icon:'💸', label:'Cash Expenses',cash:data.expenses.cashOut,count:data.expenses.list.filter(e=>e.payment_method!=='bank').length, color:C.danger, neg:true },

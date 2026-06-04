@@ -36,10 +36,11 @@ router.get('/', auth, async (req, res) => {
         WHERE TO_CHAR(created_at,'YYYY-MM') = $1
       `, [month]),
 
-      // Today's orders
+      // Today's orders — include payment method to separate cash vs bank
       pool.query(`
-        SELECT advance_amount FROM orders WHERE created_at::date = $1
-      `, [today]),
+        SELECT advance_amount, COALESCE(payment_method,'cash') AS payment_method
+        FROM orders WHERE created_at::date = $1
+      `, [today]).catch(()=>({ rows:[] })),
 
       // Today's quick sales — safe
       pool.query(`
@@ -125,13 +126,18 @@ router.get('/', auth, async (req, res) => {
     mr.grand_total  = parseFloat(mr.total||0) + qs_month_total + rep_month_total;
     mr.collected    = parseFloat(mr.collected||0) + qs_month_total + rep_month_total;
 
-    // Daily cash summary
-    const orderIncome  = todayOrders.rows.reduce((s,r)=>s+parseFloat(r.advance_amount||0),0);
+    // Daily summary — split cash vs bank
+    const orderCash    = todayOrders.rows.filter(r=>!r.payment_method||r.payment_method==='cash').reduce((s,r)=>s+parseFloat(r.advance_amount||0),0);
+    const orderBank    = todayOrders.rows.filter(r=>r.payment_method&&r.payment_method!=='cash').reduce((s,r)=>s+parseFloat(r.advance_amount||0),0);
+    const orderIncome  = orderCash + orderBank;
     const qsIncome     = todayQS.rows.reduce((s,r)=>s+parseFloat(r.total||0),0);
     const repairIncome = todayRepairs.rows.reduce((s,r)=>s+parseFloat(r.charge||0),0);
     const totalIncome  = orderIncome + qsIncome + repairIncome;
     const totalExp     = todayExpenses.rows.reduce((s,r)=>s+parseFloat(r.amount||0),0);
     const totalDep     = todayDeposits.rows.reduce((s,r)=>s+parseFloat(r.amount||0),0);
+    // Cash in hand = only cash payments, not bank transfers
+    const cashInHand   = orderCash + qsIncome + repairIncome - totalExp - totalDep;
+    const bankToday    = orderBank;
 
     res.json({
       // Month stats
@@ -144,12 +150,15 @@ router.get('/', auth, async (req, res) => {
       // Daily cash
       daily_cash: {
         orderIncome,
+        orderCash,
+        orderBank,
         qsIncome,
         repairIncome,
         totalIncome,
         totalExp,
         totalDep,
-        cashInHand:   totalIncome - totalExp - totalDep,
+        cashInHand,
+        bankToday,
         orderCount:   todayOrders.rows.length,
         qsCount:      todayQS.rows.length,
         repairCount:  todayRepairs.rows.length,

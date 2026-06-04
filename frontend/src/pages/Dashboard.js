@@ -95,27 +95,50 @@ export default function Dashboard() {
               </div>
             </div>
             <div style={{textAlign:'right'}}>
-              <div style={{fontSize:9,color:gold,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Cash in Hand</div>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?20:26,fontWeight:700,color:cash.cashInHand>=0?'#86efac':'#fca5a5'}}>
-                {fmt(cash.cashInHand)}
+              <div style={{display:'flex',gap:16,alignItems:'flex-start'}}>
+                <div>
+                  <div style={{fontSize:9,color:gold,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Cash in Hand</div>
+                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:cash.cashInHand>=0?'#86efac':'#fca5a5'}}>
+                    {fmt(cash.cashInHand)}
+                  </div>
+                </div>
+                {(cash.bankToday||0)>0 && (
+                  <div>
+                    <div style={{fontSize:9,color:'#93c5fd',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Bank Transfer</div>
+                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#93c5fd'}}>
+                      {fmt(cash.bankToday)}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
           {/* Formula */}
           <div style={{background:cream,padding:'8px 14px',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',fontSize:11,borderBottom:`1px solid ${border}`}}>
-            <span style={{color:success,fontWeight:700}}>{fmt(cash.totalIncome)}</span>
-            <span style={{color:muted,fontSize:10}}>(orders+sales+repairs)</span>
+            <span style={{color:success,fontWeight:700}}>{fmt(cash.orderCash||cash.orderIncome)}</span>
+            <span style={{color:muted,fontSize:10}}>cash orders</span>
+            {(cash.orderBank||0)>0 && <>
+              <span style={{color:'#2563eb',fontWeight:700}}>+{fmt(cash.orderBank)}</span>
+              <span style={{color:muted,fontSize:10}}>bank</span>
+            </>}
+            <span style={{color:muted}}>+</span>
+            <span style={{color:success,fontWeight:700}}>{fmt((cash.qsIncome||0)+(cash.repairIncome||0))}</span>
+            <span style={{color:muted,fontSize:10}}>sales+repairs</span>
             <span style={{color:muted}}>−</span>
             <span style={{color:danger,fontWeight:700}}>{fmt(cash.totalExp)}</span>
             <span style={{color:muted}}>−</span>
             <span style={{color:'#2563eb',fontWeight:700}}>{fmt(cash.totalDep)}</span>
-            <span style={{color:muted}}>=</span>
-            <span style={{fontWeight:700,color:cash.cashInHand>=0?success:danger}}>{fmt(cash.cashInHand)} in hand</span>
+            <span style={{color:muted}}>deposited =</span>
+            <span style={{fontWeight:700,color:cash.cashInHand>=0?success:danger}}>{fmt(cash.cashInHand)} cash in hand</span>
           </div>
           {/* 2×2 on mobile, 4-col on desktop */}
           <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(4,1fr)'}}>
             {[
-              {icon:'📋',label:'Orders',    val:fmt(cash.orderIncome),sub:`${cash.orderCount} advance${cash.orderCount!==1?'s':''}`,  color:success},
+              {icon:'📋',label:'Orders',    val:fmt(cash.orderIncome),
+                sub:(cash.orderBank||0)>0
+                  ? `${fmt(cash.orderCash||0)} cash · ${fmt(cash.orderBank)} bank`
+                  : `${cash.orderCount} advance${cash.orderCount!==1?'s':''}`,
+                color:success},
               {icon:'🛍️',label:'Sales + Repairs',val:fmt((cash.qsIncome||0)+(cash.repairIncome||0)),   sub:`${cash.qsCount||0} sales · ${cash.repairCount||0} repairs`,         color:success},
               {icon:'💸',label:'Expenses',  val:fmt(cash.totalExp),   sub:`${cash.expCount} item${cash.expCount!==1?'s':''}`,         color:cash.totalExp>0?danger:muted},
               {icon:'🏦',label:'Deposited', val:fmt(cash.totalDep),   sub:`${cash.depCount} deposit${cash.depCount!==1?'s':''}`,      color:'#2563eb'},
@@ -129,7 +152,7 @@ export default function Dashboard() {
           </div>
           {cash.cashInHand>0&&cash.totalDep===0&&(
             <div style={{padding:'9px 14px',background:'#fef9c3',borderTop:`1px solid #fde68a`,fontSize:12,color:'#854d0e',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <span>💡 {fmt(cash.cashInHand)} ready to deposit</span>
+              <span>💡 {fmt(cash.cashInHand)} cash ready to deposit{(cash.bankToday||0)>0?` · ${fmt(cash.bankToday)} received via bank`:''}</span>
               <button onClick={()=>navigate('/expenses')} style={{color:'#854d0e',fontWeight:700,fontSize:12,background:'none',border:'none',cursor:'pointer',fontFamily:"'DM Sans',sans-serif",textDecoration:'underline'}}>Record →</button>
             </div>
           )}
