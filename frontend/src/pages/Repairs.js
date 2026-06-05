@@ -293,9 +293,20 @@ export default function Repairs() {
   };
 
   const handleStatusChange = async (id, newStatus) => {
-    await apiPatch(`/repairs/${id}`, { status: newStatus });
-    load();
-    showToast(`Status updated to ${newStatus}`);
+    try {
+      const result = await apiPatch(`/repairs/${id}`, { status: newStatus });
+      if (result?.error) {
+        showToast('Failed: ' + result.error);
+        return;
+      }
+      // Optimistic update — update the list immediately without full reload
+      setRepairs(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
+      const labels = { done:'✅ Marked as Done', collected:'📦 Marked as Collected', pending:'⏳ Set to Pending', cancelled:'❌ Cancelled' };
+      showToast(labels[newStatus] || `Status: ${newStatus}`);
+    } catch(e) {
+      showToast('Failed to update status');
+      load(); // reload on error
+    }
   };
 
   const handleDelete = async (id) => {

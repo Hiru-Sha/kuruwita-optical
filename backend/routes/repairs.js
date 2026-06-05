@@ -104,20 +104,43 @@ router.post('/', auth, async (req, res) => {
   } finally { client.release(); }
 });
 
-// PATCH /api/repairs/:id — update status
+// PATCH /api/repairs/:id — update status and any field
 router.patch('/:id', auth, async (req, res) => {
-  const { status, notes } = req.body;
+  const allowed = ['status','notes','charge','payment_method','customer_name',
+                   'phone','repair_type','description','frame_description',
+                   'due_date','advance','frame_inventory_id'];
+  const fields = [], vals = [];
+
+  allowed.forEach(f => {
+    if (req.body[f] !== undefined) {
+      fields.push(`${f} = $${fields.length + 1}`);
+      vals.push(req.body[f]);
+    }
+  });
+
+  if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
+
+  // Auto-set timestamps based on status
+  if (req.body.status === 'done') {
+    fields.push(`completed_at = NOW()`);
+  }
+  if (req.body.status === 'collected') {
+    fields.push(`completed_at = COALESCE(completed_at, NOW())`);
+  }
+
+  vals.push(req.params.id);
+
   try {
-    const result = await pool.query(`
-      UPDATE repairs
-      SET status=$1,
-          notes=COALESCE($2, notes),
-          completed_at=CASE WHEN $1='done' THEN NOW() ELSE completed_at END
-      WHERE id=$3 RETURNING *`,
-      [status, notes||null, req.params.id]
+    const result = await pool.query(
+      `UPDATE repairs SET ${fields.join(', ')} WHERE id = $${vals.length} RETURNING *`,
+      vals
     );
+    if (!result.rows.length) return res.status(404).json({ error: 'Repair not found' });
     res.json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) {
+    console.error('Repair patch error:', err.message);
+    res.status(500).json({ error: 'Failed: ' + err.message });
+  }
 });
 
 // DELETE /api/repairs/:id
