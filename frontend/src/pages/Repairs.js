@@ -222,17 +222,18 @@ export default function Repairs() {
   const [lastDone,  setLastDone] = useState(null); // just-saved repair for print prompt
 
   const [form, setForm] = useState({
-    repair_type:       '',
-    customer_name:     '',
-    phone:             '',
-    frame_description: '',
-    description:       '',
-    charge:            '',
-    advance:           '',
-    payment_method:    'cash',
-    status:            'pending',
-    due_date:          new Date(Date.now()+3*86400000).toISOString().split('T')[0],
-    notes:             '',
+    repair_type:         '',
+    customer_name:       '',
+    phone:               '',
+    frame_description:   '',
+    frame_inventory_id:  null,
+    description:         '',
+    charge:              '',
+    advance:             '',
+    payment_method:      'cash',
+    status:              'pending',
+    due_date:            new Date(Date.now()+3*86400000).toISOString().split('T')[0],
+    notes:               '',
   });
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(''),3000); };
@@ -256,6 +257,19 @@ export default function Repairs() {
     setForm(f=>({ ...f, repair_type:rt.label, charge:String(rt.price) }));
   };
 
+  const searchRepairFrame = async (q) => {
+    if (!q || q.length < 2) { setFrameResults([]); return; }
+    try {
+      const BASE_  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token_ = localStorage.getItem('ko_token');
+      const r = await fetch(`${BASE_}/inventory?search=${encodeURIComponent(q)}&limit=8&no_images=1`,
+        { headers:{ Authorization:`Bearer ${token_}` }});
+      const data = await r.json();
+      const arr  = Array.isArray(data) ? data : data.data || [];
+      setFrameResults(arr.filter(i=>['Frames','Sunglasses','Reading Glasses'].includes(i.category) && i.quantity > 0).slice(0,6));
+    } catch(e) { setFrameResults([]); }
+  };
+
   const handleAdd = async () => {
     if (!form.repair_type) return setError('Please select a repair type');
     setError(''); setSaving(true);
@@ -268,7 +282,9 @@ export default function Repairs() {
       });
       if (res.error) throw new Error(res.error);
       setLastDone(res);
-      setForm({ repair_type:'', customer_name:'', phone:'', frame_description:'', description:'', charge:'', advance:'', payment_method:'cash', status:'pending', due_date: new Date(Date.now()+3*86400000).toISOString().split('T')[0], notes:'' });
+      setForm({ repair_type:'', customer_name:'', phone:'', frame_description:'', frame_inventory_id:null, description:'', charge:'', advance:'', payment_method:'cash', status:'pending', due_date: new Date(Date.now()+3*86400000).toISOString().split('T')[0], notes:'' });
+      setFrameQuery(''); setFrameResults([]);
+      setFrameQuery(''); setFrameResults([]);
       setShowAdd(false);
       showToast(`Repair recorded — ${res.repair_number}`);
       load();
@@ -421,6 +437,58 @@ export default function Repairs() {
             <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Description (optional)</label>
             <input value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}
               placeholder="e.g. Left arm loose, needs tightening — RayBan frame" style={INP}/>
+          </div>
+
+          {/* Frame from inventory — optional, deducts stock */}
+          <div style={{ marginBottom:12, position:'relative' }}>
+            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>
+              Frame from Stock (optional — deducts from inventory)
+            </label>
+            <input value={frameQuery}
+              onChange={e=>{ setFrameQuery(e.target.value); searchRepairFrame(e.target.value);
+                if (!e.target.value) setForm(f=>({...f,frame_inventory_id:null})); }}
+              placeholder="Search frame to use from stock..."
+              style={{ ...INP,
+                background:form.frame_inventory_id?'#dcfce7':INP.background,
+                border:form.frame_inventory_id?'1.5px solid #86efac':INP.border }}/>
+            {form.frame_inventory_id && (
+              <div style={{ fontSize:11, color:C.success, marginTop:3, display:'flex', alignItems:'center', gap:8 }}>
+                ✅ 1 frame will be deducted from stock
+                <button onClick={()=>{ setForm(f=>({...f,frame_inventory_id:null})); setFrameQuery(''); }}
+                  style={{ background:'none', border:'none', color:C.danger, cursor:'pointer', fontSize:11, fontFamily:'inherit' }}>
+                  ✕ Remove
+                </button>
+              </div>
+            )}
+            {frameResults.length > 0 && (
+              <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white',
+                border:'1.5px solid #c9a84c', borderRadius:8, boxShadow:'0 4px 16px rgba(0,0,0,.12)',
+                zIndex:100, overflow:'hidden', marginTop:2, maxHeight:220, overflowY:'auto' }}>
+                {frameResults.map(item=>(
+                  <div key={item.id}
+                    onMouseDown={()=>{
+                      setForm(f=>({...f, frame_inventory_id:item.id }));
+                      setFrameQuery(item.name + (item.frame_color?' · '+item.frame_color:''));
+                      setFrameResults([]);
+                    }}
+                    style={{ padding:'10px 12px', cursor:'pointer', borderBottom:'1px solid #f8f5ef',
+                      display:'flex', justifyContent:'space-between', alignItems:'center' }}
+                    onMouseEnter={e=>e.currentTarget.style.background='#f8f5ef'}
+                    onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{item.name}</div>
+                      <div style={{ fontSize:11, color:C.muted }}>
+                        {item.frame_color&&`${item.frame_color} · `}
+                        Stock: <b style={{color:item.quantity>1?C.success:C.danger}}>{item.quantity}</b>
+                      </div>
+                    </div>
+                    <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>
+                      Rs.{parseFloat(item.sell_price||0).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginBottom:14 }}>

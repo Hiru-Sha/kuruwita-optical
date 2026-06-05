@@ -158,6 +158,17 @@ router.post('/', auth, async (req, res) => {
     await client.query('COMMIT');
     const newOrder = { ...orderRes.rows[0], order_number: orderNum };
 
+    // Deduct frame from inventory if selected from stock
+    const frameInvId = req.body.frame_inventory_id;
+    if (frameInvId && !req.body.customer_own_frame) {
+      try {
+        await pool.query(
+          'UPDATE inventory SET quantity = GREATEST(0, quantity - 1) WHERE id = $1',
+          [frameInvId]
+        );
+      } catch(e) { console.warn('Frame stock deduct failed:', e.message); }
+    }
+
     // Auto-create bank receipt if payment method is bank or card
     const pm     = (req.body.payment_method||'cash').toLowerCase();
     const advAmt = parseFloat(req.body.advance_amount)||0;
@@ -246,10 +257,18 @@ router.patch('/:id', auth, async (req, res) => {
 // DELETE /api/orders/:id
 router.delete('/:id', auth, async (req, res) => {
   try {
+    // Get order first to restore stock
+    const ord = await pool.query('SELECT * FROM orders WHERE id=$1', [req.params.id]);
+    if (ord.rows.length && ord.rows[0].frame_inventory_id && !ord.rows[0].customer_own_frame) {
+      await pool.query(
+        'UPDATE inventory SET quantity = quantity + 1 WHERE id = $1',
+        [ord.rows[0].frame_inventory_id]
+      ).catch(()=>{});
+    }
     // Delete linked bank receipt first
     await pool.query(
       'DELETE FROM cash_deposits WHERE order_id = $1', [req.params.id]
-    ).catch(()=>{});  // ignore if order_id column doesn't exist yet
+    ).catch(()=>{});
     // Then delete the order
     await pool.query('DELETE FROM orders WHERE id = $1', [req.params.id]);
     res.json({ message: 'Order deleted' });

@@ -52,7 +52,8 @@ router.get('/summary', auth, async (req, res) => {
 
 // POST /api/repairs — create repair
 router.post('/', auth, async (req, res) => {
-  const { customer_name, phone, repair_type, description, charge, payment_method, status, notes } = req.body;
+  const { customer_name, phone, repair_type, description, charge, payment_method, status, notes,
+          frame_inventory_id, advance, due_date, frame_description } = req.body;
   if (!repair_type) return res.status(400).json({ error: 'repair_type required' });
   const client = await pool.connect();
   try {
@@ -70,6 +71,14 @@ router.post('/', auth, async (req, res) => {
        (status||'done')==='done' ? new Date() : null]
     );
     await client.query('COMMIT');
+
+    // Deduct frame from inventory if a frame was used from stock
+    if (frame_inventory_id) {
+      await pool.query(
+        'UPDATE inventory SET quantity = GREATEST(0, quantity - 1) WHERE id = $1',
+        [frame_inventory_id]
+      ).catch(e => console.warn('Repair frame stock deduct failed:', e.message));
+    }
     const newRepair = result.rows[0];
 
     // Auto-create bank receipt if paid by bank or card
@@ -118,6 +127,14 @@ router.delete('/:id', auth, async (req, res) => {
     const rep = await pool.query('SELECT * FROM repairs WHERE id=$1', [req.params.id]);
     if (!rep.rows.length) return res.status(404).json({ error: 'Not found' });
     const repair = rep.rows[0];
+
+    // Restore frame stock if it was taken from inventory
+    if (repair.frame_inventory_id) {
+      await pool.query(
+        'UPDATE inventory SET quantity = quantity + 1 WHERE id = $1',
+        [repair.frame_inventory_id]
+      ).catch(()=>{});
+    }
 
     // If bank/card payment — delete matching bank receipt
     if (repair.payment_method && repair.payment_method !== 'cash') {
