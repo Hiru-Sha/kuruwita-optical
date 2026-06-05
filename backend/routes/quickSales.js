@@ -57,9 +57,18 @@ router.post('/', auth, async (req, res) => {
        payment_method||'cash', parseFloat(amount_paid)||0, parseFloat(change_given)||0,
        notes||null, req.user.id]
     );
-    for (const item of items) {
-      if (item.inventory_id) {
-        await client.query('UPDATE inventory SET quantity = GREATEST(0, quantity - $1) WHERE id = $2', [item.qty||1, item.inventory_id]);
+    // Parse items if it came as a string
+    const itemsArr = Array.isArray(items) ? items
+      : (typeof items === 'string' ? JSON.parse(items) : []);
+
+    for (const item of itemsArr) {
+      const invId = item.inventory_id || item.inventoryId || item.id;
+      const qty   = parseInt(item.qty) || parseInt(item.quantity) || 1;
+      if (invId) {
+        await client.query(
+          'UPDATE inventory SET quantity = GREATEST(0, quantity - $1) WHERE id = $2',
+          [qty, invId]
+        );
       }
     }
     await client.query('COMMIT');
@@ -108,12 +117,14 @@ router.delete('/:id', auth, async (req, res) => {
 
     // Restore inventory stock
     try {
-      const items = typeof s.items === 'string' ? JSON.parse(s.items) : s.items || [];
-      for (const item of items) {
-        if (item.inventory_id) {
+      const saleItems = typeof s.items === 'string' ? JSON.parse(s.items) : s.items || [];
+      for (const item of saleItems) {
+        const invId = item.inventory_id || item.inventoryId;
+        const qty   = parseInt(item.qty) || parseInt(item.quantity) || 1;
+        if (invId) {
           await pool.query(
             'UPDATE inventory SET quantity = quantity + $1 WHERE id = $2',
-            [item.qty||1, item.inventory_id]
+            [qty, invId]
           );
         }
       }
@@ -133,6 +144,36 @@ router.get('/stats', auth, async (req, res) => {
     ]);
     res.json({ today: today.rows[0], month: month.rows[0] });
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+
+// POST /api/quick-sales/sync-stock — fix past sales that didn't deduct stock
+// Run once to correct inventory
+router.post('/sync-stock', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  try {
+    const sales = await pool.query(
+      `SELECT * FROM quick_sales ORDER BY created_at DESC LIMIT 500`
+    );
+    let fixed = 0;
+    for (const sale of sales.rows) {
+      try {
+        const items = typeof sale.items === 'string' ? JSON.parse(sale.items) : sale.items || [];
+        for (const item of items) {
+          const invId = item.inventory_id || item.inventoryId;
+          const qty   = parseInt(item.qty) || 1;
+          if (invId) {
+            // Only deduct if current quantity > 0
+            await pool.query(
+              'UPDATE inventory SET quantity = GREATEST(0, quantity - $1) WHERE id = $2 AND quantity > 0',
+              [qty, invId]
+            );
+            fixed++;
+          }
+        }
+      } catch(e) { /* skip bad records */ }
+    }
+    res.json({ ok: true, message: `Processed ${sales.rows.length} sales, adjusted ${fixed} inventory items` });
+  } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
 module.exports = router;
