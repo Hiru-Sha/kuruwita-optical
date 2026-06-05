@@ -62,7 +62,7 @@ function Sticker({ item, onReady, stickerNum }) {
   const model  = item.frame_name || parts[1] || '';
   const color  = item.frame_color || parts[2] || '';
   // Detail: type and sg_type only — NO size
-  const detail = [item.frame_type, item.sg_type, item.rg_power].filter(Boolean).join(' · ');
+  const detail = [item.frame_type, item.sg_type, item.rg_lens_type, item.rg_power].filter(Boolean).join(' · ');
 
   useEffect(() => { if (qrUrl && onReady) onReady(); }, [qrUrl]);
 
