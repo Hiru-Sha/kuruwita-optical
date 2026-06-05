@@ -224,6 +224,222 @@ function AccessorySticker({ item, onReady, stickerNum }) {
 }
 
 // ── STICKER MODAL ─────────────────────────────────────────────
+// ── Price Update Sticker ─────────────────────────────────────
+// Tiny label — stick over old price on existing sticker
+export function PriceUpdateModal({ items, onClose }) {
+  const [newPrices, setNewPrices] = React.useState(() => {
+    const p = {};
+    items.forEach(i => { p[i.id] = String(i.sell_price || ''); });
+    return p;
+  });
+  const [qty, setQty] = React.useState(() => {
+    const q = {};
+    items.forEach(i => { q[i.id] = String(i.quantity || 1); });
+    return q;
+  });
+  const [selected, setSelected] = React.useState(() => {
+    const s = {};
+    items.forEach(i => { s[i.id] = true; });
+    return s;
+  });
+  const [size, setSize] = React.useState('small'); // small=20x10mm, medium=30x12mm
+
+  const selectedItems = items.filter(i => selected[i.id]);
+
+  const printPriceStickers = () => {
+    const win = window.open('','_blank','width=900,height=700');
+    if (!win) return alert('Allow popups to print');
+
+    // Build all sticker rows
+    const stickers = [];
+    selectedItems.forEach(item => {
+      const price = parseFloat(newPrices[item.id]) || parseFloat(item.sell_price) || 0;
+      const count = parseInt(qty[item.id]) || 1;
+      for (let i = 0; i < count; i++) {
+        stickers.push({ item, price });
+      }
+    });
+
+    const w = size === 'small' ? '20mm' : '30mm';
+    const h = size === 'small' ? '10mm' : '12mm';
+    const cols = size === 'small' ? 10 : 6;
+    const fontSize = size === 'small' ? '7pt' : '9pt';
+    const priceSize = size === 'small' ? '11pt' : '14pt';
+
+    // Fill to complete rows
+    while (stickers.length % cols !== 0) stickers.push(null);
+
+    const rows = [];
+    for (let i = 0; i < stickers.length; i += cols) {
+      rows.push(stickers.slice(i, i + cols));
+    }
+
+    const html = `<!DOCTYPE html><html><head>
+<meta charset="UTF-8">
+<title>Price Update Stickers</title>
+<style>
+  @page { size: A4 portrait; margin: 5mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: white; }
+  .row { display: flex; }
+  .sticker {
+    width: ${w}; height: ${h};
+    border: 0.3mm dashed #ccc;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    overflow: hidden; text-align: center;
+    padding: 0.5mm;
+  }
+  .sticker.empty { border-color: #eee; }
+  .price { font-size: ${priceSize}; font-weight: 700; color: #0f1f3d; line-height: 1; }
+  .name  { font-size: ${fontSize}; color: #555; line-height: 1.1; }
+  .was   { font-size: 6pt; color: #999; text-decoration: line-through; }
+  .badge { background: #0f1f3d; color: #c9a84c; font-size: 5pt; font-weight: 700;
+           padding: 0.3mm 1mm; border-radius: 1mm; letter-spacing: 0.5px; }
+</style>
+</head><body>
+${rows.map(row => `
+  <div class="row">
+    ${row.map(s => s === null
+      ? `<div class="sticker empty"></div>`
+      : `<div class="sticker">
+           <div class="badge">NEW PRICE</div>
+           <div class="price">Rs.${parseFloat(s.price).toLocaleString('en-LK')}</div>
+           <div class="name">${(s.item.name||'').split(' · ')[0].slice(0,18)}</div>
+         </div>`
+    ).join('')}
+  </div>`).join('')}
+<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
+</body></html>`;
+
+    win.document.write(html);
+    win.document.close();
+  };
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.6)', zIndex:500,
+      display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+      <div style={{ background:'white', borderRadius:16, width:'100%', maxWidth:560,
+        maxHeight:'90vh', overflow:'auto', boxShadow:'0 24px 60px rgba(0,0,0,.3)',
+        fontFamily:"'DM Sans',sans-serif" }}>
+
+        {/* Header */}
+        <div style={{ background:'#0f1f3d', padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', borderRadius:'16px 16px 0 0' }}>
+          <div>
+            <div style={{ color:'white', fontWeight:700, fontSize:16 }}>🏷️ Price Update Stickers</div>
+            <div style={{ color:'#c9a84c', fontSize:12, marginTop:2 }}>
+              Tiny labels to stick over old prices — no need to replace the full sticker
+            </div>
+          </div>
+          <button onClick={onClose}
+            style={{ background:'rgba(255,255,255,.15)', border:'none', color:'white', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:14 }}>✕</button>
+        </div>
+
+        <div style={{ padding:'20px' }}>
+
+          {/* Size selector */}
+          <div style={{ marginBottom:16 }}>
+            <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:'#6b7280', marginBottom:8 }}>
+              Sticker Size
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              {[
+                { v:'small',  label:'Small',  desc:'20×10mm · 10 per row · fits over price only' },
+                { v:'medium', label:'Medium', desc:'30×12mm · 6 per row · more readable' },
+              ].map(s => (
+                <button key={s.v} onClick={()=>setSize(s.v)}
+                  style={{ flex:1, padding:'10px 12px', borderRadius:10, cursor:'pointer', fontFamily:'inherit',
+                    border:`2px solid ${size===s.v?'#0f1f3d':'#e0ddd6'}`,
+                    background:size===s.v?'#0f1f3d':'white',
+                    color:size===s.v?'white':'#6b7280', textAlign:'left' }}>
+                  <div style={{ fontWeight:700, fontSize:13 }}>{s.label}</div>
+                  <div style={{ fontSize:11, opacity:.7, marginTop:2 }}>{s.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Item list */}
+          <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:'#6b7280', marginBottom:8 }}>
+            Items — set new price and quantity of stickers needed
+          </div>
+
+          {items.map(item => (
+            <div key={item.id} style={{ display:'flex', gap:10, alignItems:'center', padding:'10px 12px',
+              background:selected[item.id]?'#f0f4ff':'#f9f9f9', borderRadius:10, marginBottom:8,
+              border:`1.5px solid ${selected[item.id]?'#93c5fd':'#e0ddd6'}` }}>
+
+              {/* Checkbox */}
+              <div onClick={()=>setSelected(s=>({...s,[item.id]:!s[item.id]}))}
+                style={{ width:20, height:20, borderRadius:5, border:`2px solid ${selected[item.id]?'#1e40af':'#d1d5db'}`,
+                  background:selected[item.id]?'#1e40af':'white', cursor:'pointer', flexShrink:0,
+                  display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:12 }}>
+                {selected[item.id] ? '✓' : ''}
+              </div>
+
+              {/* Item name */}
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:13, fontWeight:600, color:'#0f1f3d', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                  {item.name}
+                </div>
+                <div style={{ fontSize:11, color:'#6b7280' }}>
+                  Old price: <span style={{ textDecoration:'line-through' }}>Rs.{parseFloat(item.sell_price||0).toLocaleString()}</span>
+                  · Stock: {item.quantity}
+                </div>
+              </div>
+
+              {/* New price */}
+              <div style={{ flexShrink:0 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:'#6b7280', marginBottom:3, textTransform:'uppercase' }}>New Price</div>
+                <input type="number" value={newPrices[item.id]}
+                  onChange={e=>setNewPrices(p=>({...p,[item.id]:e.target.value}))}
+                  style={{ width:90, padding:'6px 8px', border:'1.5px solid #93c5fd', borderRadius:7,
+                    fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none',
+                    color:'#1e40af', background:'white', textAlign:'center' }}/>
+              </div>
+
+              {/* Qty of stickers */}
+              <div style={{ flexShrink:0 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:'#6b7280', marginBottom:3, textTransform:'uppercase' }}>Stickers</div>
+                <input type="number" min="1" value={qty[item.id]}
+                  onChange={e=>setQty(q=>({...q,[item.id]:e.target.value}))}
+                  style={{ width:56, padding:'6px 8px', border:'1.5px solid #e0ddd6', borderRadius:7,
+                    fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', textAlign:'center' }}/>
+              </div>
+            </div>
+          ))}
+
+          {/* Preview */}
+          {selectedItems.length > 0 && (
+            <div style={{ background:'#f8f5ef', borderRadius:10, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#6b7280' }}>
+              Will print <b style={{color:'#0f1f3d'}}>
+                {selectedItems.reduce((s,i)=>s+parseInt(qty[i.id]||1),0)} stickers
+              </b> for {selectedItems.length} item{selectedItems.length!==1?'s':''}
+              {' · '}{size === 'small' ? '20×10mm' : '30×12mm'} each
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div style={{ display:'flex', gap:10 }}>
+            <button onClick={printPriceStickers} disabled={selectedItems.length===0}
+              style={{ flex:1, padding:'12px', background:selectedItems.length===0?'#9ca3af':'#0f1f3d',
+                color:selectedItems.length===0?'white':'#c9a84c', border:'none', borderRadius:10,
+                fontSize:14, fontWeight:700, cursor:selectedItems.length===0?'not-allowed':'pointer',
+                fontFamily:'inherit' }}>
+              🖨️ Print {selectedItems.reduce((s,i)=>s+parseInt(qty[i.id]||1),0)} Price Stickers
+            </button>
+            <button onClick={onClose}
+              style={{ padding:'12px 20px', background:'#f3f4f6', border:'none', borderRadius:10,
+                fontSize:13, cursor:'pointer', fontFamily:'inherit', color:'#374151' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function StickerModal({ items, onClose }) {
   const sheetRef  = useRef();
   const [readyCount, setReadyCount] = useState(0);

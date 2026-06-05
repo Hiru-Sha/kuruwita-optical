@@ -40,7 +40,7 @@ function AutoInput({ value, onChange, placeholder, style, suggestions=[] }) {
 }
 
 
-import { StickerModal, QRScanner } from '../components/QRStickers';
+import { StickerModal, QRScanner, PriceUpdateModal } from '../components/QRStickers';
 
 const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b' };
 const fmtMoney = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
@@ -675,7 +675,9 @@ export default function Inventory() {
   const [loading,      setLoading]     = useState(true);
   const [imgData,      setImgData]     = useState(null);
   const [form,         setForm]        = useState(defaults('Frames'));
-  const [showStickers,  setShowStickers] = useState(false);
+  const [showStickers,   setShowStickers]  = useState(false);
+  const [showPriceUpdate,setShowPriceUpdate]= useState(false);
+  const [priceUpdateItems,setPriceUpdateItems]=useState([]);
   const [showScanner,   setShowScanner]  = useState(false);
   // Phone→PC photo session
   const [pcSessionId,   setPcSessionId]  = useState(null);
@@ -1077,6 +1079,10 @@ export default function Inventory() {
           <button onClick={()=>{ setStickerItems(items); setShowStickers(true); }}
             style={{ padding:'9px 16px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
             🏷️ Print All Stickers
+          </button>
+          <button onClick={()=>{ setPriceUpdateItems(items.filter(i=>['Sunglasses','Frames','Reading Glasses'].includes(i.category))); setShowPriceUpdate(true); }}
+            style={{ padding:'9px 16px', background:'#fef9c3', border:`1.5px solid #fde68a`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#92400e' }}>
+            💰 Update Prices
           </button>
           <button onClick={()=>{ setShowAIScan(true); setAiStep('front'); setAiPhotos({front:null,arm:null,tag:null}); setAiResult(null); }}
             style={{ padding:'9px 16px', background:'#7c3aed', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
@@ -1632,6 +1638,7 @@ export default function Inventory() {
                   <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                     <button onClick={()=>handleSavePanel(selected)} style={{ padding:'10px 18px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>💾 Save All</button>
                     <button onClick={()=>{ setStickerItems([selected]); setShowStickers(true); }} style={{ padding:'10px 16px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>🏷️ Sticker</button>
+                    <button onClick={()=>{ setPriceUpdateItems([selected]); setShowPriceUpdate(true); }} style={{ padding:'10px 16px', background:'#fef9c3', border:`1.5px solid #fde68a`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#92400e' }}>💰 Price Label</button>
                     <button onClick={()=>setPanelTab('adjust')} style={{ padding:'10px 16px', background:'#eff6ff', border:`1.5px solid #bae6fd`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#0369a1' }}>📦 Adjust Stock</button>
                     <button onClick={()=>handleDelete(selected.id)} style={{ padding:'10px 14px', background:'#fee2e2', color:C.danger, border:`1.5px solid #fca5a5`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>🗑️</button>
                   </div>
@@ -1850,6 +1857,9 @@ export default function Inventory() {
       )}
 
       {/* Sticker modal */}
+      {showPriceUpdate && (
+        <PriceUpdateModal items={priceUpdateItems} onClose={()=>setShowPriceUpdate(false)}/>
+      )}
       {showStickers && (
         <StickerModal items={stickerItems} onClose={()=>setShowStickers(false)}/>
       )}
