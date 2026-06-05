@@ -669,6 +669,7 @@ export default function Inventory() {
   const [aiStep,       setAiStep]      = useState('front'); // front | arm | tag | confirm
   const [aiResult,     setAiResult]    = useState(null);
   const [colorVariants,setColorVariants] = useState([{ color:'Black', qty:'1', image:null }]);
+  const [powerVariants,setPowerVariants] = useState(RG_POWERS.map(p=>({ power:p, qty:'0' })));
   // Keep first variant color in sync with form frame_color
   const prevFrameColor = React.useRef('Black');
   const mergeLogRef    = React.useRef([]);
@@ -761,7 +762,13 @@ export default function Inventory() {
     }
   },[form.frame_color]);
 
-  const handleCatChange = (cat) => { setAddCat(cat); setForm(defaults(cat)); setImgData(null); setColorVariants([{ color:'Black', qty:'1', image:null }]); };
+  const handleCatChange = (cat) => {
+    setAddCat(cat);
+    setForm(defaults(cat));
+    setImgData(null);
+    setColorVariants([{ color:'Black', qty:'1', image:null }]);
+    setPowerVariants(RG_POWERS.map(p=>({ power:p, qty:'0' })));
+  };
   const handleImgPick = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -928,10 +935,19 @@ export default function Inventory() {
     mergeLogRef.current = [];
     setAddSaving(true);
     try {
-      // Save each colour variant
-      for (const variant of colorVariants) {
-        if (!variant.color || parseInt(variant.qty||0) < 0) continue;
-        const variantName = buildName({ ...form, frame_color: variant.color });
+      // For Reading Glasses — use power variants instead of colour variants
+      const variantsToSave = addCat === 'Reading Glasses'
+        ? powerVariants
+            .filter(v => parseInt(v.qty||0) > 0)
+            .map(v => ({ color: form.frame_color||'Black', qty: v.qty, image: null, rg_power: v.power }))
+        : colorVariants;
+
+      // Save each variant
+      for (const variant of variantsToSave) {
+        if (parseInt(variant.qty||0) < 0) continue;
+        const variantName = addCat === 'Reading Glasses'
+          ? buildName({ ...form, rg_power: variant.rg_power })
+          : buildName({ ...form, frame_color: variant.color });
         const newSell  = parseFloat(form.sell_price)||0;
         const newCost  = parseFloat(form.cost_price)||0;
         const newQty   = parseInt(variant.qty)||0;
@@ -957,12 +973,13 @@ export default function Inventory() {
           await createItem({
             ...form,
             frame_color: variant.color,
-            name: variantName,
-            image_url: variant.image||imgData||null,
-            sell_price:   newSell,
-            cost_price:   newCost,
-            quantity:     newQty,
-            min_quantity: parseInt(form.min_quantity)||2,
+            rg_power:    variant.rg_power || form.rg_power,
+            name:        variantName,
+            image_url:   variant.image||imgData||null,
+            sell_price:  newSell,
+            cost_price:  newCost,
+            quantity:    newQty,
+            min_quantity:parseInt(form.min_quantity)||2,
           });
           mergeLogRef.current.push({ name: variantName, qty: newQty, merged: false });
         }
@@ -1268,8 +1285,54 @@ export default function Inventory() {
             }} placeholder="e.g. 5" style={INP}/></Field>
             <Field label="Min Alert"><input type="number" value={form.min_quantity||''} onChange={e=>setForm(f=>({...f,min_quantity:e.target.value}))} placeholder="e.g. 2" style={INP}/></Field>
           </div>
-          {/* ── Colour variants ─────────────────────────────── */}
+          {/* ── Colour variants (Frames/SG) OR Power variants (RG) ── */}
           <div style={{ marginTop:4, background:C.cream, borderRadius:12, padding:'14px 16px' }}>
+
+            {/* READING GLASSES — power grid */}
+            {addCat === 'Reading Glasses' ? (
+              <>
+                <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:12 }}>
+                  👓 Powers & Quantities
+                  <span style={{ fontSize:11, fontWeight:400, color:C.muted, marginLeft:8 }}>
+                    Enter 0 for powers you don't have
+                  </span>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
+                  {powerVariants.map((v,i) => (
+                    <div key={v.power} style={{ background:'white', borderRadius:9, padding:'10px 10px',
+                      border:`1.5px solid ${parseInt(v.qty||0)>0?C.navy:C.border}`,
+                      transition:'border-color .15s' }}>
+                      <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:6, textAlign:'center' }}>
+                        {v.power}
+                      </div>
+                      <input
+                        type="number" min="0" value={v.qty}
+                        onChange={e=>setPowerVariants(pv=>pv.map((x,j)=>j===i?{...x,qty:e.target.value}:x))}
+                        placeholder="0"
+                        style={{ ...INP, padding:'6px 8px', fontSize:16, fontWeight:700, textAlign:'center',
+                          background:parseInt(v.qty||0)>0?'#f0f4ff':C.cream,
+                          border:`1.5px solid ${parseInt(v.qty||0)>0?C.navy:C.border}` }}/>
+                      <div style={{ fontSize:10, color:C.muted, textAlign:'center', marginTop:3 }}>
+                        {parseInt(v.qty||0)>0 ? `${v.qty} pcs` : 'none'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop:10, background:'white', borderRadius:8, padding:'8px 12px', fontSize:12, color:C.muted, display:'flex', justifyContent:'space-between' }}>
+                  <span>
+                    {powerVariants.filter(v=>parseInt(v.qty||0)>0).length} powers selected ·{' '}
+                    <b style={{color:C.navy}}>
+                      {powerVariants.reduce((s,v)=>s+parseInt(v.qty||0),0)} total pairs
+                    </b>
+                  </span>
+                  <button onClick={()=>setPowerVariants(RG_POWERS.map(p=>({ power:p, qty:'0' })))}
+                    style={{ background:'none', border:'none', color:C.muted, cursor:'pointer', fontSize:11, fontFamily:'inherit' }}>
+                    Reset all to 0
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
               <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>🎨 Colours & Quantities</div>
               <button onClick={()=>setColorVariants(v=>[...v,{color:'Black',qty:form.quantity||'1',image:null}])}
@@ -1330,6 +1393,8 @@ export default function Inventory() {
               Each colour saves as a separate inventory item.
               {colorVariants.length>1 && <b style={{color:C.navy}}> {colorVariants.length} variants will be saved.</b>}
             </div>
+            </>
+            )}
           </div>
 
           {/* Duplicate suggestion banner */}
@@ -1360,16 +1425,26 @@ export default function Inventory() {
           {/* Preview */}
           {buildName(form) && (
             <div style={{ marginTop:10, background:C.cream, borderRadius:8, padding:'8px 14px', fontSize:12, color:C.muted }}>
-              Preview: {colorVariants.slice(0,3).map((v,i)=>(
-                <b key={i} style={{color:C.navy,marginRight:8}}>{buildName({...form,frame_color:v.color})} (×{v.qty||0})</b>
-              ))}{colorVariants.length>3&&`+${colorVariants.length-3} more`}
+              Preview:{' '}
+              {addCat === 'Reading Glasses'
+                ? powerVariants.filter(v=>parseInt(v.qty||0)>0).slice(0,4).map((v,i)=>(
+                    <b key={i} style={{color:C.navy,marginRight:8}}>{buildName({...form,rg_power:v.power})} (×{v.qty})</b>
+                  ))
+                : colorVariants.slice(0,3).map((v,i)=>(
+                    <b key={i} style={{color:C.navy,marginRight:8}}>{buildName({...form,frame_color:v.color})} (×{v.qty||0})</b>
+                  ))
+              }
+              {addCat==='Reading Glasses' && powerVariants.filter(v=>parseInt(v.qty||0)>0).length>4 && `+${powerVariants.filter(v=>parseInt(v.qty||0)>0).length-4} more`}
+              {addCat!=='Reading Glasses' && colorVariants.length>3 && `+${colorVariants.length-3} more`}
             </div>
           )}
 
           <div style={{ display:'flex', gap:8, marginTop:14 }}>
             <button onClick={handleAdd} disabled={addSaving}
               style={{ padding:'10px 22px', background:addSaving?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:addSaving?'not-allowed':'pointer', fontFamily:'inherit', minWidth:140 }}>
-              {addSaving ? '⏳ Saving...' : `💾 Save ${colorVariants.length>1?`${colorVariants.length} variants`:'Item'}`}
+              {addSaving ? '⏳ Saving...' : addCat==='Reading Glasses'
+                ? `💾 Save ${powerVariants.filter(v=>parseInt(v.qty||0)>0).length} Powers`
+                : `💾 Save ${colorVariants.length>1?`${colorVariants.length} variants`:'Item'}`}
             </button>
             <button onClick={()=>{setShowAdd(false);setForm(defaults(addCat));setImgData(null);setColorVariants([{color:'Black',qty:'1'}]);}}
               style={{ padding:'10px 16px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
