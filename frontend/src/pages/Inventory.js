@@ -123,7 +123,7 @@ const buildName = (form) => {
   switch(form.category) {
     case 'Frames':          return [form.brand, form.frame_name, form.frame_color, form.frame_size].filter(Boolean).join(' · ');
     case 'Sunglasses':      return [form.brand, form.frame_name, form.sg_type, form.frame_color].filter(Boolean).join(' · ');
-    case 'Reading Glasses': return [form.rg_lens_type, form.rg_material, form.rg_power].filter(Boolean).join(' · ');
+    case 'Reading Glasses': return [form.brand, form.rg_lens_type, form.frame_color, form.rg_power].filter(Boolean).join(' · ');
     case 'Chains':          return [form.item_name||'Chain', form.frame_material, form.frame_color].filter(Boolean).join(' · ');
     case 'Ear Tips':        return [form.item_name||'Ear Tips', form.frame_material, form.frame_size].filter(Boolean).join(' · ');
     default: return form.item_name || form.brand || form.category;
