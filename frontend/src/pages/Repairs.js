@@ -219,7 +219,9 @@ export default function Repairs() {
   const [saving,    setSaving]   = useState(false);
   const [error,     setError]    = useState('');
   const [toast,     setToast]    = useState('');
-  const [lastDone,  setLastDone] = useState(null); // just-saved repair for print prompt
+  const [lastDone,     setLastDone]     = useState(null); // just-saved repair for print prompt
+  const [frameQuery,   setFrameQuery]   = useState('');
+  const [frameResults, setFrameResults] = useState([]);
 
   const [form, setForm] = useState({
     repair_type:         '',
