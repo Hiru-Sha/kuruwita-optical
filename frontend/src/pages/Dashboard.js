@@ -219,22 +219,22 @@ export default function Dashboard() {
           value={fmt(mr.grand_total||mr.total)}
           sub={`${mr.order_count||0} orders · ${mr.qs_count||0} sales · ${mr.repair_count||0} repairs`}
           dark
-          onClick={()=>navigate('/orders?month='+new Date().toISOString().slice(0,7))}/>
+          onClick={()=>navigate('/activity?view=month&month='+new Date().toISOString().slice(0,7))}/>
         <KPI label="Collected"
           value={fmt(parseFloat(mr.collected||0)+parseFloat(mr.qs_total||0)+parseFloat(mr.repair_total||0))}
           sub="Orders + Sales + Repairs"
           color={success}
-          onClick={()=>navigate('/orders?filter=collected&month='+new Date().toISOString().slice(0,7))}/>
+          onClick={()=>navigate('/activity?view=collected&month='+new Date().toISOString().slice(0,7))}/>
         <KPI label="Balance Due"
           value={fmt(data?.total_balance)}
           sub="Outstanding"
           color={danger}
-          onClick={()=>navigate('/orders?filter=balance')}/>
+          onClick={()=>navigate('/activity?view=balance')}/>
         <KPI label="Active Orders"
           value={data?.active_orders||0}
           sub="In progress"
           color='#2563eb'
-          onClick={()=>navigate('/orders?filter=active')}/>
+          onClick={()=>navigate('/activity?view=active')}/>
       </div>
 
       {/* Reminders */}

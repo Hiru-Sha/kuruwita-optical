@@ -25,6 +25,7 @@ import KalutotaAccount from './pages/KalutotaAccount';
 import BulkImport     from './pages/BulkImport';
 import ReportPDF       from './pages/ReportPDF';
 import WalkInRx        from './pages/WalkInRx';
+import ActivityView    from './pages/ActivityView';
 import EndOfDay        from './pages/EndOfDay';
 
 function Protected({ children }) {
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="bulk-import"       element={<BulkImport />} />
             <Route path="report-pdf"       element={<ReportPDF />} />
             <Route path="walkin-rx"        element={<WalkInRx />} />
+            <Route path="activity"          element={<ActivityView />} />
             <Route path="end-of-day"      element={<EndOfDay />} />
             {/* Admin-only routes */}
             <Route path="grinding"  element={<AdminOnly><Grinding /></AdminOnly>} />
