@@ -103,16 +103,24 @@ export default function Dashboard() {
               </div>
             </div>
             <div style={{textAlign:'right'}}>
-              <div style={{display:'flex',gap:16,alignItems:'flex-start'}}>
+              <div style={{display:'flex',gap:16,alignItems:'flex-start',flexWrap:'wrap'}}>
                 <div>
-                  <div style={{fontSize:9,color:gold,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Cash in Hand</div>
+                  <div style={{fontSize:9,color:gold,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Today's Cash</div>
                   <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:cash.cashInHand>=0?'#86efac':'#fca5a5'}}>
                     {fmt(cash.cashInHand)}
                   </div>
                 </div>
+                {(cash.allTimeCash||0) !== (cash.cashInHand||0) && (
+                  <div>
+                    <div style={{fontSize:9,color:'#fde68a',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Total in Drawer</div>
+                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#fde68a'}}>
+                      {fmt(cash.allTimeCash||0)}
+                    </div>
+                  </div>
+                )}
                 {(cash.bankToday||0)>0 && (
                   <div>
-                    <div style={{fontSize:9,color:'#93c5fd',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Bank Transfer</div>
+                    <div style={{fontSize:9,color:'#93c5fd',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Bank Today</div>
                     <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#93c5fd'}}>
                       {fmt(cash.bankToday)}
                     </div>
@@ -137,7 +145,11 @@ export default function Dashboard() {
             <span style={{color:muted}}>−</span>
             <span style={{color:'#2563eb',fontWeight:700}}>{fmt(cash.totalDep)}</span>
             <span style={{color:muted}}>deposited =</span>
-            <span style={{fontWeight:700,color:cash.cashInHand>=0?success:danger}}>{fmt(cash.cashInHand)} cash in hand</span>
+            <span style={{fontWeight:700,color:cash.cashInHand>=0?success:danger}}>{fmt(cash.cashInHand)} today</span>
+            {(cash.allTimeCash||0)!==(cash.cashInHand||0) && <>
+              <span style={{color:muted}}>·</span>
+              <span style={{fontWeight:700,color:'#fde68a'}}>{fmt(cash.allTimeCash||0)} total in drawer</span>
+            </>}
           </div>
           {/* 2×2 on mobile, 4-col on desktop */}
           <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(4,1fr)'}}>

@@ -119,10 +119,12 @@ export default function Layout() {
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           {/* Hamburger — always show on mobile, show on desktop too for full nav */}
           <button onClick={()=>setOpen(o=>!o)} style={{ background:'none', border:'none', color:'white', fontSize:20, cursor:'pointer', padding:'4px 6px', lineHeight:1 }}>☰</button>
-          <span style={{ fontSize:16 }}>👁️</span>
-          <div>
-            <div style={{ fontFamily:"'Playfair Display',serif", color:'white', fontSize:mob?14:16, fontWeight:600 }}>Kuruwita Optical</div>
-            {!mob && <div style={{ color:'#c9a84c', fontSize:9, letterSpacing:'1.5px', textTransform:'uppercase' }}>Management System</div>}
+          <div onClick={()=>navigate('/dashboard')} style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}>
+            <span style={{ fontSize:16 }}>👁️</span>
+            <div>
+              <div style={{ fontFamily:"'Playfair Display',serif", color:'white', fontSize:mob?14:16, fontWeight:600 }}>Kuruwita Optical</div>
+              {!mob && <div style={{ color:'#c9a84c', fontSize:9, letterSpacing:'1.5px', textTransform:'uppercase' }}>Management System</div>}
+            </div>
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>

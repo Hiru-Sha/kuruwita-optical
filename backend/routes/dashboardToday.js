@@ -23,6 +23,7 @@ router.get('/', auth, async (req, res) => {
       activeOrders,
       lensJobsOut,
       reminders,
+      allTimeCashRes,
     ] = await Promise.all([
 
       // Month revenue — orders only (always safe)
@@ -53,10 +54,14 @@ router.get('/', auth, async (req, res) => {
         SELECT amount FROM expenses WHERE date = $1
       `, [today]).catch(()=>({ rows:[] })),
 
-      // Today's deposits — safe
+      // Today's deposits — exclude any linked to orders that no longer exist
       pool.query(`
-        SELECT amount FROM cash_deposits WHERE date = $1
-      `, [today]).catch(()=>({ rows:[] })),
+        SELECT cd.amount FROM cash_deposits cd
+        WHERE cd.date = $1
+          AND (cd.order_id IS NULL OR EXISTS (
+            SELECT 1 FROM orders o WHERE o.id = cd.order_id
+          ))
+      `, [today]).catch(()=>pool.query(`SELECT amount FROM cash_deposits WHERE date = $1`, [today])).catch(()=>({ rows:[] })),
 
       // Today's repairs — safe, no status filter
       pool.query(`
@@ -70,6 +75,35 @@ router.get('/', auth, async (req, res) => {
         FROM orders
         WHERE balance_amount > 0 AND status != 'cancelled'
       `),
+
+      // All-time cash in hand — all cash income minus all deposits and expenses
+      pool.query(`
+        SELECT
+          COALESCE((
+            SELECT SUM(advance_amount) FROM orders
+            WHERE COALESCE(payment_method,'cash')='cash'
+          ),0)
+          +
+          COALESCE((
+            SELECT SUM(total) FROM quick_sales
+            WHERE COALESCE(payment_method,'cash')='cash'
+          ),0)
+          +
+          COALESCE((
+            SELECT SUM(charge) FROM repairs
+            WHERE COALESCE(payment_method,'cash')='cash'
+            AND charge > 0
+          ),0)
+          -
+          COALESCE((SELECT SUM(amount) FROM expenses),0)
+          -
+          COALESCE((
+            SELECT SUM(cd.amount) FROM cash_deposits cd
+            WHERE cd.order_id IS NULL
+               OR EXISTS (SELECT 1 FROM orders o WHERE o.id=cd.order_id)
+          ),0)
+          AS total_cash_in_hand
+      `).catch(()=>({ rows:[{ total_cash_in_hand: 0 }] })),
 
       // Active orders count
       pool.query(`
@@ -136,8 +170,11 @@ router.get('/', auth, async (req, res) => {
     const totalExp     = todayExpenses.rows.reduce((s,r)=>s+parseFloat(r.amount||0),0);
     const totalDep     = todayDeposits.rows.reduce((s,r)=>s+parseFloat(r.amount||0),0);
     // Cash in hand = only cash payments, not bank transfers
-    const cashInHand   = orderCash + qsIncome + repairIncome - totalExp - totalDep;
+    const todayCashIn  = orderCash + qsIncome + repairIncome;
+    const cashInHand   = todayCashIn - totalExp - totalDep;
     const bankToday    = orderBank;
+    // All-time cash in drawer (carries forward from previous days)
+    const allTimeCash  = parseFloat(allTimeCashRes?.rows?.[0]?.total_cash_in_hand || 0);
 
     res.json({
       // Month stats
@@ -158,6 +195,7 @@ router.get('/', auth, async (req, res) => {
         totalExp,
         totalDep,
         cashInHand,
+        allTimeCash,
         bankToday,
         orderCount:   todayOrders.rows.length,
         qsCount:      todayQS.rows.length,
