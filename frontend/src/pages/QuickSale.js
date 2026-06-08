@@ -713,6 +713,7 @@ export default function QuickSale() {
       </div>
     )}
 
+
     </div>
   );
 }
