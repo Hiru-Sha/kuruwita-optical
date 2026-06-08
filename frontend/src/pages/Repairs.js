@@ -1,4 +1,5 @@
 /* eslint-disable */
+/* cache-bust-v3 */
 // ============================================================
 //  Repairs.js — Frame repair management
 //  Arm repair, polishing, nose pads, nails, etc.
@@ -213,6 +214,9 @@ export default function Repairs() {
   const [loading,   setLoading]  = useState(true);
   const [month,     setMonth]    = useState(thisMonth());
   const [statusFilt,setStatusFilt]=useState('all');
+  const [dateFrom,  setDateFrom]  = useState('');
+  const [dateTo,    setDateTo]    = useState('');
+  const [dateFilter,setDateFilter]= useState('all');
   const [showAdd,   setShowAdd]  = useState(false);
   const [pastMode,  setPastMode]  = useState(false);
   const [repairDate,setRepairDate]= useState('');
@@ -492,6 +496,24 @@ export default function Repairs() {
       <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap', alignItems:'center' }}>
         <input type="month" value={month} onChange={e=>setMonth(e.target.value)}
           style={{ padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy }}/>
+        {/* Custom date range */}
+        <button onClick={()=>setDateFilter(dateFilter==='custom'?'all':'custom')}
+          style={{ padding:'7px 12px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+            border:`1.5px solid ${dateFilter==='custom'?C.gold:C.border}`,
+            background:dateFilter==='custom'?'#fef9f0':'white', color:dateFilter==='custom'?'#92400e':C.muted }}>
+          📅 Date Range
+        </button>
+        {dateFilter==='custom' && (
+          <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
+            <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
+              style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:12, fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy }}/>
+            <span style={{ fontSize:11, color:C.muted }}>to</span>
+            <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
+              style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:12, fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy }}/>
+            {(dateFrom||dateTo) && <button onClick={()=>{setDateFrom('');setDateTo('');}}
+              style={{ padding:'4px 8px', background:'#fee2e2', border:'none', borderRadius:8, fontSize:11, cursor:'pointer', fontFamily:'inherit', color:C.danger }}>✕</button>}
+          </div>
+        )}
         <div style={{ display:'flex', gap:6 }}>
           {[['all','All'],['done','✅ Done'],['pending','⏳ Pending'],['collected','📦 Collected']].map(([v,l])=>(
             <button key={v} onClick={()=>setStatusFilt(v)}
@@ -515,7 +537,14 @@ export default function Repairs() {
                 <div style={{ fontSize:15, fontWeight:600, color:C.navy, marginBottom:6 }}>No repairs recorded</div>
                 <div style={{ fontSize:13 }}>Click "🔧 New Repair" to record your first repair</div>
               </div>
-            : repairs.map((repair, idx) => {
+            : repairs.filter(repair => {
+                if (dateFilter==='custom') {
+                  const d = new Date(repair.created_at);
+                  if (dateFrom && d < new Date(dateFrom)) return false;
+                  if (dateTo   && d > new Date(dateTo+'T23:59:59')) return false;
+                }
+                return true;
+              }).map((repair, idx) => {
                 const st   = STATUS_STYLE[repair.status] || STATUS_STYLE.done;
                 const rt   = REPAIR_TYPES.find(r=>r.label===repair.repair_type);
                 const prev = repairs[idx-1];

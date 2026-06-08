@@ -178,6 +178,8 @@ export default function QuickSale() {
   const [saleDate, setSaleDate] = useState('');   // 'sale' | 'history'
   const [history,  setHistory]  = useState([]);
   const [histLoad, setHistLoad] = useState(false);
+  const [histFrom, setHistFrom] = useState('');
+  const [histTo,   setHistTo]   = useState('');
   const timer = useRef(null);
 
   useEffect(()=>{
@@ -573,6 +575,29 @@ export default function QuickSale() {
     {/* ── HISTORY TAB ── */}
     {activeTab==='history' && (
       <div>
+        {/* Date range filter for history */}
+        <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap', marginBottom:10 }}>
+          <span style={{ fontSize:12, fontWeight:600, color:C.muted }}>Filter:</span>
+          <input type="date" value={histFrom} onChange={e=>setHistFrom(e.target.value)}
+            style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:12,
+              fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy }}/>
+          <span style={{ fontSize:12, color:C.muted }}>to</span>
+          <input type="date" value={histTo} onChange={e=>setHistTo(e.target.value)}
+            style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:12,
+              fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy }}/>
+          {(histFrom||histTo) && (
+            <button onClick={()=>{ setHistFrom(''); setHistTo(''); }}
+              style={{ padding:'5px 10px', background:'#fee2e2', border:'none', borderRadius:8,
+                fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
+              ✕ Clear
+            </button>
+          )}
+          {histFrom&&histTo && (
+            <span style={{ fontSize:11, color:C.muted }}>
+              {new Date(histFrom).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})} – {new Date(histTo).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+            </span>
+          )}
+        </div>
         {histLoad
           ? <div style={{textAlign:'center',padding:32,color:C.muted,background:'white',borderRadius:14,border:`1px solid ${C.border}`}}>⏳ Loading...</div>
           : !history.length
@@ -582,14 +607,18 @@ export default function QuickSale() {
               </div>
             : <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden'}}>
                 {/* Table header */}
-                <div style={{display:'grid',gridTemplateColumns:mob?'1fr 80px 70px':'1fr 140px 100px 80px 70px',gap:0,padding:'10px 16px',background:C.cream,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.7px',color:C.muted,borderBottom:`1px solid ${C.border}`}}>
+                <div style={{display:'grid',gridTemplateColumns:mob?'1fr 80px 70px':'1fr 200px 90px 80px 70px',gap:0,padding:'10px 16px',background:C.cream,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.7px',color:C.muted,borderBottom:`1px solid ${C.border}`}}>
                   <span>Sale / Customer</span>
                   {!mob&&<span>Items</span>}
                   {!mob&&<span>Payment</span>}
                   <span style={{textAlign:'right'}}>Total</span>
                   <span style={{textAlign:'center'}}>Print</span>
                 </div>
-                {history.map((sale,i)=>{
+                {history.filter(sale => {
+                  if (histFrom && sale.created_at?.slice(0,10) < histFrom) return false;
+                  if (histTo   && sale.created_at?.slice(0,10) > histTo)   return false;
+                  return true;
+                }).map((sale,i)=>{
                   const prev = history[i-1];
                   const saleDate = sale.created_at?.slice(0,10);
                   const prevDate = prev?.created_at?.slice(0,10);
@@ -601,15 +630,45 @@ export default function QuickSale() {
                           {new Date(sale.created_at).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long',year:'numeric'})}
                         </div>
                       )}
-                      <div style={{display:'grid',gridTemplateColumns:mob?'1fr 80px 70px':'1fr 140px 100px 80px 70px',gap:0,padding:'11px 16px',borderBottom:`1px solid ${C.cream}`,alignItems:'center'}}>
+                      <div style={{display:'grid',gridTemplateColumns:mob?'1fr 80px 70px':'1fr 200px 90px 80px 70px',gap:0,padding:'11px 16px',borderBottom:`1px solid ${C.cream}`,alignItems:'center'}}>
                         <div>
                           <div style={{fontSize:13,fontWeight:600,color:C.navy}}>{sale.sale_number}</div>
                           <div style={{fontSize:11,color:C.muted}}>
                             {sale.customer_name&&<span>👤 {sale.customer_name} · </span>}
                             {new Date(sale.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}
                           </div>
+                          {/* Show items on mobile */}
+                          {(() => {
+                            let items = [];
+                            try { items = typeof sale.items==='string' ? JSON.parse(sale.items) : sale.items||[]; } catch(e){}
+                            return items.length > 0 ? (
+                              <div style={{marginTop:2}}>
+                                {items.map((it,i) => (
+                                  <span key={i} style={{fontSize:11,color:C.navy,fontWeight:500}}>
+                                    {i>0 ? ', ' : ''}{it.name}{it.qty>1?` ×${it.qty}`:''}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
-                        {!mob&&<div style={{fontSize:12,color:C.muted}}>{sale.item_count||'—'} item{sale.item_count!==1?'s':''}</div>}
+                        {!mob&&<div style={{fontSize:12,color:C.muted}}>
+                          {(() => {
+                            let items = [];
+                            try { items = typeof sale.items==='string' ? JSON.parse(sale.items) : sale.items||[]; } catch(e){}
+                            if (!items.length) return <span>{sale.item_count||'—'} items</span>;
+                            return (
+                              <div>
+                                {items.map((it,i) => (
+                                  <div key={i} style={{fontSize:12,color:C.navy,fontWeight:500,lineHeight:1.4}}>
+                                    {it.name}
+                                    <span style={{color:C.muted,marginLeft:4}}>×{it.qty||1}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>}
                         {!mob&&<div style={{fontSize:12}}>
                           <span style={{background:sale.payment_method==='cash'?'#dcfce7':'#dbeafe',color:sale.payment_method==='cash'?C.success:'#1e40af',padding:'2px 8px',borderRadius:20,fontSize:11,fontWeight:600}}>
                             {sale.payment_method==='cash'?'💵 Cash':'🏦 Bank'}

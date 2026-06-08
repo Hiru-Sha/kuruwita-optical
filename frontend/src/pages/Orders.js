@@ -145,6 +145,8 @@ export default function Orders() {
   const [orders,    setOrders]    = useState([]);
   const [filter,       setFilter]      = useState('all');
   const [dateFilter,   setDateFilter]   = useState('all');
+  const [dateFrom,     setDateFrom]     = useState('');
+  const [dateTo,       setDateTo]       = useState('');
   const [search,       setSearch]       = useState('');
   const [missingCosts, setMissingCosts] = useState(false);
 
@@ -191,14 +193,20 @@ export default function Orders() {
 
   // Client-side date filter
   const filteredOrders = orders.filter(o => {
-    const cutoff = getDateRange(dateFilter);
-    if (cutoff && new Date(o.created_at) < cutoff) return false;
+    // Custom date range
+    if (dateFilter === 'custom') {
+      const d = new Date(o.created_at);
+      if (dateFrom && d < new Date(dateFrom)) return false;
+      if (dateTo   && d > new Date(dateTo + 'T23:59:59')) return false;
+    } else {
+      const cutoff = getDateRange(dateFilter);
+      if (cutoff && new Date(o.created_at) < cutoff) return false;
+    }
     if (missingCosts) {
       const noFrameCost = !parseFloat(o.frame_buy_price) && !o.customer_own_frame;
       const noLensCost  = !parseFloat(o.lens_buy_price);
       return noFrameCost || noLensCost;
     }
-    // balance_due filter — show orders with outstanding balance
     if (filter === 'balance_due') return parseFloat(o.balance_amount) > 0;
     return true;
   });
@@ -360,9 +368,9 @@ export default function Orders() {
       </div>
 
       {/* Date filter chips */}
-      <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap' }}>
+      <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap', alignItems:'center' }}>
         {DATE_FILTERS.map(df=>(
-          <button key={df.key} onClick={()=>setDateFilter(df.key)}
+          <button key={df.key} onClick={()=>{ setDateFilter(df.key); if(df.key!=='custom'){setDateFrom('');setDateTo('');} }}
             style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
               border:`1.5px solid ${dateFilter===df.key?C.navy:C.border}`,
               background:dateFilter===df.key?C.navy:'white',
@@ -370,6 +378,39 @@ export default function Orders() {
             {df.label}
           </button>
         ))}
+        <button onClick={()=>setDateFilter('custom')}
+          style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+            border:`1.5px solid ${dateFilter==='custom'?C.gold:C.border}`,
+            background:dateFilter==='custom'?'#fef9f0':'white',
+            color:dateFilter==='custom'?'#92400e':C.muted }}>
+          📅 Custom Range
+        </button>
+        {dateFilter==='custom' && (
+          <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', width:'100%', marginTop:6 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ fontSize:12, color:C.muted, fontWeight:600 }}>From</span>
+              <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
+                style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:13,
+                  fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy, cursor:'pointer' }}/>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ fontSize:12, color:C.muted, fontWeight:600 }}>To</span>
+              <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
+                style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:13,
+                  fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy, cursor:'pointer' }}/>
+            </div>
+            {(dateFrom||dateTo) && (
+              <button onClick={()=>{ setDateFrom(''); setDateTo(''); }}
+                style={{ padding:'5px 10px', background:'#fee2e2', border:'none', borderRadius:8,
+                  fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
+                ✕ Clear
+              </button>
+            )}
+            <span style={{ fontSize:11, color:C.muted }}>
+              {dateFrom&&dateTo ? `${new Date(dateFrom).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})} – ${new Date(dateTo).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}` : 'Pick date range'}
+            </span>
+          </div>
+        )}
         <button onClick={()=>setMissingCosts(s=>!s)}
           style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
             border:`1.5px solid ${missingCosts?'#f97316':C.border}`,
