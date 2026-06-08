@@ -17,13 +17,30 @@ router.get('/', auth, async (req, res) => {
   const { limit = 100 } = req.query;
   try {
     const result = await pool.query(`
-      SELECT *,
-        jsonb_array_length(items::jsonb) AS item_count
+      SELECT id, sale_number, customer_name, customer_phone,
+             items, subtotal, discount, total,
+             payment_method, amount_paid, change_given,
+             notes, served_by, created_at,
+             COALESCE(jsonb_array_length(
+               CASE WHEN items IS NOT NULL AND items::text != 'null'
+               THEN items::jsonb ELSE '[]'::jsonb END
+             ), 0) AS item_count
       FROM quick_sales
       ORDER BY created_at DESC
       LIMIT $1
     `, [parseInt(limit)]);
-    res.json(result.rows);
+    // Parse items field if stored as string
+    const rows = result.rows.map(r => ({
+      ...r,
+      items: (() => {
+        try {
+          if (!r.items) return [];
+          if (typeof r.items === 'object') return r.items;
+          return JSON.parse(r.items);
+        } catch(e) { return []; }
+      })()
+    }));
+    res.json(rows);
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
 });
 

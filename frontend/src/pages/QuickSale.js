@@ -640,7 +640,11 @@ export default function QuickSale() {
                           {/* Show items on mobile */}
                           {(() => {
                             let items = [];
-                            try { items = typeof sale.items==='string' ? JSON.parse(sale.items) : sale.items||[]; } catch(e){}
+                            try {
+                              items = Array.isArray(sale.items) ? sale.items
+                                : typeof sale.items==='string' ? JSON.parse(sale.items)
+                                : [];
+                            } catch(e){}
                             return items.length > 0 ? (
                               <div style={{marginTop:2}}>
                                 {items.map((it,i) => (
@@ -655,8 +659,12 @@ export default function QuickSale() {
                         {!mob&&<div style={{fontSize:12,color:C.muted}}>
                           {(() => {
                             let items = [];
-                            try { items = typeof sale.items==='string' ? JSON.parse(sale.items) : sale.items||[]; } catch(e){}
-                            if (!items.length) return <span>{sale.item_count||'—'} items</span>;
+                            try {
+                              items = Array.isArray(sale.items) ? sale.items
+                                : typeof sale.items==='string' ? JSON.parse(sale.items)
+                                : [];
+                            } catch(e){}
+                            if (!items.length) return <span style={{color:C.muted}}>—</span>;
                             return (
                               <div>
                                 {items.map((it,i) => (
@@ -712,7 +720,6 @@ export default function QuickSale() {
         }
       </div>
     )}
-
 
     </div>
   );
