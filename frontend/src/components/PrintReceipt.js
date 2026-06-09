@@ -14,32 +14,181 @@ const LOGO = `data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwU
 
 // ── SHARED STYLES ─────────────────────────────────────────────
 const BASE_CSS = `
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; color: #111; background: white; }
-  .hdr  { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2.5px solid #111; padding-bottom:5px; margin-bottom:6px; }
-  .shop-name { font-size:18px; font-weight:900; letter-spacing:0.3px; }
-  .shop-sub  { font-size:9px; color:#555; letter-spacing:2px; text-transform:uppercase; margin-top:2px; }
-  .shop-addr { font-size:9.5px; color:#555; margin-top:3px; line-height:1.6; }
-  .bill-right { text-align:right; }
-  .bill-type { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#555; }
-  .bill-no   { font-size:20px; font-weight:900; color:#111; margin-top:3px; }
-  .bill-date { font-size:9px; color:#666; margin-top:2px; }
-  .sec-title { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:#666; border-bottom:1px solid #bbb; padding-bottom:3px; margin-bottom:6px; margin-top:8px; }
-  .kv       { margin-bottom:5px; }
-  .kv .k    { font-size:8.5px; text-transform:uppercase; letter-spacing:.7px; color:#888; }
-  .kv .v    { font-weight:700; font-size:12px; color:#111; }
-  .row      { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dotted #ddd; font-size:12px; }
-  .row.disc { color:#555; font-style:italic; }
-  .row.sub  { color:#666; font-style:italic; }
-  .row.total{ font-weight:900; font-size:14px; border-top:1.5px solid #111; border-bottom:2px solid #111; padding:6px 0; margin-top:2px; }
-  .row.paid { font-weight:900; font-size:14px; padding:6px 0; }
-  .row.prevpaid { color:#666; font-style:italic; font-size:11px; }
-  .row.bal  { font-weight:900; font-size:13px; color:#c00; padding:4px 0; }
-  .row.done { font-weight:900; font-size:13px; color:#166534; padding:4px 0; }
-  .note     { font-size:9.5px; color:#555; border-top:1px solid #ccc; padding-top:4px; margin-top:6px; font-style:italic; line-height:1.6; }
-  .footer   { border-top:1.5px solid #bbb; padding-top:5px; margin-top:8px; display:flex; justify-content:space-between; align-items:center; font-size:8.5px; color:#666; }
-  .slogan   { font-size:10px; font-weight:700; color:#333; }
-  @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  body{
+    font-family:'Poppins',Arial,sans-serif;
+    color:#1f2937;
+    background:#fff;
+  }
+
+  .hdr{
+    background:#0f1f3d;
+    color:white;
+    padding:14px;
+    border-radius:12px;
+    margin-bottom:12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+  }
+
+  .shop-name{
+    font-size:20px;
+    font-weight:800;
+    color:white;
+  }
+
+  .shop-sub{
+    font-size:10px;
+    color:#c9a84c;
+    letter-spacing:2px;
+    text-transform:uppercase;
+  }
+
+  .shop-addr{
+    font-size:9px;
+    color:#e5e7eb;
+    margin-top:4px;
+  }
+
+  .bill-right{
+    text-align:right;
+  }
+
+  .bill-type{
+    font-size:10px;
+    color:#c9a84c;
+    font-weight:700;
+    text-transform:uppercase;
+  }
+
+  .bill-no{
+    font-size:24px;
+    font-weight:900;
+    color:white;
+  }
+
+  .bill-date{
+    font-size:10px;
+    color:#d1d5db;
+  }
+
+  .sec-title{
+    font-size:11px;
+    font-weight:700;
+    color:#0f1f3d;
+    border-bottom:2px solid #c9a84c;
+    padding-bottom:4px;
+    margin-bottom:8px;
+    margin-top:12px;
+    text-transform:uppercase;
+  }
+
+  .kv{
+    margin-bottom:8px;
+  }
+
+  .kv .k{
+    font-size:9px;
+    color:#6b7280;
+    text-transform:uppercase;
+  }
+
+  .kv .v{
+    font-size:13px;
+    font-weight:700;
+    color:#111827;
+  }
+
+  .row{
+    display:flex;
+    justify-content:space-between;
+    padding:7px 0;
+    border-bottom:1px dashed #d1d5db;
+    font-size:12px;
+  }
+
+  .total-box{
+    background:#0f1f3d;
+    color:white;
+    padding:14px;
+    border-radius:12px;
+    margin-top:10px;
+    margin-bottom:10px;
+  }
+
+  .total-title{
+    font-size:10px;
+    color:#c9a84c;
+    text-transform:uppercase;
+    letter-spacing:1px;
+  }
+
+  .total-amount{
+    font-size:24px;
+    font-weight:900;
+    margin-top:3px;
+  }
+
+  .badge{
+    display:inline-block;
+    padding:6px 12px;
+    border-radius:25px;
+    font-size:11px;
+    font-weight:700;
+    margin-top:8px;
+  }
+
+  .pending{
+    background:#fff7ed;
+    color:#ea580c;
+  }
+
+  .paid-badge{
+    background:#dcfce7;
+    color:#15803d;
+  }
+
+  .signatures{
+    display:flex;
+    justify-content:space-between;
+    margin-top:30px;
+  }
+
+  .sign-box{
+    width:40%;
+    text-align:center;
+    font-size:10px;
+  }
+
+  .sign-line{
+    border-top:1px solid #111;
+    margin-top:35px;
+    padding-top:4px;
+  }
+
+  .footer{
+    margin-top:20px;
+    border-top:1px solid #ddd;
+    padding-top:8px;
+    display:flex;
+    justify-content:space-between;
+    font-size:9px;
+    color:#6b7280;
+  }
+
+  .slogan{
+    font-weight:700;
+    color:#0f1f3d;
+  }
+
+  @media print{
+    body{
+      -webkit-print-color-adjust:exact;
+      print-color-adjust:exact;
+    }
+  }
 `;
 
 function buildPriceRows(order) {
@@ -86,6 +235,7 @@ function buildAdvanceBill(order) {
   body { width: 132mm; font-size: 11px; }
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head><body>
 
 <div class="hdr">
@@ -118,9 +268,35 @@ function buildAdvanceBill(order) {
     <div class="sec-title">Payment</div>
     ${rows}
     <div class="row paid"><span>Advance Paid</span><span>${fmt(advance)}</span></div>
-    ${balance > 0 ? `<div class="row bal"><span>Balance Due</span><span>${fmt(balance)}</span></div>` : ''}
+    ${balance > 0 ? `<div>
+  <span class="badge pending">
+      BALANCE DUE
+  </span>
+
+  <div style="
+      font-size:22px;
+      font-weight:800;
+      color:#ea580c;
+      margin-top:6px;">
+      ${fmt(balance)}
+  </div>
+</div>` : ''}
     <div class="note">Please bring this receipt when collecting. Balance of ${fmt(balance)} is due on collection.</div>
   </div>
+</div>
+
+<div class="signatures">
+
+  <div class="sign-box">
+      <div class="sign-line"></div>
+      Customer Signature
+  </div>
+
+  <div class="sign-box">
+      <div class="sign-line"></div>
+      Authorized Signature
+  </div>
+
 </div>
 
 <div class="footer">
@@ -148,6 +324,7 @@ function buildBalanceBill(order) {
   body { width: 132mm; font-size: 11px; }
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head><body>
 
 <div class="hdr">
@@ -187,7 +364,11 @@ function buildBalanceBill(order) {
     ${rows}
     ${advance > 0 ? `<div class="row prevpaid"><span>Advance Paid Previously</span><span>- ${fmt(advance)}</span></div>` : ''}
     <div class="row paid"><span>Balance Paid Today</span><span>${fmt(balance)}</span></div>
-    <div class="row done"><span>FULLY PAID &mdash; BALANCE: Rs. 0.00</span><span></span></div>
+    <div>
+  <span class="badge paid-badge">
+      FULLY PAID
+  </span>
+</div>
   </div>
 </div>
 
