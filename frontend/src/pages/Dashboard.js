@@ -14,7 +14,14 @@ export default function Dashboard() {
   const { user }  = useAuth();
   const navigate   = useNavigate();
   const [data,     setData]    = useState(null);
-  const [cash,     setCash]    = useState(null);
+  const [cash,     setCash]    = useState({
+    cashInHand:0, allTimeCash:0, bankToday:0,
+    orderCash:0, orderBank:0, orderIncome:0,
+    qsIncome:0, repairIncome:0, totalIncome:0,
+    totalExp:0, totalDep:0, orderCount:0,
+    qsCount:0, repairCount:0, expCount:0, depCount:0
+  });
+  const [cashTab,  setCashTab]  = useState('today'); // today | overall | deposits
   const [loading,  setLoading] = useState(true);
   const [mob,      setMob]     = useState(window.innerWidth < 640);
   const [showScan, setShowScan]= useState(false);
@@ -97,40 +104,66 @@ export default function Dashboard() {
         <div style={{background:'white',border:`1px solid ${border}`,borderRadius:14,overflow:'hidden',marginBottom:14}}>
           <div style={{background:navy,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <div>
-              <div style={{fontSize:13,fontWeight:700,color:'white'}}>📅 Today's Cash</div>
+              <div style={{fontSize:13,fontWeight:700,color:'white'}}>📅 Today's Cash
+                <div style={{display:'flex',gap:4,marginLeft:'auto'}}>
+                  {[['today','Today'],['overall','In Hand'],['deposits','Deposits']].map(([k,l])=>(
+                    <button key={k} onClick={e=>{e.stopPropagation();setCashTab(k);}}
+                      style={{padding:'2px 7px',borderRadius:10,fontSize:9,fontWeight:700,cursor:'pointer',fontFamily:'inherit',
+                        border:`1px solid ${cashTab===k?gold:'rgba(255,255,255,.2)'}`,
+                        background:cashTab===k?gold:'rgba(255,255,255,.1)',
+                        color:cashTab===k?navy:'rgba(255,255,255,.8)'}}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div style={{fontSize:11,color:'#ede9e0',marginTop:1}}>
                 {new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
               </div>
             </div>
             <div style={{textAlign:'right'}}>
-              <div style={{display:'flex',gap:16,alignItems:'flex-start',flexWrap:'wrap'}}>
+              {cashTab==='today' && (
+                <div style={{display:'flex',gap:16,alignItems:'flex-start',flexWrap:'wrap'}}>
+                  <div>
+                    <div style={{fontSize:9,color:gold,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Today's Cash</div>
+                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:cash.cashInHand>=0?'#86efac':'#fca5a5'}}>
+                      {fmt(cash.cashInHand)}
+                    </div>
+                  </div>
+                  {(cash.bankToday||0)>0 && (
+                    <div>
+                      <div style={{fontSize:9,color:'#93c5fd',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Bank Today</div>
+                      <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#93c5fd'}}>
+                        {fmt(cash.bankToday)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {cashTab==='overall' && (
                 <div>
-                  <div style={{fontSize:9,color:gold,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Today's Cash</div>
-                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:cash.cashInHand>=0?'#86efac':'#fca5a5'}}>
-                    {fmt(cash.cashInHand)}
+                  <div style={{fontSize:9,color:'#fde68a',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Total Cash in Drawer</div>
+                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#fde68a'}}>
+                    {fmt(cash.allTimeCash||0)}
+                  </div>
+                  <div style={{fontSize:11,color:'#ede9e0',marginTop:3}}>All time cash − all expenses − all deposits</div>
+                </div>
+              )}
+              {cashTab==='deposits' && (
+                <div>
+                  <div style={{fontSize:9,color:'#86efac',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Total Deposited</div>
+                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#86efac'}}>
+                    {fmt(cash.totalDep||0)}
+                  </div>
+                  <div style={{fontSize:11,color:'#ede9e0',marginTop:3}}>
+                    Today: {fmt(cash.totalDep||0)} · {cash.depCount||0} deposit{(cash.depCount||0)!==1?'s':''}
                   </div>
                 </div>
-                {(cash.allTimeCash||0) !== (cash.cashInHand||0) && (
-                  <div>
-                    <div style={{fontSize:9,color:'#fde68a',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Total in Drawer</div>
-                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#fde68a'}}>
-                      {fmt(cash.allTimeCash||0)}
-                    </div>
-                  </div>
-                )}
-                {(cash.bankToday||0)>0 && (
-                  <div>
-                    <div style={{fontSize:9,color:'#93c5fd',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Bank Today</div>
-                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#93c5fd'}}>
-                      {fmt(cash.bankToday)}
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
           {/* Formula */}
-          <div style={{background:cream,padding:'8px 14px',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',fontSize:11,borderBottom:`1px solid ${border}`}}>
+          {cashTab==='today' && <div style={{background:cream,padding:'8px 14px',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',fontSize:11,borderBottom:`1px solid ${border}`}}>
             <span style={{color:success,fontWeight:700}}>{fmt(cash.orderCash||cash.orderIncome)}</span>
             <span style={{color:muted,fontSize:10}}>cash orders</span>
             {(cash.orderBank||0)>0 && <>
@@ -150,7 +183,8 @@ export default function Dashboard() {
               <span style={{color:muted}}>·</span>
               <span style={{fontWeight:700,color:'#fde68a'}}>{fmt(cash.allTimeCash||0)} total in drawer</span>
             </>}
-          </div>
+          </div>}
+          {cashTab!=='today' && <div style={{height:8,borderBottom:`1px solid ${border}`}}/>}
           {/* 2×2 on mobile, 4-col on desktop */}
           <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(4,1fr)'}}>
             {[
