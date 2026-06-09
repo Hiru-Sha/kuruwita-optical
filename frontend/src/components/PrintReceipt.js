@@ -17,28 +17,28 @@ const BASE_CSS = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, sans-serif; color: #111; background: white; }
   .hdr  { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2.5px solid #111; padding-bottom:5px; margin-bottom:6px; }
-  .shop-name { font-size:14px; font-weight:900; letter-spacing:0.3px; }
-  .shop-sub  { font-size:7px; color:#555; letter-spacing:2px; text-transform:uppercase; margin-top:1px; }
-  .shop-addr { font-size:7.5px; color:#555; margin-top:2px; line-height:1.5; }
+  .shop-name { font-size:18px; font-weight:900; letter-spacing:0.3px; }
+  .shop-sub  { font-size:9px; color:#555; letter-spacing:2px; text-transform:uppercase; margin-top:2px; }
+  .shop-addr { font-size:9.5px; color:#555; margin-top:3px; line-height:1.6; }
   .bill-right { text-align:right; }
-  .bill-type { font-size:7.5px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#555; }
-  .bill-no   { font-size:15px; font-weight:900; color:#111; margin-top:2px; }
-  .bill-date { font-size:7.5px; color:#666; margin-top:1px; }
-  .sec-title { font-size:7px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:#666; border-bottom:1px solid #bbb; padding-bottom:2px; margin-bottom:4px; }
-  .kv       { margin-bottom:2px; }
-  .kv .k    { font-size:7px; text-transform:uppercase; letter-spacing:.7px; color:#888; }
-  .kv .v    { font-weight:700; font-size:9px; color:#111; }
-  .row      { display:flex; justify-content:space-between; padding:2.5px 0; border-bottom:1px dotted #ddd; font-size:9.5px; }
+  .bill-type { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#555; }
+  .bill-no   { font-size:20px; font-weight:900; color:#111; margin-top:3px; }
+  .bill-date { font-size:9px; color:#666; margin-top:2px; }
+  .sec-title { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:#666; border-bottom:1px solid #bbb; padding-bottom:3px; margin-bottom:6px; margin-top:8px; }
+  .kv       { margin-bottom:5px; }
+  .kv .k    { font-size:8.5px; text-transform:uppercase; letter-spacing:.7px; color:#888; }
+  .kv .v    { font-weight:700; font-size:12px; color:#111; }
+  .row      { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dotted #ddd; font-size:12px; }
   .row.disc { color:#555; font-style:italic; }
   .row.sub  { color:#666; font-style:italic; }
-  .row.total{ font-weight:900; font-size:11px; border-top:1.5px solid #111; border-bottom:2px solid #111; padding:4px 0; margin-top:2px; }
-  .row.paid { font-weight:900; font-size:11px; padding:4px 0; }
-  .row.prevpaid { color:#666; font-style:italic; font-size:9px; }
-  .row.bal  { font-weight:900; font-size:10px; color:#c00; padding:3px 0; }
-  .row.done { font-weight:900; font-size:10px; color:#166534; padding:3px 0; }
-  .note     { font-size:7.5px; color:#555; border-top:1px solid #ccc; padding-top:3px; margin-top:4px; font-style:italic; line-height:1.5; }
-  .footer   { border-top:1.5px solid #bbb; padding-top:4px; margin-top:6px; display:flex; justify-content:space-between; align-items:center; font-size:7px; color:#666; }
-  .slogan   { font-size:8.5px; font-weight:700; color:#333; }
+  .row.total{ font-weight:900; font-size:14px; border-top:1.5px solid #111; border-bottom:2px solid #111; padding:6px 0; margin-top:2px; }
+  .row.paid { font-weight:900; font-size:14px; padding:6px 0; }
+  .row.prevpaid { color:#666; font-style:italic; font-size:11px; }
+  .row.bal  { font-weight:900; font-size:13px; color:#c00; padding:4px 0; }
+  .row.done { font-weight:900; font-size:13px; color:#166534; padding:4px 0; }
+  .note     { font-size:9.5px; color:#555; border-top:1px solid #ccc; padding-top:4px; margin-top:6px; font-style:italic; line-height:1.6; }
+  .footer   { border-top:1.5px solid #bbb; padding-top:5px; margin-top:8px; display:flex; justify-content:space-between; align-items:center; font-size:8.5px; color:#666; }
+  .slogan   { font-size:10px; font-weight:700; color:#333; }
   @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
 `;
 
@@ -81,16 +81,16 @@ function buildAdvanceBill(order) {
 <meta charset="UTF-8">
 <title>Advance — ${order.order_number}</title>
 <style>
-  @page { size: 148mm 105mm landscape; margin: 5mm; }
+  @page { size: 148mm 210mm portrait; margin: 8mm; }
   ${BASE_CSS}
-  body { width: 138mm; font-size: 9px; }
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  body { width: 132mm; font-size: 11px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 </style>
 </head><body>
 
 <div class="hdr">
   <div style="display:flex;align-items:center;gap:6px;">
-    <img src="${LOGO}" style="height:24px;object-fit:contain;" alt=""/>
+    <img src="${LOGO}" style="height:32px;object-fit:contain;" alt=""/>
     <div>
       <div class="shop-name">Wickramakalutota Opticals</div>
       <div class="shop-sub">Optical Specialists</div>
@@ -143,11 +143,10 @@ function buildBalanceBill(order) {
 <meta charset="UTF-8">
 <title>Final Bill — ${order.order_number}</title>
 <style>
-  @page { size: 210mm 148mm landscape; margin: 7mm; }
+  @page { size: 148mm 210mm portrait; margin: 8mm; }
   ${BASE_CSS}
-  body { width: 196mm; font-size: 9.5px; }
-  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  body { width: 132mm; font-size: 11px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 </style>
 </head><body>
 
@@ -168,7 +167,7 @@ function buildBalanceBill(order) {
   </div>
 </div>
 
-<div class="grid3">
+<div class="grid2">
   <div>
     <div class="sec-title">Customer Details</div>
     <div class="kv"><span class="k">Name</span><div class="v">${order.customer_name||'—'}</div></div>
