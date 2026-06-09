@@ -83,7 +83,7 @@ router.post('/', auth, async (req, res) => {
       const qty   = parseInt(item.qty) || parseInt(item.quantity) || 1;
       if (invId) {
         await client.query(
-          'UPDATE inventory SET quantity = GREATEST(0, quantity - $1) WHERE id = $2',
+          'UPDATE inventory SET quantity = GREATEST(0, quantity - $1), updated_at = NOW() WHERE id = $2',
           [qty, invId]
         );
       }
@@ -140,7 +140,7 @@ router.delete('/:id', auth, async (req, res) => {
         const qty   = parseInt(item.qty) || parseInt(item.quantity) || 1;
         if (invId) {
           await pool.query(
-            'UPDATE inventory SET quantity = quantity + $1 WHERE id = $2',
+            'UPDATE inventory SET quantity = quantity + $1, updated_at = NOW() WHERE id = $2',
             [qty, invId]
           );
         }
@@ -181,7 +181,7 @@ router.post('/sync-stock', auth, async (req, res) => {
           if (invId) {
             // Only deduct if current quantity > 0
             await pool.query(
-              'UPDATE inventory SET quantity = GREATEST(0, quantity - $1) WHERE id = $2 AND quantity > 0',
+              'UPDATE inventory SET quantity = GREATEST(0, quantity - $1), updated_at = NOW() WHERE id = $2 AND quantity > 0',
               [qty, invId]
             );
             fixed++;

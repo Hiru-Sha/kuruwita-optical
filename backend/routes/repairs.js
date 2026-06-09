@@ -75,7 +75,7 @@ router.post('/', auth, async (req, res) => {
     // Deduct frame from inventory if a frame was used from stock
     if (frame_inventory_id) {
       await pool.query(
-        'UPDATE inventory SET quantity = GREATEST(0, quantity - 1) WHERE id = $1',
+        'UPDATE inventory SET quantity = GREATEST(0, quantity - 1), updated_at = NOW() WHERE id = $1',
         [frame_inventory_id]
       ).catch(e => console.warn('Repair frame stock deduct failed:', e.message));
     }
@@ -154,7 +154,7 @@ router.delete('/:id', auth, async (req, res) => {
     // Restore frame stock if it was taken from inventory
     if (repair.frame_inventory_id) {
       await pool.query(
-        'UPDATE inventory SET quantity = quantity + 1 WHERE id = $1',
+        'UPDATE inventory SET quantity = quantity + 1, updated_at = NOW() WHERE id = $1',
         [repair.frame_inventory_id]
       ).catch(()=>{});
     }

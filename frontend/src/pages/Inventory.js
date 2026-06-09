@@ -212,6 +212,12 @@ function ItemCard({ item, onClick, onSticker }) {
               <div style={{ fontSize:18, fontWeight:700, color:isOut?'#9ca3af':isLow?C.danger:C.success }}>{item.quantity}</div>
             </div>
             <div style={{ fontSize:10, color:'#9ca3af' }}>in stock</div>
+            {item.updated_at && (
+              <div style={{ fontSize:9, color:'#9ca3af', marginTop:1 }}>
+                {new Date(item.updated_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+                {' '}{new Date(item.updated_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1155,6 +1161,8 @@ export default function Inventory() {
         const frames   = allItems.filter(i => i.category === 'Frames');
         const sg       = allItems.filter(i => i.category === 'Sunglasses');
         const rg       = allItems.filter(i => i.category === 'Reading Glasses');
+        const rgSV     = rg.filter(i => (i.rg_lens_type||'').toLowerCase().includes('single'));
+        const rgBifocal= rg.filter(i => (i.rg_lens_type||'').toLowerCase().includes('bifocal'));
         const accs     = allItems.filter(i => !['Frames','Sunglasses','Reading Glasses'].includes(i.category));
         const polarised= sg.filter(i => i.sg_type === 'Polarised');
         const local    = sg.filter(i => i.sg_type === 'Local');
@@ -1173,6 +1181,8 @@ export default function Inventory() {
           { label:'↳ Polarised',    count:polarised.length,  qty:totalQty(polarised),  c:'#92400e', bg:'#fffbeb', cat:'Sunglasses', sub:'Polarised', indent:true },
           { label:'↳ Local',        count:local.length,      qty:totalQty(local),      c:'#92400e', bg:'#fffbeb', cat:'Sunglasses', sub:'Local',     indent:true },
           { label:'Reading Glasses',count:rg.length,         qty:totalQty(rg),         c:'#166534', bg:'#dcfce7', cat:'Reading Glasses', sub:null },
+          { label:'↳ Single Vision', count:rgSV.length,      qty:totalQty(rgSV),      c:'#166534', bg:'#f0fdf4', cat:'Reading Glasses', sub:'Single Vision', indent:true },
+          { label:'↳ Bifocal',       count:rgBifocal.length, qty:totalQty(rgBifocal), c:'#166534', bg:'#f0fdf4', cat:'Reading Glasses', sub:'Bifocal',        indent:true },
           { label:'Accessories',    count:accs.length,       qty:totalQty(accs),       c:'#6b21a8', bg:'#f5f3ff', cat:null,          sub:'accs' },
         ];
 
@@ -1509,7 +1519,10 @@ export default function Inventory() {
                   return item.sg_type===subFilter;
                 }
                 if (activeCat==='Frames') return item.frame_type===subFilter;
-                if (activeCat==='Reading Glasses') return true;
+                if (activeCat==='Reading Glasses') {
+                  if (!subFilter) return true;
+                  return (item.rg_lens_type||'').toLowerCase().includes(subFilter.toLowerCase());
+                }
                 return true;
               }).map(item=>(
                 <ItemCard key={item.id} item={item}
@@ -1553,6 +1566,13 @@ export default function Inventory() {
                 {selected.quantity===0 && <span style={{ fontSize:11, color:'#6b7280', fontWeight:600 }}>• Out of stock</span>}
                 {selected.quantity>0&&selected.quantity<=selected.min_quantity && <span style={{ fontSize:11, color:C.danger, fontWeight:600 }}>• Low stock</span>}
               </div>
+              {selected.updated_at && (
+                <div style={{ fontSize:11, color:C.muted, marginTop:4 }}>
+                  Last updated: <b>{new Date(selected.updated_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</b>
+                  {' at '}<b>{new Date(selected.updated_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</b>
+                  {' · Added: '}<b>{new Date(selected.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</b>
+                </div>
+              )}
 
               {/* Quick Reorder button — shows when low or out of stock */}
               {(selected.quantity===0 || selected.quantity<=selected.min_quantity) && selected.dealer && (
@@ -1941,4 +1961,4 @@ export default function Inventory() {
 
     </div>
   );
-} 
+}

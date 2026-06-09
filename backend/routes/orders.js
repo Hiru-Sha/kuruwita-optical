@@ -163,7 +163,7 @@ router.post('/', auth, async (req, res) => {
     if (frameInvId && !req.body.customer_own_frame) {
       try {
         await pool.query(
-          'UPDATE inventory SET quantity = GREATEST(0, quantity - 1) WHERE id = $1',
+          'UPDATE inventory SET quantity = GREATEST(0, quantity - 1), updated_at = NOW() WHERE id = $1',
           [frameInvId]
         );
       } catch(e) { console.warn('Frame stock deduct failed:', e.message); }
@@ -261,7 +261,7 @@ router.delete('/:id', auth, async (req, res) => {
     const ord = await pool.query('SELECT * FROM orders WHERE id=$1', [req.params.id]);
     if (ord.rows.length && ord.rows[0].frame_inventory_id && !ord.rows[0].customer_own_frame) {
       await pool.query(
-        'UPDATE inventory SET quantity = quantity + 1 WHERE id = $1',
+        'UPDATE inventory SET quantity = quantity + 1, updated_at = NOW() WHERE id = $1',
         [ord.rows[0].frame_inventory_id]
       ).catch(()=>{});
     }
