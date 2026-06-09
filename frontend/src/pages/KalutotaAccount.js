@@ -1,5 +1,6 @@
 /* eslint-disable */
 import React, { useEffect, useState, useCallback } from 'react';
+import { QRScanner } from '../components/QRStickers';
 
 const C = {
   navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6',
@@ -87,6 +88,9 @@ function PayModal({ tx, onClose, onSave }) {
           <button onClick={onClose} style={{padding:'11px 16px',background:C.cream,border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,cursor:'pointer',fontFamily:'inherit',color:C.muted}}>Cancel</button>
         </div>
       </div>
+      {showScanner && (
+        <QRScanner title="Scan Item QR" onScan={handleQRScan} onClose={()=>setShowScanner(false)}/>
+      )}
     </div>
   );
 }
@@ -105,7 +109,8 @@ export default function KalutotaAccount() {
   const [error,    setError]   = useState('');
   const [toast,    setToast]   = useState('');
   const [imgData,  setImgData] = useState(null);
-  const [invResult,setInvResult]=useState(null);
+  const [invResult,   setInvResult]   = useState(null);
+  const [showScanner, setShowScanner] = useState(false);
 
   const [showCashPay,  setShowCashPay]  = useState(false);
   const [cashPayForm,  setCashPayForm]  = useState({
@@ -142,6 +147,29 @@ export default function KalutotaAccount() {
   const handleImgPick = async (e) => {
     const f=e.target.files[0]; if(!f) return;
     setImgData(await toB64(f));
+  };
+
+  const handleQRScan = async (scannedId) => {
+    setShowScanner(false);
+    const id = parseInt(scannedId);
+    if (!id) return;
+    try {
+      const BASE_  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token_ = localStorage.getItem('ko_token');
+      const res    = await fetch(`${BASE_}/inventory/${id}`, { headers:{ Authorization:`Bearer ${token_}` }});
+      const item   = await res.json();
+      if (item?.id) {
+        setForm(f=>({
+          ...f,
+          description:         item.name,
+          inventory_item_name: item.name,
+          unit_price:          String(item.sell_price||''),
+          quantity:            '1',
+          update_inventory:    true,
+        }));
+        setInvResult({ message: `📦 ${item.name} — Stock: ${item.quantity} — Rs.${parseFloat(item.sell_price||0).toLocaleString()}` });
+      }
+    } catch(e) {}
   };
 
   const handleAdd = async () => {
@@ -384,9 +412,21 @@ export default function KalutotaAccount() {
           </div>
 
           <div style={{marginBottom:10}}>
-            <label style={LBL}>Description *</label>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <label style={LBL}>Description *</label>
+              <button onClick={()=>setShowScanner(true)}
+                style={{padding:'4px 12px',background:C.navy,color:C.gold,border:'none',borderRadius:8,
+                  fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                📷 Scan QR
+              </button>
+            </div>
             <input value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}
-              placeholder="e.g. RayBan Black Full rim frames, Lens cleaner × 10..." style={INP}/>
+              placeholder="e.g. RayBan Black Full rim frames... or tap Scan QR ↑" style={INP}/>
+            {invResult?.message && (
+              <div style={{fontSize:12,color:'#1e40af',background:'#eff6ff',borderRadius:7,padding:'6px 10px',marginTop:5,fontWeight:600}}>
+                {invResult.message}
+              </div>
+            )}
           </div>
 
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:10,marginBottom:10}}>
