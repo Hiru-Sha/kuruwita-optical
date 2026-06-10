@@ -19,6 +19,7 @@ const NAV = [
   { to:'/customers',  icon:'👥', label:'Customers',   section:'main'      },
   { to:'/inventory',  icon:'📦', label:'Inventory',   section:'inventory' },
   { to:'/lens-prices',icon:'🧪', label:'Lens Prices', section:'inventory' },
+  { to:'/calculator', icon:'🧮', label:'Calculator',  section:'inventory' },
   { to:'/reports',    icon:'📊', label:'Reports',     section:'reports',  roles:['admin'] },
   { to:'/report-pdf',  icon:'📄', label:'PDF Report',   section:'reports',  roles:['admin'] },
   { to:'/expenses',   icon:'💸', label:'Expenses',    section:'reports',  roles:['admin'] },
@@ -42,6 +43,7 @@ const BOTTOM_NAV_STAFF = [
   { to:'/quick-sale', icon:'🛍️', label:'Sale'    },
   { to:'/customers',  icon:'👥', label:'Customers'},
   { to:'/inventory',  icon:'📦', label:'Stock'   },
+  { to:'/calculator', icon:'🧮', label:'Calc'    },
 ];
 
 export default function Layout() {
