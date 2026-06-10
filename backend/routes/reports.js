@@ -42,7 +42,7 @@ router.get('/revenue', auth, async (req, res) => {
       SELECT COALESCE(SUM(charge),0) AS total, COUNT(*) AS count
       FROM repairs
       WHERE TO_CHAR(created_at,'YYYY-MM') = $1
-      AND status = 'completed'
+      AND status IN ('done','collected','completed')
     `, [month], { rows: [{ total: 0, count: 0 }] });
 
     // 6-month trend using only orders (always safe)
@@ -86,7 +86,7 @@ router.get('/revenue', auth, async (req, res) => {
         SUM(charge) AS rev, COUNT(*) AS cnt
       FROM repairs
       WHERE created_at >= NOW() - INTERVAL '6 months'
-      AND status = 'completed'
+      AND status IN ('done','collected','completed')
       GROUP BY 1
     `, [], { rows: [] });
 
@@ -180,7 +180,7 @@ router.get('/profit', auth, async (req, res) => {
         COUNT(*) AS repair_count
       FROM repairs
       WHERE created_at >= NOW() - INTERVAL '6 months'
-      AND status = 'completed'
+      AND status IN ('done','collected','completed')
       GROUP BY DATE_TRUNC('month', created_at)
     `);
 
