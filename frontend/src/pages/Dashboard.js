@@ -250,6 +250,7 @@ export default function Dashboard() {
           {label:'Deposit Cash', path:'/expenses',    bg:'#2563eb',color:'white',icon:'🏦'},
           {label:'All Orders',   path:'/orders',      bg:navy,     color:'white',icon:'📋'},
           {label:'Inventory',    path:'/inventory',   bg:cream,    color:navy,   icon:'📦',bord:border},
+          {label:'Calculator',   path:'/calculator',  bg:'#0f766e',color:'white',icon:'🧮'},
         ].map(a=>(
           <button key={a.label} onClick={()=>navigate(a.path)}
             style={{padding:mob?'14px 8px':'10px 14px',background:a.bg,color:a.color,border:a.bord?`1.5px solid ${a.bord}`:'none',borderRadius:10,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',justifyContent:'center',gap:6,textAlign:'center'}}>
