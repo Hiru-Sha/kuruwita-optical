@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login      from './pages/Login';
@@ -26,7 +26,7 @@ import BulkImport     from './pages/BulkImport';
 import ReportPDF       from './pages/ReportPDF';
 import WalkInRx        from './pages/WalkInRx';
 import ActivityView    from './pages/ActivityView';
-import LensCalculator  from './pages/LensCalculator';
+const LensCalculator = React.lazy(() => import('./pages/LensCalculator').catch(() => ({ default: () => <div>Calculator loading...</div> })));
 import EndOfDay        from './pages/EndOfDay';
 
 function Protected({ children }) {
@@ -73,7 +73,7 @@ export default function App() {
             <Route path="report-pdf"       element={<ReportPDF />} />
             <Route path="walkin-rx"        element={<WalkInRx />} />
             <Route path="activity"          element={<ActivityView />} />
-            <Route path="calculator"        element={<LensCalculator />} />
+            <Route path="calculator"        element={<Suspense fallback={<div>Loading...</div>}><LensCalculator /></Suspense>} />
             <Route path="end-of-day"      element={<EndOfDay />} />
             {/* Admin-only routes */}
             <Route path="grinding"  element={<AdminOnly><Grinding /></AdminOnly>} />
