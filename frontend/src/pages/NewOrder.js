@@ -381,7 +381,7 @@ export default function NewOrder() {
     if (v.length < 1) { setFrameResults([]); return; }
     frameTimer.current = setTimeout(async () => {
       try {
-        const res  = await getInventory({ search:v, limit:'20', no_images:'1' });
+        const res  = await getInventory({ search:v, limit:'12' }); // include images
         // backend returns { data: rows } — axios wraps in res.data
         const rows = res.data?.data || res.data || [];
         const arr  = Array.isArray(rows) ? rows : [];
@@ -743,23 +743,24 @@ export default function NewOrder() {
                           style={{ padding:'10px 14px', cursor:'pointer', borderBottom:`1px solid ${C.cream}`, display:'flex', alignItems:'center', gap:10, background:'white' }}
                           onMouseEnter={e=>e.currentTarget.style.background='#f8f5ef'}
                           onMouseLeave={e=>e.currentTarget.style.background='white'}>
-                          <div style={{ width:10, height:10, borderRadius:'50%', background:i.quantity>2?C.success:i.quantity>0?'#f59e0b':C.danger, flexShrink:0 }}/>
+                          {/* Frame image */}
+                          {i.image_url
+                            ? <img src={i.image_url} alt="" style={{ width:48, height:36, objectFit:'contain', borderRadius:6, border:`1px solid ${C.border}`, background:'#f9f9f9', flexShrink:0 }}/>
+                            : <div style={{ width:48, height:36, borderRadius:6, border:`1px solid ${C.border}`, background:C.cream, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>👓</div>
+                          }
                           <div style={{ flex:1, minWidth:0 }}>
                             <div style={{ fontSize:13, fontWeight:700, color:C.navy, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{i.name}</div>
                             <div style={{ fontSize:11, color:C.muted, display:'flex', gap:8, flexWrap:'wrap', marginTop:2 }}>
+                              {i.brand      && <span style={{ fontWeight:600, color:C.navy }}>{i.brand}</span>}
                               {i.frame_color && <span>{i.frame_color}</span>}
                               {i.frame_type  && <span>{i.frame_type}</span>}
-                              {i.category    && <span style={{ color:'#7c3aed' }}>{i.category}</span>}
                               <span style={{ fontWeight:700, color:i.quantity>0?C.success:C.danger }}>
                                 {i.quantity > 0 ? `${i.quantity} in stock` : 'Out of stock'}
                               </span>
-                              <span style={{ color:C.navy, fontWeight:600 }}>{fmtMoney(i.sell_price)}</span>
+                              <span style={{ color:C.gold, fontWeight:700 }}>{fmtMoney(i.sell_price)}</span>
                             </div>
                           </div>
-                          <div style={{ fontSize:11, color:C.muted, textAlign:'right', flexShrink:0 }}>
-                            {i.display_number ? `🏪#${i.display_number}` : ''}
-                            {i.stock_number   ? ` 📦#${i.stock_number}` : ''}
-                          </div>
+                          {i.display_number && <div style={{ fontSize:10, color:C.muted, textAlign:'right', flexShrink:0 }}>🏪#{i.display_number}</div>}
                         </div>
                       ))}
                       <div onMouseDown={()=>setFrameResults([])}

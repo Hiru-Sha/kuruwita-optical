@@ -24,8 +24,20 @@ router.get('/', auth, async (req, res) => {
     `;
     const params = [];
     if (search) {
-      params.push(`%${search}%`);
-      sql += ` AND name ILIKE $${params.length}`;
+      // Search across name, brand, frame_name, item_name, rg_power — any word match
+      const terms = search.trim().split(/\s+/).filter(Boolean);
+      terms.forEach(term => {
+        params.push(`%${term}%`);
+        const n = params.length;
+        sql += ` AND (
+          name        ILIKE $${n} OR
+          brand       ILIKE $${n} OR
+          frame_name  ILIKE $${n} OR
+          item_name   ILIKE $${n} OR
+          rg_power    ILIKE $${n} OR
+          REPLACE(name, '-', ' ') ILIKE $${n}
+        )`;
+      });
     }
     if (category && category !== 'All') {
       params.push(category);
