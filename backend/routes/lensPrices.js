@@ -113,4 +113,45 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+// POST /api/lens-prices/learn — auto-save price from order
+router.post('/learn', auth, async (req, res) => {
+  const { brand, lens_type, lens_index, color, coating, buy_price, sell_price, power_range, notes } = req.body;
+  if (!lens_type || !buy_price || !sell_price) return res.status(400).json({ error: 'Missing fields' });
+  try {
+    // Check if this exact combination already exists
+    const existing = await pool.query(`
+      SELECT id FROM lens_prices
+      WHERE active = true
+        AND lens_type = $1
+        AND COALESCE(lens_index,'') = COALESCE($2,'')
+        AND LOWER(COALESCE(color,'white')) = LOWER(COALESCE($3,'white'))
+        AND LOWER(COALESCE(coating,'')) = LOWER(COALESCE($4,''))
+        AND COALESCE(brand,'') = COALESCE($5,'')
+      LIMIT 1
+    `, [lens_type, lens_index||null, color||'White', coating||'', brand||'']);
+
+    if (existing.rows.length > 0) {
+      // Update existing price
+      await pool.query(`
+        UPDATE lens_prices
+        SET buy_price = $1, sell_price = $2, updated_at = NOW()
+        WHERE id = $3
+      `, [parseFloat(buy_price), parseFloat(sell_price), existing.rows[0].id]);
+      return res.json({ updated: true, id: existing.rows[0].id });
+    }
+
+    // Insert new price
+    const result = await pool.query(`
+      INSERT INTO lens_prices (brand, lens_type, lens_index, color, coating, buy_price, sell_price, power_range, notes, active)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true) RETURNING id
+    `, [brand||'Generic', lens_type, lens_index||null, color||'White', coating||'',
+        parseFloat(buy_price), parseFloat(sell_price), power_range||null, notes||'Auto-learned from order']);
+
+    res.json({ created: true, id: result.rows[0].id });
+  } catch (err) {
+    console.error('Lens price learn error:', err.message);
+    res.status(500).json({ error: 'Failed to save lens price' });
+  }
+});
+
 module.exports = router;

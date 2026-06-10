@@ -281,6 +281,29 @@ export default function Orders() {
       const r = await getOrder(selected.id);
       setSelected(r.data);
       load();
+
+      // Auto-save to lens price list if both buy and sell are entered
+      if (updates.lens_buy_price > 0 && updates.lens_sell_price > 0) {
+        try {
+          const BASE_ = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+          const tok_  = localStorage.getItem('ko_token');
+          await fetch(`${BASE_}/lens-prices/learn`, {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json', Authorization:`Bearer ${tok_}` },
+            body: JSON.stringify({
+              brand:      lensCostForm.company || selected.lens_company || 'Generic',
+              lens_type:  selected.lens_type   || 'Single Vision',
+              lens_index: selected.lens_index  || null,
+              color:      'White',
+              coating:    selected.lens_coating || '',
+              buy_price:  updates.lens_buy_price,
+              sell_price: updates.lens_sell_price,
+              notes:      `Learned from order ${selected.order_number}`,
+            }),
+          });
+          showToast('Costs updated ✓ — lens price list updated');
+        } catch(e2) { /* non-critical */ }
+      }
     } catch(e) { showToast('Failed to update'); }
     finally { setSavingLens(false); }
   };
