@@ -65,6 +65,7 @@ function apiGet(path) {
   return fetch(`${BASE}${path}`, { headers:{ Authorization:`Bearer ${token}` }}).then(r=>r.json());
 }
 
+
 export default function LensCalculator() {
   const navigate = useNavigate();
 
