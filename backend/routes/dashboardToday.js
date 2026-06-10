@@ -77,31 +77,22 @@ router.get('/', auth, async (req, res) => {
         WHERE balance_amount > 0 AND status != 'cancelled'
       `),
 
-      // All-time cash in hand — all cash income minus all deposits and expenses
+      // All-time cash in hand
       pool.query(`
         SELECT
-          COALESCE((
-            SELECT SUM(advance_amount) FROM orders
-            WHERE COALESCE(payment_method,'cash')='cash'
-          ),0)
-          +
-          COALESCE((
-            SELECT SUM(total) FROM quick_sales
-            WHERE COALESCE(payment_method,'cash')='cash'
-          ),0)
-          +
-          COALESCE((
-            SELECT SUM(charge) FROM repairs
-            WHERE COALESCE(payment_method,'cash')='cash'
-            AND COALESCE(charge,0) > 0
-          ),0)
-          -
-          COALESCE((SELECT SUM(amount) FROM expenses),0)
-          -
-          COALESCE((SELECT SUM(amount) FROM cash_deposits),0)
-          AS total_cash_in_hand,
-          COALESCE((SELECT SUM(amount) FROM cash_deposits),0) AS total_deposited
-      `).catch(()=>({ rows:[{ total_cash_in_hand: 0, total_deposited: 0 }] })),
+          COALESCE(o.cash_in,0) + COALESCE(qs.cash_in,0) + COALESCE(r.cash_in,0)
+            - COALESCE(ex.total,0) - COALESCE(dep.total,0) AS total_cash_in_hand,
+          COALESCE(dep.total,0) AS total_deposited
+        FROM
+          (SELECT COALESCE(SUM(advance_amount),0) AS cash_in FROM orders
+            WHERE LOWER(COALESCE(payment_method,'cash'))='cash') o,
+          (SELECT COALESCE(SUM(total),0) AS cash_in FROM quick_sales
+            WHERE LOWER(COALESCE(payment_method,'cash'))='cash') qs,
+          (SELECT COALESCE(SUM(charge),0) AS cash_in FROM repairs
+            WHERE LOWER(COALESCE(payment_method,'cash'))='cash') r,
+          (SELECT COALESCE(SUM(amount),0) AS total FROM expenses) ex,
+          (SELECT COALESCE(SUM(amount),0) AS total FROM cash_deposits) dep
+      `).catch(e => { console.error('allTimeCash error:', e.message); return { rows:[{ total_cash_in_hand:0, total_deposited:0 }] }; }),
 
       // Active orders count
       pool.query(`

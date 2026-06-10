@@ -324,28 +324,42 @@ export default function NewOrder() {
   const lensMargin  = lensDetails.buyPrice>0 ? pct(lensDetails.sellPrice-lensDetails.buyPrice, lensDetails.sellPrice) : null;
   const frameMargin = frameDetails.buyPrice>0 ? pct(frameDetails.sellPrice-frameDetails.buyPrice, frameDetails.sellPrice) : null;
 
+  // Suppliers you actually buy from — DB price list applies to these
+  const REAL_SUPPLIERS = ['Negombo', 'Solex', 'MR Lens', 'Neo Vision', 'Omega', 'Murano'];
+  // Reference-only suppliers — use their hardcoded list only as fallback, never DB
+  const REF_SUPPLIERS  = ['Lanka Optic'];
+
   const lookupLens = useCallback(async (type, coating, _sph, lens_index, company, color) => {
     const detColor = color || (coating.toLowerCase().includes('photo')||coating.toLowerCase().includes('photochromic') ? 'Photo-Gray' : 'White');
-    try {
-      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-      const token = localStorage.getItem('ko_token');
-      const params = new URLSearchParams({ lens_type:type, color:detColor });
-      if (coating && coating !== 'Default') params.set('coating', coating);
-      if (lens_index && lens_index !== 'Default') params.set('lens_index', lens_index);
-      const res  = await fetch(`${BASE}/lens-prices/match?${params}`, { headers:{ Authorization:`Bearer ${token}` } });
-      const data = await res.json();
-      if (data?.length > 0) {
-        const m = data[0];
-        setLensDetails(l => ({ ...l, type, coating, lens_index:lens_index||l.lens_index, lens_company:company||l.lens_company, color:detColor,
-          buyPrice:parseFloat(m.buy_price)||0, sellPrice:parseFloat(m.sell_price)||0,
-          matchedRange:m.power_range||m.series||'', matched:true, lensDiscount:0, matchSource:'db' }));
-        return;
-      }
-    } catch(e) {}
+    const isRefOnly = REF_SUPPLIERS.includes(company);
+
+    // Only hit the DB for real suppliers — skip DB for reference-only suppliers
+    if (!isRefOnly) {
+      try {
+        const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('ko_token');
+        const params = new URLSearchParams({ lens_type:type, color:detColor });
+        if (coating && coating !== 'Default') params.set('coating', coating);
+        if (lens_index && lens_index !== 'Default') params.set('lens_index', lens_index);
+        const res  = await fetch(`${BASE}/lens-prices/match?${params}`, { headers:{ Authorization:`Bearer ${token}` } });
+        const data = await res.json();
+        if (data?.length > 0) {
+          const m = data[0];
+          setLensDetails(l => ({ ...l, type, coating, lens_index:lens_index||l.lens_index, lens_company:company||l.lens_company, color:detColor,
+            buyPrice:parseFloat(m.buy_price)||0, sellPrice:parseFloat(m.sell_price)||0,
+            matchedRange:m.power_range||m.series||'', matched:true, lensDiscount:0, matchSource:'db' }));
+          return;
+        }
+      } catch(e) {}
+    }
+
+    // For reference-only suppliers (or if DB has no match) — use hardcoded reference price
     const sp = findSupplierPrice(company, type, lens_index, coating);
     if (sp) {
       setLensDetails(l => ({ ...l, type, coating, lens_index:lens_index||l.lens_index, lens_company:company||l.lens_company, color:detColor,
-        buyPrice:0, sellPrice:sp, matchedRange:`${company} reference`, matched:true, lensDiscount:0, matchSource:'supplier' }));
+        buyPrice:0, sellPrice:sp,
+        matchedRange: isRefOnly ? `${company} — reference price only` : `${company} reference`,
+        matched:true, lensDiscount:0, matchSource:'supplier' }));
       return;
     }
     setLensDetails(l => ({ ...l, type, coating, lens_index:lens_index||l.lens_index, lens_company:company||l.lens_company, color:detColor,
@@ -872,7 +886,12 @@ export default function NewOrder() {
               <div style={{ background:lensDetails.matchSource==='db'?'#dbeafe':'#fef9c3', border:`1px solid ${lensDetails.matchSource==='db'?'#93c5fd':'#fde68a'}`, borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
                 <div>
                   <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:lensDetails.matchSource==='db'?'#1e40af':'#92400e', marginBottom:4 }}>
-                    {lensDetails.matchSource==='db' ? 'Price from your price list' : 'Supplier reference price'} · {lensDetails.matchedRange}
+                    {lensDetails.matchSource==='db'
+                      ? '✅ Price from your price list'
+                      : lensDetails.matchedRange?.includes('reference price only')
+                        ? '⚠️ Reference Price Only — not your supplier'
+                        : 'Supplier reference price'}
+                    {' · '}{lensDetails.matchedRange}
                   </div>
                   <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
                     {lensDetails.buyPrice>0 && <span style={{ fontSize:13 }}>Buy: <b>{fmtMoney(lensDetails.buyPrice)}</b></span>}
