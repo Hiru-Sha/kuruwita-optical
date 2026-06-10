@@ -11,7 +11,17 @@ const C = {
   border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
 };
 const fmt     = n => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
-const fmtD    = d => new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+const fmtD    = d => {
+  if (!d) return '—';
+  // Handle date-only string (YYYY-MM-DD) without timezone shift
+  const s = String(d).slice(0,10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y,m,dy] = s.split('-');
+    return new Date(+y,+m-1,+dy).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  }
+  const dt = new Date(d);
+  return isNaN(dt) ? '—' : dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+};
 const fmtTime = d => new Date(d).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
 
 function api(path) {
