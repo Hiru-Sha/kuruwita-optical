@@ -79,13 +79,18 @@ function buildReportHTML(data, from, to) {
     </tr>`).join('');
 
   // Top frames
-  const frameRows = data.topFrames.slice(0,8).map((f,i)=>`
+  const frameRows = data.topFrames.slice(0,8).map((f,i)=>{
+    const fname = f.frame || f.name || f.frame_name || Object.values(f).find(v=>typeof v==='string'&&v.length>1) || '—';
+    const funits = f.units || f.count || f.unit_count || 0;
+    const frev   = f.revenue || f.total_revenue || f.total || 0;
+    return `
     <tr>
       <td style="padding:5px 10px;border:1px solid #e0ddd6;">${i+1}</td>
-      <td style="padding:5px 10px;border:1px solid #e0ddd6;">${f.frame}</td>
-      <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:center;">${f.units}</td>
-      <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:right;">${fmtR(f.revenue)}</td>
-    </tr>`).join('');
+      <td style="padding:5px 10px;border:1px solid #e0ddd6;">${fname}</td>
+      <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:center;">${funits}</td>
+      <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:right;">${fmtR(frev)}</td>
+    </tr>`;
+  }).join('');
 
   // Repair types
   const repairRows = rep.types.map(r=>`
@@ -377,12 +382,17 @@ ${data.topFrames.length > 0 ? `
 ${data.topLenses.length > 0 ? `
 <table>
   <tr><th>Lens Type</th><th class="c">Units</th><th class="r">Revenue</th></tr>
-  ${data.topLenses.map(l=>`
+  ${data.topLenses.map(l=>{
+    const lname  = l.lens_type || l.type || l.name || l.lens || Object.values(l).find(v=>typeof v==='string'&&v.length>1) || '—';
+    const lunits = l.units || l.count || 0;
+    const lrev   = l.revenue || l.total || 0;
+    return `
     <tr>
-      <td style="padding:5px 10px;border:1px solid #e0ddd6;">${l.lens_type}</td>
-      <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:center;">${l.units}</td>
-      <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:right;">${fmtR(l.revenue)}</td>
-    </tr>`).join('')}
+      <td style="padding:5px 10px;border:1px solid #e0ddd6;">${lname}</td>
+      <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:center;">${lunits}</td>
+      <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:right;">${fmtR(lrev)}</td>
+    </tr>`;
+  }).join('')}
 </table>` : '<p style="color:#6b7280;font-size:12px;">No data for this period</p>'}
 
 <!-- ══ LENS JOBS ══════════════════════════════════════════ -->
@@ -470,7 +480,23 @@ export default function ReportPDF() {
     try {
       const res = await apiGet(`/full-report?from=${from}&to=${to}`);
       if (res.error) throw new Error(res.error);
-      setData(res);
+      // Normalize field names in case backend returns different keys
+      const normalized = {
+        ...res,
+        topFrames: (res.topFrames||[]).map(f=>({
+          ...f,
+          frame:   f.frame   || f.name   || f.frame_name || '—',
+          units:   f.units   || f.count  || 0,
+          revenue: f.revenue || f.total  || 0,
+        })),
+        topLenses: (res.topLenses||[]).map(l=>({
+          ...l,
+          lens_type: l.lens_type || l.type || l.name || '—',
+          units:     l.units     || l.count || 0,
+          revenue:   l.revenue   || l.total || 0,
+        })),
+      };
+      setData(normalized);
       setPreviewing(true);
     } catch(e) { setError(e.message||'Failed to load report'); }
     finally { setLoading(false); }
@@ -626,18 +652,23 @@ export default function ReportPDF() {
             {data.topFrames.length > 0 && (
               <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
                 <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>🕶️ Top Frames</div>
-                {data.topFrames.slice(0,7).map((f,i)=>(
-                  <div key={f.frame} style={{ padding:'9px 16px', borderBottom:`1px solid ${C.cream}`, display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:13 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                      <span style={{ width:20, height:20, borderRadius:'50%', background:i===0?C.gold:i===1?'#c0c0c0':i===2?'#cd7f32':C.cream, display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:i<3?'white':C.muted }}>{i+1}</span>
-                      <span style={{ color:C.navy, fontWeight:500 }}>{f.frame}</span>
+                {data.topFrames.slice(0,7).map((f,i)=>{
+                  const fname = f.frame||f.name||f.frame_name||'—';
+                  const frev  = f.revenue||f.total||0;
+                  const funits= f.units||f.count||0;
+                  return (
+                    <div key={i} style={{ padding:'9px 16px', borderBottom:`1px solid ${C.cream}`, display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:13 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                        <span style={{ width:20, height:20, borderRadius:'50%', background:i===0?C.gold:i===1?'#c0c0c0':i===2?'#cd7f32':C.cream, display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:i<3?'white':C.muted }}>{i+1}</span>
+                        <span style={{ color:C.navy, fontWeight:500 }}>{fname}</span>
+                      </div>
+                      <div style={{ textAlign:'right' }}>
+                        <div style={{ color:C.success, fontWeight:700 }}>{fmt(frev)}</div>
+                        <div style={{ fontSize:11, color:C.muted }}>{funits} sold</div>
+                      </div>
                     </div>
-                    <div style={{ textAlign:'right' }}>
-                      <div style={{ color:C.success, fontWeight:700 }}>{fmt(f.revenue)}</div>
-                      <div style={{ fontSize:11, color:C.muted }}>{f.units} sold</div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
