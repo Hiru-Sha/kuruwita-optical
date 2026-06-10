@@ -31,6 +31,7 @@ router.get('/', auth, async (req, res) => {
         SELECT
           COALESCE(SUM(total_amount),0)   AS total,
           COALESCE(SUM(advance_amount),0) AS collected,
+
           COALESCE(SUM(balance_amount),0) AS owed,
           COUNT(id)                        AS order_count
         FROM orders
@@ -116,18 +117,19 @@ router.get('/', auth, async (req, res) => {
         WHERE lens_step BETWEEN 1 AND 2
       `),
 
-      // Balance reminders
+      // Balance reminders — use customer fields directly from orders table
       pool.query(`
-        SELECT o.id, o.order_number, o.deliver_date,
-               o.balance_amount, c.name AS customer_name, c.phone
-        FROM orders o
-        JOIN customers c ON o.customer_id = c.id
-        WHERE o.balance_amount > 0
-          AND o.status != 'cancelled'
-          AND o.deliver_date <= CURRENT_DATE + INTERVAL '7 days'
-        ORDER BY o.deliver_date ASC
+        SELECT id, order_number, deliver_date,
+               balance_amount, customer_name, phone,
+               frame, total_amount, status
+        FROM orders
+        WHERE balance_amount > 0
+          AND status NOT IN ('cancelled','delivered')
+          AND deliver_date IS NOT NULL
+          AND deliver_date <= CURRENT_DATE + INTERVAL '7 days'
+        ORDER BY deliver_date ASC
         LIMIT 10
-      `),
+      `).catch(()=>({ rows:[] })),
     ]);
 
     const mr = monthRevenue.rows[0];
@@ -155,6 +157,7 @@ router.get('/', auth, async (req, res) => {
     mr.repair_total = rep_month_total;
     mr.repair_count = rep_month_count;
     mr.grand_total  = parseFloat(mr.total||0) + qs_month_total + rep_month_total;
+    // Collected = delivered orders total + all QS + all repairs this month
     mr.collected    = parseFloat(mr.collected||0) + qs_month_total + rep_month_total;
 
     // Daily summary — split cash vs bank

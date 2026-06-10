@@ -320,7 +320,8 @@ export default function ActivityView() {
         qs   = [];
         reps = reps.filter(r => r.status === 'pending');
       } else if (viewMode === 'collected') {
-        ords = ords.filter(o => o.status === 'delivered' && o.created_at?.slice(0,7) === month);
+        // Show all orders this month where advance was paid (includes partial advances)
+        ords = ords.filter(o => o.created_at?.slice(0,7) === month && parseFloat(o.advance_amount) > 0);
         qs   = qs.filter(  s => s.created_at?.slice(0,7) === month);
         reps = reps.filter(r => ['done','collected'].includes(r.status) && r.created_at?.slice(0,7) === month);
       }
@@ -348,7 +349,10 @@ export default function ActivityView() {
   const fs = sales.filter(  s => !q || (s.customer_name||'').toLowerCase().includes(q) || (s.sale_number||'').includes(q));
   const fr = repairs.filter(r => !q || (r.customer_name||'').toLowerCase().includes(q) || (r.repair_number||'').includes(q) || (r.repair_type||'').toLowerCase().includes(q));
 
-  const grandTotal  = fo.reduce((s,o)=>s+parseFloat(o.total_amount||0),0)
+  const orderAmt    = viewMode==='collected'
+    ? fo.reduce((s,o)=>s+parseFloat(o.advance_amount||0),0)
+    : fo.reduce((s,o)=>s+parseFloat(o.total_amount||0),0);
+  const grandTotal  = orderAmt
                     + fs.reduce((s,x)=>s+parseFloat(x.total||0),0)
                     + fr.reduce((s,r)=>s+parseFloat(r.charge||0),0);
   const balanceDue  = fo.reduce((s,o)=>s+parseFloat(o.balance_amount||0),0);
@@ -462,7 +466,7 @@ export default function ActivityView() {
           {(tab==='all'||tab==='orders') && fo.length > 0 && (
             <div style={{ marginBottom:16 }}>
               {tab==='all' && <div style={{ fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:10 }}>
-                📋 Orders — {fo.length} · {fmt(fo.reduce((s,o)=>s+parseFloat(o.total_amount||0),0))}
+                📋 Orders — {fo.length} · {fmt(viewMode==='collected' ? fo.reduce((s,o)=>s+parseFloat(o.advance_amount||0),0) : fo.reduce((s,o)=>s+parseFloat(o.total_amount||0),0))}
               </div>}
               {fo.map(o=>(
                 <Row key={o.id} type="order" id={o.id} accent={C.navy}>
@@ -481,8 +485,10 @@ export default function ActivityView() {
                       </div>
                     </div>
                     <div style={{ textAlign:'right', flexShrink:0, marginLeft:12 }}>
-                      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:C.navy }}>{fmt(o.total_amount)}</div>
-                      <div style={{ fontSize:11, color:C.success }}>paid {fmt(o.advance_amount)}</div>
+                      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:C.navy }}>
+                        {viewMode==='collected' ? fmt(o.advance_amount) : fmt(o.total_amount)}
+                      </div>
+                      {viewMode!=='collected' && <div style={{ fontSize:11, color:C.success }}>paid {fmt(o.advance_amount)}</div>}
                     </div>
                   </div>
                 </Row>
