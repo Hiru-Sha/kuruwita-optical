@@ -234,6 +234,7 @@ export default function Repairs() {
     frame_inventory_id:  null,
     description:         '',
     charge:              '',
+    repair_cost:         '',
     advance:             '',
     payment_method:      'cash',
     status:              'pending',
@@ -268,13 +269,14 @@ export default function Repairs() {
     try {
       const res = await apiPost('/repairs', {
         ...form,
-        charge:  parseFloat(form.charge)||0,
+        charge:       parseFloat(form.charge)||0,
+        repair_cost:  parseFloat(form.repair_cost)||0,
         advance: parseFloat(form.advance)||0,
         import_date: pastMode && repairDate ? repairDate : null,
       });
       if (res.error) throw new Error(res.error);
       setLastDone(res);
-      setForm({ repair_type:'', customer_name:'', phone:'', frame_description:'', frame_inventory_id:null, description:'', charge:'', advance:'', payment_method:'cash', status:'pending', due_date: new Date(Date.now()+3*86400000).toISOString().split('T')[0], notes:'' });
+      setForm({ repair_type:'', customer_name:'', phone:'', frame_description:'', frame_inventory_id:null, description:'', charge:'', repair_cost:'', advance:'', payment_method:'cash', status:'pending', due_date: new Date(Date.now()+3*86400000).toISOString().split('T')[0], notes:'' });
 
       setShowAdd(false);
       showToast(`Repair recorded — ${res.repair_number}`);
@@ -443,11 +445,16 @@ export default function Repairs() {
 
 
 
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginBottom:14 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr', gap:12, marginBottom:14 }}>
             <div>
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Charge (Rs.) *</label>
               <input type="number" value={form.charge} onChange={e=>setForm(f=>({...f,charge:e.target.value}))}
                 placeholder="0 for free" style={{ ...INP, fontSize:18, fontWeight:700 }}/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Repair Cost (Rs.)</label>
+              <input type="number" value={form.repair_cost} onChange={e=>setForm(f=>({...f,repair_cost:e.target.value}))}
+                placeholder="Your cost" style={{ ...INP, fontSize:18, fontWeight:700 }}/>
             </div>
             <div>
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Payment</label>
@@ -473,9 +480,29 @@ export default function Repairs() {
 
           {/* Quick total display */}
           {parseFloat(form.charge) > 0 && (
-            <div style={{ background:C.navy, borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontSize:13, color:'#ede9e0' }}>{form.repair_type || 'Repair'} · {form.payment_method === 'bank' ? '🏦 Bank' : '💵 Cash'}</span>
-              <span style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:C.gold }}>{fmtFull(form.charge)}</span>
+            <div style={{ background:C.navy, borderRadius:10, padding:'12px 16px', marginBottom:14 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: parseFloat(form.repair_cost) > 0 ? 8 : 0 }}>
+                <span style={{ fontSize:13, color:'#ede9e0' }}>{form.repair_type || 'Repair'} · {form.payment_method === 'bank' ? '🏦 Bank' : '💵 Cash'}</span>
+                <span style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:C.gold }}>{fmtFull(form.charge)}</span>
+              </div>
+              {parseFloat(form.repair_cost) > 0 && (
+                <div style={{ display:'flex', gap:16, flexWrap:'wrap', borderTop:'1px solid rgba(255,255,255,.15)', paddingTop:8 }}>
+                  <div>
+                    <div style={{ fontSize:10, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'.8px' }}>Charge</div>
+                    <div style={{ fontSize:14, fontWeight:700, color:'#86efac' }}>{fmtFull(form.charge)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:10, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'.8px' }}>Cost</div>
+                    <div style={{ fontSize:14, fontWeight:700, color:'#fca5a5' }}>- {fmtFull(form.repair_cost)}</div>
+                  </div>
+                  <div style={{ marginLeft:'auto' }}>
+                    <div style={{ fontSize:10, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'.8px' }}>Profit</div>
+                    <div style={{ fontSize:16, fontWeight:700, color: parseFloat(form.charge)-parseFloat(form.repair_cost) >= 0 ? '#86efac' : '#fca5a5' }}>
+                      {fmtFull(parseFloat(form.charge) - parseFloat(form.repair_cost))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -577,6 +604,15 @@ export default function Repairs() {
                               {parseFloat(repair.charge)===0 ? <span style={{ color:C.muted, fontSize:13 }}>Free</span> : fmtFull(repair.charge)}
                             </div>
                             <div style={{ fontSize:10, color:C.muted }}>{repair.payment_method==='bank'?'🏦 Bank':repair.payment_method==='free'?'🎁':'💵 Cash'}</div>
+                            {parseFloat(repair.repair_cost) > 0 && (
+                              <div style={{ fontSize:10, marginTop:2 }}>
+                                <span style={{ color:C.muted }}>Cost: {fmtFull(repair.repair_cost)}</span>
+                                <span style={{ marginLeft:4, fontWeight:700,
+                                  color: parseFloat(repair.charge)-parseFloat(repair.repair_cost) >= 0 ? C.success : C.danger }}>
+                                  · Profit: {fmtFull(parseFloat(repair.charge)-parseFloat(repair.repair_cost))}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
 

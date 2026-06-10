@@ -59,16 +59,18 @@ router.post('/', auth, async (req, res) => {
   try {
     await client.query('BEGIN');
     const repair_number = await nextRepairNumber(client);
+    const import_date = req.body.repair_date || req.body.import_date || null;
     const result = await client.query(`
       INSERT INTO repairs
-        (repair_number, customer_name, phone, repair_type, description, charge, payment_method, status, notes, added_by, completed_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        (repair_number, customer_name, phone, repair_type, description, charge, payment_method, status, notes, added_by, completed_at, created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12::timestamp, NOW())) RETURNING *`,
       [repair_number,
        customer_name?.trim()||null, phone?.trim()||null,
        repair_type, description?.trim()||null,
        parseFloat(charge)||0, payment_method||'cash',
        status||'done', notes?.trim()||null, req.user.id,
-       (status||'done')==='done' ? new Date() : null]
+       (status||'done')==='done' ? new Date() : null,
+       import_date||null]
     );
     await client.query('COMMIT');
 
@@ -106,7 +108,7 @@ router.post('/', auth, async (req, res) => {
 
 // PATCH /api/repairs/:id — update status and any field
 router.patch('/:id', auth, async (req, res) => {
-  const allowed = ['status','notes','charge','payment_method','customer_name',
+  const allowed = ['status','notes','charge','repair_cost','payment_method','customer_name',
                    'phone','repair_type','description','frame_description',
                    'due_date','advance','frame_inventory_id'];
   const fields = [], vals = [];

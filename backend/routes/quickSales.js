@@ -66,13 +66,14 @@ router.post('/', auth, async (req, res) => {
   try {
     await client.query('BEGIN');
     const saleNum = await nextSaleNumber();
+    const import_date = req.body.import_date || null;
     const result = await client.query(
-      `INSERT INTO quick_sales (sale_number,customer_name,customer_phone,items,subtotal,discount,total,payment_method,amount_paid,change_given,notes,served_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+      `INSERT INTO quick_sales (sale_number,customer_name,customer_phone,items,subtotal,discount,total,payment_method,amount_paid,change_given,notes,served_by,created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13::timestamp, NOW())) RETURNING *`,
       [saleNum, customer_name||null, customer_phone||null, JSON.stringify(items),
        parseFloat(subtotal)||0, parseFloat(discount)||0, parseFloat(total)||0,
        payment_method||'cash', parseFloat(amount_paid)||0, parseFloat(change_given)||0,
-       notes||null, req.user.id]
+       notes||null, req.user.id, import_date||null]
     );
     // Parse items if it came as a string
     const itemsArr = Array.isArray(items) ? items

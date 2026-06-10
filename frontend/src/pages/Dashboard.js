@@ -151,9 +151,9 @@ export default function Dashboard() {
               )}
               {cashTab==='deposits' && (
                 <div>
-                  <div style={{fontSize:9,color:'#86efac',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Total Deposited</div>
+                  <div style={{fontSize:9,color:'#86efac',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Total Deposited (All Time)</div>
                   <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#86efac'}}>
-                    {fmt(cash.totalDep||0)}
+                    {fmt(cash.allTimeDeposits||0)}
                   </div>
                   <div style={{fontSize:11,color:'#ede9e0',marginTop:3}}>
                     Today: {fmt(cash.totalDep||0)} · {cash.depCount||0} deposit{(cash.depCount||0)!==1?'s':''}

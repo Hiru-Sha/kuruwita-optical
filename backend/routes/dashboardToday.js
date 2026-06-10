@@ -92,18 +92,15 @@ router.get('/', auth, async (req, res) => {
           COALESCE((
             SELECT SUM(charge) FROM repairs
             WHERE COALESCE(payment_method,'cash')='cash'
-            AND charge > 0
+            AND COALESCE(charge,0) > 0
           ),0)
           -
           COALESCE((SELECT SUM(amount) FROM expenses),0)
           -
-          COALESCE((
-            SELECT SUM(cd.amount) FROM cash_deposits cd
-            WHERE cd.order_id IS NULL
-               OR EXISTS (SELECT 1 FROM orders o WHERE o.id=cd.order_id)
-          ),0)
-          AS total_cash_in_hand
-      `).catch(()=>({ rows:[{ total_cash_in_hand: 0 }] })),
+          COALESCE((SELECT SUM(amount) FROM cash_deposits),0)
+          AS total_cash_in_hand,
+          COALESCE((SELECT SUM(amount) FROM cash_deposits),0) AS total_deposited
+      `).catch(()=>({ rows:[{ total_cash_in_hand: 0, total_deposited: 0 }] })),
 
       // Active orders count
       pool.query(`
@@ -174,7 +171,9 @@ router.get('/', auth, async (req, res) => {
     const cashInHand   = todayCashIn - totalExp - totalDep;
     const bankToday    = orderBank;
     // All-time cash in drawer (carries forward from previous days)
-    const allTimeCash  = parseFloat(allTimeCashRes?.rows?.[0]?.total_cash_in_hand || 0);
+    const allTimeCash    = parseFloat(allTimeCashRes?.rows?.[0]?.total_cash_in_hand || 0);
+    // Total all-time deposits
+    const allTimeDeposits = parseFloat(allTimeCashRes?.rows?.[0]?.total_deposited || 0);
 
     res.json({
       // Month stats
@@ -196,6 +195,7 @@ router.get('/', auth, async (req, res) => {
         totalDep,
         cashInHand,
         allTimeCash,
+        allTimeDeposits,
         bankToday,
         orderCount:   todayOrders.rows.length,
         qsCount:      todayQS.rows.length,
