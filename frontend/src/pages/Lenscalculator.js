@@ -435,7 +435,6 @@ export default function LensCalculator() {
           boxShadow:'0 4px 16px rgba(201,168,76,.4)' }}>
         👁️ Show Price to Customer
       </button>
-      
     </div>
   );
 }
