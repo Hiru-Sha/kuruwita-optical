@@ -294,8 +294,6 @@ export function PriceUpdateModal({ items, onClose }) {
   .price { font-size: ${priceSize}; font-weight: 700; color: #0f1f3d; line-height: 1; }
   .name  { font-size: ${fontSize}; color: #555; line-height: 1.1; }
   .was   { font-size: 6pt; color: #999; text-decoration: line-through; }
-  .badge { background: #0f1f3d; color: #c9a84c; font-size: 5pt; font-weight: 700;
-           padding: 0.3mm 1mm; border-radius: 1mm; letter-spacing: 0.5px; }
 </style>
 </head><body>
 ${rows.map(row => `
@@ -303,9 +301,7 @@ ${rows.map(row => `
     ${row.map(s => s === null
       ? `<div class="sticker empty"></div>`
       : `<div class="sticker">
-           <div class="badge">NEW PRICE</div>
            <div class="price">Rs.${parseFloat(s.price).toLocaleString('en-LK')}</div>
-           <div class="name">${(s.item.name||'').split(' · ')[0].slice(0,18)}</div>
          </div>`
     ).join('')}
   </div>`).join('')}
