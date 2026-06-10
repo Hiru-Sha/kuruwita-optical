@@ -10,7 +10,6 @@ const C = {
   navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
   border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
 };
-
 const fmt     = n => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 const fmtD    = d => new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
 const fmtTime = d => new Date(d).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
@@ -311,7 +310,7 @@ export default function ActivityView() {
         qs   = [];
         reps = reps.filter(r => r.status === 'pending');
       } else if (viewMode === 'collected') {
-        ords = ords.filter(o => o.status === 'delivered');
+        ords = ords.filter(o => o.status === 'delivered' && o.created_at?.slice(0,7) === month);
         qs   = qs.filter(  s => s.created_at?.slice(0,7) === month);
         reps = reps.filter(r => ['done','collected'].includes(r.status) && r.created_at?.slice(0,7) === month);
       }
@@ -331,7 +330,7 @@ export default function ActivityView() {
     month:     `This Month — ${new Date(month+'-01').toLocaleDateString('en-GB',{month:'long',year:'numeric'})}`,
     balance:   '💰 Balance Due',
     active:    '🔄 Active & Pending',
-    collected: '✅ Completed',
+    collected: `✅ Completed — ${new Date(month+'-01').toLocaleDateString('en-GB',{month:'long',year:'numeric'})}`,
   };
 
   const q = search.toLowerCase();
@@ -400,6 +399,28 @@ export default function ActivityView() {
       </div>
 
       {/* Search */}
+      {/* Month / period filter */}
+      <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', marginBottom:12 }}>
+        <span style={{ fontSize:12, color:C.muted, fontWeight:600 }}>Period:</span>
+        {[
+          { l:'This Month', v: new Date().toISOString().slice(0,7) },
+          { l:'Last Month', v: (() => { const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); })() },
+          { l:'2 Months Ago', v: (() => { const d=new Date(); d.setMonth(d.getMonth()-2); return d.toISOString().slice(0,7); })() },
+        ].map(p => (
+          <button key={p.v}
+            onClick={()=>{ const url=new URL(window.location); url.searchParams.set('month',p.v); window.history.replaceState({},'',url); window.location.reload(); }}
+            style={{ padding:'5px 12px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer',
+              fontFamily:'inherit', border:`1.5px solid ${month===p.v?C.navy:C.border}`,
+              background:month===p.v?C.navy:'white', color:month===p.v?'white':C.muted }}>
+            {p.l}
+          </button>
+        ))}
+        <input type="month" value={month}
+          onChange={e=>{ const url=new URL(window.location); url.searchParams.set('month',e.target.value); window.history.replaceState({},'',url); window.location.reload(); }}
+          style={{ padding:'5px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:12,
+            fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy, cursor:'pointer' }}/>
+      </div>
+
       <input value={search} onChange={e=>setSearch(e.target.value)}
         placeholder="🔍 Search name, number, frame..."
         style={{ padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13,
