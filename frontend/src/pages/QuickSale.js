@@ -1,4 +1,5 @@
 /* eslint-disable */
+import { buildQuickSaleBill, openPrint } from '../components/PrintReceipt';
 // ============================================================
 //  QuickSale.js — Mobile-friendly version
 //  On mobile: single column, sticky total bar at bottom
@@ -195,7 +196,18 @@ export default function QuickSale() {
       const token = localStorage.getItem('ko_token');
       const res   = await fetch(`${BASE}/quick-sales?limit=50`, { headers:{ Authorization:`Bearer ${token}` } });
       const data  = await res.json();
-      setHistory(Array.isArray(data)?data:[]);
+      const arr = Array.isArray(data)?data:[];
+      // Debug — log first sale's items to console
+      if (arr.length > 0) {
+        console.log('QS History sample:', {
+          id: arr[0].id,
+          items: arr[0].items,
+          items_type: typeof arr[0].items,
+          is_array: Array.isArray(arr[0].items),
+          item_count: arr[0].item_count,
+        });
+      }
+      setHistory(arr);
     } catch(e) { console.error(e); }
     finally { setHistLoad(false); }
   };
@@ -275,7 +287,7 @@ export default function QuickSale() {
         <Receipt sale={done} items={doneItems}/>
       </div>
       <div style={{display:'flex',gap:10,justifyContent:'center'}}>
-        <button onClick={()=>printReceipt(done,doneItems)} style={{padding:'12px 22px',background:C.gold,color:C.navy,border:'none',borderRadius:9,fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>🖨️ Print</button>
+        <button onClick={()=>openPrint(buildQuickSaleBill(done,doneItems))} style={{padding:'12px 22px',background:C.gold,color:C.navy,border:'none',borderRadius:9,fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>🖨️ Print</button>
         <button onClick={reset} style={{padding:'12px 22px',background:C.navy,color:'white',border:'none',borderRadius:9,fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>+ New Sale</button>
       </div>
     </div>
@@ -690,8 +702,8 @@ export default function QuickSale() {
                               const token=localStorage.getItem('ko_token');
                               const res=await fetch(`${BASE}/quick-sales/${sale.id}`,{headers:{Authorization:`Bearer ${token}`}});
                               const full=await res.json();
-                              printReceipt(sale, full.items||[]);
-                            } catch(e){ printReceipt(sale,[]); }
+                              openPrint(buildQuickSaleBill(sale, full.items||[]));
+                            } catch(e){ openPrint(buildQuickSaleBill(sale,[])); }
                           }}
                             style={{background:C.gold+'30',color:'#92400e',border:`1px solid ${C.gold}`,borderRadius:7,padding:'5px 10px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
                             🖨️

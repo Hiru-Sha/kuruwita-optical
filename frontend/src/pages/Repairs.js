@@ -1,4 +1,5 @@
 /* eslint-disable */
+import { buildRepairBill, openPrint as openRepairPrint } from '../components/PrintReceipt';
 /* cache-bust-v3 */
 // ============================================================
 //  Repairs.js — Frame repair management
@@ -342,7 +343,7 @@ export default function Repairs() {
                 style={{ padding:'9px 18px', background:'#eff6ff', color:'#1e40af', border:`1px solid #93c5fd`, borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                 🗂️ Print Job Card
               </button>
-              <button onClick={()=>{ printRepairReceipt(lastDone); setLastDone(null); }}
+              <button onClick={()=>{ openRepairPrint(buildRepairBill(lastDone)); setLastDone(null); }}
               style={{ padding:'8px 18px', background:C.gold, color:C.navy, border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               🖨️ Print Receipt
             </button>
@@ -644,7 +645,7 @@ export default function Repairs() {
                             style={{ padding:'5px 10px', background:'#eff6ff', color:'#1e40af', border:`1px solid #93c5fd`, borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                             🗂️ Job Card
                           </button>
-                          <button onClick={()=>printRepairReceipt(repair)}
+                          <button onClick={()=>openRepairPrint(buildRepairBill(repair))}
                             style={{ padding:'4px 11px', background:C.gold+'30', color:'#92400e', border:`1px solid ${C.gold}`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                             🖨️ Print
                           </button>
