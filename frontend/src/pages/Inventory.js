@@ -1268,10 +1268,11 @@ export default function Inventory() {
           <div style={{ marginBottom:14 }}>
             <label style={LBL}>Default Photo <span style={{ fontWeight:400, color:C.muted }}>(used for variants without their own photo)</span></label>
             <div style={{ display:'flex', gap:10, alignItems:'flex-end' }}>
-              <label style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', width:110, height:90, border:`2px dashed ${imgData?C.gold:C.border}`, borderRadius:10, cursor:'pointer', background:imgData?'#fdf9f0':C.cream, overflow:'hidden', position:'relative' }}>
-                {imgData ? <img src={imgData} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <><span style={{ fontSize:22 }}>📷</span><span style={{ fontSize:10, color:C.muted, marginTop:4 }}>From PC</span></>}
-                <input type="file" accept="image/*" onChange={handleImgPick} style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer' }}/>
-              </label>
+              {imgData && (
+                <div style={{ width:110, height:90, border:`2px solid ${C.gold}`, borderRadius:10, overflow:'hidden', position:'relative' }}>
+                  <img src={imgData} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                </div>
+              )}
 
               {imgData && (
                 <button type="button" onClick={()=>setImgData(null)}
@@ -1352,21 +1353,14 @@ export default function Inventory() {
             </div>
             {colorVariants.map((v,i)=>(
               <div key={i} style={{ display:'grid', gridTemplateColumns:'44px 1fr 100px 44px 36px', gap:8, marginBottom:8, alignItems:'flex-start' }}>
-                {/* Image picker per variant — PC file or phone camera */}
-                <div style={{ display:'flex', flexDirection:'column', gap:3, flexShrink:0 }}>
-                  <label style={{ width:44, height:44, border:`2px dashed ${v.image?C.gold:C.border}`, borderRadius:8, cursor:'pointer', background:v.image?'#fdf9f0':C.cream, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative' }}>
-                    {v.image
-                      ?<img src={v.image} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                      :<span style={{ fontSize:18 }}>📷</span>
-                    }
-                    <input type="file" accept="image/*" style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer' }}
-                      onChange={async e=>{
-                        const f=e.target.files[0]; if(!f) return;
-                        const b64=await toBase64(f);
-                        setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,image:b64}:x));
-                      }}/>
-                  </label>
-
+                {/* Variant image — shown if set via AI photo */}
+                <div style={{ flexShrink:0 }}>
+                  {v.image
+                    ? <div style={{ width:44, height:44, border:`2px solid ${C.gold}`, borderRadius:8, overflow:'hidden' }}>
+                        <img src={v.image} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                      </div>
+                    : <div style={{ width:44, height:44, border:`2px dashed ${C.border}`, borderRadius:8, background:C.cream, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>📷</div>
+                  }
                 </div>
                 <div style={{ flex:1 }}>
                   <select value={FR_COLORS.includes(v.color) ? v.color : 'Other'}
