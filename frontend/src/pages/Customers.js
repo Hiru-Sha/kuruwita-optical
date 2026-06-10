@@ -569,17 +569,11 @@ export default function Customers() {
                               <div style={{ fontSize:10, color:'#ede9e0', marginTop:2 }}>
                                 CYL {selected.refractions?.[0]?.r_cyl||'0.00'} × {selected.refractions?.[0]?.r_axis||'0'}
                               </div>
-                              <div style={{ fontSize:10, color:'#ede9e0', marginTop:2 }}>
-                                CYL {selected.refractions?.[0]?.r_cyl||'0.00'} × {selected.refractions?.[0]?.r_axis||'0'}
-                              </div>
                             </div>
                             <div>
                               <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Latest Left</div>
                               <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'white', fontWeight:700 }}>
                                 {selected.refractions?.[0]?.l_sph||'Plano'}
-                              </div>
-                              <div style={{ fontSize:10, color:'#ede9e0', marginTop:2 }}>
-                                CYL {selected.refractions?.[0]?.l_cyl||'0.00'} × {selected.refractions?.[0]?.l_axis||'0'}
                               </div>
                               <div style={{ fontSize:10, color:'#ede9e0', marginTop:2 }}>
                                 CYL {selected.refractions?.[0]?.l_cyl||'0.00'} × {selected.refractions?.[0]?.l_axis||'0'}
