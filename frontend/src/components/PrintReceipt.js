@@ -162,13 +162,13 @@ function buildAdvanceBill(order) {
 
   const body = `
   <div class="body">
-    <!-- Top row: badge LEFT, Ready By RIGHT -->
+    <!-- Top row: badge LEFT, Order Date RIGHT -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
       <span class="badge badge-advance">ADVANCE RECEIPT</span>
-      <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Ready: ${fmtD(order.deliver_date)}</span>
+      <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Order Date: ${orderDate}</span>
     </div>
 
-    <!-- Customer block: name full width, then phone + age side by side -->
+    <!-- Customer block: name full width, then phone + age + ready by -->
     <div class="cust-block">
       <div style="grid-column:1/4;margin-bottom:2px;">
         <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
@@ -180,7 +180,7 @@ function buildAdvanceBill(order) {
         <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
       </div>
       <div>
-        <div class="kv"><div class="k">Order Date</div><div class="v">${orderDate}</div></div>
+        <div class="kv"><div class="k">Ready By</div><div class="v" style="color:#c9a84c;">${fmtD(order.deliver_date)}</div></div>
       </div>
     </div>
 
@@ -334,140 +334,179 @@ function buildBalanceBill(order) {
 
 // ── QUICK SALE BILL ───────────────────────────────────────────
 function buildQuickSaleBill(sale, items) {
+  const subtotal = parseFloat(sale.subtotal || 0);
   const discount = parseFloat(sale.discount || 0);
-  const paid = parseFloat(sale.amount_paid || 0);
-  const change = parseFloat(sale.change_given || 0);
-  const total = parseFloat(sale.total || 0);
+  const total    = parseFloat(sale.total    || 0);
+  const paid     = parseFloat(sale.amount_paid  || 0);
+  const change   = parseFloat(sale.change_given || 0);
   const saleDate = sale.created_at ? fmtD(sale.created_at) : today();
+  const payMethod = (sale.payment_method || 'cash').toLowerCase();
+  const payLabel  = payMethod === 'bank' || payMethod === 'transfer' ? 'Bank Transfer' : 'Cash';
 
   const itemsHTML = (items || []).map(item => {
-    const lineTotal = (parseFloat(item.price || item.unit_price || 0)) * (parseInt(item.qty) || 1) - (parseFloat(item.item_discount) || 0);
-    return `<div class="item-row">
+    const unitPrice = parseFloat(item.price || item.unit_price || 0);
+    const qty       = parseInt(item.qty) || 1;
+    const itemDisc  = parseFloat(item.item_discount) || 0;
+    const lineTotal = unitPrice * qty - itemDisc;
+    return `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:4px 0;border-bottom:1px dashed #d1cdc4;">
       <div>
-        <div style="font-weight:700;font-size:10pt;">${item.name}</div>
-        <div style="font-size:8pt;color:#6b7280;">Rs. ${parseFloat(item.price || item.unit_price || 0).toLocaleString()} × ${item.qty || 1}${parseFloat(item.item_discount) > 0 ? ' − disc. Rs.' + parseFloat(item.item_discount).toLocaleString() : ''}</div>
+        <div style="font-size:10pt;font-weight:700;color:#0f1f3d;">${item.name}</div>
+        <div style="font-size:7.5pt;color:#9ca3af;margin-top:1px;">Rs. ${unitPrice.toLocaleString()} x ${qty}${itemDisc > 0 ? ' &nbsp;|&nbsp; Disc: Rs.' + itemDisc.toLocaleString() : ''}</div>
       </div>
-      <div style="font-weight:700;font-size:10pt;">${fmt(lineTotal)}</div>
+      <div style="font-size:10pt;font-weight:700;color:#0f1f3d;white-space:nowrap;">${fmt(lineTotal)}</div>
     </div>`;
   }).join('');
 
   const body = `
-    <div class="section">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4mm;">
-        <span class="status-badge status-paid">✅ Paid</span>
-        <div style="font-size:8pt;color:#6b7280;">${sale.payment_method === 'bank' ? '🏦 Bank Transfer' : '💵 Cash'} &nbsp;|&nbsp; ${saleDate}</div>
-      </div>
+  <div class="body">
+    <!-- Top row: badge LEFT, date RIGHT -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
+      <span class="badge badge-paid">SALES RECEIPT</span>
+      <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Date: ${saleDate}</span>
     </div>
 
+    <!-- Customer block (optional) -->
     ${sale.customer_name || sale.customer_phone ? `
-    <div class="section">
-      <div class="sec-title">Customer Details</div>
-      <div class="grid2">
-        ${sale.customer_name ? `<div class="kv"><div class="k">Name</div><div class="v">${sale.customer_name}</div></div>` : ''}
-        ${sale.customer_phone ? `<div class="kv"><div class="k">Phone</div><div class="v">${sale.customer_phone}</div></div>` : ''}
+    <div class="cust-block" style="margin-bottom:3.5mm;">
+      <div style="grid-column:1/4;margin-bottom:2px;">
+        <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${sale.customer_name || '—'}</div></div>
       </div>
+      <div>
+        <div class="kv"><div class="k">Phone</div><div class="v">${sale.customer_phone || '—'}</div></div>
+      </div>
+      <div>
+        <div class="kv"><div class="k">Payment</div><div class="v">${payLabel}</div></div>
+      </div>
+      <div></div>
+    </div>` : `
+    <div style="background:#f8f7f4;border-radius:7px;padding:5px 9px;margin-bottom:3.5mm;">
+      <div class="kv"><div class="k">Payment Method</div><div class="v">${payLabel}</div></div>
+    </div>`}
+
+    <!-- Items pill bar -->
+    <div style="background:#0f1f3d;border-radius:7px;padding:5px 9px;margin-bottom:3mm;">
+      <div class="pill-label">Items Sold</div>
+    </div>
+    <div style="margin-bottom:3mm;">${itemsHTML}</div>
+
+    <hr class="divider-dashed"/>
+
+    <!-- Payment table -->
+    <table class="price-table">
+      ${discount > 0 ? `
+        <tr class="row-sub"><td>Sub Total</td><td>${fmt(subtotal || total + discount)}</td></tr>
+        <tr class="row-disc"><td>Discount</td><td>- ${fmt(discount)}</td></tr>
+        <tr class="total-row"><td>Net Payable</td><td>${fmt(total)}</td></tr>` :
+        `<tr class="total-row"><td>Total Amount</td><td>${fmt(total)}</td></tr>`}
+    </table>
+
+    <div class="amt-box">
+      <span class="lbl">Amount Paid</span>
+      <span class="val">${fmt(paid)}</span>
+    </div>
+
+    ${change > 0 ? `
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:7px;padding:5px 10px;text-align:center;margin-bottom:3mm;">
+      <span style="font-size:8pt;color:#15803d;font-weight:700;">Change Returned: ${fmt(change)}</span>
     </div>` : ''}
 
-    <div class="section">
-      <div class="sec-title">Product Details</div>
-      ${itemsHTML}
-    </div>
+    <div class="note-box">Thank you for your purchase! Please keep this receipt.</div>
 
-    <div class="section" style="margin-top:3mm;">
-      <div class="sec-title">Payment Summary</div>
-      ${discount > 0 ? `
-        <div class="price-row sub"><span>Subtotal</span><span>${fmt(sale.subtotal || total + discount)}</span></div>
-        <div class="price-row disc"><span>Discount</span><span>- ${fmt(discount)}</span></div>
-      ` : ''}
-      <div class="price-row total"><span>TOTAL</span><span>${fmt(total)}</span></div>
+    <div class="stamp-sig">
+      <div class="stamp-box"></div>
+      <div class="sig-line"><hr/><span>Authorized Signature</span></div>
     </div>
-
-    <div class="total-box">
-      <div class="lbl">Amount Paid</div>
-      <div class="amt">${fmt(paid)}</div>
-    </div>
-
-    ${change > 0 ? `<div style="text-align:center;font-size:9pt;color:#6b7280;margin-bottom:4mm;">Change returned: ${fmt(change)}</div>` : ''}
-
-    <div style="margin-top:8mm;">
-      <div style="height:45mm;border:1px dashed #d1d5db;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:9pt;margin-bottom:10mm;">
-        OFFICIAL RUBBER STAMP
-      </div>
-      <div style="width:55mm;margin-left:auto;text-align:center;">
-        <div style="border-top:1px solid #111827;margin-bottom:4px;"></div>
-        <div style="font-size:8pt;color:#374151;font-weight:600;">Authorized Signature</div>
-      </div>
-    </div>
+  </div>
   `;
 
-  return wrap(body, 'Sales Receipt', sale.sale_number, `Date: ${saleDate}`);
+  return wrap(body, 'Sales Receipt', sale.sale_number || 'QS', `Date: ${saleDate}`);
 }
 
 // ── REPAIR BILL ───────────────────────────────────────────────
 function buildRepairBill(repair) {
-  const charge = parseFloat(repair.charge || 0);
+  const charge  = parseFloat(repair.charge  || 0);
   const advance = parseFloat(repair.advance || 0);
   const balance = Math.max(0, charge - advance);
-  const repairDate = repair.created_at ? fmtD(repair.created_at) : today();
+  const repairDate  = repair.created_at ? fmtD(repair.created_at) : today();
   const isFullyPaid = balance === 0 || repair.status === 'collected';
+  const statusLabel = isFullyPaid ? 'COLLECTED' : repair.status === 'done' ? 'READY FOR COLLECTION' : 'IN PROGRESS';
+  const description = repair.frame_description || repair.description || '';
 
   const body = `
-    <div class="section">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4mm;">
-        <span class="status-badge ${isFullyPaid ? 'status-paid' : 'status-advance'}">${isFullyPaid ? '✅ Collected' : repair.status === 'done' ? '✓ Ready for Collection' : '⏳ In Progress'}</span>
-        <div style="font-size:8pt;color:#6b7280;">${repairDate}</div>
-      </div>
+  <div class="body">
+    <!-- Top row: badge LEFT, date RIGHT -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
+      <span class="badge ${isFullyPaid ? 'badge-paid' : 'badge-advance'}">${statusLabel}</span>
+      <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Date: ${repairDate}</span>
     </div>
 
-    <div class="grid2" style="margin-bottom:5mm;">
-      <div class="section">
-        <div class="sec-title">Customer Details</div>
-        <div class="kv"><div class="k">Name</div><div class="v">${repair.customer_name || '—'}</div></div>
+    <!-- Customer block -->
+    <div class="cust-block">
+      <div style="grid-column:1/4;margin-bottom:2px;">
+        <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${repair.customer_name || '—'}</div></div>
+      </div>
+      <div>
         <div class="kv"><div class="k">Phone</div><div class="v">${repair.phone || '—'}</div></div>
       </div>
-      <div class="section">
-        <div class="sec-title">Product Details</div>
-        <div class="kv"><div class="k">Type</div><div class="v">${repair.repair_type || '—'}</div></div>
+      <div>
         <div class="kv"><div class="k">Ref No.</div><div class="v">${repair.repair_number || '—'}</div></div>
-        ${repair.due_date ? `<div class="kv"><div class="k">Due Date</div><div class="v">${fmtD(repair.due_date)}</div></div>` : ''}
+      </div>
+      <div>
+        ${repair.due_date ? `<div class="kv"><div class="k">Due Date</div><div class="v" style="color:#c9a84c;">${fmtD(repair.due_date)}</div></div>` : ''}
       </div>
     </div>
 
-    ${repair.description || repair.frame_description ? `
-    <div class="section">
-      <div class="sec-title">Description</div>
-      <div style="font-size:9.5pt;color:#0f1f3d;line-height:1.5;">${repair.frame_description || repair.description}</div>
+    <!-- Repair type pill -->
+    <div class="pill-bar pill-bar-frame">
+      <div>
+        <div class="pill-label">Repair Type</div>
+        <div class="pill-value">${repair.repair_type || 'General Repair'}</div>
+      </div>
+    </div>
+
+    ${description ? `
+    <!-- Description pill -->
+    <div class="pill-bar pill-bar-lens" style="margin-bottom:3mm;">
+      <div>
+        <div class="pill-label">Description</div>
+        <div class="pill-value" style="font-size:9pt;">${description}</div>
+      </div>
     </div>` : ''}
 
-    <div class="section">
-      <div class="sec-title">Payment Summary</div>
-      <div class="price-row"><span>Repair Charge</span><span>${charge > 0 ? fmt(charge) : 'Free'}</span></div>
-      ${advance > 0 ? `<div class="price-row sub"><span>Advance Paid</span><span>- ${fmt(advance)}</span></div>` : ''}
-      ${balance > 0 ? `<div class="price-row bal"><span>Balance Due</span><span>${fmt(balance)}</span></div>` : `<div class="price-row paid"><span>✓ Fully Paid</span><span>${fmt(charge)}</span></div>`}
-    </div>
+    <hr class="divider-dashed"/>
 
-    <div class="total-box">
-      <div class="lbl">${isFullyPaid ? 'Total Paid' : balance > 0 ? 'Balance Due' : 'Charge'}</div>
-      <div class="amt">${fmt(isFullyPaid ? charge : balance > 0 ? balance : charge)}</div>
-    </div>
+    <!-- Payment table -->
+    <table class="price-table">
+      <tr><td>Repair Charge</td><td>${charge > 0 ? fmt(charge) : 'Free'}</td></tr>
+      ${advance > 0 ? `<tr class="row-sub"><td>Advance Paid</td><td>- ${fmt(advance)}</td></tr>` : ''}
+      ${balance > 0
+        ? `<tr class="total-row"><td>Balance Due</td><td>${fmt(balance)}</td></tr>`
+        : `<tr class="total-row"><td>Total Paid</td><td>${fmt(charge)}</td></tr>`}
+    </table>
 
-    ${!isFullyPaid ? `
-    <div style="margin-bottom:4mm;">
-      <span style="display:inline-block;padding:4px 10px;border-radius:20px;background:#fff7ed;color:#ea580c;font-size:8pt;font-weight:700;">Balance Pending</span>
+    ${balance > 0 ? `
+    <div class="bal-box">
+      <span class="lbl">Balance Due on Collection</span>
+      <span class="val">${fmt(balance)}</span>
     </div>` : `
-    <div style="margin-bottom:4mm;">
-      <span style="display:inline-block;padding:4px 10px;border-radius:20px;background:#dcfce7;color:#15803d;font-size:8pt;font-weight:700;">Fully Paid</span>
+    <div class="amt-box">
+      <span class="lbl">Total Paid</span>
+      <span class="val">${fmt(charge)}</span>
     </div>`}
 
-    <div style="margin-top:8mm;">
-      <div style="height:45mm;border:1px dashed #d1d5db;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:9pt;margin-bottom:10mm;">
-        OFFICIAL RUBBER STAMP
-      </div>
-      <div style="width:55mm;margin-left:auto;text-align:center;">
-        <div style="border-top:1px solid #111827;margin-bottom:4px;"></div>
-        <div style="font-size:8pt;color:#374151;font-weight:600;">Authorized Signature</div>
-      </div>
+    ${isFullyPaid ? `
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:7px;padding:5px 10px;text-align:center;margin-bottom:3mm;">
+      <span style="font-size:8pt;color:#15803d;font-weight:700;">Account Settled</span>
+    </div>` : ''}
+
+    <div class="note-box">Please bring this receipt when collecting your item.</div>
+
+    <div class="stamp-sig">
+      <div class="stamp-box"></div>
+      <div class="sig-line"><hr/><span>Authorized Signature</span></div>
     </div>
+  </div>
   `;
 
   return wrap(body, 'Repair Receipt', repair.repair_number || 'REP', `Date: ${repairDate}`);
