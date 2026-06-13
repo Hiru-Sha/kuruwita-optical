@@ -42,7 +42,7 @@ async function markOverdueOrders() {
 // GET /api/orders
 router.get('/', auth, async (req, res) => {
   await markOverdueOrders().catch(()=>{});
-  const { search, status, limit = 100000, offset = 0 } = req.query;
+  const { search, status, limit = 10000, offset = 0 } = req.query;
   try {
     let query = `
       SELECT o.*, c.name AS customer_name, c.phone, c.age

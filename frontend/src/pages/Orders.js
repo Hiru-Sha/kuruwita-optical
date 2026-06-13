@@ -585,7 +585,7 @@ export default function Orders() {
                   </div>
                   {selected.last_payment_date && (
                     <div style={{ fontSize:11, color:C.muted, marginTop:4 }}>
-                      Last paid: {new Date(selected.last_payment_date+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+                      Last paid: {(() => { const r = selected.last_payment_date; const d = new Date(r.includes('T') ? r : r + 'T00:00:00'); return isNaN(d) ? r : d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); })()}
                       {selected.last_payment_method && ` · ${selected.last_payment_method}`}
                     </div>
                   )}

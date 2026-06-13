@@ -41,7 +41,7 @@ export const getMe           = ()         => api.get('/auth/me');
 export const changePassword  = (data)     => api.post('/auth/change-password', data);
 
 // ---- Orders ----
-export const getOrders       = (params)   => api.get('/orders', { params });
+export const getOrders       = (params)   => api.get('/orders', { params: { limit: 10000, ...params } });
 export const getOrder        = (id)       => api.get(`/orders/${id}`);
 export const createOrder     = (data)     => api.post('/orders', data);
 export const updateOrder     = (id, data) => api.patch(`/orders/${id}`, data);
