@@ -57,8 +57,8 @@ const PAGE_CSS = `
   .price-table td { padding: 2.5px 0; font-size:9pt; vertical-align:middle; }
   .price-table td:last-child { text-align:right; font-weight:700; }
   .price-table .row-sub td { color:#9ca3af; font-size:8pt; }
-  .price-table .row-disc td { color:#dc2626; }
-  .price-table .total-row td { font-size:11pt; font-weight:900; color:#0f1f3d; border-top:1.5px solid #0f1f3d; padding-top:5px; }
+  .price-table .row-disc td { color:#dc2626; font-weight:700; font-size:9.5pt; }
+  .price-table .total-row td { font-size:12pt; font-weight:900; color:#0f1f3d; border-top:2px solid #0f1f3d; padding-top:6px; margin-top:2px; }
 
   /* AMOUNT BOXES */
   .amt-box { background:#0f1f3d; border-radius:8px; padding:7px 12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5mm; }
@@ -204,15 +204,17 @@ function buildAdvanceBill(order) {
 
     <hr class="divider-dashed"/>
 
-    <!-- Payment table -->
+    <!-- Payment table — always show prices clearly -->
     <table class="price-table">
       ${fSell > 0 ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
       ${lSell > 0 ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
+      ${(fSell > 0 || lSell > 0) && (discAmt > 0 || discPct > 0) ? `
+        <tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>` : ''}
       ${discAmt > 0 || discPct > 0 ? `
-        <tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>
-        <tr class="row-disc"><td>Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td>- ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>
+        <tr class="row-disc"><td style="font-weight:700;">Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td style="font-size:10pt;font-weight:800;color:#dc2626;">- ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>
         <tr class="total-row"><td>Net Payable</td><td>${fmt(total)}</td></tr>` :
         `<tr class="total-row"><td>Total Amount</td><td>${fmt(total)}</td></tr>`}
+      <tr class="row-sub"><td>Advance Paid Now</td><td style="color:#15803d;font-weight:700;">- ${fmt(advance)}</td></tr>
     </table>
 
     <div class="amt-box">
@@ -299,16 +301,17 @@ function buildBalanceBill(order) {
 
     <hr class="divider-dashed"/>
 
-    <!-- Payment table -->
+    <!-- Payment table — full breakdown -->
     <table class="price-table">
       ${fSell > 0 ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
       ${lSell > 0 ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
+      ${(fSell > 0 || lSell > 0) && (discAmt > 0 || discPct > 0) ? `
+        <tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>` : ''}
       ${discAmt > 0 || discPct > 0 ? `
-        <tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>
-        <tr class="row-disc"><td>Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td>- ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>
+        <tr class="row-disc"><td style="font-weight:700;">Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td style="font-size:10pt;font-weight:800;color:#dc2626;">- ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>
         <tr class="total-row"><td>Net Payable</td><td>${fmt(total)}</td></tr>` :
         `<tr class="total-row"><td>Total Amount</td><td>${fmt(total)}</td></tr>`}
-      ${advance > 0 ? `<tr class="row-sub"><td>Advance Paid</td><td>- ${fmt(advance)}</td></tr>` : ''}
+      ${advance > 0 ? `<tr class="row-sub"><td>Advance Already Paid</td><td style="color:#15803d;font-weight:700;">- ${fmt(advance)}</td></tr>` : ''}
     </table>
 
     <div class="amt-box">
@@ -343,56 +346,57 @@ function buildQuickSaleBill(sale, items) {
   const payMethod = (sale.payment_method || 'cash').toLowerCase();
   const payLabel  = payMethod === 'bank' || payMethod === 'transfer' ? 'Bank Transfer' : 'Cash';
 
-  const itemsHTML = (items || []).map(item => {
+  // Build items as price-table rows — each item shows name, unit price, qty, item discount clearly
+  const itemRows = (items || []).map(item => {
     const unitPrice = parseFloat(item.price || item.unit_price || 0);
     const qty       = parseInt(item.qty) || 1;
     const itemDisc  = parseFloat(item.item_discount) || 0;
-    const lineTotal = unitPrice * qty - itemDisc;
+    const gross     = unitPrice * qty;
+    const lineTotal = gross - itemDisc;
     return `
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:4px 0;border-bottom:1px dashed #d1cdc4;">
-      <div>
-        <div style="font-size:10pt;font-weight:700;color:#0f1f3d;">${item.name}</div>
-        <div style="font-size:7.5pt;color:#9ca3af;margin-top:1px;">Rs. ${unitPrice.toLocaleString()} x ${qty}${itemDisc > 0 ? ' &nbsp;|&nbsp; Disc: Rs.' + itemDisc.toLocaleString() : ''}</div>
-      </div>
-      <div style="font-size:10pt;font-weight:700;color:#0f1f3d;white-space:nowrap;">${fmt(lineTotal)}</div>
-    </div>`;
+      <tr>
+        <td style="padding:4px 0 2px;">
+          <div style="font-size:9.5pt;font-weight:700;color:#0f1f3d;">${item.name}</div>
+          <div style="font-size:7.5pt;color:#9ca3af;">Rs. ${unitPrice.toLocaleString()} × ${qty}</div>
+        </td>
+        <td style="text-align:right;vertical-align:top;padding:4px 0 2px;">
+          ${itemDisc > 0
+            ? `<div style="font-size:8pt;color:#9ca3af;text-decoration:line-through;">${fmt(gross)}</div>
+               <div style="font-size:9.5pt;font-weight:700;color:#0f1f3d;">${fmt(lineTotal)}</div>
+               <div style="font-size:7.5pt;color:#dc2626;font-weight:600;">- ${fmt(itemDisc)} disc</div>`
+            : `<div style="font-size:9.5pt;font-weight:700;color:#0f1f3d;">${fmt(lineTotal)}</div>`}
+        </td>
+      </tr>
+      <tr><td colspan="2" style="padding:0;"><hr style="border:none;border-top:1px dashed #d1cdc4;margin:1px 0;"/></td></tr>`;
   }).join('');
 
   const body = `
   <div class="body">
-    <!-- Top row: badge LEFT, date RIGHT -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
       <span class="badge badge-paid">SALES RECEIPT</span>
       <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Date: ${saleDate}</span>
     </div>
 
-    <!-- Customer block (optional) -->
     ${sale.customer_name || sale.customer_phone ? `
     <div class="cust-block" style="margin-bottom:3.5mm;">
       <div style="grid-column:1/4;margin-bottom:2px;">
         <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${sale.customer_name || '—'}</div></div>
       </div>
-      <div>
-        <div class="kv"><div class="k">Phone</div><div class="v">${sale.customer_phone || '—'}</div></div>
-      </div>
-      <div>
-        <div class="kv"><div class="k">Payment</div><div class="v">${payLabel}</div></div>
-      </div>
+      <div><div class="kv"><div class="k">Phone</div><div class="v">${sale.customer_phone || '—'}</div></div></div>
+      <div><div class="kv"><div class="k">Payment</div><div class="v">${payLabel}</div></div></div>
       <div></div>
     </div>` : `
     <div style="background:#f8f7f4;border-radius:7px;padding:5px 9px;margin-bottom:3.5mm;">
       <div class="kv"><div class="k">Payment Method</div><div class="v">${payLabel}</div></div>
     </div>`}
 
-    <!-- Items pill bar -->
-    <div style="background:#0f1f3d;border-radius:7px;padding:5px 9px;margin-bottom:3mm;">
+    <div style="background:#0f1f3d;border-radius:7px;padding:5px 9px;margin-bottom:0;">
       <div class="pill-label">Items Sold</div>
     </div>
-    <div style="margin-bottom:3mm;">${itemsHTML}</div>
+    <table class="price-table" style="margin-bottom:2mm;">${itemRows}</table>
 
     <hr class="divider-dashed"/>
 
-    <!-- Payment table -->
     <table class="price-table">
       ${discount > 0 ? `
         <tr class="row-sub"><td>Sub Total</td><td>${fmt(subtotal || total + discount)}</td></tr>
@@ -478,11 +482,11 @@ function buildRepairBill(repair) {
 
     <!-- Payment table -->
     <table class="price-table">
-      <tr><td>Repair Charge</td><td>${charge > 0 ? fmt(charge) : 'Free'}</td></tr>
-      ${advance > 0 ? `<tr class="row-sub"><td>Advance Paid</td><td>- ${fmt(advance)}</td></tr>` : ''}
+      <tr><td>Repair Charge</td><td style="font-size:10pt;font-weight:800;">${charge > 0 ? fmt(charge) : 'Free'}</td></tr>
+      ${advance > 0 ? `<tr class="row-sub"><td>Advance Paid</td><td style="color:#15803d;font-weight:700;">- ${fmt(advance)}</td></tr>` : ''}
       ${balance > 0
-        ? `<tr class="total-row"><td>Balance Due</td><td>${fmt(balance)}</td></tr>`
-        : `<tr class="total-row"><td>Total Paid</td><td>${fmt(charge)}</td></tr>`}
+        ? `<tr class="total-row"><td>Balance Due</td><td style="color:#dc2626;">${fmt(balance)}</td></tr>`
+        : `<tr class="total-row"><td>Total Paid</td><td style="color:#15803d;">${fmt(charge)}</td></tr>`}
     </table>
 
     ${balance > 0 ? `
