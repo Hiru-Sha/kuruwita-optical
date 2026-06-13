@@ -1267,13 +1267,21 @@ export default function Inventory() {
           </div>
           <div style={{ marginBottom:14 }}>
             <label style={LBL}>Default Photo <span style={{ fontWeight:400, color:C.muted }}>(used for variants without their own photo)</span></label>
-            <div style={{ display:'flex', gap:10, alignItems:'flex-end' }}>
+            <div style={{ display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' }}>
               {imgData && (
                 <div style={{ width:110, height:90, border:`2px solid ${C.gold}`, borderRadius:10, overflow:'hidden', position:'relative' }}>
                   <img src={imgData} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
                 </div>
               )}
-
+              {/* Camera / file pick button */}
+              <label style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                width:80, height:80, border:`2px dashed ${imgData?C.gold:C.border}`, borderRadius:10,
+                cursor:'pointer', background:imgData?'#fdf9f0':C.cream, gap:4, position:'relative' }}>
+                <span style={{ fontSize:22 }}>📷</span>
+                <span style={{ fontSize:11, color:C.muted, fontWeight:600 }}>{imgData ? 'Change' : 'Add Photo'}</span>
+                <input type="file" accept="image/*" capture="environment" style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
+                  onChange={handleImgPick}/>
+              </label>
               {imgData && (
                 <button type="button" onClick={()=>setImgData(null)}
                   style={{ padding:'6px 10px', background:'#fee2e2', color:C.danger, border:'none', borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:'inherit', alignSelf:'flex-start' }}>
