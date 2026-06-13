@@ -38,10 +38,10 @@ router.get('/', auth, async (req, res) => {
         WHERE TO_CHAR(created_at,'YYYY-MM') = $1
       `, [month]),
 
-      // Today's orders — include payment method to separate cash vs bank
+      // Today's orders — no payment_method column on orders table, treat all as cash
       pool.query(`
-        SELECT advance_amount, COALESCE(payment_method,'cash') AS payment_method
-        FROM orders WHERE created_at::date = $1
+        SELECT advance_amount, 'cash' AS payment_method
+        FROM orders WHERE created_at::date = $1 AND status != 'cancelled'
       `, [today]).catch(()=>({ rows:[] })),
 
       // Today's quick sales — safe
@@ -78,6 +78,8 @@ router.get('/', auth, async (req, res) => {
       `),
 
       // All-time cash in hand
+      // orders table has NO payment_method column — treat all advances as cash
+      // quick_sales and repairs DO have payment_method — filter to cash only
       pool.query(`
         SELECT
           COALESCE(o.cash_in,0) + COALESCE(qs.cash_in,0) + COALESCE(r.cash_in,0)
@@ -85,7 +87,7 @@ router.get('/', auth, async (req, res) => {
           COALESCE(dep.total,0) AS total_deposited
         FROM
           (SELECT COALESCE(SUM(advance_amount),0) AS cash_in FROM orders
-            WHERE LOWER(COALESCE(payment_method,'cash'))='cash') o,
+            WHERE status != 'cancelled') o,
           (SELECT COALESCE(SUM(total),0) AS cash_in FROM quick_sales
             WHERE LOWER(COALESCE(payment_method,'cash'))='cash') qs,
           (SELECT COALESCE(SUM(charge),0) AS cash_in FROM repairs
