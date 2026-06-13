@@ -22,9 +22,9 @@ const PAGE_CSS = `
   /* HEADER — no pseudo-element circles */
   .hdr { background: #0f1f3d; padding: 7mm 7mm 5mm; color: white; }
   .hdr-inner { display: flex; justify-content: space-between; align-items: flex-start; }
-  .shop-name { font-family:'Playfair Display',serif; font-size: 13pt; font-weight: 900; color: white; line-height: 1.15; }
-  .shop-tagline { font-size: 6pt; color: #c9a84c; letter-spacing: 2.5px; text-transform: uppercase; margin-top: 2px; font-weight:600; }
-  .shop-addr { font-size: 6.5pt; color: rgba(237,233,224,.75); margin-top: 3px; line-height: 1.5; }
+  .shop-name { font-family:'Playfair Display',serif; font-size: 16pt; font-weight: 900; color: white; line-height: 1.1; letter-spacing:-0.3px; }
+  .shop-tagline { font-size: 6pt; color: #c9a84c; letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; font-weight:600; }
+  .shop-addr { font-size: 7.5pt; color: white; margin-top: 4px; line-height: 1.6; font-weight:600; letter-spacing:0.2px; }
   .bill-badge { background: #c9a84c; color: #0f1f3d; font-size: 6.5pt; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 1px; text-transform: uppercase; display: inline-block; margin-bottom: 3px; }
   .bill-no { font-family:'Playfair Display',serif; font-size: 17pt; font-weight: 900; color: white; line-height: 1; letter-spacing:-0.5px; }
   .bill-date { font-size: 7pt; color: rgba(237,233,224,.7); margin-top: 2px; }
@@ -108,10 +108,9 @@ function hdr(billType, billNo, dateStr) {
   <div class="hdr">
     <div class="hdr-inner">
       <div>
-        <img src="${LOGO}" alt="" style="height:30px;object-fit:contain;margin-bottom:4px;display:block;filter:brightness(0) invert(1);opacity:.9;"/>
         <div class="shop-name">Wickramakalutota Opticals</div>
-        <div class="shop-tagline">Vision Care Specialists · Chilaw</div>
-        <div class="shop-addr">No.57, Kurunegala Road, Chilaw &nbsp;|&nbsp; 032 222 1211</div>
+        <div class="shop-tagline">Your Trusted Eye Care · Chilaw</div>
+        <div class="shop-addr">No.57, Kurunegala Road, Chilaw &nbsp;|&nbsp; Tel: 032 222 1211</div>
       </div>
       <div style="text-align:right;padding-top:2px;">
         <div class="bill-badge">${billType}</div>
@@ -156,59 +155,64 @@ function buildAdvanceBill(order) {
   const discPct = parseFloat(order.discount_percent || 0);
   const sub     = fSell + lSell;
   const orderDate = order.created_at ? fmtD(order.created_at) : today();
-  const frameDetail = [order.frame_color, order.frame_type].filter(Boolean).join(' · ');
-  const lensDetail  = [order.lens_coating, order.lens_company].filter(Boolean).join(' · ');
+  // Frame: only colour (no type/size labels like Medium/Small)
+  const frameColor = order.frame_color || '';
+  // Lens: only type, no company name
+  const lensCoating = order.lens_coating || '';
 
   const body = `
   <div class="body">
+    <!-- Top row: badge LEFT, Ready By RIGHT -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
       <span class="badge badge-advance">ADVANCE RECEIPT</span>
-      <span style="font-size:6.5pt;color:#9ca3af;font-weight:600;">Ordered: ${orderDate}</span>
+      <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Ready: ${fmtD(order.deliver_date)}</span>
     </div>
 
+    <!-- Customer block: name full width, then phone + age side by side -->
     <div class="cust-block">
-      <div style="grid-column:1/3;">
+      <div style="grid-column:1/4;margin-bottom:2px;">
         <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
       </div>
       <div>
         <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
       </div>
       <div>
-        <div class="kv"><div class="k">Phone</div><div style="display:none"></div></div>
         <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
+      </div>
+      <div>
+        <div class="kv"><div class="k">Order Date</div><div class="v">${orderDate}</div></div>
       </div>
     </div>
 
+    <!-- Frame pill -->
     <div class="pill-bar pill-bar-frame">
       <div>
         <div class="pill-label">Frame</div>
         <div class="pill-value">${order.frame || '—'}</div>
       </div>
-      ${frameDetail ? `<div class="pill-sub">${frameDetail}</div>` : ''}
+      ${frameColor ? `<div class="pill-sub">${frameColor}</div>` : ''}
     </div>
 
+    <!-- Lens pill -->
     <div class="pill-bar pill-bar-lens">
       <div>
         <div class="pill-label">Lens</div>
         <div class="pill-value">${order.lens_type || '—'}</div>
       </div>
-      ${lensDetail ? `<div class="pill-sub">${lensDetail}</div>` : ''}
-    </div>
-
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3mm;">
-      <span style="font-size:7pt;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Ready By</span>
-      <span style="font-size:9pt;font-weight:700;color:#0f1f3d;">${fmtD(order.deliver_date)}</span>
+      ${lensCoating ? `<div class="pill-sub">${lensCoating}</div>` : ''}
     </div>
 
     <hr class="divider-dashed"/>
 
+    <!-- Payment table -->
     <table class="price-table">
-      ${fSell > 0 ? `<tr><td>Frame</td><td>${fmt(fSell)}</td></tr>` : ''}
-      ${lSell > 0 ? `<tr><td>Lenses</td><td>${fmt(lSell)}</td></tr>` : ''}
+      ${fSell > 0 ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
+      ${lSell > 0 ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
       ${discAmt > 0 || discPct > 0 ? `
-        <tr class="row-sub"><td>Subtotal</td><td>${fmt(sub)}</td></tr>
-        <tr class="row-disc"><td>Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td>- ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>` : ''}
-      <tr class="total-row"><td>Total Amount</td><td>${fmt(total)}</td></tr>
+        <tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>
+        <tr class="row-disc"><td>Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td>- ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>
+        <tr class="total-row"><td>Net Payable</td><td>${fmt(total)}</td></tr>` :
+        `<tr class="total-row"><td>Total Amount</td><td>${fmt(total)}</td></tr>`}
     </table>
 
     <div class="amt-box">
@@ -218,7 +222,7 @@ function buildAdvanceBill(order) {
 
     ${balance > 0 ? `
     <div class="bal-box">
-      <span class="lbl">Balance Due</span>
+      <span class="lbl">Balance Due on Collection</span>
       <span class="val">${fmt(balance)}</span>
     </div>` : `
     <div style="text-align:center;margin-bottom:2.5mm;">
@@ -228,7 +232,7 @@ function buildAdvanceBill(order) {
     <div class="note-box">Please bring this receipt when collecting your spectacles.</div>
 
     <div class="stamp-sig">
-      <div class="stamp-box"><span class="stamp-txt">Official Stamp</span></div>
+      <div class="stamp-box"></div>
       <div class="sig-line"><hr/><span>Authorized Signature</span></div>
     </div>
   </div>
@@ -248,18 +252,20 @@ function buildBalanceBill(order) {
   const discPct = parseFloat(order.discount_percent || 0);
   const sub     = fSell + lSell;
   const orderDate = order.created_at ? fmtD(order.created_at) : today();
-  const frameDetail = [order.frame_color, order.frame_type].filter(Boolean).join(' · ');
-  const lensDetail  = [order.lens_coating, order.lens_company].filter(Boolean).join(' · ');
+  const frameColor  = order.frame_color  || '';
+  const lensCoating = order.lens_coating || '';
 
   const body = `
   <div class="body">
+    <!-- Top row: badge LEFT, collected date RIGHT -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
-      <span class="badge badge-paid">Final Receipt</span>
-      <span style="font-size:6.5pt;color:#9ca3af;font-weight:600;">Ordered: ${orderDate}</span>
+      <span class="badge badge-paid">FINAL RECEIPT</span>
+      <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Collected: ${today()}</span>
     </div>
 
+    <!-- Customer block -->
     <div class="cust-block">
-      <div style="grid-column:1/3;">
+      <div style="grid-column:1/4;margin-bottom:2px;">
         <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
       </div>
       <div>
@@ -268,38 +274,40 @@ function buildBalanceBill(order) {
       <div>
         <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
       </div>
+      <div>
+        <div class="kv"><div class="k">Order Date</div><div class="v">${orderDate}</div></div>
+      </div>
     </div>
 
+    <!-- Frame pill -->
     <div class="pill-bar pill-bar-frame">
       <div>
         <div class="pill-label">Frame</div>
         <div class="pill-value">${order.frame || '—'}</div>
       </div>
-      ${frameDetail ? `<div class="pill-sub">${frameDetail}</div>` : ''}
+      ${frameColor ? `<div class="pill-sub">${frameColor}</div>` : ''}
     </div>
 
+    <!-- Lens pill -->
     <div class="pill-bar pill-bar-lens">
       <div>
         <div class="pill-label">Lens</div>
         <div class="pill-value">${order.lens_type || '—'}</div>
       </div>
-      ${lensDetail ? `<div class="pill-sub">${lensDetail}</div>` : ''}
-    </div>
-
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3mm;">
-      <span style="font-size:7pt;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Collected On</span>
-      <span style="font-size:9pt;font-weight:700;color:#0f1f3d;">${today()}</span>
+      ${lensCoating ? `<div class="pill-sub">${lensCoating}</div>` : ''}
     </div>
 
     <hr class="divider-dashed"/>
 
+    <!-- Payment table -->
     <table class="price-table">
-      ${fSell > 0 ? `<tr><td>Frame</td><td>${fmt(fSell)}</td></tr>` : ''}
-      ${lSell > 0 ? `<tr><td>Lenses</td><td>${fmt(lSell)}</td></tr>` : ''}
+      ${fSell > 0 ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
+      ${lSell > 0 ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
       ${discAmt > 0 || discPct > 0 ? `
-        <tr class="row-sub"><td>Subtotal</td><td>${fmt(sub)}</td></tr>
-        <tr class="row-disc"><td>Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td>- ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>` : ''}
-      <tr class="total-row"><td>Total Amount</td><td>${fmt(total)}</td></tr>
+        <tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>
+        <tr class="row-disc"><td>Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td>- ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>
+        <tr class="total-row"><td>Net Payable</td><td>${fmt(total)}</td></tr>` :
+        `<tr class="total-row"><td>Total Amount</td><td>${fmt(total)}</td></tr>`}
       ${advance > 0 ? `<tr class="row-sub"><td>Advance Paid</td><td>- ${fmt(advance)}</td></tr>` : ''}
     </table>
 
@@ -315,7 +323,7 @@ function buildBalanceBill(order) {
     <div class="note-box">Thank you! Please keep this receipt as proof of payment.</div>
 
     <div class="stamp-sig">
-      <div class="stamp-box"><span class="stamp-txt">Official Stamp</span></div>
+      <div class="stamp-box"></div>
       <div class="sig-line"><hr/><span>Authorized Signature</span></div>
     </div>
   </div>
