@@ -16,15 +16,13 @@ const PAGE_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap');
   @page { size: 140mm 200mm portrait; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', Arial, sans-serif; background: white; color: #1a1a2e; width: 140mm; height: 200mm; overflow: hidden; }
+  body { font-family: 'Inter', Arial, sans-serif; background: white; color: #1a1a2e; width: 140mm; height: 200mm; }
   .page { width: 140mm; height: 200mm; display: flex; flex-direction: column; }
 
-  /* ── HEADER ── */
-  .hdr { background: #0f1f3d; padding: 7mm 7mm 5mm; color: white; position: relative; overflow: hidden; }
-  .hdr::after { content:''; position:absolute; top:-20px; right:-20px; width:80px; height:80px; border-radius:50%; background:rgba(201,168,76,.12); }
-  .hdr::before { content:''; position:absolute; bottom:-30px; left:30%; width:120px; height:120px; border-radius:50%; background:rgba(201,168,76,.07); }
-  .hdr-inner { display: flex; justify-content: space-between; align-items: flex-start; position:relative; z-index:1; }
-  .shop-name { font-family:'Playfair Display',serif; font-size: 13pt; font-weight: 900; color: white; line-height: 1.15; letter-spacing:-0.2px; }
+  /* HEADER — no pseudo-element circles */
+  .hdr { background: #0f1f3d; padding: 7mm 7mm 5mm; color: white; }
+  .hdr-inner { display: flex; justify-content: space-between; align-items: flex-start; }
+  .shop-name { font-family:'Playfair Display',serif; font-size: 13pt; font-weight: 900; color: white; line-height: 1.15; }
   .shop-tagline { font-size: 6pt; color: #c9a84c; letter-spacing: 2.5px; text-transform: uppercase; margin-top: 2px; font-weight:600; }
   .shop-addr { font-size: 6.5pt; color: rgba(237,233,224,.75); margin-top: 3px; line-height: 1.5; }
   .bill-badge { background: #c9a84c; color: #0f1f3d; font-size: 6.5pt; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 1px; text-transform: uppercase; display: inline-block; margin-bottom: 3px; }
@@ -32,28 +30,37 @@ const PAGE_CSS = `
   .bill-date { font-size: 7pt; color: rgba(237,233,224,.7); margin-top: 2px; }
   .gold-bar { height: 3px; background: linear-gradient(90deg, #c9a84c 0%, #e8d48e 50%, transparent 100%); }
 
-  /* ── BODY ── */
-  .body { padding: 5mm 7mm; flex: 1; display:flex; flex-direction:column; }
-  .sec-title { font-size: 6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #9ca3af; margin-bottom: 3px; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; margin-bottom:4mm; }
-  .info-block { background:#f8f7f4; border-radius:6px; padding:4px 7px; }
-  .kv { margin-bottom: 2.5px; }
-  .kv .k { font-size: 6.5pt; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; font-weight:600; }
-  .kv .v { font-size: 9.5pt; font-weight: 700; color: #0f1f3d; line-height:1.3; }
+  /* BODY — flex column, fills remaining height */
+  .body { padding: 5mm 7mm 4mm; flex: 1; display:flex; flex-direction:column; }
 
-  /* ── DIVIDER ── */
-  .divider { border:none; border-top: 1px solid #e8e6e1; margin: 3mm 0; }
+  /* CUSTOMER BLOCK — full width single column */
+  .cust-block { background:#f8f7f4; border-radius:7px; padding:5px 9px; margin-bottom:3.5mm; display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 6mm; }
+  .sec-title { font-size: 6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #9ca3af; margin-bottom: 3px; }
+  .kv { margin-bottom: 2px; }
+  .kv .k { font-size: 6.5pt; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; font-weight:600; }
+  .kv .v { font-size: 10pt; font-weight: 700; color: #0f1f3d; line-height:1.3; }
+  .kv .v-lg { font-size: 11.5pt; font-weight: 800; color: #0f1f3d; line-height:1.2; }
+
+  /* FRAME / LENS PILL BARS */
+  .pill-bar { border-radius:7px; padding:5px 9px; margin-bottom:3mm; display:flex; justify-content:space-between; align-items:center; }
+  .pill-bar-frame { background:#0f1f3d; }
+  .pill-bar-lens  { background:#1e3a5f; }
+  .pill-label { font-size:6pt; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:1px; color:#c9a84c; }
+  .pill-value { font-size:10pt; font-weight:700; color:white; }
+  .pill-sub   { font-size:7.5pt; color:rgba(237,233,224,.7); text-align:right; }
+
+  /* DIVIDERS */
   .divider-dashed { border:none; border-top: 1px dashed #d1cdc4; margin: 2.5mm 0; }
 
-  /* ── PRICE TABLE ── */
+  /* PRICE TABLE */
   .price-table { width:100%; border-collapse:collapse; margin-bottom:3mm; }
   .price-table td { padding: 2.5px 0; font-size:9pt; vertical-align:middle; }
   .price-table td:last-child { text-align:right; font-weight:700; }
-  .price-table .sub { color:#9ca3af; font-size:8pt; }
-  .price-table .disc td { color:#dc2626; }
+  .price-table .row-sub td { color:#9ca3af; font-size:8pt; }
+  .price-table .row-disc td { color:#dc2626; }
   .price-table .total-row td { font-size:11pt; font-weight:900; color:#0f1f3d; border-top:1.5px solid #0f1f3d; padding-top:5px; }
 
-  /* ── AMOUNT BOX ── */
+  /* AMOUNT BOXES */
   .amt-box { background:#0f1f3d; border-radius:8px; padding:7px 12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5mm; }
   .amt-box .lbl { font-size:7pt; color:#c9a84c; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
   .amt-box .val { font-family:'Playfair Display',serif; font-size:15pt; font-weight:900; color:white; }
@@ -61,44 +68,38 @@ const PAGE_CSS = `
   .bal-box .lbl { font-size:7pt; color:#dc2626; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
   .bal-box .val { font-family:'Playfair Display',serif; font-size:13pt; font-weight:900; color:#dc2626; }
 
-  /* ── STATUS BADGES ── */
+  /* BADGES */
   .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:7.5pt; font-weight:700; letter-spacing:0.3px; }
   .badge-advance { background:#fffbeb; color:#92400e; border:1.5px solid #f59e0b; }
-  .badge-paid { background:#f0fdf4; color:#15803d; border:1.5px solid #86efac; }
+  .badge-paid    { background:#f0fdf4; color:#15803d; border:1.5px solid #86efac; }
 
-  /* ── STAMP + SIG AREA ── */
-  .bottom-area { margin-top:auto; }
-  .stamp-sig { display:flex; gap:5mm; align-items:flex-end; margin-top:3mm; }
-  .stamp-box { flex:1; height:20mm; border:1px dashed #d1cdc4; border-radius:7px; display:flex; align-items:center; justify-content:center; }
-  .stamp-txt { font-size:6.5pt; color:#c4bfb5; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; }
-  .sig-line { flex:1; text-align:center; }
-  .sig-line hr { border:none; border-top:1.5px solid #0f1f3d; margin-bottom:3px; }
-  .sig-line span { font-size:7pt; color:#6b7280; font-weight:600; letter-spacing:0.5px; }
-
-  /* ── NOTE BOX ── */
+  /* NOTE */
   .note-box { background:#fffbeb; border-left:3px solid #c9a84c; border-radius:0 6px 6px 0; padding:5px 8px; font-size:7.5pt; color:#92400e; line-height:1.5; margin-bottom:3mm; }
 
-  /* ── ITEM ROWS ── */
+  /* STAMP + SIG — pushed to bottom with margin-top:auto */
+  .stamp-sig { display:flex; gap:5mm; align-items:flex-end; margin-top:auto; padding-top:4mm; }
+  .stamp-box { flex:1; height:22mm; border:1px dashed #d1cdc4; border-radius:7px; display:flex; align-items:center; justify-content:center; }
+  .stamp-txt { font-size:6.5pt; color:#c4bfb5; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; }
+  .sig-line { flex:1; text-align:center; padding-bottom:2px; }
+  .sig-line hr { border:none; border-top:1.5px solid #0f1f3d; margin-bottom:4px; }
+  .sig-line span { font-size:7pt; color:#6b7280; font-weight:600; letter-spacing:0.5px; }
+
+  /* ITEM ROWS (quick sale) */
   .item-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dotted #e0ddd6; font-size: 9pt; }
   .item-row:last-child { border-bottom: none; }
 
-  /* ── FOOTER ── */
-  .footer { background: #0f1f3d; padding: 3.5mm 7mm; display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+  /* FOOTER */
+  .footer { background: #0f1f3d; padding: 3.5mm 7mm; display: flex; justify-content: space-between; align-items: center; }
   .footer-slogan { font-size: 7.5pt; font-weight: 700; color: #c9a84c; }
   .footer-sub { font-size: 6.5pt; color: rgba(237,233,224,.6); }
 
-  /* ── STATUS BADGES (compat) ── */
-  .status-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 8.5pt; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
-  .status-advance { background: #fef9c3; color: #92400e; border: 1.5px solid #f59e0b; }
-  .status-paid { background: #dcfce7; color: #166534; border: 1.5px solid #86efac; }
+  /* compat classes for QS / repair bills */
   .total-box { background: #0f1f3d; border-radius: 10px; padding: 12px 16px; text-align: center; margin: 4mm 0; }
   .total-box .lbl { font-size: 8pt; color: #c9a84c; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
   .total-box .amt { font-size: 22pt; font-weight: 900; color: white; }
-  .sig-row { display: flex; justify-content: space-between; margin-top: 6mm; gap: 10mm; }
-  .sig-box { flex: 1; border-top: 1.5px solid #0f1f3d; padding-top: 4px; text-align: center; font-size: 7.5pt; color: #6b7280; }
-  .footer { background: #0f1f3d; padding: 5mm 8mm; display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
-  .footer-slogan { font-size: 8.5pt; font-weight: 700; color: #c9a84c; }
-  .footer-sub { font-size: 7pt; color: #ede9e0; }
+  .status-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 8.5pt; font-weight: 700; text-transform: uppercase; }
+  .status-advance { background: #fef9c3; color: #92400e; border: 1.5px solid #f59e0b; }
+  .status-paid { background: #dcfce7; color: #166534; border: 1.5px solid #86efac; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 `;
 
@@ -155,72 +156,77 @@ function buildAdvanceBill(order) {
   const discPct = parseFloat(order.discount_percent || 0);
   const sub     = fSell + lSell;
   const orderDate = order.created_at ? fmtD(order.created_at) : today();
-  const hasCoating = order.lens_coating && order.lens_coating !== '—';
+  const frameDetail = [order.frame_color, order.frame_type].filter(Boolean).join(' · ');
+  const lensDetail  = [order.lens_coating, order.lens_company].filter(Boolean).join(' · ');
 
   const body = `
   <div class="body">
-    <!-- Status row -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
-      <span class="badge badge-advance">⏳ Advance Receipt</span>
+      <span class="badge badge-advance">ADVANCE RECEIPT</span>
       <span style="font-size:6.5pt;color:#9ca3af;font-weight:600;">Ordered: ${orderDate}</span>
     </div>
 
-    <!-- Customer + Product side by side -->
-    <div class="grid2">
-      <div class="info-block">
-        <div class="sec-title">Customer</div>
-        <div class="kv"><div class="v" style="font-size:10.5pt;">${order.customer_name || '—'}</div></div>
-        <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
-        ${order.age ? `<div class="kv"><div class="k">Age</div><div class="v">${order.age} yrs</div></div>` : ''}
+    <div class="cust-block">
+      <div style="grid-column:1/3;">
+        <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
       </div>
-      <div class="info-block">
-        <div class="sec-title">Delivery</div>
-        <div class="kv"><div class="k">Ready By</div><div class="v" style="color:#0f1f3d;">${fmtD(order.deliver_date)}</div></div>
-        <div class="kv"><div class="k">Lens</div><div class="v">${order.lens_type || '—'}${hasCoating ? '<br/><span style="font-size:7.5pt;color:#6b7280;font-weight:500;">' + order.lens_coating + '</span>' : ''}</div></div>
+      <div>
+        <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
+      </div>
+      <div>
+        <div class="kv"><div class="k">Phone</div><div style="display:none"></div></div>
+        <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
       </div>
     </div>
 
-    <!-- Frame bar -->
-    <div style="background:#0f1f3d;border-radius:7px;padding:5px 9px;margin-bottom:3.5mm;display:flex;justify-content:space-between;align-items:center;">
+    <div class="pill-bar pill-bar-frame">
       <div>
-        <div style="font-size:6pt;color:#c9a84c;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:1px;">Frame</div>
-        <div style="font-size:10pt;font-weight:700;color:white;">${order.frame || '—'}</div>
+        <div class="pill-label">Frame</div>
+        <div class="pill-value">${order.frame || '—'}</div>
       </div>
-      ${order.frame_color || order.frame_type ? `<div style="text-align:right;font-size:7.5pt;color:rgba(237,233,224,.7);">${[order.frame_color, order.frame_type].filter(Boolean).join(' · ')}</div>` : ''}
+      ${frameDetail ? `<div class="pill-sub">${frameDetail}</div>` : ''}
+    </div>
+
+    <div class="pill-bar pill-bar-lens">
+      <div>
+        <div class="pill-label">Lens</div>
+        <div class="pill-value">${order.lens_type || '—'}</div>
+      </div>
+      ${lensDetail ? `<div class="pill-sub">${lensDetail}</div>` : ''}
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3mm;">
+      <span style="font-size:7pt;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Ready By</span>
+      <span style="font-size:9pt;font-weight:700;color:#0f1f3d;">${fmtD(order.deliver_date)}</span>
     </div>
 
     <hr class="divider-dashed"/>
 
-    <!-- Payment breakdown -->
     <table class="price-table">
       ${fSell > 0 ? `<tr><td>Frame</td><td>${fmt(fSell)}</td></tr>` : ''}
       ${lSell > 0 ? `<tr><td>Lenses</td><td>${fmt(lSell)}</td></tr>` : ''}
       ${discAmt > 0 || discPct > 0 ? `
-        <tr class="sub"><td>Subtotal</td><td>${fmt(sub)}</td></tr>
-        <tr class="disc"><td>Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td>− ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>` : ''}
+        <tr class="row-sub"><td>Subtotal</td><td>${fmt(sub)}</td></tr>
+        <tr class="row-disc"><td>Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td>- ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>` : ''}
       <tr class="total-row"><td>Total Amount</td><td>${fmt(total)}</td></tr>
     </table>
 
-    <!-- Advance paid box -->
     <div class="amt-box">
       <span class="lbl">Advance Paid</span>
       <span class="val">${fmt(advance)}</span>
     </div>
 
-    <!-- Balance due box -->
     ${balance > 0 ? `
     <div class="bal-box">
       <span class="lbl">Balance Due</span>
       <span class="val">${fmt(balance)}</span>
     </div>` : `
     <div style="text-align:center;margin-bottom:2.5mm;">
-      <span class="badge badge-paid">✓ Fully Paid</span>
+      <span class="badge badge-paid">Account Settled</span>
     </div>`}
 
-    <!-- Note -->
-    <div class="note-box">📋 Please bring this receipt when collecting your spectacles.</div>
+    <div class="note-box">Please bring this receipt when collecting your spectacles.</div>
 
-    <!-- Stamp + Signature -->
     <div class="stamp-sig">
       <div class="stamp-box"><span class="stamp-txt">Official Stamp</span></div>
       <div class="sig-line"><hr/><span>Authorized Signature</span></div>
@@ -242,68 +248,72 @@ function buildBalanceBill(order) {
   const discPct = parseFloat(order.discount_percent || 0);
   const sub     = fSell + lSell;
   const orderDate = order.created_at ? fmtD(order.created_at) : today();
-  const hasCoating = order.lens_coating && order.lens_coating !== '—';
+  const frameDetail = [order.frame_color, order.frame_type].filter(Boolean).join(' · ');
+  const lensDetail  = [order.lens_coating, order.lens_company].filter(Boolean).join(' · ');
 
   const body = `
   <div class="body">
-    <!-- Status row -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
-      <span class="badge badge-paid">✓ Fully Paid</span>
+      <span class="badge badge-paid">Final Receipt</span>
       <span style="font-size:6.5pt;color:#9ca3af;font-weight:600;">Ordered: ${orderDate}</span>
     </div>
 
-    <!-- Customer + Product -->
-    <div class="grid2">
-      <div class="info-block">
-        <div class="sec-title">Customer</div>
-        <div class="kv"><div class="v" style="font-size:10.5pt;">${order.customer_name || '—'}</div></div>
-        <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
-        ${order.age ? `<div class="kv"><div class="k">Age</div><div class="v">${order.age} yrs</div></div>` : ''}
+    <div class="cust-block">
+      <div style="grid-column:1/3;">
+        <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
       </div>
-      <div class="info-block">
-        <div class="sec-title">Product</div>
-        <div class="kv"><div class="k">Lens</div><div class="v">${order.lens_type || '—'}${hasCoating ? '<br/><span style="font-size:7.5pt;color:#6b7280;font-weight:500;">' + order.lens_coating + '</span>' : ''}</div></div>
-        <div class="kv"><div class="k">Collected</div><div class="v">${today()}</div></div>
+      <div>
+        <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
+      </div>
+      <div>
+        <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
       </div>
     </div>
 
-    <!-- Frame bar -->
-    <div style="background:#0f1f3d;border-radius:7px;padding:5px 9px;margin-bottom:3.5mm;display:flex;justify-content:space-between;align-items:center;">
+    <div class="pill-bar pill-bar-frame">
       <div>
-        <div style="font-size:6pt;color:#c9a84c;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:1px;">Frame</div>
-        <div style="font-size:10pt;font-weight:700;color:white;">${order.frame || '—'}</div>
+        <div class="pill-label">Frame</div>
+        <div class="pill-value">${order.frame || '—'}</div>
       </div>
-      ${order.frame_color || order.frame_type ? `<div style="text-align:right;font-size:7.5pt;color:rgba(237,233,224,.7);">${[order.frame_color, order.frame_type].filter(Boolean).join(' · ')}</div>` : ''}
+      ${frameDetail ? `<div class="pill-sub">${frameDetail}</div>` : ''}
+    </div>
+
+    <div class="pill-bar pill-bar-lens">
+      <div>
+        <div class="pill-label">Lens</div>
+        <div class="pill-value">${order.lens_type || '—'}</div>
+      </div>
+      ${lensDetail ? `<div class="pill-sub">${lensDetail}</div>` : ''}
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3mm;">
+      <span style="font-size:7pt;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Collected On</span>
+      <span style="font-size:9pt;font-weight:700;color:#0f1f3d;">${today()}</span>
     </div>
 
     <hr class="divider-dashed"/>
 
-    <!-- Payment breakdown -->
     <table class="price-table">
       ${fSell > 0 ? `<tr><td>Frame</td><td>${fmt(fSell)}</td></tr>` : ''}
       ${lSell > 0 ? `<tr><td>Lenses</td><td>${fmt(lSell)}</td></tr>` : ''}
       ${discAmt > 0 || discPct > 0 ? `
-        <tr class="sub"><td>Subtotal</td><td>${fmt(sub)}</td></tr>
-        <tr class="disc"><td>Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td>− ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>` : ''}
+        <tr class="row-sub"><td>Subtotal</td><td>${fmt(sub)}</td></tr>
+        <tr class="row-disc"><td>Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td>- ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>` : ''}
       <tr class="total-row"><td>Total Amount</td><td>${fmt(total)}</td></tr>
-      ${advance > 0 ? `<tr class="sub"><td>Advance Paid</td><td>− ${fmt(advance)}</td></tr>` : ''}
+      ${advance > 0 ? `<tr class="row-sub"><td>Advance Paid</td><td>- ${fmt(advance)}</td></tr>` : ''}
     </table>
 
-    <!-- Final paid box -->
     <div class="amt-box">
       <span class="lbl">Balance Paid Today</span>
       <span class="val">${fmt(balance)}</span>
     </div>
 
-    <!-- Zero balance confirmation -->
     <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:7px;padding:5px 10px;text-align:center;margin-bottom:3mm;">
-      <span style="font-size:8pt;color:#15803d;font-weight:700;">✓ Account Settled — Total Paid: ${fmt(total)}</span>
+      <span style="font-size:8pt;color:#15803d;font-weight:700;">Account Settled — Total Paid: ${fmt(total)}</span>
     </div>
 
-    <!-- Note -->
-    <div class="note-box">📋 Thank you! Please keep this receipt as proof of payment.</div>
+    <div class="note-box">Thank you! Please keep this receipt as proof of payment.</div>
 
-    <!-- Stamp + Signature -->
     <div class="stamp-sig">
       <div class="stamp-box"><span class="stamp-txt">Official Stamp</span></div>
       <div class="sig-line"><hr/><span>Authorized Signature</span></div>
