@@ -117,23 +117,36 @@ router.post('/', auth, async (req, res) => {
     const orderRes = await client.query(`
       INSERT INTO orders (
         order_number, customer_id, frame, frame_type, frame_material,
-        lens_type, lens_coating, lens_company,
+        frame_color, frame_sell_price, frame_buy_price,
+        lens_type, lens_coating, lens_company, lens_index,
+        lens_sell_price, lens_buy_price,
         total_amount, advance_amount, balance_amount,
         deliver_date, status,
         has_rx, rx_hospital, rx_date, rx_doctor, notes,
-        frame_buy_price, lens_buy_price
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
-                $19,$20)
+        customer_own_frame, order_type, frame_inventory_id,
+        discount_amount, discount_percent, payment_method
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
+                $18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)
       RETURNING *
     `, [
       orderNum, customer_id,
       frame||null, frame_type||null, frame_material||null,
+      req.body.frame_color||null,
+      parseFloat(req.body.frame_sell_price)||0,
+      parseFloat(req.body.frame_buy_price)||0,
       lens_type||null, lens_coating||null, lens_company||null,
+      req.body.lens_index||null,
+      parseFloat(req.body.lens_sell_price)||0,
+      parseFloat(req.body.lens_buy_price)||0,
       total, advance, balance,
       deliver_date||null, import_date ? 'delivered' : (status||'created'),
       has_rx||false, rx_hospital||null, rx_date||null, rx_doctor||null, notes||null,
-      parseFloat(req.body.frame_buy_price)||0,
-      parseFloat(req.body.lens_buy_price)||0,
+      req.body.customer_own_frame||false,
+      req.body.order_type||'normal',
+      req.body.frame_inventory_id||null,
+      parseFloat(req.body.discount_amount)||0,
+      parseFloat(req.body.discount_percent)||0,
+      req.body.payment_method||'cash',
     ]);
 
     if (importTs) {

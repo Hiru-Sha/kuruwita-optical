@@ -488,7 +488,7 @@ export default function Orders() {
                     {o.has_rx && !o.rx_returned && (
                       <span style={{ background:'#e0f2fe', color:'#0369a1', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>Rx</span>
                     )}
-                    {(!parseFloat(o.lens_buy_price) || (!parseFloat(o.frame_buy_price) && !o.customer_own_frame && parseFloat(o.frame_sell_price)>0)) && (
+                    {(!parseFloat(o.lens_buy_price) || (!parseFloat(o.frame_buy_price) && !o.customer_own_frame)) && (
                       <span style={{ background:'#fff7ed', color:'#c2410c', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, border:'1px solid #fed7aa' }}>
                         ⚠️ No cost
                       </span>
@@ -703,7 +703,7 @@ export default function Orders() {
 
               {/* Current cost summary — frame + lens */}
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:showLensCost?10:0 }}>
-                {(selected.customer_own_frame || parseFloat(selected.frame_sell_price)===0) ? (
+                {selected.customer_own_frame ? (
                   <div style={{ background:'#f0fdf4', borderRadius:8, padding:'8px 10px', border:'1px solid #86efac' }}>
                     <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Frame Buy</div>
                     <div style={{ fontSize:11, fontWeight:700, color:C.success }}>Customer Frame</div>
@@ -725,7 +725,7 @@ export default function Orders() {
                 <div style={{ background:C.cream, borderRadius:8, padding:'8px 10px' }}>
                   <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Total COGS</div>
                   <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>
-                    {fmtMoney(((selected.customer_own_frame||parseFloat(selected.frame_sell_price)===0)?0:parseFloat(selected.frame_buy_price)||0)+(parseFloat(selected.lens_buy_price)||0))}
+                    {fmtMoney((selected.customer_own_frame?0:parseFloat(selected.frame_buy_price)||0)+(parseFloat(selected.lens_buy_price)||0))}
                   </div>
                 </div>
                 <div style={{ background:C.cream, borderRadius:8, padding:'8px 10px' }}>
@@ -744,7 +744,7 @@ export default function Orders() {
                     ⚠️ Only enter frame cost here for <b>old orders or orders where frame is not in inventory</b>. If frame was selected from inventory, cost is already set automatically.
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
-                    {(selected.customer_own_frame || parseFloat(selected.frame_sell_price)===0) ? (
+                    {selected.customer_own_frame ? (
                       <div style={{ background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:8, padding:'9px 12px' }}>
                         <div style={{ fontSize:10, fontWeight:700, color:C.success }}>Customer's own frame</div>
                         <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>No frame cost needed</div>
