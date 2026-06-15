@@ -15,44 +15,23 @@ const DIOPTERS     = ['0.00',...Array.from({length:80},(_,i)=>((i+1)*0.25).toFix
 const AXES         = Array.from({length:181},(_,i)=>String(i));
 const VA_OPTIONS   = ['6/6','6/9','6/12','6/18','6/24','6/36','6/60','CF','HM','PL'];
 const FRAME_TYPES  = ['Full rim','Half rim','Rimless','Sunglass'];
-const FRAME_MATS   = ['Plastic','Metal','TR90','Titanium','Acetate'];
+const FRAME_MATS   = ['Plastic','Metal','TR90','Titanium','Acetate','Mixed'];
 const FRAME_COLORS = ['Black','Gold','Silver','Brown','Gunmetal','Blue','Red','Pink','Tortoise','Crystal','Other'];
 const LENS_TYPES   = ['Single Vision','Progressive','Bifocal','Office Lens','Reading (ready)','Progressive Bifocal'];
 const LENS_COATINGS= [
-  // ── CR39 basics (most common) ──
-  'CR White (UC)',
-  'CR Blue Cut',
-  'CR Blue Cut PG',
-  'CR HMC',
-  'CR HMC PG',
-  // ── Progressive coatings ──
-  'Progressive White',
-  'Progressive Blue Cut',
-  'Progressive Blue Cut PG',
-  'Progressive HMC',
-  'Progressive HMC PG',
-  'Progressive Polarized',
-  'Progressive Photo Gray',
-  // ── High index / specialty ──
+  // ── Single coatings ──
+  'CR White',
+  'Blue Filter',
+  'PhotoChrome',
   'HMC',
-  'HMC PG',
-  'HMC Grey',
-  'Blue Cut HMC',
-  'Blue Cut PG HMC',
-  'BC PG',
-  'BC PG DSC',
-  'HMC DSC',
-  'Photo HMC DSC',
-  'Blue Cut DSC',
-  'Polarized',
-  'Polarized DSC',
-  'UC',
-  'Multi Coded',
-  'Mirror Coating',
-  'Photochromic',
+  // ── Combinations ──
+  'Blue Filter + PhotoGrey',
+  'Blue Filter + HMC',
+  'PhotoGrey + HMC',
+  'Blue Filter + PhotoGrey + HMC',
 ];
-const LENS_INDEXES = ['Default','CR39','1.49','1.56','1.59','1.6','1.61','1.67','1.74','Poly'];
-const LENS_COMPANIES = ['Lanka Optic','MR Lens','Neo Vision','Omega','Murano','Generic','Other'];
+const LENS_INDEXES = ['CR39','1.49','1.56','1.59','1.6','1.61','1.67','1.74','Poly'];
+const LENS_COMPANIES = ['Negombo Optical','Solex','Other'];
 
 const fmtMoney = (n) => 'Rs. '+parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 const pct = (a,b) => b>0 ? Math.round((a/b)*100) : 0;
@@ -286,7 +265,7 @@ export default function NewOrder() {
   },[location.search]);
 
   const [lensDetails, setLensDetails] = useState({
-    type:'Single Vision', coating:'HMC', lens_index:'Default',
+    type:'Bifocal', coating:'CR White', lens_index:'CR39',
     lens_company:'Lanka Optic', color:'White',
     buyPrice:0, sellPrice:0, lensDiscount:0,
     matchedRange:'', matched:false, matchSource:'',
@@ -311,7 +290,7 @@ export default function NewOrder() {
   const [customerOwnFrame, setCustomerOwnFrame]= useState(false);
   const [showScanner,      setShowScanner]     = useState(false);
 
-  const frameFinal  = (orderType==='frame_replace_free'||orderType==='lens_warranty') ? 0
+  const frameFinal  = (orderType==='frame_replace_free'||orderType==='lens_warranty'||orderType==='lens_change') ? 0
     : Math.max(0,(frameDetails.sellPrice||0)-(frameDetails.frameDiscount||0));
   const lensFinal   = orderType==='lens_warranty' ? 0
     : Math.max(0,(lensDetails.sellPrice||0)-(lensDetails.lensDiscount||0));
@@ -713,8 +692,9 @@ export default function NewOrder() {
                 { v:'lens_paid',          icon:'🔬', label:'Lens Paid Replacement', sub:'Customer pays for new lens',  col:'#1d4ed8', bg:'#eff6ff' },
                 { v:'frame_replace_free', icon:'🎁', label:'Frame Replace Free',    sub:'One-to-one, no charge',       col:'#7c3aed', bg:'#f5f3ff' },
                 { v:'frame_replace_paid', icon:'💰', label:'Frame Replace Paid',    sub:'Replacement with payment',    col:'#b45309', bg:'#fffbeb' },
+                { v:'lens_change',        icon:'🔬', label:'Lens Change Only',        sub:"Customer's own frame — no frame cost", col:'#0891b2', bg:'#ecfeff' },
               ].map(t=>(
-                <button key={t.v} onClick={()=>setOrderType(t.v)}
+                <button key={t.v} onClick={()=>{ setOrderType(t.v); if(t.v==='lens_change'){ setCustomerOwnFrame(true); setFrameDetails(f=>({...f,buyPrice:0,sellPrice:0})); } }}
                   style={{ padding:'10px 12px', borderRadius:10, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
                     border:`2px solid ${orderType===t.v?t.col:C.border}`,
                     background:orderType===t.v?t.bg:'white', color:orderType===t.v?t.col:C.muted,
@@ -872,6 +852,7 @@ export default function NewOrder() {
                   {LENS_COATINGS.map(c=><option key={c}>{c}</option>)}
                 </select>
               </Field>
+              {!(lensDetails.type && lensDetails.coating) && (
               <Field label="Tint / Color">
                 <select value={lensDetails.color}
                   onChange={e=>{ const cl=e.target.value; setLensDetails(l=>({...l,color:cl})); lookupLens(lensDetails.type,lensDetails.coating,'',lensDetails.lens_index,lensDetails.lens_company,cl); }}
@@ -881,6 +862,7 @@ export default function NewOrder() {
                   <option value="Polarize">Polarize</option>
                 </select>
               </Field>
+              )}
             </div>
             {lensDetails.matched ? (
               <div style={{ background:lensDetails.matchSource==='db'?'#dbeafe':'#fef9c3', border:`1px solid ${lensDetails.matchSource==='db'?'#93c5fd':'#fde68a'}`, borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
