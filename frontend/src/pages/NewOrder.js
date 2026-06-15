@@ -278,7 +278,7 @@ export default function NewOrder() {
 
   const [lensDetails, setLensDetails] = useState({
     type:'Bifocal', coating:'CR White', lens_index:'CR39',
-    lens_company:'Lanka Optic', color:'White',
+    lens_company:'Negombo Optical', color:'White',
     buyPrice:0, sellPrice:0, lensDiscount:0,
     matchedRange:'', matched:false, matchSource:'',
   });
@@ -449,6 +449,7 @@ export default function NewOrder() {
   };
 
   const handleSave = async () => {
+    if (saving) return;   // prevent double-tap duplicate
     const err = validate(4);
     if (err) return setError(err);
     setError(''); setSaving(true);

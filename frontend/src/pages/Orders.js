@@ -749,7 +749,7 @@ export default function Orders() {
                       <input type="number" value={lensCostForm.lensBuy} onChange={e=>setLensCostForm(f=>({...f,lensBuy:e.target.value}))}
                         placeholder="What lab charged you"
                         style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #93c5fd`, borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
-                      <div style={{ fontSize:10, color:C.muted, marginTop:3 }}>Lanka Optic / Negombo / Solex bill</div>
+                      <div style={{ fontSize:10, color:C.muted, marginTop:3 }}>Negombo Optical / Solex bill</div>
                     </div>
                     <div>
                       <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Lens Sell Price (Rs.)</label>
@@ -760,7 +760,7 @@ export default function Orders() {
                     <div style={{ gridColumn:'1/-1' }}>
                       <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Lab / Supplier</label>
                       <input value={lensCostForm.company} onChange={e=>setLensCostForm(f=>({...f,company:e.target.value}))}
-                        placeholder="e.g. Lanka Optic, Neo Vision..."
+                        placeholder="e.g. Negombo Optical, Solex..."
                         style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #93c5fd`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
                     </div>
                   </div>
