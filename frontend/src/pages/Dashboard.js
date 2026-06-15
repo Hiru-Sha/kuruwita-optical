@@ -144,7 +144,7 @@ export default function Dashboard() {
                 <div>
                   <div style={{fontSize:9,color:'#fde68a',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Total Cash in Drawer</div>
                   <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#fde68a'}}>
-                    {fmt(cash.allTimeCash||0)}
+                    {fmt((cash._raw_allTimeCashRes?.total_cash_in_hand) || cash.allTimeCash || 0)}
                   </div>
                   <div style={{fontSize:11,color:'#ede9e0',marginTop:3}}>All time cash − all expenses − all deposits</div>
                 </div>

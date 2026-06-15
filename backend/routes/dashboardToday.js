@@ -201,6 +201,7 @@ router.get('/', auth, async (req, res) => {
         repairCount:  todayRepairs.rows.length,
         expCount:     todayExpenses.rows.length,
         depCount:     todayDeposits.rows.length,
+        _raw_allTimeCashRes: allTimeCashRes?.rows?.[0],
       },
     });
   } catch (err) {
