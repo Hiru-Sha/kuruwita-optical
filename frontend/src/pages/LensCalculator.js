@@ -32,7 +32,7 @@ function RxInput({ label, sph, setSph, cyl, setCyl, add, setAdd, onCopyToOther }
           </button>
         )}
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
         {[['SPH',sph,setSph,sphSign,setSphSign,handleSphChange],['CYL',cyl,setCyl,cylSign,setCylSign,handleCylChange]].map(([lbl,val,set,sign,setSign,handler])=>(
           <div key={lbl}>
             <label style={{ fontSize:10, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>{lbl}</label>
@@ -48,16 +48,16 @@ function RxInput({ label, sph, setSph, cyl, setCyl, add, setAdd, onCopyToOther }
             </div>
           </div>
         ))}
-        {/* ADD field — always + */}
-        <div>
-          <label style={{ fontSize:10, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>ADD</label>
-          <div style={{ display:'flex', gap:4 }}>
-            <div style={{ display:'flex', border:`1.5px solid ${C.border}`, borderRadius:8, overflow:'hidden' }}>
-              <button style={{ padding:'8px 10px', border:'none', background:C.navy, color:'white', fontWeight:700, fontSize:14, cursor:'default', fontFamily:'inherit' }}>+</button>
-            </div>
-            <input value={(add||'').replace(/[^0-9.]/g,'')} onChange={handleAddChange} placeholder="0.00"
-              style={{ flex:1, padding:'8px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
+      </div>
+      {/* ADD — full width row below SPH/CYL */}
+      <div style={{ marginTop:10 }}>
+        <label style={{ fontSize:10, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>ADD (Near Addition)</label>
+        <div style={{ display:'flex', gap:4, maxWidth:'50%' }}>
+          <div style={{ display:'flex', border:`1.5px solid ${C.border}`, borderRadius:8, overflow:'hidden' }}>
+            <button style={{ padding:'8px 10px', border:'none', background:C.navy, color:'white', fontWeight:700, fontSize:14, cursor:'default', fontFamily:'inherit' }}>+</button>
           </div>
+          <input value={(add||'').replace(/[^0-9.]/g,'')} onChange={handleAddChange} placeholder="0.00"
+            style={{ flex:1, padding:'8px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
         </div>
       </div>
     </div>
