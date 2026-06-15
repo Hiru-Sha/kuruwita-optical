@@ -234,6 +234,11 @@ export default function Orders() {
 
   const handleLensStep = async (id, lens_step) => {
     await updateOrder(id, { lens_step });
+    // lens_step 3 = Received — notify staff to call customer
+    if (lens_step === 3) {
+      const order = orders.find(o=>o.id===id) || selected;
+      showToast(`Lens received for ${order?.order_number||'order'} — call ${order?.customer_name||'customer'} to collect`);
+    }
     load();
     setSelected(s => s ? { ...s, lens_step } : s);
   };

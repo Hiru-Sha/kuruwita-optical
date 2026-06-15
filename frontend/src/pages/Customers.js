@@ -226,8 +226,14 @@ function OrderCard({ o, customerId, onRefresh }) {
 
   return (
     <div style={{ background:cream, borderRadius:10, padding:'12px 14px', marginBottom:10 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-        <span style={{ fontSize:12, fontWeight:700, color:muted }}>{o.order_number}</span>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:12, fontWeight:700, color:muted }}>{o.order_number}</span>
+          <a href={`/orders?search=${o.order_number}`} onClick={e=>e.stopPropagation()}
+            style={{ fontSize:10, color:'#1e40af', fontWeight:600, textDecoration:'none', background:'#eff6ff', padding:'2px 7px', borderRadius:10, border:'1px solid #bae6fd' }}>
+            Open →
+          </a>
+        </div>
         <span style={{ background:st.bg, color:st.color, fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:20 }}>{o.status}</span>
       </div>
       <div style={{ fontSize:14, fontWeight:600, color:navy, marginBottom:4 }}>{o.frame||'—'}</div>

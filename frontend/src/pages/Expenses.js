@@ -106,6 +106,14 @@ export default function Expenses() {
     catch { return []; }
   });
   const [showManageCats, setShowManageCats] = useState(false);
+
+  // Budget limits per category — stored in localStorage
+  const [budgets, setBudgets] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ko_expense_budgets') || '{}'); }
+    catch { return {}; }
+  });
+  const [showBudgets, setShowBudgets] = useState(false);
+  const saveBudgets = (b) => { setBudgets(b); localStorage.setItem('ko_expense_budgets', JSON.stringify(b)); };
   const [newCatName, setNewCatName] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('📌');
 
@@ -828,7 +836,29 @@ export default function Expenses() {
           <div style={{ display:'grid', gridTemplateColumns:'280px 1fr', gap:16 }}>
             {/* Category breakdown */}
             <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
-              <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>By Category</div>
+              <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>By Category</span>
+                <button onClick={()=>setShowBudgets(s=>!s)}
+                  style={{ fontSize:11, fontWeight:600, padding:'4px 10px', background:showBudgets?'#fee2e2':C.cream, color:showBudgets?C.danger:C.muted, border:`1px solid ${C.border}`, borderRadius:7, cursor:'pointer', fontFamily:'inherit' }}>
+                  {showBudgets ? '✕ Close' : '🎯 Set Budgets'}
+                </button>
+              </div>
+              {showBudgets && (
+                <div style={{ padding:'12px 14px', background:'#fffbeb', borderBottom:`1px solid ${C.border}` }}>
+                  <div style={{ fontSize:11, color:'#92400e', marginBottom:10, fontWeight:600 }}>Set monthly budget limits per category — you'll get a warning at 80%</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                    {summary?.by_category?.map(cat => (
+                      <div key={cat.category} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                        <span style={{ fontSize:12, minWidth:80, color:C.navy, fontWeight:600 }}>{cat.category}</span>
+                        <input type="number" placeholder="No limit"
+                          value={budgets[cat.category]||''}
+                          onChange={e=>saveBudgets({...budgets,[cat.category]:e.target.value?parseFloat(e.target.value):undefined})}
+                          style={{ width:'100%', padding:'5px 8px', border:`1.5px solid ${C.border}`, borderRadius:7, fontSize:12, fontFamily:'inherit', outline:'none', background:'white' }}/>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {!summary?.by_category?.length
                 ? <div style={{ padding:20, textAlign:'center', color:C.muted, fontSize:13 }}>No expenses</div>
                 : summary.by_category.map(cat=>{
@@ -850,6 +880,16 @@ export default function Expenses() {
                         <div style={{ height:5, background:C.cream, borderRadius:3, overflow:'hidden' }}>
                           <div style={{ height:'100%', width:`${parseFloat(cat.total)/max*100}%`, background:info.color, borderRadius:3 }}/>
                         </div>
+                        {budgets[cat.category] && parseFloat(cat.total) > parseFloat(budgets[cat.category]) * 0.8 && (
+                          <div style={{ marginTop:4, fontSize:10, fontWeight:700,
+                            color: parseFloat(cat.total) >= parseFloat(budgets[cat.category]) ? C.danger : '#b45309',
+                            background: parseFloat(cat.total) >= parseFloat(budgets[cat.category]) ? '#fee2e2' : '#fef9c3',
+                            padding:'2px 8px', borderRadius:10, display:'inline-block' }}>
+                            {parseFloat(cat.total) >= parseFloat(budgets[cat.category])
+                              ? `Over budget! (limit: ${fmt(budgets[cat.category])})`
+                              : `${Math.round(parseFloat(cat.total)/parseFloat(budgets[cat.category])*100)}% of Rs. ${parseFloat(budgets[cat.category]).toLocaleString()} budget`}
+                          </div>
+                        )}
                       </div>
                     );
                   })

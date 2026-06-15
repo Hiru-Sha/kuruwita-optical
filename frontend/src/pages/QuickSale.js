@@ -179,8 +179,9 @@ export default function QuickSale() {
   const [saleDate, setSaleDate] = useState('');   // 'sale' | 'history'
   const [history,  setHistory]  = useState([]);
   const [histLoad, setHistLoad] = useState(false);
-  const [histFrom, setHistFrom] = useState('');
-  const [histTo,   setHistTo]   = useState('');
+  const [histFrom,   setHistFrom]   = useState('');
+  const [histTo,     setHistTo]     = useState('');
+  const [histSearch, setHistSearch] = useState('');
   const timer = useRef(null);
 
   useEffect(()=>{
@@ -587,9 +588,11 @@ export default function QuickSale() {
     {/* ── HISTORY TAB ── */}
     {activeTab==='history' && (
       <div>
-        {/* Date range filter for history */}
+        {/* Date range + name filter for history */}
         <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap', marginBottom:10 }}>
-          <span style={{ fontSize:12, fontWeight:600, color:C.muted }}>Filter:</span>
+          <input value={histSearch} onChange={e=>setHistSearch(e.target.value)} placeholder="Search name or phone..."
+            style={{ flex:1, minWidth:160, padding:'6px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:12, fontFamily:'inherit', outline:'none', background:'white' }}/>
+          <span style={{ fontSize:12, fontWeight:600, color:C.muted }}>Date:</span>
           <input type="date" value={histFrom} onChange={e=>setHistFrom(e.target.value)}
             style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:12,
               fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy }}/>
@@ -629,6 +632,12 @@ export default function QuickSale() {
                 {history.filter(sale => {
                   if (histFrom && sale.created_at?.slice(0,10) < histFrom) return false;
                   if (histTo   && sale.created_at?.slice(0,10) > histTo)   return false;
+                  if (histSearch) {
+                    const q = histSearch.toLowerCase();
+                    return (sale.customer_name||'').toLowerCase().includes(q) ||
+                           (sale.customer_phone||'').toLowerCase().includes(q) ||
+                           (sale.sale_number||'').toLowerCase().includes(q);
+                  }
                   return true;
                 }).map((sale,i)=>{
                   const prev = history[i-1];
