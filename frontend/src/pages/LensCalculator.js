@@ -16,11 +16,12 @@ function apiPost(path, body) {
   return fetch(`${BASE}${path}`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify(body)}).then(r=>r.json());
 }
 
-function RxInput({ label, sph, setSph, cyl, setCyl, onCopyToOther }) {
+function RxInput({ label, sph, setSph, cyl, setCyl, add, setAdd, onCopyToOther }) {
   const [sphSign, setSphSign] = useState('-');
   const [cylSign, setCylSign] = useState('-');
   const handleSphChange = e => { const r=e.target.value.replace(/[^0-9.]/g,''); setSph(r?sphSign+r:''); };
   const handleCylChange = e => { const r=e.target.value.replace(/[^0-9.]/g,''); setCyl(r?cylSign+r:''); };
+  const handleAddChange = e => { const r=e.target.value.replace(/[^0-9.]/g,''); if(setAdd) setAdd(r?'+'+r:''); };
   return (
     <div style={{ background:C.cream, borderRadius:12, padding:'12px 14px' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
@@ -31,7 +32,7 @@ function RxInput({ label, sph, setSph, cyl, setCyl, onCopyToOther }) {
           </button>
         )}
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
         {[['SPH',sph,setSph,sphSign,setSphSign,handleSphChange],['CYL',cyl,setCyl,cylSign,setCylSign,handleCylChange]].map(([lbl,val,set,sign,setSign,handler])=>(
           <div key={lbl}>
             <label style={{ fontSize:10, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>{lbl}</label>
@@ -47,6 +48,17 @@ function RxInput({ label, sph, setSph, cyl, setCyl, onCopyToOther }) {
             </div>
           </div>
         ))}
+        {/* ADD field — always + */}
+        <div>
+          <label style={{ fontSize:10, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>ADD</label>
+          <div style={{ display:'flex', gap:4 }}>
+            <div style={{ display:'flex', border:`1.5px solid ${C.border}`, borderRadius:8, overflow:'hidden' }}>
+              <button style={{ padding:'8px 10px', border:'none', background:C.navy, color:'white', fontWeight:700, fontSize:14, cursor:'default', fontFamily:'inherit' }}>+</button>
+            </div>
+            <input value={(add||'').replace(/[^0-9.]/g,'')} onChange={handleAddChange} placeholder="0.00"
+              style={{ flex:1, padding:'8px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -54,8 +66,8 @@ function RxInput({ label, sph, setSph, cyl, setCyl, onCopyToOther }) {
 
 export default function LensCalculator() {
   const navigate = useNavigate();
-  const [rSph,setRSph]=useState(''); const [rCyl,setRCyl]=useState('');
-  const [lSph,setLSph]=useState(''); const [lCyl,setLCyl]=useState('');
+  const [rSph,setRSph]=useState(''); const [rCyl,setRCyl]=useState(''); const [rAdd,setRAdd]=useState('');
+  const [lSph,setLSph]=useState(''); const [lCyl,setLCyl]=useState(''); const [lAdd,setLAdd]=useState('');
 
   // DB lens prices
   const [dbPrices,   setDbPrices]   = useState([]);
@@ -93,7 +105,9 @@ export default function LensCalculator() {
   // Index & CYL recommendations
   const powers = [rSph,rCyl,lSph,lCyl].map(v=>Math.abs(parseFloat(v)||0));
   const maxPow = Math.max(...powers);
+  const hasAdd = parseFloat(rAdd||0)>0 || parseFloat(lAdd||0)>0;
   const rec = maxPow===0?null:maxPow<=2?'1.56 is fine':maxPow<=4?'1.61 recommended — thinner':maxPow<=6?'1.67 recommended — high power':'1.74 recommended — very high power';
+  const addRec = hasAdd ? `ADD: ${rAdd||lAdd} — Bifocal or Progressive lens needed` : null;
   const maxCyl = Math.max(Math.abs(parseFloat(rCyl)||0),Math.abs(parseFloat(lCyl)||0));
   const cylWarn = maxCyl>=1.5?`High CYL (${maxCyl.toFixed(2)}) — toric lens`:null;
 
@@ -234,10 +248,11 @@ export default function LensCalculator() {
       <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'16px 18px', marginBottom:12 }}>
         <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:12 }}>Patient Rx</div>
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-          <RxInput label="Right Eye (OD)" sph={rSph} setSph={setRSph} cyl={rCyl} setCyl={setRCyl} onCopyToOther={()=>{setLSph(rSph);setLCyl(rCyl);}}/>
-          <RxInput label="Left Eye (OS)"  sph={lSph} setSph={setLSph} cyl={lCyl} setCyl={setLCyl} onCopyToOther={()=>{setRSph(lSph);setRCyl(lCyl);}}/>
+          <RxInput label="Right Eye (OD)" sph={rSph} setSph={setRSph} cyl={rCyl} setCyl={setRCyl} add={rAdd} setAdd={setRAdd} onCopyToOther={()=>{setLSph(rSph);setLCyl(rCyl);setLAdd(rAdd);}}/>
+          <RxInput label="Left Eye (OS)"  sph={lSph} setSph={setLSph} cyl={lCyl} setCyl={setLCyl} add={lAdd} setAdd={setLAdd} onCopyToOther={()=>{setRSph(lSph);setRCyl(lCyl);setRAdd(lAdd);}}/>
         </div>
         {rec    && <div style={{ marginTop:10, background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:8, padding:'8px 12px', fontSize:12, color:'#1e40af' }}>Recommendation: {rec}</div>}
+        {addRec && <div style={{ marginTop:6, background:'#f0fdf4', border:'1px solid #86efac', borderRadius:8, padding:'7px 12px', fontSize:12, color:'#166534', fontWeight:600 }}>{addRec}</div>}
         {cylWarn && <div style={{ marginTop:6, background:'#fef9c3', border:'1px solid #fde68a', borderRadius:8, padding:'7px 12px', fontSize:12, color:'#92400e' }}>High CYL: {cylWarn}</div>}
       </div>
 
