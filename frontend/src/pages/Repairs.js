@@ -59,8 +59,6 @@ export default function Repairs() {
     if (amt > balance + 0.01) return setPayErr(`Cannot exceed balance due (${fmtFull(balance)})`);
     setPayLoading(true); setPayErr('');
     try {
-      await apiPatch(`/repairs/${payRepair.id}/payment`.replace('PATCH','POST'), null);
-      // Use POST to the payment endpoint
       const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
       const token = localStorage.getItem('ko_token');
       const res   = await fetch(`${BASE}/repairs/${payRepair.id}/payment`, {
