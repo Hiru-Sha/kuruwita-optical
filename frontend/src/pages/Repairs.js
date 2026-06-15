@@ -170,14 +170,14 @@ export default function Repairs() {
     setLoading(true);
     try {
       const [rep, sum] = await Promise.all([
-        apiGet(`/repairs?month=${month}${statusFilt!=='all'?`&status=${statusFilt}`:''}`),
+        apiGet(`/repairs?limit=2000${statusFilt!=='all'?`&status=${statusFilt}`:''}`),
         apiGet('/repairs/summary'),
       ]);
       setRepairs(Array.isArray(rep)?rep:[]);
       setSummary(sum);
     } catch(e) { console.error(e); }
     finally { setLoading(false); }
-  },[month, statusFilt]);
+  },[statusFilt]);
 
   useEffect(()=>{ load(); },[load]);
 
@@ -523,8 +523,14 @@ export default function Repairs() {
 
       {/* Filters */}
       <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap', alignItems:'center' }}>
-        <input type="month" value={month} onChange={e=>setMonth(e.target.value)}
-          style={{ padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy }}/>
+        <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+          <input type="month" value={month} onChange={e=>setMonth(e.target.value)}
+            style={{ padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy }}/>
+          {month && <button onClick={()=>setMonth('')}
+            style={{ padding:'6px 10px', background:'#fee2e2', border:'none', borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
+            All Time
+          </button>}
+        </div>
         {/* Custom date range */}
         <button onClick={()=>setDateFilter(dateFilter==='custom'?'all':'custom')}
           style={{ padding:'7px 12px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
@@ -567,6 +573,9 @@ export default function Repairs() {
                 <div style={{ fontSize:13 }}>Click "🔧 New Repair" to record your first repair</div>
               </div>
             : repairs.filter(repair => {
+                // Month filter (client-side)
+                if (month && repair.created_at?.slice(0,7) !== month) return false;
+                // Custom date range
                 if (dateFilter==='custom') {
                   const d = new Date(repair.created_at);
                   if (dateFrom && d < new Date(dateFrom)) return false;
