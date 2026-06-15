@@ -517,43 +517,172 @@ function buildRepairBill(repair) {
   return wrap(body, 'Repair Receipt', repair.repair_number || 'REP', `Date: ${repairDate}`);
 }
 
-// ── LAB JOB CARD (A6 portrait — unchanged) ────────────────────
+// ── LAB JOB CARD — Quarter A4, folds in half ─────────────────
+// Card is 105mm × 148mm (A6). Folded in half = two 105×74mm panels.
+// TOP PANEL  (0→74mm)  : shop name, order no, patient, date — visible when folded
+// FOLD LINE  (at 74mm) : dashed rule
+// BOTTOM PANEL (74→148mm): frame, lens, Rx, measurements, notes
 function buildLabCardHTML(order) {
   const ref = order.refraction || order;
   const orderDate = order.created_at ? fmtD(order.created_at) : today();
   const rawNotes = order.notes || '';
-  const cleanNotes = rawNotes.replace(/imported from past records/gi, '').replace(/^[,;:\s]+|[,;:\s]+$/g, '').trim();
-  const val = v => v && v !== '—' && v !== '0' && v !== '0.00' ? v : '—';
-  const eyeRow = (eye, sph, cyl, axis, add, va) => `<tr>
-    <td style="background:#f0f4f8;padding:5px 7px;font-weight:700;font-size:10.5px;border:1px solid #ccd3de;">${eye}</td>
-    <td style="padding:5px 4px;text-align:center;border:1px solid #ccd3de;font-size:11px;font-weight:700;">${val(sph)}</td>
-    <td style="padding:5px 4px;text-align:center;border:1px solid #ccd3de;font-size:11px;font-weight:700;">${val(cyl)}</td>
-    <td style="padding:5px 4px;text-align:center;border:1px solid #ccd3de;font-size:11px;font-weight:700;">${val(axis)}</td>
-    <td style="padding:5px 4px;text-align:center;border:1px solid #ccd3de;font-size:11px;font-weight:700;">${val(add)}</td>
-    <td style="padding:5px 4px;text-align:center;border:1px solid #ccd3de;font-size:11px;font-weight:700;">${val(va)}</td>
+  const cleanNotes = rawNotes.replace(/imported from past records/gi,'').replace(/Gifts given:[^\n]*/gi,'').replace(/^[,;\s]+|[,;\s]+$/g,'').trim();
+  const val = v => (v && v !== '—' && v !== '0' && v !== '0.00' && v !== 'Plano' ) ? v : (v==='Plano'?'Plano':'—');
+  const cell = (v,fs='11px') => `<td style="padding:4px 3px;text-align:center;border:1.5px solid #b0bccf;font-size:${fs};font-weight:700;color:#0f1f3d;min-width:14mm;">${val(v)}</td>`;
+  const eyeRow = (eye,sph,cyl,axis,add) => `<tr>
+    <td style="padding:4px 5px;font-weight:800;font-size:9px;border:1.5px solid #b0bccf;background:#eef1f6;text-align:center;">${eye}</td>
+    ${cell(sph)}${cell(cyl)}${cell(axis)}${cell(add)}
   </tr>`;
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${order.order_number} — Lab</title>
-<style>@page{size:105mm 148mm;margin:4mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#0f1f3d;width:97mm;font-size:9px}table{width:100%;border-collapse:collapse}.sec{border:1px solid #b0bccf;border-radius:4px;overflow:hidden;margin-bottom:3px}.sec-hd{background:#0f1f3d;color:#c9a84c;font-size:6.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;padding:2.5px 7px}th{background:#eef1f5;padding:2.5px 5px;font-size:6.5px;font-weight:700;text-transform:uppercase;color:#6b7280;border:1px solid #ccd3de;text-align:center}td{padding:4px 5px;border:1px solid #ccd3de;font-size:10px;font-weight:700;color:#0f1f3d}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+  const pd_r = ref.r_pd || ''; const pd_l = ref.l_pd || '';
+  const pdVal = pd_r && pd_l ? `R: ${pd_r}  L: ${pd_l}` : (pd_r || pd_l || '—');
+  const seg = [order.seg_height_r, order.seg_height_l].filter(Boolean).join(' / ') || '—';
+  const lensCoatPrint = printCoating(order.lens_coating || '—');
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${order.order_number} Lab Card</title>
+<style>
+  @page { size: 105mm 148mm portrait; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; color: #0f1f3d; width: 105mm; height: 148mm; }
+  .card { width: 105mm; height: 148mm; display: flex; flex-direction: column; }
+
+  /* ── TOP PANEL ── 74mm tall — the "face" when folded */
+  .top { height: 74mm; display: flex; flex-direction: column; padding: 5mm 5mm 3mm; background: #0f1f3d; position: relative; overflow: hidden; }
+  .top::after { content:''; position:absolute; bottom:-18mm; right:-12mm; width:50mm; height:50mm; border-radius:50%; background:rgba(201,168,76,.10); }
+
+  .shop-name { font-size: 13px; font-weight: 900; color: white; letter-spacing: -0.3px; line-height: 1.1; }
+  .shop-sub  { font-size: 7px; color: rgba(201,168,76,.9); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
+  .shop-addr { font-size: 6.5px; color: rgba(255,255,255,.6); margin-top: 2px; }
+
+  .order-no { font-size: 20px; font-weight: 900; color: #c9a84c; line-height: 1; letter-spacing: -0.5px; }
+  .order-lbl { font-size: 6px; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+
+  .gold-bar { height: 2px; background: linear-gradient(90deg,#c9a84c,transparent); margin: 4mm 0 3mm; }
+
+  .patient-name { font-size: 17px; font-weight: 900; color: white; line-height: 1.15; }
+  .patient-sub  { font-size: 8px; color: rgba(255,255,255,.6); margin-top: 2px; }
+
+  .send-badge { display: inline-block; background: #c9a84c; color: #0f1f3d; font-size: 6.5px; font-weight: 800; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; margin-top: auto; align-self: flex-start; }
+
+  /* ── FOLD LINE ── */
+  .fold { height: 0; border-top: 2px dashed #b0bccf; position: relative; }
+  .fold::before { content: 'FOLD'; position: absolute; left: 50%; transform: translateX(-50%) translateY(-50%); background: white; padding: 0 4px; font-size: 5.5px; color: #9ca3af; letter-spacing: 1.5px; font-weight: 700; }
+
+  /* ── BOTTOM PANEL ── 74mm tall — detail side */
+  .bot { height: 74mm; padding: 3mm 4mm 2mm; display: flex; flex-direction: column; gap: 2px; }
+
+  .sec-hd { background: #0f1f3d; color: #c9a84c; font-size: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 2px 5px; }
+  .sec { border: 1.5px solid #b0bccf; overflow: hidden; margin-bottom: 2px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #eef1f6; padding: 2px 3px; font-size: 6.5px; font-weight: 700; text-transform: uppercase; color: #6b7280; border: 1.5px solid #b0bccf; text-align: center; }
+
+  .info-row { display: flex; gap: 2mm; }
+  .info-cell { flex: 1; }
+  .lbl { font-size: 6px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; margin-bottom: 1px; }
+  .val { font-size: 9px; font-weight: 800; color: #0f1f3d; line-height: 1.3; }
+
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
 </head><body>
-<div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:4px;margin-bottom:4px;border-bottom:2px solid #0f1f3d;">
-  <div style="display:flex;align-items:center;gap:5px;">
-    <img src="${LOGO}" style="height:28px;object-fit:contain;" alt=""/>
-    <div><div style="font-size:9.5px;font-weight:700;">Wickramakalutota Opticals</div><div style="font-size:6.5px;color:#6b7280;">No.57, Kurunegala Road, Chilaw · 032 222 1211</div></div>
+<div class="card">
+
+  <!-- ══ TOP PANEL ══ -->
+  <div class="top">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <div class="shop-name">Wickramakalutota Opticals</div>
+        <div class="shop-sub">Your Trusted Eye Care · Chilaw</div>
+        <div class="shop-addr">No.57, Kurunegala Road · 032 222 1211</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="order-lbl">Order No.</div>
+        <div class="order-no">${order.order_number}</div>
+      </div>
+    </div>
+
+    <div class="gold-bar"></div>
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex:1;">
+      <div>
+        <div style="font-size:6.5px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px;">Patient</div>
+        <div class="patient-name">${order.customer_name || '—'}</div>
+        <div class="patient-sub">
+          ${order.phone ? order.phone + ' &nbsp;·&nbsp; ' : ''}Date: ${orderDate}
+          ${order.deliver_date ? ' &nbsp;·&nbsp; Due: ' + fmtD(order.deliver_date) : ''}
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:3mm;">
+      <span class="send-badge">Send with frame to lab</span>
+    </div>
   </div>
-  <div style="text-align:right;"><div style="background:#0f1f3d;color:#c9a84c;font-weight:700;font-size:12px;padding:3px 8px;border-radius:4px;margin-bottom:2px;">${order.order_number}</div><div style="font-size:7px;color:#6b7280;">${orderDate}</div></div>
+
+  <!-- ══ FOLD LINE ══ -->
+  <div class="fold"></div>
+
+  <!-- ══ BOTTOM PANEL ══ -->
+  <div class="bot">
+
+    <!-- Frame + Lens row -->
+    <div class="info-row" style="margin-bottom:2px;">
+      <div class="info-cell sec" style="padding:2px 4px;">
+        <div class="sec-hd" style="margin:-2px -4px 2px;">Frame</div>
+        <div class="val">${order.frame || '—'}</div>
+        <div style="display:flex;gap:4mm;margin-top:1px;">
+          <div><div class="lbl">Type</div><div class="val" style="font-size:8px;">${order.frame_type || '—'}</div></div>
+          <div><div class="lbl">Color</div><div class="val" style="font-size:8px;">${order.frame_color || '—'}</div></div>
+        </div>
+      </div>
+      <div class="info-cell sec" style="padding:2px 4px;">
+        <div class="sec-hd" style="margin:-2px -4px 2px;">Lens</div>
+        <div class="val">${order.lens_type || '—'}</div>
+        <div style="display:flex;gap:4mm;margin-top:1px;">
+          <div><div class="lbl">Coating</div><div class="val" style="font-size:8px;">${lensCoatPrint}</div></div>
+          <div><div class="lbl">Index</div><div class="val" style="font-size:8px;">${order.lens_index || 'CR39'}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rx table -->
+    <div class="sec">
+      <div class="sec-hd">Prescription (Rx)</div>
+      <table>
+        <tr><th style="width:16%;text-align:left;padding:2px 4px;">Eye</th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th></tr>
+        ${eyeRow('R', ref.r_sph, ref.r_cyl, ref.r_axis, ref.r_add)}
+        ${eyeRow('L', ref.l_sph, ref.l_cyl, ref.l_axis, ref.l_add)}
+      </table>
+    </div>
+
+    <!-- PD + Seg row -->
+    <div class="sec">
+      <div class="sec-hd">Measurements</div>
+      <table>
+        <tr>
+          <th style="width:34%;">PD (mm)</th>
+          <th style="width:33%;">Seg Height</th>
+          <th style="width:33%;">Lens Size</th>
+        </tr>
+        <tr>
+          <td style="padding:4px;text-align:center;border:1.5px solid #b0bccf;font-size:10px;font-weight:800;">${pdVal}</td>
+          <td style="padding:4px;text-align:center;border:1.5px solid #b0bccf;font-size:10px;font-weight:800;">${seg}</td>
+          <td style="padding:4px;text-align:center;border:1.5px solid #b0bccf;font-size:10px;font-weight:800;">${order.frame_size || '—'}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Special Instructions -->
+    <div class="sec" style="flex:1;">
+      <div class="sec-hd">Special Instructions</div>
+      <div style="padding:3px 5px;min-height:10mm;font-size:9px;font-weight:700;line-height:1.5;">${cleanNotes || ''}</div>
+    </div>
+
+    <div style="margin-top:auto;padding-top:1mm;border-top:1px solid #e0e4ea;font-size:5.5px;color:#9ca3af;display:flex;justify-content:space-between;">
+      <span>Wickramakalutota Opticals</span><span>Printed: ${today()}</span>
+    </div>
+
+  </div>
 </div>
-<div style="background:#f0f4f8;border:1px solid #b0bccf;border-radius:4px;padding:4px 7px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;">
-  <div><div style="font-size:6.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#6b7280;margin-bottom:1px;">Patient</div><div style="font-size:13px;font-weight:700;">${order.customer_name || '—'}</div></div>
-  <div style="font-size:6.5px;color:#92400e;background:#fffbeb;padding:2px 6px;border-radius:10px;font-weight:700;border:1px solid #c9a84c;">✦ SEND WITH FRAME TO LAB</div>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:3px;">
-  <div class="sec"><div class="sec-hd">Frame</div><table><tr><th style="text-align:left;">Name</th></tr><tr><td style="font-size:10.5px;">${order.frame || '—'}</td></tr><tr><th style="text-align:left;width:50%;">Type</th><th style="text-align:left;">Color</th></tr><tr><td style="font-size:9px;">${order.frame_type || '—'}</td><td style="font-size:9px;">${order.frame_color || '—'}</td></tr></table></div>
-  <div class="sec"><div class="sec-hd">Lens</div><table><tr><th style="text-align:left;" colspan="2">Type</th></tr><tr><td colspan="2" style="font-size:10px;">${order.lens_type || '—'}</td></tr><tr><th style="text-align:left;">Coating</th><th style="text-align:left;">Index</th></tr><tr><td style="font-size:9px;">${order.lens_coating || '—'}</td><td style="font-size:9px;">${order.lens_index || '—'}</td></tr></table></div>
-</div>
-<div class="sec" style="margin-bottom:3px;"><div class="sec-hd">Prescription (Rx)</div><table><tr><th style="width:18%;text-align:left;">Eye</th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th><th>VA</th></tr>${eyeRow('Right', ref.r_sph, ref.r_cyl, ref.r_axis, ref.r_add, ref.r_va)}${eyeRow('Left', ref.l_sph, ref.l_cyl, ref.l_axis, ref.l_add, ref.l_va)}</table></div>
-<div class="sec" style="margin-bottom:3px;"><div class="sec-hd">Measurements</div><table><tr><th style="width:50%;text-align:center;">PD (mm)</th><th style="text-align:center;">Seg Height (mm)</th></tr><tr><td style="font-size:14px;font-weight:700;text-align:center;height:18px;">${ref.r_pd || ref.l_pd || ''}</td><td style="font-size:14px;font-weight:700;text-align:center;height:18px;">${order.seg_height_r || ''}</td></tr></table></div>
-<div class="sec" style="margin-bottom:4px;"><div class="sec-hd">Special Instructions</div><div style="padding:5px 7px;min-height:24px;font-size:10px;font-weight:700;line-height:1.5;">${cleanNotes || ''}</div></div>
-<div style="border-top:1px solid #d0d7e0;padding-top:2px;display:flex;justify-content:space-between;"><div style="font-size:6px;color:#9ca3af;">Wickramakalutota Opticals · No.57 Kurunegala Road · 032 222 1211</div><div style="font-size:6px;color:#9ca3af;">Printed: ${today()}</div></div>
 <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
 </body></html>`;
 }
