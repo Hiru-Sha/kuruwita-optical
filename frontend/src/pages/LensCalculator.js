@@ -81,12 +81,18 @@ export default function LensCalculator() {
   const [addSaving,  setAddSaving]  = useState(false);
   const [addMsg,     setAddMsg]     = useState('');
 
+  // Staff price list filters
+  const [filterCoating, setFilterCoating] = useState('all');
+
   // Customer mode
-  const [customerMode, setCustomerMode] = useState(false);
-  const [selectedLens, setSelectedLens] = useState(null);
-  const [framePrice,   setFramePrice]   = useState('');
-  const [discType,     setDiscType]     = useState('pct');
-  const [discVal,      setDiscVal]      = useState('');
+  const [customerMode,   setCustomerMode]   = useState(false);
+  const [selectedLens,   setSelectedLens]   = useState(null);
+  const [editSellPrice,  setEditSellPrice]  = useState(''); // editable sell price before showing customer
+  const [custFilterType, setCustFilterType] = useState('all');
+  const [custFilterCoat, setCustFilterCoat] = useState('all');
+  const [framePrice,     setFramePrice]     = useState('');
+  const [discType,       setDiscType]       = useState('pct');
+  const [discVal,        setDiscVal]        = useState('');
 
   const LENS_TYPES = ['all','Bifocal','Single Vision','Progressive','Office Lens','Reading (ready)'];
   const COATINGS   = ['CR White','Blue Cut','Photo Gray','HMC','Blue Cut + Photo Gray','Blue Cut + HMC','Photo Gray + HMC','Blue Cut + Photo Gray + HMC'];
@@ -112,8 +118,10 @@ export default function LensCalculator() {
   const cylWarn = maxCyl>=1.5?`High CYL (${maxCyl.toFixed(2)}) — toric lens`:null;
 
   // Filter DB prices
+  const COATING_FILTERS = ['all','CR White','Blue Cut','Photo Gray','HMC','Blue Cut + Photo Gray','Blue Cut + HMC','Photo Gray + HMC'];
   const filtered = dbPrices.filter(p => {
     if (filterType!=='all' && p.lens_type!==filterType) return false;
+    if (filterCoating!=='all' && !(p.coating||'').toLowerCase().includes(filterCoating.toLowerCase())) return false;
     if (searchQ) {
       const q = searchQ.toLowerCase();
       return (p.lens_type||'').toLowerCase().includes(q) ||
@@ -124,8 +132,8 @@ export default function LensCalculator() {
     return true;
   });
 
-  // Customer calc
-  const lensPrice   = selectedLens ? parseFloat(selectedLens.sell_price||0) : 0;
+  // Customer calc — use edited sell price if staff has overridden it
+  const lensPrice   = selectedLens ? (editSellPrice!==''?parseFloat(editSellPrice)||0:parseFloat(selectedLens.sell_price||0)) : 0;
   const framePriceN = parseFloat(framePrice)||0;
   const subTotal    = lensPrice + framePriceN;
   const discAmt     = discType==='pct' ? Math.round(subTotal*(parseFloat(discVal)||0)/100) : parseFloat(discVal)||0;
@@ -155,23 +163,70 @@ export default function LensCalculator() {
 
   // ── Customer view ──────────────────────────────────────────────
   if (customerMode) {
-    const showable = dbPrices.filter(p=>p.sell_price>0);
+    const CUST_COAT_FILTERS = ['all','CR White','Blue Cut','Photo Gray','HMC'];
+    const CUST_TYPE_FILTERS = ['all','Bifocal','Single Vision','Progressive','Office Lens','Reading (ready)'];
+    const showable = dbPrices.filter(p => {
+      if (!p.sell_price) return false;
+      if (custFilterType!=='all' && p.lens_type!==custFilterType) return false;
+      if (custFilterCoat!=='all' && !(p.coating||'').toLowerCase().includes(custFilterCoat.toLowerCase())) return false;
+      return true;
+    });
     return (
       <div style={{ minHeight:'100vh', background:'linear-gradient(135deg,#0f1f3d 0%,#1a3260 100%)',
         fontFamily:"'DM Sans',sans-serif", padding:20, display:'flex', flexDirection:'column', alignItems:'center' }}>
-        <div style={{ textAlign:'center', marginBottom:20, marginTop:10 }}>
+        <div style={{ textAlign:'center', marginBottom:14, marginTop:10 }}>
           <div style={{ fontSize:11, color:C.gold, letterSpacing:'2px', textTransform:'uppercase', marginBottom:6 }}>Wickramakalutota Opticals</div>
           <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:'white', fontWeight:700 }}>Lens Price Guide</div>
-          {rec && <div style={{ fontSize:12, color:'#ede9e0', marginTop:6 }}>Recommendation: {rec}</div>}
+          {rec && <div style={{ fontSize:12, color:'#ede9e0', marginTop:4 }}>Recommendation: {rec}</div>}
         </div>
         <div style={{ width:'100%', maxWidth:420 }}>
+
+          {/* Staff-only: filter chips + edit sell price — shown before customer sees */}
+          <div style={{ background:'rgba(255,255,255,.08)', borderRadius:12, padding:'10px 12px', marginBottom:14, border:'1px solid rgba(255,255,255,.15)' }}>
+            <div style={{ fontSize:10, color:C.gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:8 }}>Staff: Filter & Set Price</div>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
+              {CUST_TYPE_FILTERS.map(t=>(
+                <button key={t} onClick={()=>{ setCustFilterType(t); setSelectedLens(null); setEditSellPrice(''); }}
+                  style={{ padding:'4px 10px', borderRadius:20, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:'none',
+                    background:custFilterType===t?C.gold:'rgba(255,255,255,.15)', color:custFilterType===t?C.navy:'white' }}>
+                  {t==='all'?'All Types':t}
+                </button>
+              ))}
+            </div>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:selectedLens?10:0 }}>
+              {CUST_COAT_FILTERS.map(c=>(
+                <button key={c} onClick={()=>{ setCustFilterCoat(c); setSelectedLens(null); setEditSellPrice(''); }}
+                  style={{ padding:'4px 10px', borderRadius:20, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:'none',
+                    background:custFilterCoat===c?C.gold:'rgba(255,255,255,.15)', color:custFilterCoat===c?C.navy:'white' }}>
+                  {c==='all'?'All Coatings':c}
+                </button>
+              ))}
+            </div>
+            {selectedLens && (
+              <div style={{ marginTop:8 }}>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,.7)', marginBottom:4, fontWeight:600 }}>
+                  Edit sell price before showing (list price: Rs. {Math.round(selectedLens.sell_price).toLocaleString()})
+                </div>
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <span style={{ color:'rgba(255,255,255,.7)', fontSize:13 }}>Rs.</span>
+                  <input type="number" value={editSellPrice} onChange={e=>setEditSellPrice(e.target.value)}
+                    placeholder={String(Math.round(selectedLens.sell_price))}
+                    style={{ flex:1, padding:'8px 10px', border:'1.5px solid rgba(201,168,76,.6)', borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'rgba(255,255,255,.1)', color:'white' }}/>
+                  {editSellPrice && <button onClick={()=>setEditSellPrice('')}
+                    style={{ background:'rgba(255,255,255,.15)', border:'none', borderRadius:7, padding:'7px 10px', cursor:'pointer', color:'white', fontSize:12, fontFamily:'inherit' }}>Reset</button>}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div style={{ fontSize:11, color:'rgba(255,255,255,.6)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:10, textAlign:'center' }}>
-            Tap a lens to see your price
+            {showable.length} lens option{showable.length!==1?'s':''} — tap to select
           </div>
           {showable.map((p,i) => {
             const isSel = selectedLens?.id===p.id;
+            const displayPrice = isSel && editSellPrice!=='' ? parseFloat(editSellPrice)||0 : parseFloat(p.sell_price||0);
             return (
-              <button key={i} onClick={()=>setSelectedLens(isSel?null:p)}
+              <button key={i} onClick={()=>{ setSelectedLens(isSel?null:p); if(!isSel) setEditSellPrice(''); }}
                 style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center',
                   padding:'12px 16px', marginBottom:8, borderRadius:14, cursor:'pointer', fontFamily:'inherit',
                   border:`2px solid ${isSel?C.gold:'rgba(255,255,255,.2)'}`,
@@ -180,7 +235,7 @@ export default function LensCalculator() {
                   <div style={{ fontSize:14, fontWeight:700 }}>{p.lens_type}</div>
                   <div style={{ fontSize:11, opacity:.75 }}>{p.coating}{p.lens_index?` · ${p.lens_index}`:''}{p.brand?` · ${p.brand}`:''}</div>
                 </div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700 }}>{fmt(p.sell_price)}</div>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700 }}>{fmt(displayPrice)}</div>
               </button>
             );
           })}
@@ -325,13 +380,24 @@ export default function LensCalculator() {
         </div>
 
         {/* Search + filter */}
-        <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
-          <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Search lens type, coating, supplier..."
-            style={{ flex:1, minWidth:160, padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream }}/>
+        <div style={{ display:'flex', gap:8, marginBottom:8, flexWrap:'wrap' }}>
+          <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Search..."
+            style={{ flex:1, minWidth:120, padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream }}/>
           <select value={filterType} onChange={e=>setFilterType(e.target.value)}
             style={{ padding:'8px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream }}>
             {LENS_TYPES.map(t=><option key={t} value={t}>{t==='all'?'All Types':t}</option>)}
           </select>
+        </div>
+        {/* Coating filter chips */}
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:12 }}>
+          {COATING_FILTERS.map(c=>(
+            <button key={c} onClick={()=>setFilterCoating(c)}
+              style={{ padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                border:`1.5px solid ${filterCoating===c?C.navy:C.border}`,
+                background:filterCoating===c?C.navy:'white', color:filterCoating===c?'white':C.muted }}>
+              {c==='all'?'All Coatings':c}
+            </button>
+          ))}
         </div>
 
         {loadingDB ? (
