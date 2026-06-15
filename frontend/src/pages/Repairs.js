@@ -36,6 +36,92 @@ const REPAIR_TYPES = [
 ];
 
 // ── Print receipt for repair ──────────────────────────────────
+const printRepairJobCard = (repair) => {
+  const today   = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+  const time    = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const dueDate = repair.due_date
+    ? new Date(repair.due_date+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})
+    : '—';
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Job Card — ${repair.repair_number||'NEW'}</title>
+<style>
+  @page{size:A6 landscape;margin:6mm}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;color:#0f1f3d;font-size:12px}
+  .label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:3px}
+  .val{font-size:13px;font-weight:600;color:#0f1f3d;min-height:18px;border-bottom:1px dotted #ccc;padding-bottom:2px;margin-bottom:8px}
+  .big{font-size:16px;font-weight:700}
+  table{width:100%;border-collapse:collapse}
+  td{padding:5px 8px;border:1px solid #ddd;font-size:12px}
+  .th{background:#0f1f3d;color:white;font-size:10px;font-weight:700;text-transform:uppercase;padding:5px 8px}
+</style></head><body>
+<table style="border:2px solid #0f1f3d;border-radius:0;width:100%;margin-bottom:8px">
+  <tr>
+    <td colspan="3" style="background:#0f1f3d;padding:8px 12px;border:none">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:white">Wickramakalutota Opticals</div>
+          <div style="font-size:10px;color:#c9a84c">No.57 Kurunegala Road, Chilaw · 032 222 1211</div>
+        </div>
+        <div style="text-align:right">
+          <div style="background:#c9a84c;color:#0f1f3d;font-weight:700;font-size:14px;padding:4px 10px;border-radius:6px">${repair.repair_number||'REPAIR'}</div>
+          <div style="font-size:9px;color:#ede9e0;margin-top:2px">${today} ${time}</div>
+        </div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td style="width:50%;vertical-align:top;border:1px solid #ddd">
+      <div class="label">Customer Name</div>
+      <div class="val big">${repair.customer_name||'—'}</div>
+      <div class="label">Phone</div>
+      <div class="val">${repair.phone||'—'}</div>
+    </td>
+    <td style="width:50%;vertical-align:top;border:1px solid #ddd">
+      <div class="label">Date Received</div>
+      <div class="val">${today}</div>
+      <div class="label">Expected Ready Date</div>
+      <div class="val" style="color:#c0392b;font-weight:700">${dueDate}</div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" style="border:1px solid #ddd;vertical-align:top">
+      <div class="label">Repair Type</div>
+      <div class="val big">${repair.repair_type||'—'}</div>
+      <div class="label">Frame / Item Description</div>
+      <div class="val">${repair.frame_description||repair.description||''}</div>
+      <div class="label">Problem / Notes</div>
+      <div class="val">${repair.notes||''}</div>
+    </td>
+  </tr>
+  <tr>
+    <td style="border:1px solid #ddd;background:#f8f5ef">
+      <div class="label">Quoted Price</div>
+      <div style="font-family:Georgia,serif;font-size:20px;font-weight:700;color:#0f1f3d">Rs. ${parseFloat(repair.charge||0).toLocaleString('en-LK',{minimumFractionDigits:2})}</div>
+    </td>
+    <td style="border:1px solid #ddd;background:#f8f5ef">
+      <div class="label">Advance Paid</div>
+      <div style="font-size:20px;font-weight:700;color:#6b7280">Rs. ${parseFloat(repair.advance||0).toLocaleString('en-LK',{minimumFractionDigits:2})}</div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" style="border:1px solid #ddd;padding:6px 8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:10px;color:#6b7280">Customer signature: ___________________________</div>
+        <div style="font-size:9px;color:#9ca3af">Please bring this card when collecting.</div>
+      </div>
+    </td>
+  </tr>
+</table>
+<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
+</body></html>`;
+
+  const win = window.open('','_blank','width=700,height=500');
+  if (!win) { alert('Please allow popups to print job card.'); return; }
+  win.document.open(); win.document.write(html); win.document.close();
+};
+
 export default function Repairs() {
   const [repairs,   setRepairs]  = useState([]);
   const [summary,   setSummary]  = useState(null);
@@ -52,25 +138,7 @@ export default function Repairs() {
   const [payErr,     setPayErr]     = useState('');
   const [payLoading, setPayLoading] = useState(false);
 
-  const handleRecordPayment = async () => {
-    const amt = parseFloat(payAmt);
-    const balance = parseFloat(payRepair.balance_amount ?? (parseFloat(payRepair.charge||0) - parseFloat(payRepair.amount_paid||payRepair.advance||0)));
-    if (!amt || amt <= 0) return setPayErr('Enter a valid amount');
-    if (amt > balance + 0.01) return setPayErr(`Cannot exceed balance due (${fmtFull(balance)})`);
-    setPayLoading(true); setPayErr('');
-    try {
-      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-      const token = localStorage.getItem('ko_token');
-      const res   = await fetch(`${BASE}/repairs/${payRepair.id}/payment`, {
-        method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
-        body: JSON.stringify({ amount:amt, method:payMethod, pay_date:payDate }),
-      });
-      if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Failed'); }
-      setPayRepair(null); setPayAmt(''); setPayErr('');
-      load();
-    } catch(e) { setPayErr(e.message); }
-    finally { setPayLoading(false); }
-  };
+;
   const [showAdd,   setShowAdd]  = useState(false);
   const [pastMode,  setPastMode]  = useState(false);
   const [repairDate,setRepairDate]= useState('');
@@ -112,6 +180,26 @@ export default function Repairs() {
   },[month, statusFilt]);
 
   useEffect(()=>{ load(); },[load]);
+
+  const handleRecordPayment = async () => {
+    const amt = parseFloat(payAmt);
+    const balance = parseFloat(payRepair.balance_amount ?? (parseFloat(payRepair.charge||0) - parseFloat(payRepair.amount_paid||payRepair.advance||0)));
+    if (!amt || amt <= 0) return setPayErr('Enter a valid amount');
+    if (amt > balance + 0.01) return setPayErr(`Cannot exceed balance due (${fmtFull(balance)})`);
+    setPayLoading(true); setPayErr('');
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/repairs/${payRepair.id}/payment`, {
+        method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+        body: JSON.stringify({ amount:amt, method:payMethod, pay_date:payDate }),
+      });
+      if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Failed'); }
+      setPayRepair(null); setPayAmt(''); setPayErr('');
+      load();
+    } catch(e) { setPayErr(e.message); }
+    finally { setPayLoading(false); }
+  }
 
   const handleSelectType = (rt) => {
     setForm(f=>({ ...f, repair_type:rt.label, charge:String(rt.price) }));
