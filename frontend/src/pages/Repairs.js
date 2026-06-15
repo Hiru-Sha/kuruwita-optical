@@ -269,7 +269,7 @@ export default function Repairs() {
   const handleRecordPayment = async () => {
     const amt = parseFloat(payAmt);
     const charge = parseFloat(payRepair.charge||0);
-    const paid   = parseFloat(payRepair.amount_paid||payRepair.advance||0);
+    const paid   = parseFloat(payRepair.advance||0);
     const balance = Math.max(0, charge - paid);
     if (!amt || amt <= 0) return setPayErr('Enter a valid amount');
     if (amt > balance + 0.01) return setPayErr(`Cannot exceed balance (${fmtFull(balance)})`);
@@ -356,7 +356,7 @@ export default function Repairs() {
       {/* Print prompt after saving */}
       {payRepair && (() => {
         const charge  = parseFloat(payRepair.charge||0);
-        const paid    = parseFloat(payRepair.amount_paid||payRepair.advance||0);
+        const paid    = parseFloat(payRepair.advance||0);
         const balance = Math.max(0, charge - paid);
         return (
           <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.55)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
@@ -737,7 +737,7 @@ export default function Repairs() {
                             🖨️ Print
                           </button>
                           {(() => {
-                            const bal = Math.max(0, parseFloat(repair.charge||0) - parseFloat(repair.amount_paid||repair.advance||0));
+                            const bal = Math.max(0, parseFloat(repair.charge||0) - parseFloat(repair.advance||0));
                             return bal > 0 ? (
                               <button onClick={()=>{ setPayRepair(repair); setPayAmt(''); setPayErr(''); setPayDate(new Date().toISOString().split('T')[0]); }}
                                 style={{ padding:'4px 11px', background:'#dcfce7', color:C.success, border:`1px solid #86efac`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
