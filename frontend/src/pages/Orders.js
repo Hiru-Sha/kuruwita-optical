@@ -703,12 +703,19 @@ export default function Orders() {
 
               {/* Current cost summary — frame + lens */}
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:showLensCost?10:0 }}>
+                {selected.customer_own_frame ? (
+                  <div style={{ background:'#f0fdf4', borderRadius:8, padding:'8px 10px', border:'1px solid #86efac' }}>
+                    <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Frame Buy</div>
+                    <div style={{ fontSize:11, fontWeight:700, color:C.success }}>Customer Frame</div>
+                  </div>
+                ) : (
                 <div style={{ background:parseFloat(selected.frame_buy_price)>0?C.cream:'#fef9c3', borderRadius:8, padding:'8px 10px', border:parseFloat(selected.frame_buy_price)>0?'none':'1px solid #fde68a' }}>
                   <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Frame Buy</div>
                   <div style={{ fontSize:12, fontWeight:700, color:parseFloat(selected.frame_buy_price)>0?C.success:'#92400e' }}>
                     {parseFloat(selected.frame_buy_price)>0?fmtMoney(selected.frame_buy_price):'Not set'}
                   </div>
                 </div>
+                )}
                 <div style={{ background:parseFloat(selected.lens_buy_price)>0?C.cream:'#fef9c3', borderRadius:8, padding:'8px 10px', border:parseFloat(selected.lens_buy_price)>0?'none':'1px solid #fde68a' }}>
                   <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Lens Buy</div>
                   <div style={{ fontSize:12, fontWeight:700, color:parseFloat(selected.lens_buy_price)>0?C.success:'#92400e' }}>
@@ -718,7 +725,7 @@ export default function Orders() {
                 <div style={{ background:C.cream, borderRadius:8, padding:'8px 10px' }}>
                   <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Total COGS</div>
                   <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>
-                    {fmtMoney((parseFloat(selected.frame_buy_price)||0)+(parseFloat(selected.lens_buy_price)||0))}
+                    {fmtMoney((selected.customer_own_frame?0:parseFloat(selected.frame_buy_price)||0)+(parseFloat(selected.lens_buy_price)||0))}
                   </div>
                 </div>
                 <div style={{ background:C.cream, borderRadius:8, padding:'8px 10px' }}>
@@ -737,6 +744,12 @@ export default function Orders() {
                     ⚠️ Only enter frame cost here for <b>old orders or orders where frame is not in inventory</b>. If frame was selected from inventory, cost is already set automatically.
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+                    {selected.customer_own_frame ? (
+                      <div style={{ background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:8, padding:'9px 12px' }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:C.success }}>Customer's own frame</div>
+                        <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>No frame cost needed</div>
+                      </div>
+                    ) : (
                     <div>
                       <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Frame Buy Price (Rs.)</label>
                       <input type="number" value={lensCostForm.frameBuy} onChange={e=>setLensCostForm(f=>({...f,frameBuy:e.target.value}))}
@@ -744,6 +757,7 @@ export default function Orders() {
                         style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #86efac`, borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
                       <div style={{ fontSize:10, color:C.muted, marginTop:3 }}>From dealer / Kalutota receipt</div>
                     </div>
+                    )}
                     <div>
                       <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Lens Buy Price (Rs.)</label>
                       <input type="number" value={lensCostForm.lensBuy} onChange={e=>setLensCostForm(f=>({...f,lensBuy:e.target.value}))}
