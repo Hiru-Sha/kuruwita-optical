@@ -267,6 +267,45 @@ export default function LensPrices() {
   // ── Main tab: "my-prices" or "supplier-ref" ──
   const [mainTab, setMainTab] = useState('my-prices');
 
+  // ─── LEARNED PRICES state ──────────────────────────────────────────────────
+  const [learnedPrices,  setLearnedPrices]  = useState([]);
+  const [learnedLoading, setLearnedLoading] = useState(false);
+  const [learnedSearch,  setLearnedSearch]  = useState('');
+  const [learnedType,    setLearnedType]    = useState('all');
+  const [deletingId,     setDeletingId]     = useState(null);
+
+  const loadLearned = useCallback(async () => {
+    setLearnedLoading(true);
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/lens-prices?active=true`, { headers:{ Authorization:`Bearer ${token}` } });
+      const data  = await res.json();
+      // Show only auto-learned prices — those with Negombo Optical, Solex, Generic, or notes containing "order" or "learned"
+      const learned = Array.isArray(data) ? data.filter(p =>
+        ['Negombo Optical','Solex','Other'].includes(p.brand) ||
+        (p.notes||'').toLowerCase().includes('order') ||
+        (p.notes||'').toLowerCase().includes('learn') ||
+        (p.notes||'').toLowerCase().includes('calculator')
+      ) : [];
+      setLearnedPrices(learned);
+    } catch { setLearnedPrices([]); }
+    finally { setLearnedLoading(false); }
+  }, []);
+
+  useEffect(() => { if (mainTab === 'learned') loadLearned(); }, [loadLearned, mainTab]);
+
+  const handleDeleteLearned = async (id) => {
+    if (!window.confirm('Remove this learned price?')) return;
+    setDeletingId(id);
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      await fetch(`${BASE}/lens-prices/${id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${token}` } });
+      loadLearned();
+    } catch {} finally { setDeletingId(null); }
+  };
+
   // ─── MY PRICES state (original API section) ───────────────────────────────
   const [prices,  setPrices]  = useState([]);
   const [loading, setLoading] = useState(true);
@@ -427,8 +466,9 @@ export default function LensPrices() {
       {/* ── Main tab switcher ── */}
       <div style={{ display:'flex', gap:0, background:'white', borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden', marginBottom:18, width:'fit-content' }}>
         {[
-          { key:'my-prices',    label:'🏪 My Prices',          sub:'Murano & Generic'    },
-          { key:'supplier-ref', label:'📋 Supplier Reference', sub:'Lanka Optic · MR · Neo Vision · Omega' },
+          { key:'my-prices',    label:'My Prices',          sub:'Murano & Generic'    },
+          { key:'learned',      label:'Learned from Orders', sub:'Auto-saved from your orders' },
+          { key:'supplier-ref', label:'Supplier Reference', sub:'Lanka Optic · MR · Neo Vision' },
         ].map(t => (
           <button key={t.key} onClick={()=>setMainTab(t.key)}
             style={{ padding:'11px 22px', background:mainTab===t.key?C.navy:'white', color:mainTab===t.key?'white':C.muted, border:'none', cursor:'pointer', fontFamily:'inherit', textAlign:'left', transition:'all .15s', borderRight:`1px solid ${C.border}` }}>
@@ -437,6 +477,91 @@ export default function LensPrices() {
           </button>
         ))}
       </div>
+
+      {/* ══════════════════════════════════════════════════════
+          TAB — LEARNED FROM ORDERS
+      ══════════════════════════════════════════════════════ */}
+      {mainTab === 'learned' && (
+        <div>
+          <div style={{ background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:10, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#1e40af' }}>
+            These prices are automatically saved whenever you update lens costs on an order or enter lens prices in a new order. They are used to auto-fill prices in future orders with the same lens details.
+          </div>
+
+          {/* Search + filter */}
+          <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
+            <input value={learnedSearch} onChange={e=>setLearnedSearch(e.target.value)} placeholder="Search lens type, coating, supplier..."
+              style={{ flex:1, minWidth:180, padding:'9px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream }}/>
+            <select value={learnedType} onChange={e=>setLearnedType(e.target.value)}
+              style={{ padding:'9px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream }}>
+              {['all','Bifocal','Single Vision','Progressive','Office Lens','Reading (ready)'].map(t=>(
+                <option key={t} value={t}>{t==='all'?'All Types':t}</option>
+              ))}
+            </select>
+            <button onClick={loadLearned} style={{ padding:'9px 14px', background:C.cream, border:`1px solid ${C.border}`, borderRadius:9, fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>
+              Refresh
+            </button>
+          </div>
+
+          {learnedLoading ? (
+            <div style={{ textAlign:'center', padding:40, color:C.muted }}>Loading...</div>
+          ) : (() => {
+            const filtered = learnedPrices.filter(p => {
+              if (learnedType !== 'all' && p.lens_type !== learnedType) return false;
+              if (learnedSearch) {
+                const q = learnedSearch.toLowerCase();
+                return (p.lens_type||'').toLowerCase().includes(q) ||
+                       (p.coating||'').toLowerCase().includes(q) ||
+                       (p.brand||'').toLowerCase().includes(q) ||
+                       (p.lens_index||'').toLowerCase().includes(q);
+              }
+              return true;
+            });
+            if (!filtered.length) return (
+              <div style={{ textAlign:'center', padding:40, color:C.muted, fontSize:14 }}>
+                No learned prices yet. They will appear here automatically after you save order costs or enter lens prices in new orders.
+              </div>
+            );
+            return (
+              <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
+                {/* Header row */}
+                <div style={{ display:'grid', gridTemplateColumns:'1.8fr 1.5fr 0.7fr 1fr 1fr 1fr 0.5fr', gap:0, padding:'9px 14px', background:C.cream }}>
+                  {['Lens Type','Coating','Index','Supplier','Buy Price','Sell Price',''].map(h=>(
+                    <div key={h} style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, letterSpacing:'0.5px' }}>{h}</div>
+                  ))}
+                </div>
+                {filtered.map((p,i) => {
+                  const margin = p.buy_price>0 ? Math.round((p.sell_price-p.buy_price)/p.sell_price*100) : null;
+                  const updatedDate = p.updated_at ? new Date(p.updated_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
+                  return (
+                    <div key={p.id} style={{ display:'grid', gridTemplateColumns:'1.8fr 1.5fr 0.7fr 1fr 1fr 1fr 0.5fr', gap:0,
+                      padding:'11px 14px', borderTop:`1px solid ${C.cream}`, alignItems:'center',
+                      background:i%2===0?'white':'#fafaf9' }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{p.lens_type}</div>
+                        {updatedDate && <div style={{ fontSize:10, color:C.muted, marginTop:1 }}>Updated {updatedDate}</div>}
+                      </div>
+                      <div style={{ fontSize:12, color:C.navy }}>{p.coating||'—'}</div>
+                      <div style={{ fontSize:12, color:C.muted }}>{p.lens_index||'—'}</div>
+                      <div style={{ fontSize:12, color:C.muted }}>{p.brand||'—'}</div>
+                      <div style={{ fontSize:14, fontWeight:700, color:C.success }}>Rs. {Math.round(p.buy_price||0).toLocaleString()}</div>
+                      <div>
+                        <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>Rs. {Math.round(p.sell_price||0).toLocaleString()}</div>
+                        {margin!==null && (
+                          <div style={{ fontSize:10, fontWeight:700, color:margin>=30?C.success:margin>=15?'#b45309':C.danger }}>{margin}% margin</div>
+                        )}
+                      </div>
+                      <button onClick={()=>handleDeleteLearned(p.id)} disabled={deletingId===p.id}
+                        style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:6, padding:'4px 8px', fontSize:11, cursor:'pointer', fontFamily:'inherit', fontWeight:700 }}>
+                        {deletingId===p.id?'...':'✕'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════
           TAB 1 — MY PRICES (original full component)
