@@ -77,27 +77,8 @@ router.get('/', auth, async (req, res) => {
         WHERE balance_amount > 0 AND status != 'cancelled'
       `),
 
-      // All-time cash in hand — sequential to catch individual errors
-      (async () => {
-        try {
-          const oRes  = await pool.query(`SELECT COALESCE(SUM(advance_amount),0) AS v FROM orders`);
-          const qRes  = await pool.query(`SELECT COALESCE(SUM(amount_paid),0) AS v FROM quick_sales`).catch(()=>pool.query(`SELECT COALESCE(SUM(total),0) AS v FROM quick_sales`));
-          const rRes  = await pool.query(`SELECT COALESCE(SUM(charge),0) AS v FROM repairs`).catch(()=>({rows:[{v:0}]}));
-          const exRes = await pool.query(`SELECT COALESCE(SUM(amount),0) AS v FROM expenses`).catch(()=>({rows:[{v:0}]}));
-          const dRes  = await pool.query(`SELECT COALESCE(SUM(amount),0) AS v FROM cash_deposits`).catch(()=>({rows:[{v:0}]}));
-          const orders_v   = parseFloat(oRes.rows[0].v)  || 0;
-          const qs_v       = parseFloat(qRes.rows[0].v)  || 0;
-          const repairs_v  = parseFloat(rRes.rows[0].v)  || 0;
-          const expenses_v = parseFloat(exRes.rows[0].v) || 0;
-          const deposits_v = parseFloat(dRes.rows[0].v)  || 0;
-          const total_cash_in_hand = orders_v + qs_v + repairs_v - expenses_v - deposits_v;
-          console.log(`[CASH] orders=${orders_v} qs=${qs_v} repairs=${repairs_v} exp=${expenses_v} dep=${deposits_v} => TOTAL=${total_cash_in_hand}`);
-          return { rows:[{ total_cash_in_hand, total_deposited: deposits_v }] };
-        } catch(e) {
-          console.error('[CASH ERROR]', e.message);
-          return { rows:[{ total_cash_in_hand:0, total_deposited:0 }] };
-        }
-      })(),
+      // placeholder — allTimeCash computed separately below
+      Promise.resolve({ rows:[{ total_cash_in_hand:0, total_deposited:0 }] }),
 
       // Active orders count
       pool.query(`
@@ -169,10 +150,25 @@ router.get('/', auth, async (req, res) => {
     const todayCashIn  = orderCash + qsIncome + repairIncome;
     const cashInHand   = todayCashIn - totalExp - totalDep;
     const bankToday    = orderBank;
-    // All-time cash in drawer (carries forward from previous days)
-    const allTimeCash    = parseFloat(allTimeCashRes?.rows?.[0]?.total_cash_in_hand || 0);
-    // Total all-time deposits
-    const allTimeDeposits = parseFloat(allTimeCashRes?.rows?.[0]?.total_deposited || 0);
+    // All-time cash — compute with separate awaited queries
+    let allTimeCash = 0, allTimeDeposits = 0;
+    try {
+      const [atOrders, atQS, atRepairs, atExp, atDep] = await Promise.all([
+        pool.query(`SELECT COALESCE(SUM(advance_amount),0) AS v FROM orders`).catch(()=>({rows:[{v:'0'}]})),
+        pool.query(`SELECT COALESCE(SUM(total),0) AS v FROM quick_sales`).catch(()=>({rows:[{v:'0'}]})),
+        pool.query(`SELECT COALESCE(SUM(charge),0) AS v FROM repairs`).catch(()=>({rows:[{v:'0'}]})),
+        pool.query(`SELECT COALESCE(SUM(amount),0) AS v FROM expenses`).catch(()=>({rows:[{v:'0'}]})),
+        pool.query(`SELECT COALESCE(SUM(amount),0) AS v FROM cash_deposits`).catch(()=>({rows:[{v:'0'}]})),
+      ]);
+      const ov = parseFloat(atOrders.rows[0].v)||0;
+      const qv = parseFloat(atQS.rows[0].v)||0;
+      const rv = parseFloat(atRepairs.rows[0].v)||0;
+      const ev = parseFloat(atExp.rows[0].v)||0;
+      const dv = parseFloat(atDep.rows[0].v)||0;
+      allTimeCash    = ov + qv + rv - ev - dv;
+      allTimeDeposits = dv;
+      console.log(`[CASH] o=${ov} qs=${qv} r=${rv} exp=${ev} dep=${dv} => ${allTimeCash}`);
+    } catch(e) { console.error('[CASH ERROR]', e.message); }
 
     res.json({
       // Month stats
