@@ -540,35 +540,35 @@ function buildLabCardHTML(order) {
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${order.order_number} Lab Card</title>
 <style>
-  @page { size: 105mm 148mm portrait; margin: 0; }
+  @page { size: 110mm 130mm portrait; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; color: #0f1f3d; width: 105mm; height: 148mm; }
-  .card { width: 105mm; height: 148mm; display: flex; flex-direction: column; }
+  body { font-family: Arial, sans-serif; color: #0f1f3d; width: 110mm; height: 130mm; }
+  .card { width: 110mm; height: 130mm; display: flex; flex-direction: column; }
 
-  /* ── TOP PANEL ── 74mm tall — the "face" when folded */
-  .top { height: 74mm; display: flex; flex-direction: column; padding: 5mm 5mm 3mm; background: #0f1f3d; position: relative; overflow: hidden; }
-  .top::after { content:''; position:absolute; bottom:-18mm; right:-12mm; width:50mm; height:50mm; border-radius:50%; background:rgba(201,168,76,.10); }
+  /* ── TOP PANEL ── 40mm tall — the "face" when folded */
+  .top { height: 40mm; display: flex; flex-direction: column; padding: 3mm 5mm 2mm; background: #0f1f3d; position: relative; overflow: hidden; }
+  .top::after { content:''; position:absolute; bottom:-12mm; right:-8mm; width:35mm; height:35mm; border-radius:50%; background:rgba(201,168,76,.10); }
 
-  .shop-name { font-size: 13px; font-weight: 900; color: white; letter-spacing: -0.3px; line-height: 1.1; }
-  .shop-sub  { font-size: 7px; color: rgba(201,168,76,.9); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
-  .shop-addr { font-size: 6.5px; color: rgba(255,255,255,.6); margin-top: 2px; }
+  .shop-name { font-size: 11px; font-weight: 900; color: white; letter-spacing: -0.2px; line-height: 1.1; }
+  .shop-sub  { font-size: 6px; color: rgba(201,168,76,.9); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
+  .shop-addr { font-size: 6px; color: rgba(255,255,255,.55); margin-top: 1px; }
 
-  .order-no { font-size: 20px; font-weight: 900; color: #c9a84c; line-height: 1; letter-spacing: -0.5px; }
-  .order-lbl { font-size: 6px; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+  .order-no { font-size: 18px; font-weight: 900; color: #c9a84c; line-height: 1; letter-spacing: -0.5px; }
+  .order-lbl { font-size: 5.5px; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1px; }
 
-  .gold-bar { height: 2px; background: linear-gradient(90deg,#c9a84c,transparent); margin: 4mm 0 3mm; }
+  .gold-bar { height: 2px; background: linear-gradient(90deg,#c9a84c,transparent); margin: 2.5mm 0 2mm; }
 
-  .patient-name { font-size: 17px; font-weight: 900; color: white; line-height: 1.15; }
-  .patient-sub  { font-size: 8px; color: rgba(255,255,255,.6); margin-top: 2px; }
+  .patient-name { font-size: 15px; font-weight: 900; color: white; line-height: 1.1; }
+  .patient-sub  { font-size: 7px; color: rgba(255,255,255,.6); margin-top: 1px; }
 
-  .send-badge { display: inline-block; background: #c9a84c; color: #0f1f3d; font-size: 6.5px; font-weight: 800; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; margin-top: auto; align-self: flex-start; }
+  .send-badge { display: inline-block; background: #c9a84c; color: #0f1f3d; font-size: 6px; font-weight: 800; padding: 3px 6px; border-radius: 8px; letter-spacing: 0.3px; text-transform: uppercase; text-align:center; line-height:1.3; }
 
   /* ── FOLD LINE ── */
   .fold { height: 0; border-top: 2px dashed #b0bccf; position: relative; }
   .fold::before { content: 'FOLD'; position: absolute; left: 50%; transform: translateX(-50%) translateY(-50%); background: white; padding: 0 4px; font-size: 5.5px; color: #9ca3af; letter-spacing: 1.5px; font-weight: 700; }
 
   /* ── BOTTOM PANEL ── 74mm tall — detail side */
-  .bot { height: 74mm; padding: 3mm 4mm 2mm; display: flex; flex-direction: column; gap: 2px; }
+  .bot { height: 90mm; padding: 3mm 5mm 2mm; display: flex; flex-direction: column; gap: 2px; }
 
   .sec-hd { background: #0f1f3d; color: #c9a84c; font-size: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 2px 5px; }
   .sec { border: 1.5px solid #b0bccf; overflow: hidden; margin-bottom: 2px; }
@@ -602,19 +602,16 @@ function buildLabCardHTML(order) {
 
     <div class="gold-bar"></div>
 
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex:1;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex:1;">
       <div>
-        <div style="font-size:6.5px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px;">Patient</div>
+        <div style="font-size:6px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.8px;margin-bottom:1px;">Patient</div>
         <div class="patient-name">${order.customer_name || '—'}</div>
         <div class="patient-sub">
-          ${order.phone ? order.phone + ' &nbsp;·&nbsp; ' : ''}Date: ${orderDate}
+          ${order.phone ? order.phone + ' &nbsp;·&nbsp; ' : ''}${orderDate}
           ${order.deliver_date ? ' &nbsp;·&nbsp; Due: ' + fmtD(order.deliver_date) : ''}
         </div>
       </div>
-    </div>
-
-    <div style="margin-top:3mm;">
-      <span class="send-badge">Send with frame to lab</span>
+      <span class="send-badge">Send with<br/>frame to lab</span>
     </div>
   </div>
 
