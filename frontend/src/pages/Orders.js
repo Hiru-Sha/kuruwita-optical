@@ -12,6 +12,7 @@ const C = {
   border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
 };
 const fmtMoney = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
+const printCoating = c => ({'Blue Cut':'Blue Filter','Photo Gray':'Photochromic','Blue Cut + Photo Gray':'Blue Filter + Photochromic','Blue Cut + HMC':'Blue Filter + HMC','Photo Gray + HMC':'Photochromic + HMC','Blue Cut + Photo Gray + HMC':'Blue Filter + Photochromic + HMC'}[c]||c);
 const STATUSES = ['all','created','called','delivered','overdue','balance_due'];
 const STATUS_STYLE = {
   created:   { bg:'#dbeafe', color:'#1e40af' },
@@ -806,7 +807,7 @@ export default function Orders() {
                 {[
                   { l:'Frame',   v:selected.frame },
                   { l:'Lens',    v:selected.lens_type },
-                  { l:'Coating', v:selected.lens_coating },
+                  { l:'Coating', v:printCoating(selected.lens_coating) },
                   { l:'Deliver', v:selected.deliver_date?.slice(0,10) },
                 ].map(item=>(
                   <div key={item.l} style={{ background:C.cream, borderRadius:8, padding:'10px 12px' }}>

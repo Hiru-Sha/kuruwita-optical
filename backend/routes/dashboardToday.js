@@ -84,7 +84,7 @@ router.get('/', auth, async (req, res) => {
       pool.query(`
         SELECT COUNT(*) AS c
         FROM orders
-        WHERE status IN ('created','sent_to_lab','received')
+        WHERE status IN ('created','called','overdue')
       `),
 
       // Lens jobs out

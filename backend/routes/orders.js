@@ -383,4 +383,33 @@ router.post('/import', auth, async (req, res) => {
   } finally { client.release(); }
 });
 
+// POST /api/orders/fix-prices — backfill frame_sell_price and lens_sell_price for old orders
+router.post('/fix-prices', auth, async (req, res) => {
+  try {
+    // For orders where frame_sell_price is 0 or null but total_amount > 0 and lens_sell_price is also 0
+    // Set frame_sell_price = total_amount (since old orders had no split)
+    const result = await pool.query(`
+      UPDATE orders
+      SET
+        frame_sell_price = CASE
+          WHEN customer_own_frame = true OR customer_own_frame IS NULL AND frame_buy_price = 0 THEN 0
+          ELSE COALESCE(NULLIF(frame_sell_price, 0), total_amount)
+        END,
+        lens_sell_price = CASE
+          WHEN COALESCE(lens_sell_price, 0) = 0 AND COALESCE(frame_sell_price, 0) = 0
+          THEN total_amount
+          ELSE COALESCE(lens_sell_price, 0)
+        END
+      WHERE
+        (COALESCE(frame_sell_price, 0) = 0 AND COALESCE(lens_sell_price, 0) = 0)
+        AND COALESCE(total_amount, 0) > 0
+      RETURNING id, order_number, total_amount, frame_sell_price, lens_sell_price
+    `);
+    res.json({ fixed: result.rowCount, rows: result.rows.slice(0, 10) });
+  } catch (err) {
+    console.error('fix-prices error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

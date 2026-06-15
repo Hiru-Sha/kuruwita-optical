@@ -218,6 +218,34 @@ export default function Repairs() {
   const [dateFrom,  setDateFrom]  = useState('');
   const [dateTo,    setDateTo]    = useState('');
   const [dateFilter,setDateFilter]= useState('all');
+  const [payRepair,  setPayRepair]  = useState(null);  // repair being paid
+  const [payAmt,     setPayAmt]     = useState('');
+  const [payMethod,  setPayMethod]  = useState('cash');
+  const [payDate,    setPayDate]    = useState(new Date().toISOString().split('T')[0]);
+  const [payErr,     setPayErr]     = useState('');
+  const [payLoading, setPayLoading] = useState(false);
+
+  const handleRecordPayment = async () => {
+    const amt = parseFloat(payAmt);
+    const balance = parseFloat(payRepair.balance_amount ?? (parseFloat(payRepair.charge||0) - parseFloat(payRepair.amount_paid||payRepair.advance||0)));
+    if (!amt || amt <= 0) return setPayErr('Enter a valid amount');
+    if (amt > balance + 0.01) return setPayErr(`Cannot exceed balance due (${fmtFull(balance)})`);
+    setPayLoading(true); setPayErr('');
+    try {
+      await apiPatch(`/repairs/${payRepair.id}/payment`.replace('PATCH','POST'), null);
+      // Use POST to the payment endpoint
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/repairs/${payRepair.id}/payment`, {
+        method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+        body: JSON.stringify({ amount:amt, method:payMethod, pay_date:payDate }),
+      });
+      if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Failed'); }
+      setPayRepair(null); setPayAmt(''); setPayErr('');
+      load();
+    } catch(e) { setPayErr(e.message); }
+    finally { setPayLoading(false); }
+  };
   const [showAdd,   setShowAdd]  = useState(false);
   const [pastMode,  setPastMode]  = useState(false);
   const [repairDate,setRepairDate]= useState('');
@@ -326,6 +354,66 @@ export default function Repairs() {
       )}
 
       {/* Print prompt after saving */}
+      {/* ── Payment Modal ── */}
+      {payRepair && (() => {
+        const charge  = parseFloat(payRepair.charge||0);
+        const paid    = parseFloat(payRepair.amount_paid||payRepair.advance||0);
+        const balance = parseFloat(payRepair.balance_amount ?? Math.max(0, charge - paid));
+        return (
+          <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.55)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+            onClick={e=>{ if(e.target===e.currentTarget){ setPayRepair(null); setPayErr(''); } }}>
+            <div style={{ background:'white', borderRadius:16, padding:28, width:'100%', maxWidth:380, boxShadow:'0 20px 60px rgba(0,0,0,.25)' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+                <div>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, color:C.navy }}>Record Payment</div>
+                  <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>{payRepair.repair_number} · {payRepair.customer_name}</div>
+                </div>
+                <button onClick={()=>{ setPayRepair(null); setPayErr(''); }}
+                  style={{ background:C.cream, border:'none', borderRadius:8, padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>✕</button>
+              </div>
+              <div style={{ background:balance>0?'#fee2e2':'#dcfce7', borderRadius:10, padding:'12px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:12, color:C.muted }}>Balance due</span>
+                <span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:balance>0?C.danger:C.success }}>{fmtFull(balance)}</span>
+              </div>
+              {balance <= 0 ? (
+                <div style={{ textAlign:'center', color:C.success, fontSize:14, fontWeight:600, padding:'10px 0' }}>Fully paid</div>
+              ) : (
+                <>
+                  {payErr && <div style={{ background:'#fef2f2', color:C.danger, borderRadius:8, padding:'8px 12px', fontSize:13, marginBottom:12 }}>{payErr}</div>}
+                  <div style={{ marginBottom:12 }}>
+                    <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Amount (Rs.)</label>
+                    <input type="number" value={payAmt} onChange={e=>setPayAmt(e.target.value)}
+                      placeholder={`Max: Rs. ${balance.toLocaleString()}`}
+                      style={{ width:'100%', padding:'10px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:15, fontFamily:'inherit', outline:'none', background:C.cream }}/>
+                    <button onClick={()=>setPayAmt(String(balance))} style={{ marginTop:6, padding:'5px 12px', background:C.navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Full balance</button>
+                  </div>
+                  <div style={{ marginBottom:12 }}>
+                    <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Payment Date</label>
+                    <input type="date" value={payDate} onChange={e=>setPayDate(e.target.value)}
+                      style={{ width:'100%', padding:'9px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:'inherit', outline:'none', background:C.cream }}/>
+                  </div>
+                  <div style={{ marginBottom:16 }}>
+                    <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Method</label>
+                    <div style={{ display:'flex', gap:8 }}>
+                      {[['cash','Cash'],['bank','Bank'],['card','Card']].map(([v,l])=>(
+                        <button key={v} onClick={()=>setPayMethod(v)}
+                          style={{ flex:1, padding:'9px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${payMethod===v?C.navy:C.border}`, background:payMethod===v?C.navy:'white', color:payMethod===v?'white':C.muted }}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button onClick={handleRecordPayment} disabled={payLoading}
+                    style={{ width:'100%', padding:'13px', background:payLoading?C.muted:C.success, color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:payLoading?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                    {payLoading ? 'Saving...' : `Record ${payAmt ? 'Rs. '+parseFloat(payAmt||0).toLocaleString() : 'Payment'}`}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {lastDone && (
         <div style={{ background:'#dcfce7', border:`1.5px solid #86efac`, borderRadius:12, padding:'14px 18px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10 }}>
           <div>
@@ -649,6 +737,16 @@ export default function Repairs() {
                             style={{ padding:'4px 11px', background:C.gold+'30', color:'#92400e', border:`1px solid ${C.gold}`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                             🖨️ Print
                           </button>
+                          {/* Record payment — show if balance > 0 */}
+                          {(() => {
+                            const bal = parseFloat(repair.balance_amount ?? Math.max(0, parseFloat(repair.charge||0) - parseFloat(repair.amount_paid||repair.advance||0)));
+                            return bal > 0 ? (
+                              <button onClick={()=>{ setPayRepair(repair); setPayAmt(''); setPayErr(''); setPayDate(new Date().toISOString().split('T')[0]); }}
+                                style={{ padding:'4px 11px', background:'#dcfce7', color:C.success, border:`1px solid #86efac`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                                Bal: {fmtFull(bal)}
+                              </button>
+                            ) : <span style={{ fontSize:10, color:C.success, fontWeight:700 }}>Paid</span>;
+                          })()}
 
                           {/* Delete */}
                           <button onClick={()=>handleDelete(repair.id)}

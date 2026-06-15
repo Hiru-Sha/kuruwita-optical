@@ -110,7 +110,8 @@ router.post('/', auth, async (req, res) => {
 router.patch('/:id', auth, async (req, res) => {
   const allowed = ['status','notes','charge','repair_cost','payment_method','customer_name',
                    'phone','repair_type','description','frame_description',
-                   'due_date','advance','frame_inventory_id'];
+                   'due_date','advance','frame_inventory_id',
+                   'balance_amount','last_payment_date','last_payment_method','amount_paid'];
   const fields = [], vals = [];
 
   allowed.forEach(f => {
@@ -177,6 +178,46 @@ router.delete('/:id', auth, async (req, res) => {
     await pool.query('DELETE FROM repairs WHERE id=$1', [req.params.id]);
     res.json({ message: 'Deleted' });
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+
+// POST /api/repairs/:id/payment — record partial/full payment on a repair
+router.post('/:id/payment', auth, async (req, res) => {
+  const { amount, method, pay_date } = req.body;
+  const amt = parseFloat(amount);
+  if (!amt || amt <= 0) return res.status(400).json({ error: 'Invalid amount' });
+  try {
+    const rep = await pool.query('SELECT * FROM repairs WHERE id=$1', [req.params.id]);
+    if (!rep.rows.length) return res.status(404).json({ error: 'Repair not found' });
+    const repair = rep.rows[0];
+    const currentPaid   = parseFloat(repair.amount_paid || repair.advance || 0);
+    const newPaid       = currentPaid + amt;
+    const charge        = parseFloat(repair.charge || 0);
+    const newBalance    = Math.max(0, charge - newPaid);
+    const dateStr       = pay_date || new Date().toISOString().split('T')[0];
+
+    const result = await pool.query(`
+      UPDATE repairs
+      SET amount_paid = $1, balance_amount = $2,
+          last_payment_date = $3, last_payment_method = $4,
+          status = CASE WHEN $2 <= 0 THEN 'collected' ELSE status END
+      WHERE id = $5 RETURNING *
+    `, [newPaid, newBalance, dateStr, method||'cash', req.params.id]);
+
+    // Auto-create bank deposit if method is bank/card
+    const pm = (method||'cash').toLowerCase();
+    if (pm === 'bank' || pm === 'card' || pm === 'transfer') {
+      await pool.query(
+        `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by) VALUES ($1,$2,$3,$4,$5,$6)`,
+        [dateStr, amt, 'Pan Asia Bank', pm==='card'?'card':'online',
+         'Payment: Repair ' + repair.repair_number, req.user.id]
+      ).catch(()=>{});
+    }
+
+    res.json(result.rows[0]);
+  } catch(err) {
+    console.error('Repair payment error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
