@@ -19,17 +19,29 @@ const FRAME_MATS   = ['Plastic','Metal','TR90','Titanium','Acetate','Mixed'];
 const FRAME_COLORS = ['Black','Gold','Silver','Brown','Gunmetal','Blue','Red','Pink','Tortoise','Crystal','Other'];
 const LENS_TYPES   = ['Single Vision','Progressive','Bifocal','Office Lens','Reading (ready)','Progressive Bifocal'];
 const LENS_COATINGS= [
-  // ── Single coatings ──
+  // ── Single coatings (supplier terms) ──
   'CR White',
-  'Blue Filter',
-  'PhotoChrome',
+  'Blue Cut',
+  'Photo Gray',
   'HMC',
   // ── Combinations ──
-  'Blue Filter + PhotoGrey',
-  'Blue Filter + HMC',
-  'PhotoGrey + HMC',
-  'Blue Filter + PhotoGrey + HMC',
+  'Blue Cut + Photo Gray',
+  'Blue Cut + HMC',
+  'Photo Gray + HMC',
+  'Blue Cut + Photo Gray + HMC',
 ];
+
+// Maps coating order-form term → friendly print name on receipt
+const COATING_PRINT_NAME = {
+  'CR White':                   'CR White',
+  'Blue Cut':                   'Blue Filter',
+  'Photo Gray':                 'Photochromic',
+  'HMC':                        'HMC',
+  'Blue Cut + Photo Gray':      'Blue Filter + Photochromic',
+  'Blue Cut + HMC':             'Blue Filter + HMC',
+  'Photo Gray + HMC':           'Photochromic + HMC',
+  'Blue Cut + Photo Gray + HMC':'Blue Filter + Photochromic + HMC',
+};
 const LENS_INDEXES = ['CR39','1.49','1.56','1.59','1.6','1.61','1.67','1.74','Poly'];
 const LENS_COMPANIES = ['Negombo Optical','Solex','Other'];
 
