@@ -540,13 +540,13 @@ function buildLabCardHTML(order) {
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${order.order_number} Lab Card</title>
 <style>
-  @page { size: 110mm 130mm portrait; margin: 0; }
+  @page { size: 145mm 105mm landscape; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; color: #0f1f3d; width: 110mm; height: 130mm; }
-  .card { width: 110mm; height: 130mm; display: flex; flex-direction: column; }
+  body { font-family: Arial, sans-serif; color: #0f1f3d; width: 145mm; height: 105mm; }
+  .card { width: 145mm; height: 105mm; display: flex; flex-direction: column; }
 
-  /* ── TOP PANEL ── 40mm tall — the "face" when folded */
-  .top { height: 40mm; display: flex; flex-direction: column; padding: 3mm 5mm 2mm; background: #0f1f3d; position: relative; overflow: hidden; }
+  /* ── TOP PANEL ── 35mm tall — the "face" when folded */
+  .top { height: 35mm; display: flex; flex-direction: column; padding: 3mm 5mm 2mm; background: #0f1f3d; position: relative; overflow: hidden; }
   .top::after { content:''; position:absolute; bottom:-12mm; right:-8mm; width:35mm; height:35mm; border-radius:50%; background:rgba(201,168,76,.10); }
 
   .shop-name { font-size: 11px; font-weight: 900; color: white; letter-spacing: -0.2px; line-height: 1.1; }
@@ -568,7 +568,7 @@ function buildLabCardHTML(order) {
   .fold::before { content: 'FOLD'; position: absolute; left: 50%; transform: translateX(-50%) translateY(-50%); background: white; padding: 0 4px; font-size: 5.5px; color: #9ca3af; letter-spacing: 1.5px; font-weight: 700; }
 
   /* ── BOTTOM PANEL ── 74mm tall — detail side */
-  .bot { height: 90mm; padding: 3mm 5mm 2mm; display: flex; flex-direction: column; gap: 2px; }
+  .bot { height: 70mm; padding: 3mm 5mm 2mm; display: flex; flex-direction: column; gap: 2px; }
 
   .sec-hd { background: #0f1f3d; color: #c9a84c; font-size: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 2px 5px; }
   .sec { border: 1.5px solid #b0bccf; overflow: hidden; margin-bottom: 2px; }
