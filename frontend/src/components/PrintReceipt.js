@@ -540,35 +540,35 @@ function buildLabCardHTML(order) {
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${order.order_number} Lab Card</title>
 <style>
-  @page { size: 145mm 105mm landscape; margin: 0; }
+  @page { size: 148mm 105mm landscape; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; color: #0f1f3d; width: 145mm; height: 105mm; }
-  .card { width: 145mm; height: 105mm; display: flex; flex-direction: column; }
+  body { font-family: Arial, sans-serif; color: #0f1f3d; width: 148mm; height: 105mm; }
+  .card { width: 148mm; height: 105mm; display: flex; flex-direction: column; }
 
-  /* ── TOP PANEL ── 52mm tall — the "face" when folded */
-  .top { height: 52mm; display: flex; flex-direction: column; padding: 4mm 5mm 3mm; background: #0f1f3d; position: relative; overflow: hidden; }
+  /* ── TOP PANEL ── 28mm tall */
+  .top { height: 28mm; display: flex; flex-direction: column; padding: 3mm 5mm 2mm; background: #0f1f3d; position: relative; overflow: hidden; }
   .top::after { content:''; position:absolute; bottom:-12mm; right:-8mm; width:35mm; height:35mm; border-radius:50%; background:rgba(201,168,76,.10); }
 
-  .shop-name { font-size: 11px; font-weight: 900; color: white; letter-spacing: -0.2px; line-height: 1.1; }
-  .shop-sub  { font-size: 6px; color: rgba(201,168,76,.9); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
-  .shop-addr { font-size: 6px; color: rgba(255,255,255,.55); margin-top: 1px; }
+  .shop-name { font-size: 10px; font-weight: 900; color: white; letter-spacing: -0.2px; line-height: 1.1; }
+  .shop-sub  { font-size: 5.5px; color: rgba(201,168,76,.9); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
+  .shop-addr { font-size: 5.5px; color: rgba(255,255,255,.55); margin-top: 1px; }
 
-  .order-no { font-size: 18px; font-weight: 900; color: #c9a84c; line-height: 1; letter-spacing: -0.5px; }
-  .order-lbl { font-size: 5.5px; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1px; }
+  .order-no { font-size: 15px; font-weight: 900; color: #c9a84c; line-height: 1; letter-spacing: -0.5px; }
+  .order-lbl { font-size: 5px; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1px; }
 
-  .gold-bar { height: 2px; background: linear-gradient(90deg,#c9a84c,transparent); margin: 2.5mm 0 2mm; }
+  .gold-bar { height: 1.5px; background: linear-gradient(90deg,#c9a84c,transparent); margin: 1.5mm 0 1mm; }
 
-  .patient-name { font-size: 15px; font-weight: 900; color: white; line-height: 1.1; }
-  .patient-sub  { font-size: 7px; color: rgba(255,255,255,.6); margin-top: 1px; }
+  .patient-name { font-size: 13px; font-weight: 900; color: white; line-height: 1.1; }
+  .patient-sub  { font-size: 6px; color: rgba(255,255,255,.6); margin-top: 1px; }
 
-  .send-badge { display: inline-block; background: #c9a84c; color: #0f1f3d; font-size: 6px; font-weight: 800; padding: 3px 6px; border-radius: 8px; letter-spacing: 0.3px; text-transform: uppercase; text-align:center; line-height:1.3; }
+  .send-badge { display: inline-block; background: #c9a84c; color: #0f1f3d; font-size: 5.5px; font-weight: 800; padding: 2px 5px; border-radius: 6px; letter-spacing: 0.3px; text-transform: uppercase; text-align:center; line-height:1.3; }
 
   /* ── FOLD LINE ── */
   .fold { height: 0; border-top: 2px dashed #b0bccf; position: relative; }
   .fold::before { content: 'FOLD'; position: absolute; left: 50%; transform: translateX(-50%) translateY(-50%); background: white; padding: 0 4px; font-size: 5.5px; color: #9ca3af; letter-spacing: 1.5px; font-weight: 700; }
 
   /* ── BOTTOM PANEL ── 74mm tall — detail side */
-  .bot { height: 52mm; padding: 2mm 5mm 2mm; display: flex; flex-direction: column; gap: 2px; }
+  .bot { height: 76mm; padding: 2mm 5mm 2mm; display: flex; flex-direction: column; gap: 2px; }
 
   .sec-hd { background: #0f1f3d; color: #c9a84c; font-size: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 2px 5px; }
   .sec { border: 1.5px solid #b0bccf; overflow: hidden; margin-bottom: 2px; }
@@ -671,7 +671,7 @@ function buildLabCardHTML(order) {
     <!-- Special Instructions -->
     <div class="sec" style="flex:1;">
       <div class="sec-hd">Special Instructions</div>
-      <div style="padding:3px 5px;min-height:6mm;font-size:9px;font-weight:700;line-height:1.5;">${cleanNotes || ''}</div>
+      <div style="padding:3px 5px;min-height:14mm;font-size:9px;font-weight:700;line-height:1.5;">${cleanNotes || ''}</div>
     </div>
 
     <div style="margin-top:auto;padding-top:1mm;border-top:1px solid #e0e4ea;font-size:5.5px;color:#9ca3af;display:flex;justify-content:space-between;">
