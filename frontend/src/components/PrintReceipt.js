@@ -545,8 +545,8 @@ function buildLabCardHTML(order) {
   body { font-family: Arial, sans-serif; color: #0f1f3d; width: 145mm; height: 105mm; }
   .card { width: 145mm; height: 105mm; display: flex; flex-direction: column; }
 
-  /* ── TOP PANEL ── 35mm tall — the "face" when folded */
-  .top { height: 35mm; display: flex; flex-direction: column; padding: 3mm 5mm 2mm; background: #0f1f3d; position: relative; overflow: hidden; }
+  /* ── TOP PANEL ── 52mm tall — the "face" when folded */
+  .top { height: 52mm; display: flex; flex-direction: column; padding: 4mm 5mm 3mm; background: #0f1f3d; position: relative; overflow: hidden; }
   .top::after { content:''; position:absolute; bottom:-12mm; right:-8mm; width:35mm; height:35mm; border-radius:50%; background:rgba(201,168,76,.10); }
 
   .shop-name { font-size: 11px; font-weight: 900; color: white; letter-spacing: -0.2px; line-height: 1.1; }
@@ -568,7 +568,7 @@ function buildLabCardHTML(order) {
   .fold::before { content: 'FOLD'; position: absolute; left: 50%; transform: translateX(-50%) translateY(-50%); background: white; padding: 0 4px; font-size: 5.5px; color: #9ca3af; letter-spacing: 1.5px; font-weight: 700; }
 
   /* ── BOTTOM PANEL ── 74mm tall — detail side */
-  .bot { height: 70mm; padding: 3mm 5mm 2mm; display: flex; flex-direction: column; gap: 2px; }
+  .bot { height: 52mm; padding: 2mm 5mm 2mm; display: flex; flex-direction: column; gap: 2px; }
 
   .sec-hd { background: #0f1f3d; color: #c9a84c; font-size: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 2px 5px; }
   .sec { border: 1.5px solid #b0bccf; overflow: hidden; margin-bottom: 2px; }
@@ -671,7 +671,7 @@ function buildLabCardHTML(order) {
     <!-- Special Instructions -->
     <div class="sec" style="flex:1;">
       <div class="sec-hd">Special Instructions</div>
-      <div style="padding:3px 5px;min-height:10mm;font-size:9px;font-weight:700;line-height:1.5;">${cleanNotes || ''}</div>
+      <div style="padding:3px 5px;min-height:6mm;font-size:9px;font-weight:700;line-height:1.5;">${cleanNotes || ''}</div>
     </div>
 
     <div style="margin-top:auto;padding-top:1mm;border-top:1px solid #e0e4ea;font-size:5.5px;color:#9ca3af;display:flex;justify-content:space-between;">
