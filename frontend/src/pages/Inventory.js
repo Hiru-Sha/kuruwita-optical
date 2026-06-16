@@ -791,11 +791,27 @@ export default function Inventory() {
       }).then(r=>r.json()).catch(()=>({ pending:false }));
 
       if (check.pending) {
-        // PC is waiting — push photo to it automatically
+        // PC is waiting — push photo + current form fields to it
         const res = await fetch(`${BASE_}/scan-session/photo-session/upload-from-phone`, {
           method: 'POST',
           headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token_}` },
-          body: JSON.stringify({ image: b64 }),
+          body: JSON.stringify({
+            image: b64,
+            formData: {
+              category:    addCat,
+              name:        form.name        || '',
+              brand:       form.brand       || '',
+              model:       form.model       || '',
+              frame_type:  form.frame_type  || '',
+              frame_color: form.frame_color || '',
+              material:    form.material    || '',
+              sg_type:     form.sg_type     || '',
+              rg_lens_type:form.rg_lens_type|| '',
+              cost_price:  form.cost_price  || '',
+              sell_price:  form.sell_price  || '',
+              quantity:    form.quantity    || '',
+            }
+          }),
         });
         const data = await res.json();
         if (data.ok) {
@@ -846,9 +862,27 @@ export default function Inventory() {
         if (data.ready && data.image) {
           clearInterval(pollIntervalRef.current);
           setPcPolling(false);
-          setImgData(data.image);       // → sets main form image
-          setShowAdd(true);             // → open add form if not open
-          // flash success
+          setImgData(data.image);
+          setShowAdd(true);
+          // Apply form fields sent from phone if any
+          if (data.formData) {
+            const fd = data.formData;
+            if (fd.category) handleCatChange(fd.category);
+            setForm(f => ({
+              ...f,
+              name:         fd.name        || f.name,
+              brand:        fd.brand       || f.brand,
+              model:        fd.model       || f.model,
+              frame_type:   fd.frame_type  || f.frame_type,
+              frame_color:  fd.frame_color || f.frame_color,
+              material:     fd.material    || f.material,
+              sg_type:      fd.sg_type     || f.sg_type,
+              rg_lens_type: fd.rg_lens_type|| f.rg_lens_type,
+              cost_price:   fd.cost_price  || f.cost_price,
+              sell_price:   fd.sell_price  || f.sell_price,
+              quantity:     fd.quantity    || f.quantity,
+            }));
+          }
           setPcSessionId('done');
           setTimeout(() => setPcSessionId(null), 3000);
         }

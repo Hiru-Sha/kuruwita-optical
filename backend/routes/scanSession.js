@@ -94,11 +94,12 @@ router.get('/photo-session/pending', auth, (req, res) => {
 router.post('/photo-session/upload-from-phone', auth, async (req, res) => {
   const token = userPending[req.user.id];
   if (!token || !photoSessions[token]) return res.status(404).json({ error: 'No PC waiting. Click "Add from Phone" on PC first.' });
-  const { image } = req.body;
+  const { image, formData } = req.body;
   if (!image) return res.status(400).json({ error: 'No image' });
   photoSessions[token].image     = image;
+  photoSessions[token].formData  = formData || null;
   photoSessions[token].timestamp = Date.now();
-  delete userPending[req.user.id]; // clear pending — only one photo per session
+  delete userPending[req.user.id];
   res.json({ ok: true });
 });
 
@@ -107,9 +108,11 @@ router.get('/photo-session/:token/poll', auth, (req, res) => {
   const s = photoSessions[req.params.token];
   if (!s) return res.json({ expired: true });
   if (s.image) {
-    const image = s.image;
-    s.image = null; // consume once
-    return res.json({ ready: true, image });
+    const image    = s.image;
+    const formData = s.formData || null;
+    s.image    = null;
+    s.formData = null;
+    return res.json({ ready: true, image, formData });
   }
   res.json({ ready: false });
 });
