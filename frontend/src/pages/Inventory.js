@@ -1174,26 +1174,35 @@ export default function Inventory() {
       </div>
 
       {/* Phone photo session status banner */}
-      {pcPolling && (
-        <div style={{ background:'#eff6ff', border:'1.5px solid #93c5fd', borderRadius:12, padding:'12px 16px',
-          marginBottom:16, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ width:10, height:10, borderRadius:'50%', background:'#3b82f6',
-              animation:'pcPulse 1s infinite' }}/>
-            <div>
-              <div style={{ fontSize:14, fontWeight:700, color:'#1e40af' }}>
-                Waiting for photo from phone...
+      {pcPolling && (() => {
+        const BASE_ = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const phoneUrl = `${BASE_.replace('/api','')}/api/scan-session/photo-session/${pcSessionId}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(phoneUrl)}`;
+        return (
+        <div style={{ background:'#eff6ff', border:'1.5px solid #93c5fd', borderRadius:12, padding:'16px',
+          marginBottom:16 }}>
+          <div style={{ display:'flex', alignItems:'flex-start', gap:16 }}>
+            <img src={qrUrl} alt="QR" style={{ width:100, height:100, borderRadius:8, border:'2px solid #93c5fd', flexShrink:0 }}/>
+            <div style={{ flex:1 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                <div style={{ width:10, height:10, borderRadius:'50%', background:'#3b82f6' }}/>
+                <div style={{ fontSize:14, fontWeight:700, color:'#1e40af' }}>Waiting for photo from phone...</div>
               </div>
-              <div style={{ fontSize:12, color:'#3b82f6', marginTop:2 }}>
-                Open the web app on your phone → go to Inventory → tap 📷 camera button → take photo → it appears here
+              <div style={{ fontSize:12, color:'#374151', marginBottom:8, lineHeight:1.5 }}>
+                <b>1.</b> Open your phone camera → scan QR code<br/>
+                <b>2.</b> Select category (Frames / Sunglasses / Reading Glasses)<br/>
+                <b>3.</b> Tap Take Photo → send → photo appears here
               </div>
+              <div style={{ fontSize:10, color:'#6b7280', wordBreak:'break-all', background:'white', padding:'4px 8px', borderRadius:6, marginBottom:8 }}>
+                {phoneUrl}
+              </div>
+              <button onClick={()=>{ setPcPolling(false); setPcSessionId(null); clearInterval(pollIntervalRef.current); }}
+                style={{ padding:'6px 12px', background:'white', border:'1px solid #93c5fd', borderRadius:8,
+                  fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'#1e40af' }}>
+                Cancel
+              </button>
             </div>
           </div>
-          <button onClick={()=>{ setPcPolling(false); setPcSessionId(null); clearInterval(pollIntervalRef.current); localStorage.removeItem('ko_pending_photo_session'); }}
-            style={{ padding:'6px 12px', background:'white', border:'1px solid #93c5fd', borderRadius:8,
-              fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'#1e40af', flexShrink:0 }}>
-            Cancel
-          </button>
         </div>
       )}
       <style>{'.pcPulse,@keyframes pcPulse{0%,100%{opacity:1}50%{opacity:.2}}'}</style>

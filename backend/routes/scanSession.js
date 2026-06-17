@@ -121,9 +121,10 @@ router.get('/photo-session/:token/poll', auth, (req, res) => {
 router.post('/photo-session/:token/upload', (req, res) => {
   const s = photoSessions[req.params.token];
   if (!s) return res.status(404).json({ error: 'Session expired' });
-  const { image } = req.body;
+  const { image, formData } = req.body;
   if (!image) return res.status(400).json({ error: 'No image' });
   s.image     = image;
+  s.formData  = formData || null;
   s.timestamp = Date.now();
   res.json({ ok: true });
 });
@@ -190,6 +191,18 @@ router.get('/photo-session/:token', (req, res) => {
     <!-- Camera input — opens phone camera -->
     <input type="file" accept="image/*" capture="environment" id="fileInput" style="display:none">
 
+    <!-- Category selector -->
+    <div id="catSection" style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Select Category</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="cat-btn selected" data-cat="Frames" onclick="selectCat(this)" style="padding:10px;border-radius:10px;border:2px solid #0f1f3d;background:#0f1f3d;color:#c9a84c;font-size:13px;font-weight:700;cursor:pointer">🕶️ Frames</button>
+        <button class="cat-btn" data-cat="Sunglasses" onclick="selectCat(this)" style="padding:10px;border-radius:10px;border:2px solid #e0ddd6;background:white;color:#6b7280;font-size:13px;font-weight:700;cursor:pointer">😎 Sunglasses</button>
+        <button class="cat-btn" data-cat="Reading Glasses" onclick="selectCat(this)" style="padding:10px;border-radius:10px;border:2px solid #e0ddd6;background:white;color:#6b7280;font-size:13px;font-weight:700;cursor:pointer">👓 Reading Glasses</button>
+        <button class="cat-btn" data-cat="Contact Lenses" onclick="selectCat(this)" style="padding:10px;border-radius:10px;border:2px solid #e0ddd6;background:white;color:#6b7280;font-size:13px;font-weight:700;cursor:pointer">👁️ Contact Lenses</button>
+        <button class="cat-btn" data-cat="Accessories" onclick="selectCat(this)" style="padding:10px;border-radius:10px;border:2px solid #e0ddd6;background:white;color:#6b7280;font-size:13px;font-weight:700;cursor:pointer;grid-column:1/-1">🎒 Accessories</button>
+      </div>
+    </div>
+
     <button class="btn btn-take" id="btnTake" onclick="document.getElementById('fileInput').click()">
       📷 Take Photo
     </button>
@@ -207,6 +220,19 @@ router.get('/photo-session/:token', (req, res) => {
 <script>
 const tok = '${tok}';
 let b64 = null;
+
+function selectCat(btn) {
+  document.querySelectorAll('.cat-btn').forEach(b => {
+    b.style.border = '2px solid #e0ddd6';
+    b.style.background = 'white';
+    b.style.color = '#6b7280';
+    b.classList.remove('selected');
+  });
+  btn.style.border = '2px solid #0f1f3d';
+  btn.style.background = '#0f1f3d';
+  btn.style.color = '#c9a84c';
+  btn.classList.add('selected');
+}
 
 const fileInput = document.getElementById('fileInput');
 const previewImg = document.getElementById('previewImg');
@@ -270,11 +296,13 @@ btnSend.onclick = async () => {
   btnSend.disabled = true;
   btnRetake.disabled = true;
   status.textContent = 'Sending to PC...';
+  const selCat = document.querySelector('.cat-btn.selected');
+  const category = selCat ? selCat.dataset.cat : 'Frames';
   try {
     const res = await fetch('/api/scan-session/photo-session/' + tok + '/upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: b64 }),
+      body: JSON.stringify({ image: b64, formData: { category } }),
     });
     const data = await res.json();
     if (data.ok) {
