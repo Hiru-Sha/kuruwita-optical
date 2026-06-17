@@ -689,7 +689,8 @@ export default function Inventory() {
   // Phone→PC photo session
   const [pcSessionId,   setPcSessionId]  = useState(null);
   const [pcPolling,     setPcPolling]    = useState(false);
-  const pollIntervalRef = React.useRef(null);
+  const pollIntervalRef   = React.useRef(null);
+  const pendingCatRef     = React.useRef(null); // category arriving from phone
 
   const [scanResult,   setScanResult]  = useState(null); // last scanned item
   const [showFullImg,  setShowFullImg] = useState(false);
@@ -862,27 +863,34 @@ export default function Inventory() {
         if (data.ready && data.image) {
           clearInterval(pollIntervalRef.current);
           setPcPolling(false);
+          // Store category in ref BEFORE setting image
+          if (data.formData?.category) {
+            pendingCatRef.current = data.formData.category;
+          }
           setImgData(data.image);
           setShowAdd(true);
-          // Apply category AFTER render so it's not overridden
-          const incomingCat = data.formData?.category;
-          setTimeout(() => {
-            if (incomingCat) {
-              handleCatChange(incomingCat, true); // keep image when applying from phone
-            }
-          }, 50);
           setPcSessionId('done');
-          // Scroll to the add form
           setTimeout(() => {
             const el = document.querySelector('[data-add-form]');
             if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
-          }, 200);
+          }, 300);
           setTimeout(() => setPcSessionId(null), 4000);
         }
       } catch(e) {}
     }, 1500);
     return () => clearInterval(pollIntervalRef.current);
   }, [pcPolling, pcSessionId]);
+
+  // Apply pending category from phone after imgData is set
+  React.useEffect(() => {
+    if (imgData && pendingCatRef.current) {
+      const cat = pendingCatRef.current;
+      pendingCatRef.current = null;
+      setAddCat(cat);           // set category
+      setForm(defaults(cat));   // reset form fields for that category
+      // imgData is NOT cleared — already set above
+    }
+  }, [imgData]);
 
   // Check for duplicates when name/model changes
   const checkDuplicates = React.useCallback(async (name) => {
@@ -1300,7 +1308,7 @@ export default function Inventory() {
             <label style={LBL}>Category *</label>
             <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
               {CATS.slice(1).map(c=>(
-                <button key={c} onClick={()=>handleCatChange(c, !!imgData)}
+                <button key={c} onClick={()=>handleCatChange(c, showAdd && !!imgData)}
                   style={{ padding:'7px 14px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
                     border:`2px solid ${addCat===c?C.navy:C.border}`,
                     background:addCat===c?C.navy:'white',
