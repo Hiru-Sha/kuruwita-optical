@@ -172,17 +172,39 @@ function ItemCard({ item, onClick, onSticker }) {
   const isLow = item.quantity>0 && item.quantity<=item.min_quantity;
   const isOut = item.quantity===0;
   const cat   = CAT_ICON[item.category]||'📦';
+  const [imgSrc, setImgSrc] = React.useState(item.image_url||null);
+  const cardRef = React.useRef(null);
+
+  // Lazy-load image when card enters viewport
+  React.useEffect(() => {
+    if (imgSrc) return; // already have image
+    const el = cardRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      obs.disconnect();
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      fetch(`${BASE}/inventory/${item.id}`, { headers:{ Authorization:`Bearer ${token}` } })
+        .then(r=>r.json())
+        .then(d=>{ if(d.image_url) setImgSrc(d.image_url); })
+        .catch(()=>{});
+    }, { rootMargin:'100px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [item.id]);
+
   let sub = '';
   if (item.category==='Frames')              sub=[item.frame_color,item.frame_shape,item.frame_size].filter(Boolean).join(' · ');
   else if (item.category==='Sunglasses')     sub=[item.sg_type,item.frame_color].filter(Boolean).join(' · ');
   else if (item.category==='Reading Glasses')sub=[item.rg_power,item.rg_lens_type].filter(Boolean).join(' · ');
   else sub=item.brand||'';
   return (
-    <div style={{ background:'white', border:`1.5px solid ${isOut?'#d1d5db':isLow?'#fca5a5':C.border}`, borderRadius:14, cursor:'pointer', overflow:'hidden', position:'relative', transition:'all .15s', borderLeft:isLow&&!isOut?`4px solid ${C.danger}`:undefined }}
+    <div ref={cardRef} style={{ background:'white', border:`1.5px solid ${isOut?'#d1d5db':isLow?'#fca5a5':C.border}`, borderRadius:14, cursor:'pointer', overflow:'hidden', position:'relative', transition:'all .15s', borderLeft:isLow&&!isOut?`4px solid ${C.danger}`:undefined }}
       onMouseEnter={e=>e.currentTarget.style.borderColor=C.gold}
       onMouseLeave={e=>e.currentTarget.style.borderColor=isOut?'#d1d5db':isLow?'#fca5a5':C.border}>
       <div onClick={onClick} style={{ height:110, background:C.cream, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative' }}>
-        {item.image_url?<img src={item.image_url} alt={item.name} loading="lazy" decoding="async" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>:<div style={{ fontSize:32, opacity:.35 }}>{cat}</div>}
+        {imgSrc?<img src={imgSrc} alt={item.name} loading="lazy" decoding="async" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>:<div style={{ fontSize:32, opacity:.35 }}>{cat}</div>}
         {isOut&&<span style={{ position:'absolute', top:7, right:7, background:'#f3f4f6', color:'#6b7280', fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:20 }}>Out</span>}
         {isLow&&!isOut&&<span style={{ position:'absolute', top:7, right:7, background:'#fee2e2', color:C.danger, fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:20 }}>Low</span>}
         <span style={{ position:'absolute', bottom:7, left:7, background:'rgba(15,31,61,.7)', color:'white', fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:20 }}>{cat} {item.category}</span>
@@ -755,6 +777,7 @@ function MobilePhoneUploader() {
 export default function Inventory() {
   const [items,        setItems]       = useState([]);
   const [activeCat,    setActiveCat]   = useState('All');
+  const [stockFilter,  setStockFilter]  = useState('all'); // 'all' | 'low' | 'out'
   const [subFilter,    setSubFilter]   = useState('');
   const [search,       setSearch]      = useState('');
   const [selected,     setSelected]    = useState(null);
@@ -1334,17 +1357,33 @@ export default function Inventory() {
             {/* Top row — summary cards */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:12 }}>
               {[
-                { l:'Total Items',       v:allItems.length,                    dark:true },
-                { l:'Low Stock',         v:low,                                c:C.danger },
-                { l:'Out of Stock',      v:out,                                c:'#9ca3af' },
-                { l:'Stock Value',       v:`Rs.${Math.round(val/1000)}K`,      c:C.success },
+                { l:'Total Items',  v:allItems.length,              dark:true,   sf:'all' },
+                { l:'Low Stock',    v:low,   c:C.danger,             sf:'low' },
+                { l:'Out of Stock', v:out,   c:'#9ca3af',            sf:'out' },
+                { l:'Stock Value',  v:`Rs.${Math.round(val/1000)}K`, c:C.success, sf:null },
               ].map(s=>(
-                <div key={s.l} style={{ background:s.dark?C.navy:'white', border:`1px solid ${C.border}`, borderRadius:10, padding:'12px 14px', textAlign:'center' }}>
+                <div key={s.l} onClick={()=>s.sf && setStockFilter(s.sf)}
+                  style={{ background:s.dark?C.navy:stockFilter===s.sf?'#fef2f2':'white',
+                    border:`2px solid ${stockFilter===s.sf?C.danger:s.dark?'transparent':C.border}`,
+                    borderRadius:10, padding:'12px 14px', textAlign:'center',
+                    cursor:s.sf?'pointer':'default', transition:'all .15s' }}>
                   <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?C.gold:C.muted, marginBottom:4 }}>{s.l}</div>
                   <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
+                  {s.sf && s.sf!=='all' && <div style={{ fontSize:9, color:C.muted, marginTop:2 }}>Click to filter</div>}
                 </div>
               ))}
             </div>
+            {stockFilter!=='all' && (
+              <div style={{ background:'#fee2e2', borderRadius:9, padding:'7px 14px', marginBottom:8, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:13, fontWeight:700, color:C.danger }}>
+                  {stockFilter==='low' ? '⚠️ Showing low stock items only' : '❌ Showing out of stock items only'}
+                </span>
+                <button onClick={()=>setStockFilter('all')}
+                  style={{ fontSize:12, fontWeight:600, background:'white', border:`1px solid ${C.danger}`, borderRadius:7, padding:'3px 10px', cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
+                  ✕ Clear filter
+                </button>
+              </div>
+            )}
 
             {/* Category count chips — click to filter */}
             <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px' }}>
@@ -1697,6 +1736,9 @@ export default function Inventory() {
           ? <div style={{ textAlign:'center', padding:'48px 20px', color:C.muted }}><div style={{ fontSize:40, marginBottom:12 }}>📦</div><div style={{ fontSize:14, fontWeight:600 }}>No items yet</div></div>
           : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(185px,1fr))', gap:14 }}>
               {items.filter(item=>{
+                // Stock filter
+                if (stockFilter==='low') return item.quantity>0 && item.quantity<=item.min_quantity;
+                if (stockFilter==='out') return item.quantity===0;
                 // Hide Old Stock in All tab — only show when Old Stock tab is active
                 if (activeCat==='All' && item.category==='Old Stock') return false;
                 if (!subFilter) return true;
