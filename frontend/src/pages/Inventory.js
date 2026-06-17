@@ -1286,31 +1286,27 @@ export default function Inventory() {
       {/* Add form */}
       {showAdd && (
         <div data-add-form style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:24, marginBottom:20 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
             <h3 style={{ fontSize:15, fontWeight:700, color:C.navy, margin:0 }}>➕ Add New Item</h3>
             {imgData && (
               <span style={{ fontSize:11, fontWeight:700, color:C.success, background:'#dcfce7', padding:'3px 10px', borderRadius:20, border:'1px solid #86efac' }}>📷 Photo ready</span>
             )}
           </div>
+
+          {/* Category — large buttons, always visible, never clears image */}
           <div style={{ marginBottom:16 }}>
             <label style={LBL}>Category *</label>
             <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
               {CATS.slice(1).map(c=>(
-                <button key={c} onClick={()=>handleCatChange(c)}
-                  style={{ padding:'7px 14px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-                    border:`2px solid ${addCat===c?C.navy:C.border}`,
+                <button key={c} onClick={()=>{ setAddCat(c); setForm(defaults(c)); setColorVariants([{color:'Black',qty:'1',image:null}]); setPowerVariants(RG_POWERS.map(p=>({power:p,qty:'0'}))); }}
+                  style={{ padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+                    border:`2.5px solid ${addCat===c?C.navy:C.border}`,
                     background:addCat===c?C.navy:'white',
-                    color:addCat===c?'white':C.muted,
-                    boxShadow: addCat===c ? '0 2px 8px rgba(15,31,61,.2)' : 'none' }}>
+                    color:addCat===c?'white':C.muted }}>
                   {CAT_ICON[c]} {c}
                 </button>
               ))}
             </div>
-            {imgData && (
-              <div style={{ marginTop:8, fontSize:11, color:'#1e40af', background:'#eff6ff', padding:'6px 10px', borderRadius:8, border:'1px solid #bae6fd' }}>
-                ℹ️ Category selected: <b>{addCat}</b> — change it above if wrong, image stays
-              </div>
-            )}
           </div>
           <div style={{ marginBottom:14 }}>
             <label style={LBL}>Default Photo <span style={{ fontWeight:400, color:C.muted }}>(used for variants without their own photo)</span></label>

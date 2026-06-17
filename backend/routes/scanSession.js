@@ -110,6 +110,7 @@ router.get('/photo-session/:token/poll', auth, (req, res) => {
   if (s.image) {
     const image    = s.image;
     const formData = s.formData || null;
+    console.log('[POLL] image ready, formData:', JSON.stringify(formData));
     s.image    = null;
     s.formData = null;
     return res.json({ ready: true, image, formData });
@@ -126,6 +127,7 @@ router.post('/photo-session/:token/upload', (req, res) => {
   s.image     = image;
   s.formData  = formData || null;
   s.timestamp = Date.now();
+  console.log('[UPLOAD] token:', req.params.token, 'formData:', JSON.stringify(formData));
   res.json({ ok: true });
 });
 
