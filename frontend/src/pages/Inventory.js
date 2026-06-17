@@ -863,31 +863,14 @@ export default function Inventory() {
           clearInterval(pollIntervalRef.current);
           setPcPolling(false);
           setImgData(data.image);
-          // Apply category first (this resets form to correct defaults for that category)
-          if (data.formData?.category) {
-            handleCatChange(data.formData.category);
-          }
           setShowAdd(true);
-          // Then overlay the specific fields from phone on top
-          if (data.formData) {
-            const fd = data.formData;
-            setTimeout(() => {
-              setForm(f => ({
-                ...f,
-                name:         fd.name         || f.name,
-                brand:        fd.brand        || f.brand,
-                model:        fd.model        || f.model,
-                frame_type:   fd.frame_type   || f.frame_type,
-                frame_color:  fd.frame_color  || f.frame_color,
-                material:     fd.material     || f.material,
-                sg_type:      fd.sg_type      || f.sg_type,
-                rg_lens_type: fd.rg_lens_type || f.rg_lens_type,
-                cost_price:   fd.cost_price   || f.cost_price,
-                sell_price:   fd.sell_price   || f.sell_price,
-                quantity:     fd.quantity     || f.quantity,
-              }));
-            }, 100); // small delay so handleCatChange resets first
-          }
+          // Apply category AFTER render so it's not overridden
+          const incomingCat = data.formData?.category;
+          setTimeout(() => {
+            if (incomingCat) {
+              handleCatChange(incomingCat);
+            }
+          }, 50);
           setPcSessionId('done');
           // Scroll to the add form
           setTimeout(() => {
@@ -1306,17 +1289,31 @@ export default function Inventory() {
       {/* Add form */}
       {showAdd && (
         <div data-add-form style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:24, marginBottom:20 }}>
-          <h3 style={{ fontSize:15, fontWeight:700, color:C.navy, marginBottom:16 }}>➕ Add New Item</h3>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+            <h3 style={{ fontSize:15, fontWeight:700, color:C.navy, margin:0 }}>➕ Add New Item</h3>
+            {imgData && (
+              <span style={{ fontSize:11, fontWeight:700, color:C.success, background:'#dcfce7', padding:'3px 10px', borderRadius:20, border:'1px solid #86efac' }}>📷 Photo ready</span>
+            )}
+          </div>
           <div style={{ marginBottom:16 }}>
             <label style={LBL}>Category *</label>
             <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
               {CATS.slice(1).map(c=>(
                 <button key={c} onClick={()=>handleCatChange(c)}
-                  style={{ padding:'7px 14px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${addCat===c?C.navy:C.border}`, background:addCat===c?C.navy:'white', color:addCat===c?'white':C.muted }}>
+                  style={{ padding:'7px 14px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                    border:`2px solid ${addCat===c?C.navy:C.border}`,
+                    background:addCat===c?C.navy:'white',
+                    color:addCat===c?'white':C.muted,
+                    boxShadow: addCat===c ? '0 2px 8px rgba(15,31,61,.2)' : 'none' }}>
                   {CAT_ICON[c]} {c}
                 </button>
               ))}
             </div>
+            {imgData && (
+              <div style={{ marginTop:8, fontSize:11, color:'#1e40af', background:'#eff6ff', padding:'6px 10px', borderRadius:8, border:'1px solid #bae6fd' }}>
+                ℹ️ Category selected: <b>{addCat}</b> — change it above if wrong, image stays
+              </div>
+            )}
           </div>
           <div style={{ marginBottom:14 }}>
             <label style={LBL}>Default Photo <span style={{ fontWeight:400, color:C.muted }}>(used for variants without their own photo)</span></label>
