@@ -769,10 +769,9 @@ export default function Inventory() {
     }
   },[form.frame_color]);
 
-  const handleCatChange = (cat, keepImage=false) => {
+  const handleCatChange = (cat) => {
     setAddCat(cat);
     setForm(defaults(cat));
-    if (!keepImage) setImgData(null);
     setColorVariants([{ color:'Black', qty:'1', image:null }]);
     setPowerVariants(RG_POWERS.map(p=>({ power:p, qty:'0' })));
   };
@@ -863,12 +862,12 @@ export default function Inventory() {
         if (data.ready && data.image) {
           clearInterval(pollIntervalRef.current);
           setPcPolling(false);
-          // Store category in ref BEFORE setting image
-          if (data.formData?.category) {
-            pendingCatRef.current = data.formData.category;
-          }
           setImgData(data.image);
           setShowAdd(true);
+          if (data.formData?.category) {
+            setAddCat(data.formData.category);
+            setForm(defaults(data.formData.category));
+          }
           setPcSessionId('done');
           setTimeout(() => {
             const el = document.querySelector('[data-add-form]');
@@ -880,17 +879,6 @@ export default function Inventory() {
     }, 1500);
     return () => clearInterval(pollIntervalRef.current);
   }, [pcPolling, pcSessionId]);
-
-  // Apply pending category from phone after imgData is set
-  React.useEffect(() => {
-    if (imgData && pendingCatRef.current) {
-      const cat = pendingCatRef.current;
-      pendingCatRef.current = null;
-      setAddCat(cat);           // set category
-      setForm(defaults(cat));   // reset form fields for that category
-      // imgData is NOT cleared — already set above
-    }
-  }, [imgData]);
 
   // Check for duplicates when name/model changes
   const checkDuplicates = React.useCallback(async (name) => {
@@ -1308,7 +1296,7 @@ export default function Inventory() {
             <label style={LBL}>Category *</label>
             <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
               {CATS.slice(1).map(c=>(
-                <button key={c} onClick={()=>handleCatChange(c, showAdd && !!imgData)}
+                <button key={c} onClick={()=>handleCatChange(c)}
                   style={{ padding:'7px 14px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
                     border:`2px solid ${addCat===c?C.navy:C.border}`,
                     background:addCat===c?C.navy:'white',
