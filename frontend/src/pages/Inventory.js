@@ -1105,14 +1105,13 @@ export default function Inventory() {
           mergeLogRef.current.push({ name: variantName, qty: newQty, merged: false });
         }
       }
-      // Save extra size variants (same brand/model, different size)
-      if (form.extraSizes && form.extraSizes.length > 0) {
+      // Save size variants (same brand/model, different size, each with own colours)
+      if (form.sizeVariants && form.sizeVariants.length > 0) {
         const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
         const token = localStorage.getItem('ko_token');
-        for (const size of form.extraSizes) {
-          const sizeForm = { ...form, frame_size: size };
-          for (const variant of colorVariants) {
-            const sName = buildName({ ...sizeForm, frame_color: variant.color });
+        for (const sv of form.sizeVariants) {
+          for (const vc of sv.colors) {
+            const sName = buildName({ ...form, frame_size: sv.size, frame_color: vc.color });
             await fetch(`${BASE}/inventory`, {
               method: 'POST',
               headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
@@ -1120,12 +1119,12 @@ export default function Inventory() {
                 name: sName, category: addCat,
                 brand: form.brand, dealer: form.dealer,
                 frame_type: form.frame_type, frame_material: form.frame_material,
-                frame_color: variant.color, frame_size: size,
+                frame_color: vc.color, frame_size: sv.size,
                 sell_price: parseFloat(form.sell_price)||0,
                 cost_price: parseFloat(form.cost_price)||0,
-                quantity: parseInt(variant.qty)||0,
+                quantity: parseInt(vc.qty)||0,
                 min_quantity: parseInt(form.min_quantity)||2,
-                image_url: variant.image||imgData||null,
+                image_url: vc.image||imgData||null,
               }),
             });
           }
@@ -1561,28 +1560,58 @@ export default function Inventory() {
                     + Add Colour
                   </button>
 
-                  {/* Same model different size */}
-                  <div style={{ marginTop:16, background:'#fffbeb', border:'1px solid #fde68a', borderRadius:10, padding:'10px 14px' }}>
-                    <div style={{ fontSize:11, fontWeight:700, color:'#92400e', marginBottom:8 }}>
-                      📐 Same brand & model, different size?
+                  {/* Same model different size — each size has its own colours/qty/images */}
+                  <div style={{ marginTop:16, background:'#fffbeb', border:'1px solid #fde68a', borderRadius:10, padding:'12px 14px' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                      <div>
+                        <div style={{ fontSize:11, fontWeight:700, color:'#92400e' }}>📐 Same brand & model, different size?</div>
+                        <div style={{ fontSize:10, color:'#b45309', marginTop:2 }}>Each size saves as a separate item with its own colours & photos</div>
+                      </div>
+                      <button onClick={()=>setForm(f=>({ ...f, sizeVariants:[...(f.sizeVariants||[]), { size:'Medium', colors:[{color:'Black',qty:'1',image:null}] }] }))}
+                        style={{ fontSize:11, fontWeight:700, color:'#92400e', background:'#fef9c3', border:'1px solid #fde68a', borderRadius:8, padding:'5px 12px', cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+                        + Add Size
+                      </button>
                     </div>
-                    <div style={{ fontSize:11, color:'#92400e', marginBottom:8 }}>
-                      Each size saves as a separate item. Add sizes below:
-                    </div>
-                    {(form.extraSizes||[]).map((s,i)=>(
-                      <div key={i} style={{ display:'flex', gap:8, marginBottom:6 }}>
-                        <select value={s} onChange={e=>setForm(f=>({ ...f, extraSizes:f.extraSizes.map((x,j)=>j===i?e.target.value:x) }))}
-                          style={{ ...INP, flex:1 }}>
-                          {['XS','S','M','L','XL','Small','Medium','Large','Extra Large','One Size'].map(o=><option key={o}>{o}</option>)}
-                        </select>
-                        <button onClick={()=>setForm(f=>({ ...f, extraSizes:f.extraSizes.filter((_,j)=>j!==i) }))}
-                          style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7, padding:'6px 10px', cursor:'pointer', fontFamily:'inherit' }}>✕</button>
+                    {(form.sizeVariants||[]).map((sv,si)=>(
+                      <div key={si} style={{ background:'white', border:'1px solid #fde68a', borderRadius:10, padding:'10px 12px', marginBottom:10 }}>
+                        {/* Size header */}
+                        <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:8 }}>
+                          <select value={sv.size} onChange={e=>setForm(f=>({ ...f, sizeVariants:f.sizeVariants.map((x,j)=>j===si?{...x,size:e.target.value}:x) }))}
+                            style={{ ...INP, flex:1 }}>
+                            {['XS','S','M','L','XL','XXL','Small','Medium','Large','Extra Large','One Size','36','38','40','42','44','46','48','50','52','54','56','58','60'].map(o=><option key={o}>{o}</option>)}
+                          </select>
+                          <button onClick={()=>setForm(f=>({ ...f, sizeVariants:f.sizeVariants.filter((_,j)=>j!==si) }))}
+                            style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7, padding:'6px 10px', cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>✕</button>
+                        </div>
+                        {/* Colours for this size */}
+                        {sv.colors.map((vc,ci)=>(
+                          <div key={ci} style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}>
+                            {/* Photo */}
+                            <label style={{ width:44, height:40, border:`2px dashed ${vc.image?C.gold:C.border}`, borderRadius:7,
+                              display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer',
+                              background:vc.image?'#fdf9f0':'white', flexShrink:0, overflow:'hidden', position:'relative' }}>
+                              {vc.image
+                                ? <img src={vc.image} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt=""/>
+                                : <span style={{ fontSize:14 }}>📷</span>}
+                              <input type="file" accept="image/*" capture="environment"
+                                style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer' }}
+                                onChange={async e=>{ const f2=e.target.files[0]; if(!f2) return; const b=await compressImage(f2,400,0.7);
+                                  setForm(f=>({ ...f, sizeVariants:f.sizeVariants.map((x,j)=>j!==si?x:{...x,colors:x.colors.map((c,k)=>k===ci?{...c,image:b}:c)}) })); }}/>
+                            </label>
+                            <input value={vc.color} onChange={e=>setForm(f=>({ ...f, sizeVariants:f.sizeVariants.map((x,j)=>j!==si?x:{...x,colors:x.colors.map((c,k)=>k===ci?{...c,color:e.target.value}:c)}) }))}
+                              placeholder="Color" style={{ ...INP, flex:2 }}/>
+                            <input type="number" value={vc.qty} onChange={e=>setForm(f=>({ ...f, sizeVariants:f.sizeVariants.map((x,j)=>j!==si?x:{...x,colors:x.colors.map((c,k)=>k===ci?{...c,qty:e.target.value}:c)}) }))}
+                              placeholder="Qty" style={{ ...INP, flex:1 }}/>
+                            {sv.colors.length>1 && <button onClick={()=>setForm(f=>({ ...f, sizeVariants:f.sizeVariants.map((x,j)=>j!==si?x:{...x,colors:x.colors.filter((_,k)=>k!==ci)}) }))}
+                              style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7, padding:'5px 8px', cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>✕</button>}
+                          </div>
+                        ))}
+                        <button onClick={()=>setForm(f=>({ ...f, sizeVariants:f.sizeVariants.map((x,j)=>j!==si?x:{...x,colors:[...x.colors,{color:'',qty:'1',image:null}]}) }))}
+                          style={{ fontSize:11, fontWeight:600, color:'#1e40af', background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:7, padding:'4px 10px', cursor:'pointer', fontFamily:'inherit' }}>
+                          + Add Colour
+                        </button>
                       </div>
                     ))}
-                    <button onClick={()=>setForm(f=>({ ...f, extraSizes:[...(f.extraSizes||[]), 'Medium'] }))}
-                      style={{ fontSize:11, fontWeight:600, color:'#92400e', background:'#fef9c3', border:'1px solid #fde68a', borderRadius:8, padding:'4px 10px', cursor:'pointer', fontFamily:'inherit' }}>
-                      + Add Size Variant
-                    </button>
                   </div>
                 </div>
               )}
