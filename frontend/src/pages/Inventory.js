@@ -863,28 +863,38 @@ export default function Inventory() {
           clearInterval(pollIntervalRef.current);
           setPcPolling(false);
           setImgData(data.image);
+          // Apply category first (this resets form to correct defaults for that category)
+          if (data.formData?.category) {
+            handleCatChange(data.formData.category);
+          }
           setShowAdd(true);
-          // Apply form fields sent from phone if any
+          // Then overlay the specific fields from phone on top
           if (data.formData) {
             const fd = data.formData;
-            if (fd.category) handleCatChange(fd.category);
-            setForm(f => ({
-              ...f,
-              name:         fd.name        || f.name,
-              brand:        fd.brand       || f.brand,
-              model:        fd.model       || f.model,
-              frame_type:   fd.frame_type  || f.frame_type,
-              frame_color:  fd.frame_color || f.frame_color,
-              material:     fd.material    || f.material,
-              sg_type:      fd.sg_type     || f.sg_type,
-              rg_lens_type: fd.rg_lens_type|| f.rg_lens_type,
-              cost_price:   fd.cost_price  || f.cost_price,
-              sell_price:   fd.sell_price  || f.sell_price,
-              quantity:     fd.quantity    || f.quantity,
-            }));
+            setTimeout(() => {
+              setForm(f => ({
+                ...f,
+                name:         fd.name         || f.name,
+                brand:        fd.brand        || f.brand,
+                model:        fd.model        || f.model,
+                frame_type:   fd.frame_type   || f.frame_type,
+                frame_color:  fd.frame_color  || f.frame_color,
+                material:     fd.material     || f.material,
+                sg_type:      fd.sg_type      || f.sg_type,
+                rg_lens_type: fd.rg_lens_type || f.rg_lens_type,
+                cost_price:   fd.cost_price   || f.cost_price,
+                sell_price:   fd.sell_price   || f.sell_price,
+                quantity:     fd.quantity     || f.quantity,
+              }));
+            }, 100); // small delay so handleCatChange resets first
           }
           setPcSessionId('done');
-          setTimeout(() => setPcSessionId(null), 3000);
+          // Scroll to the add form
+          setTimeout(() => {
+            const el = document.querySelector('[data-add-form]');
+            if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+          }, 200);
+          setTimeout(() => setPcSessionId(null), 4000);
         }
       } catch(e) {}
     }, 1500);
@@ -1286,7 +1296,7 @@ export default function Inventory() {
 
       {/* Add form */}
       {showAdd && (
-        <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:24, marginBottom:20 }}>
+        <div data-add-form style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:24, marginBottom:20 }}>
           <h3 style={{ fontSize:15, fontWeight:700, color:C.navy, marginBottom:16 }}>➕ Add New Item</h3>
           <div style={{ marginBottom:16 }}>
             <label style={LBL}>Category *</label>
