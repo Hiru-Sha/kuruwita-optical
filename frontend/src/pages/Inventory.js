@@ -1105,9 +1105,37 @@ export default function Inventory() {
           mergeLogRef.current.push({ name: variantName, qty: newQty, merged: false });
         }
       }
+      // Save extra size variants (same brand/model, different size)
+      if (form.extraSizes && form.extraSizes.length > 0) {
+        const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('ko_token');
+        for (const size of form.extraSizes) {
+          const sizeForm = { ...form, frame_size: size };
+          for (const variant of colorVariants) {
+            const sName = buildName({ ...sizeForm, frame_color: variant.color });
+            await fetch(`${BASE}/inventory`, {
+              method: 'POST',
+              headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+              body: JSON.stringify({
+                name: sName, category: addCat,
+                brand: form.brand, dealer: form.dealer,
+                frame_type: form.frame_type, frame_material: form.frame_material,
+                frame_color: variant.color, frame_size: size,
+                sell_price: parseFloat(form.sell_price)||0,
+                cost_price: parseFloat(form.cost_price)||0,
+                quantity: parseInt(variant.qty)||0,
+                min_quantity: parseInt(form.min_quantity)||2,
+                image_url: variant.image||imgData||null,
+              }),
+            });
+          }
+        }
+      }
       setShowAdd(false);
       setForm(defaults(addCat));
       setImgData(null);
+      setAddCat('');
+      setAddStep('category');
       setColorVariants([{ color:'Black', qty:'1', image:null }]);
       setDupMatches([]);
       load();
@@ -1499,18 +1527,63 @@ export default function Inventory() {
               {/* Variants */}
               {(addCat==='Frames'||addCat==='Sunglasses') && (
                 <div style={{ marginTop:16 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:8 }}>Colour Variants</div>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px' }}>Colour Variants</div>
+                  </div>
                   {colorVariants.map((v,i)=>(
-                    <div key={i} style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}>
-                      <input value={v.color} onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:e.target.value}:x))} placeholder="Color" style={{ ...INP, flex:2 }}/>
-                      <input type="number" value={v.qty} onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,qty:e.target.value}:x))} placeholder="Qty" style={{ ...INP, flex:1 }}/>
-                      {colorVariants.length>1 && <button onClick={()=>setColorVariants(cv=>cv.filter((_,j)=>j!==i))} style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7, padding:'6px 10px', cursor:'pointer', fontFamily:'inherit' }}>✕</button>}
+                    <div key={i} style={{ background:C.cream, borderRadius:10, padding:'10px 12px', marginBottom:8 }}>
+                      <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:v.image?8:0 }}>
+                        {/* Colour photo */}
+                        <label style={{ width:52, height:48, border:`2px dashed ${v.image?C.gold:C.border}`, borderRadius:8,
+                          display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer',
+                          background:v.image?'#fdf9f0':'white', flexShrink:0, overflow:'hidden', position:'relative' }}>
+                          {v.image
+                            ? <img src={v.image} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt=""/>
+                            : <span style={{ fontSize:18 }}>📷</span>}
+                          <input type="file" accept="image/*" capture="environment"
+                            style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer' }}
+                            onChange={async e=>{ const f=e.target.files[0]; if(!f) return; const b=await compressImage(f,400,0.7); setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,image:b}:x)); }}/>
+                        </label>
+                        <input value={v.color} onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:e.target.value}:x))} placeholder="Color name" style={{ ...INP, flex:2 }}/>
+                        <input type="number" value={v.qty} onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,qty:e.target.value}:x))} placeholder="Qty" style={{ ...INP, flex:1 }}/>
+                        {colorVariants.length>1 && <button onClick={()=>setColorVariants(cv=>cv.filter((_,j)=>j!==i))} style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7, padding:'6px 10px', cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>✕</button>}
+                      </div>
+                      {v.image && (
+                        <button onClick={()=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,image:null}:x))}
+                          style={{ fontSize:10, color:C.danger, background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', padding:0 }}>
+                          ✕ Remove photo
+                        </button>
+                      )}
                     </div>
                   ))}
                   <button onClick={()=>setColorVariants(cv=>[...cv,{color:'',qty:'1',image:null}])}
                     style={{ fontSize:12, fontWeight:600, color:'#1e40af', background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:8, padding:'5px 12px', cursor:'pointer', fontFamily:'inherit', marginTop:4 }}>
-                    + Add Color
+                    + Add Colour
                   </button>
+
+                  {/* Same model different size */}
+                  <div style={{ marginTop:16, background:'#fffbeb', border:'1px solid #fde68a', borderRadius:10, padding:'10px 14px' }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:'#92400e', marginBottom:8 }}>
+                      📐 Same brand & model, different size?
+                    </div>
+                    <div style={{ fontSize:11, color:'#92400e', marginBottom:8 }}>
+                      Each size saves as a separate item. Add sizes below:
+                    </div>
+                    {(form.extraSizes||[]).map((s,i)=>(
+                      <div key={i} style={{ display:'flex', gap:8, marginBottom:6 }}>
+                        <select value={s} onChange={e=>setForm(f=>({ ...f, extraSizes:f.extraSizes.map((x,j)=>j===i?e.target.value:x) }))}
+                          style={{ ...INP, flex:1 }}>
+                          {['XS','S','M','L','XL','Small','Medium','Large','Extra Large','One Size'].map(o=><option key={o}>{o}</option>)}
+                        </select>
+                        <button onClick={()=>setForm(f=>({ ...f, extraSizes:f.extraSizes.filter((_,j)=>j!==i) }))}
+                          style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7, padding:'6px 10px', cursor:'pointer', fontFamily:'inherit' }}>✕</button>
+                      </div>
+                    ))}
+                    <button onClick={()=>setForm(f=>({ ...f, extraSizes:[...(f.extraSizes||[]), 'Medium'] }))}
+                      style={{ fontSize:11, fontWeight:600, color:'#92400e', background:'#fef9c3', border:'1px solid #fde68a', borderRadius:8, padding:'4px 10px', cursor:'pointer', fontFamily:'inherit' }}>
+                      + Add Size Variant
+                    </button>
+                  </div>
                 </div>
               )}
 
