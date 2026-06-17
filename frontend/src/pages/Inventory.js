@@ -768,10 +768,10 @@ export default function Inventory() {
     }
   },[form.frame_color]);
 
-  const handleCatChange = (cat) => {
+  const handleCatChange = (cat, keepImage=false) => {
     setAddCat(cat);
     setForm(defaults(cat));
-    setImgData(null);
+    if (!keepImage) setImgData(null);
     setColorVariants([{ color:'Black', qty:'1', image:null }]);
     setPowerVariants(RG_POWERS.map(p=>({ power:p, qty:'0' })));
   };
@@ -868,7 +868,7 @@ export default function Inventory() {
           const incomingCat = data.formData?.category;
           setTimeout(() => {
             if (incomingCat) {
-              handleCatChange(incomingCat);
+              handleCatChange(incomingCat, true); // keep image when applying from phone
             }
           }, 50);
           setPcSessionId('done');
@@ -1187,7 +1187,8 @@ export default function Inventory() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
       <style>{'.pcPulse,@keyframes pcPulse{0%,100%{opacity:1}50%{opacity:.2}}'}</style>
 
       {/* Stats + Category Counts */}
@@ -1299,7 +1300,7 @@ export default function Inventory() {
             <label style={LBL}>Category *</label>
             <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
               {CATS.slice(1).map(c=>(
-                <button key={c} onClick={()=>handleCatChange(c)}
+                <button key={c} onClick={()=>handleCatChange(c, !!imgData)}
                   style={{ padding:'7px 14px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
                     border:`2px solid ${addCat===c?C.navy:C.border}`,
                     background:addCat===c?C.navy:'white',
