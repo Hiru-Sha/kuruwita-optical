@@ -681,6 +681,7 @@ export default function Inventory() {
   const mergeLogRef    = React.useRef([]);
   const [loading,      setLoading]     = useState(true);
   const [imgData,      setImgData]     = useState(null);
+  const imgDataRef = React.useRef(null); // mirrors imgData, survives any re-render
   const [form,         setForm]        = useState(defaults('Frames'));
   const [showStickers,   setShowStickers]  = useState(false);
   const [showPriceUpdate,setShowPriceUpdate]= useState(false);
@@ -779,6 +780,7 @@ export default function Inventory() {
     const f = e.target.files[0];
     if (!f) return;
     const b64 = await toBase64(f);
+    imgDataRef.current = b64;
     setImgData(b64);
 
     // Check if PC is waiting for a photo from this user account
@@ -877,6 +879,7 @@ export default function Inventory() {
   useEffect(() => {
     if (!phoneData) return;
     const { image, category } = phoneData;
+    imgDataRef.current = image;
     setImgData(image);
     setAddCat(category);
     setForm(defaults(category));
@@ -1308,7 +1311,7 @@ export default function Inventory() {
             <label style={LBL}>Category *</label>
             <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
               {CATS.slice(1).map(c=>(
-                <button key={c} onClick={()=>{ setAddCat(c); setForm(defaults(c)); setColorVariants([{color:'Black',qty:'1',image:null}]); setPowerVariants(RG_POWERS.map(p=>({power:p,qty:'0'}))); }}
+                <button key={c} onClick={()=>{ const img=imgDataRef.current; setAddCat(c); setForm(defaults(c)); setColorVariants([{color:'Black',qty:'1',image:null}]); setPowerVariants(RG_POWERS.map(p=>({power:p,qty:'0'}))); if(img) setImgData(img); }}
                   style={{ padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
                     border:`2.5px solid ${addCat===c?C.navy:C.border}`,
                     background:addCat===c?C.navy:'white',
@@ -1336,7 +1339,7 @@ export default function Inventory() {
                   onChange={handleImgPick}/>
               </label>
               {imgData && (
-                <button type="button" onClick={()=>setImgData(null)}
+                <button type="button" onClick={()=>{ imgDataRef.current=null; setImgData(null); }}
                   style={{ padding:'6px 10px', background:'#fee2e2', color:C.danger, border:'none', borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:'inherit', alignSelf:'flex-start' }}>
                   ✕ Remove
                 </button>
