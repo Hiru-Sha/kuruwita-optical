@@ -680,15 +680,8 @@ export default function Inventory() {
   const prevFrameColor = React.useRef('Black');
   const mergeLogRef    = React.useRef([]);
   const [loading,      setLoading]     = useState(true);
-  const [imgData,      setImgDataRaw]  = useState(null);
+  const [imgData,      setImgData]     = useState(null);
   const imgDataRef = React.useRef(null);
-  const setImgData = React.useCallback((val) => {
-    if (!val && imgDataRef.current) {
-      console.error('IMAGE CLEARED by:', new Error().stack.split('\n')[2]);
-    }
-    imgDataRef.current = val || null;
-    setImgDataRaw(val);
-  }, []);
   const [form,         setForm]        = useState(defaults('Frames'));
   const [showStickers,   setShowStickers]  = useState(false);
   const [showPriceUpdate,setShowPriceUpdate]= useState(false);
@@ -1303,6 +1296,38 @@ export default function Inventory() {
         );
       })()}
 
+      {/* Photo — lives OUTSIDE the form so category changes never affect it */}
+      {showAdd && (
+        <div style={{ background:'white', border:`1px solid ${C.gold}`, borderRadius:14, padding:16, marginBottom:8, display:'flex', gap:12, alignItems:'center' }}>
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:C.muted, marginBottom:8 }}>ITEM PHOTO</div>
+            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+              {imgData && (
+                <div style={{ width:100, height:80, border:`2px solid ${C.gold}`, borderRadius:10, overflow:'hidden' }}>
+                  <img src={imgData} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                </div>
+              )}
+              <label style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                width:75, height:75, border:`2px dashed ${imgData?C.gold:C.border}`, borderRadius:10,
+                cursor:'pointer', background:imgData?'#fdf9f0':C.cream, gap:4, position:'relative' }}>
+                <span style={{ fontSize:20 }}>📷</span>
+                <span style={{ fontSize:10, color:C.muted, fontWeight:600 }}>{imgData ? 'Change' : 'Add Photo'}</span>
+                <input type="file" accept="image/*" capture="environment"
+                  style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
+                  onChange={handleImgPick}/>
+              </label>
+              {imgData && (
+                <button type="button" onClick={()=>{ imgDataRef.current=null; setImgData(null); }}
+                  style={{ padding:'5px 9px', background:'#fee2e2', color:C.danger, border:'none', borderRadius:8, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+                  ✕ Remove
+                </button>
+              )}
+            </div>
+          </div>
+          {imgData && <div style={{ fontSize:11, color:C.success, fontWeight:600 }}>✓ Photo ready — change category freely below</div>}
+        </div>
+      )}
+
       {/* Add form */}
       {showAdd && (
         <div data-add-form style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:24, marginBottom:20 }}>
@@ -1314,9 +1339,6 @@ export default function Inventory() {
           </div>
 
           {/* Category — large buttons, always visible, never clears image */}
-          <div style={{ background:'#fef9c3', padding:'4px 8px', borderRadius:6, marginBottom:8, fontSize:11 }}>
-            DEBUG: imgData={imgData?'HAS IMAGE ('+imgData.length+' chars)':'null'} | imgDataRef={imgDataRef.current?'HAS REF':'null'} | addCat={addCat}
-          </div>
           <div style={{ marginBottom:16 }}>
             <label style={LBL}>Category *</label>
             <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
@@ -1331,31 +1353,7 @@ export default function Inventory() {
               ))}
             </div>
           </div>
-          <div style={{ marginBottom:14 }}>
-            <label style={LBL}>Default Photo <span style={{ fontWeight:400, color:C.muted }}>(used for variants without their own photo)</span></label>
-            <div style={{ display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' }}>
-              {imgData && (
-                <div style={{ width:110, height:90, border:`2px solid ${C.gold}`, borderRadius:10, overflow:'hidden', position:'relative' }}>
-                  <img src={imgData} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                </div>
-              )}
-              {/* Camera / file pick button */}
-              <label style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                width:80, height:80, border:`2px dashed ${imgData?C.gold:C.border}`, borderRadius:10,
-                cursor:'pointer', background:imgData?'#fdf9f0':C.cream, gap:4, position:'relative' }}>
-                <span style={{ fontSize:22 }}>📷</span>
-                <span style={{ fontSize:11, color:C.muted, fontWeight:600 }}>{imgData ? 'Change' : 'Add Photo'}</span>
-                <input type="file" accept="image/*" capture="environment" style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
-                  onChange={handleImgPick}/>
-              </label>
-              {imgData && (
-                <button type="button" onClick={()=>{ imgDataRef.current=null; setImgData(null); }}
-                  style={{ padding:'6px 10px', background:'#fee2e2', color:C.danger, border:'none', borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:'inherit', alignSelf:'flex-start' }}>
-                  ✕ Remove
-                </button>
-              )}
-            </div>
-          </div>
+          {/* Photo section removed from here - rendered outside form below */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
             <CategoryFields form={form} set={setForm} suggestions={suggestions}/>
           </div>
