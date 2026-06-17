@@ -1530,7 +1530,7 @@ export default function Inventory() {
               )}
 
               <div style={{ display:'flex', gap:10, marginTop:20 }}>
-                <button onClick={handleAddSave} disabled={addSaving}
+                <button onClick={handleAdd} disabled={addSaving}
                   style={{ flex:1, padding:'12px', background:addSaving?C.muted:C.navy, color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:addSaving?'not-allowed':'pointer', fontFamily:'inherit' }}>
                   {addSaving ? '⏳ Saving...' : `💾 Save ${addCat}`}
                 </button>
