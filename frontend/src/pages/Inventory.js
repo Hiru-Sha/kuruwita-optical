@@ -690,7 +690,7 @@ export default function Inventory() {
   // Phone→PC photo session
   const [pcSessionId,   setPcSessionId]  = useState(null);
   const [pcPolling,     setPcPolling]    = useState(false);
-  const [phoneData,     setPhoneData]    = useState(null); // {image, category} from phone
+  const phoneDataRef = React.useRef(null); // incoming phone data - ref avoids re-render timing
   const pollIntervalRef   = React.useRef(null);
 
   const [scanResult,   setScanResult]  = useState(null); // last scanned item
@@ -865,9 +865,16 @@ export default function Inventory() {
           clearInterval(pollIntervalRef.current);
           setPcPolling(false);
           setPcSessionId('done');
-          // Store image + category together in ONE state update
+          // Apply directly - no intermediate state
           const cat = data.formData?.category || 'Frames';
-          setPhoneData({ image: data.image, category: cat });
+          phoneDataRef.current = { image: data.image, category: cat };
+          imgDataRef.current = data.image;
+          setImgData(data.image);
+          setAddCat(cat);
+          setForm(defaults(cat));
+          setColorVariants([{ color:'Black', qty:'1', image:null }]);
+          setPowerVariants(RG_POWERS.map(p=>({ power:p, qty:'0' })));
+          setShowAdd(true);
           setTimeout(() => setPcSessionId(null), 4000);
         }
       } catch(e) {}
@@ -875,23 +882,7 @@ export default function Inventory() {
     return () => clearInterval(pollIntervalRef.current);
   }, [pcPolling, pcSessionId]);
 
-  // Apply phone data when it arrives - single useEffect handles everything
-  useEffect(() => {
-    if (!phoneData) return;
-    const { image, category } = phoneData;
-    imgDataRef.current = image;
-    setImgData(image);
-    setAddCat(category);
-    setForm(defaults(category));
-    setColorVariants([{ color:'Black', qty:'1', image:null }]);
-    setPowerVariants(RG_POWERS.map(p=>({ power:p, qty:'0' })));
-    setShowAdd(true);
-    setPhoneData(null);
-    setTimeout(() => {
-      const el = document.querySelector('[data-add-form]');
-      if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
-    }, 200);
-  }, [phoneData]);
+
 
   // Check for duplicates when name/model changes
   const checkDuplicates = React.useCallback(async (name) => {
