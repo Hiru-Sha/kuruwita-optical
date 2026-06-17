@@ -875,7 +875,6 @@ export default function Inventory() {
     const f = e.target.files[0];
     if (!f) return;
     const b64 = await toBase64(f);
-    imgDataRef.current = b64;
     setImgData(b64);
 
     // Check if PC is waiting for a photo from this user account
