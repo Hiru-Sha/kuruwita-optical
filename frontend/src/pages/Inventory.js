@@ -664,11 +664,12 @@ export default function Inventory() {
   const [selected,     setSelected]    = useState(null);
   const [panelTab,     setPanelTab]    = useState('details');
   const [showAdd,      setShowAdd]     = useState(false);
+  const [addStep,      setAddStep]     = useState('category'); // 'category' | 'form'
   const [suggestions,  setSuggestions] = useState({ dealers:[], brands:[], names:[] });
   const [addSaving,    setAddSaving]   = useState(false);
-  const [dupMatches,   setDupMatches]  = useState([]); // existing items with same name
+  const [dupMatches,   setDupMatches]  = useState([]);
   const [dupChecking,  setDupChecking] = useState(false);
-  const [addCat,       setAddCat]      = useState('Frames');
+  const [addCat,       setAddCat]      = useState('');
   const [showAIScan,   setShowAIScan]  = useState(false);
   const [aiPhotos,     setAiPhotos]    = useState({ front:null, arm:null, tag:null });
   const [aiLoading,    setAiLoading]   = useState(false);
@@ -681,7 +682,6 @@ export default function Inventory() {
   const mergeLogRef    = React.useRef([]);
   const [loading,      setLoading]     = useState(true);
   const [imgData,      setImgData]     = useState(null);
-  const imgDataRef = React.useRef(null);
   const [form,         setForm]        = useState(defaults('Frames'));
   const [showStickers,   setShowStickers]  = useState(false);
   const [showPriceUpdate,setShowPriceUpdate]= useState(false);
@@ -690,8 +690,7 @@ export default function Inventory() {
   // Phone→PC photo session
   const [pcSessionId,   setPcSessionId]  = useState(null);
   const [pcPolling,     setPcPolling]    = useState(false);
-  const phoneDataRef = React.useRef(null); // incoming phone data - ref avoids re-render timing
-  const pollIntervalRef   = React.useRef(null);
+  const pollIntervalRef = React.useRef(null);
 
   const [scanResult,   setScanResult]  = useState(null); // last scanned item
   const [showFullImg,  setShowFullImg] = useState(false);
@@ -865,17 +864,11 @@ export default function Inventory() {
           clearInterval(pollIntervalRef.current);
           setPcPolling(false);
           setPcSessionId('done');
-          // Apply directly - no intermediate state
-          const cat = data.formData?.category || 'Frames';
-          phoneDataRef.current = { image: data.image, category: cat };
-          imgDataRef.current = data.image;
           setImgData(data.image);
-          setAddCat(cat);
-          setForm(defaults(cat));
-          setColorVariants([{ color:'Black', qty:'1', image:null }]);
-          setPowerVariants(RG_POWERS.map(p=>({ power:p, qty:'0' })));
+          setAddCat('');
+          setAddStep('category');
           setShowAdd(true);
-          setTimeout(() => setPcSessionId(null), 4000);
+          setTimeout(() => setPcSessionId(null), 3000);
         }
       } catch(e) {}
     }, 1500);
@@ -1149,7 +1142,7 @@ export default function Inventory() {
               display:'flex', alignItems:'center', gap:6 }}>
             {pcSessionId==='done' ? '✅ Photo received!' : pcPolling ? '⏳ Waiting for phone...' : '📱 Add from Phone'}
           </button>
-          <button onClick={()=>setShowAdd(s=>!s)}
+          <button onClick={()=>{ if(showAdd){ setShowAdd(false); setImgData(null); setAddCat(''); setAddStep('category'); } else { setAddStep('category'); setImgData(null); setAddCat(''); setShowAdd(true); } }}
             style={{ padding:'9px 20px', background:showAdd?C.cream:C.gold, color:showAdd?C.muted:C.navy, border:showAdd?`1.5px solid ${C.border}`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
             {showAdd?'✕ Cancel':'+ Add Item'}
           </button>
@@ -1287,239 +1280,183 @@ export default function Inventory() {
         );
       })()}
 
-      {/* Photo — lives OUTSIDE the form so category changes never affect it */}
+      {/* ── ADD ITEM WIZARD ─────────────────────────────────── */}
       {showAdd && (
-        <div style={{ background:'white', border:`1px solid ${C.gold}`, borderRadius:14, padding:16, marginBottom:8, display:'flex', gap:12, alignItems:'center' }}>
-          <div>
-            <div style={{ fontSize:12, fontWeight:700, color:C.muted, marginBottom:8 }}>ITEM PHOTO</div>
-            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-              {imgData && (
-                <div style={{ width:100, height:80, border:`2px solid ${C.gold}`, borderRadius:10, overflow:'hidden' }}>
-                  <img src={imgData} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                </div>
-              )}
-              <label style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                width:75, height:75, border:`2px dashed ${imgData?C.gold:C.border}`, borderRadius:10,
-                cursor:'pointer', background:imgData?'#fdf9f0':C.cream, gap:4, position:'relative' }}>
-                <span style={{ fontSize:20 }}>📷</span>
-                <span style={{ fontSize:10, color:C.muted, fontWeight:600 }}>{imgData ? 'Change' : 'Add Photo'}</span>
-                <input type="file" accept="image/*" capture="environment"
-                  style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
-                  onChange={handleImgPick}/>
-              </label>
-              {imgData && (
-                <button type="button" onClick={()=>{ imgDataRef.current=null; setImgData(null); }}
-                  style={{ padding:'5px 9px', background:'#fee2e2', color:C.danger, border:'none', borderRadius:8, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
-                  ✕ Remove
-                </button>
-              )}
+        <div style={{ background:'white', border:`2px solid ${C.gold}`, borderRadius:14, marginBottom:16, overflow:'hidden' }}>
+
+          {/* Wizard header */}
+          <div style={{ background:C.navy, padding:'12px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, color:'white' }}>
+              {addStep==='category' ? '➕ Add New Item — Choose Category' : `➕ Add ${addCat}`}
             </div>
-          </div>
-          {imgData && <div style={{ fontSize:11, color:C.success, fontWeight:600 }}>✓ Photo ready — change category freely below</div>}
-        </div>
-      )}
-
-      {/* Add form */}
-      {showAdd && (
-        <div data-add-form style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:24, marginBottom:20 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-            <h3 style={{ fontSize:15, fontWeight:700, color:C.navy, margin:0 }}>➕ Add New Item</h3>
-            {imgData && (
-              <span style={{ fontSize:11, fontWeight:700, color:C.success, background:'#dcfce7', padding:'3px 10px', borderRadius:20, border:'1px solid #86efac' }}>📷 Photo ready</span>
-            )}
+            <button onClick={()=>{ setShowAdd(false); setImgData(null); setAddCat(''); setAddStep('category'); setForm(defaults('Frames')); setColorVariants([{color:'Black',qty:'1',image:null}]); }}
+              style={{ background:'rgba(255,255,255,.15)', border:'none', color:'white', borderRadius:8, padding:'4px 12px', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+              ✕ Cancel
+            </button>
           </div>
 
-          {/* Category — large buttons, always visible, never clears image */}
-          <div style={{ marginBottom:16 }}>
-            <label style={LBL}>Category *</label>
-            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-              {CATS.slice(1).map(c=>(
-                <button key={c} onClick={()=>{ const img=imgDataRef.current; setAddCat(c); setForm(defaults(c)); setColorVariants([{color:'Black',qty:'1',image:null}]); setPowerVariants(RG_POWERS.map(p=>({power:p,qty:'0'}))); if(img) setImgData(img); }}
-                  style={{ padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-                    border:`2.5px solid ${addCat===c?C.navy:C.border}`,
-                    background:addCat===c?C.navy:'white',
-                    color:addCat===c?'white':C.muted }}>
-                  {CAT_ICON[c]} {c}
-                </button>
-              ))}
-            </div>
-          </div>
-          {/* Photo section removed from here - rendered outside form below */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
-            <CategoryFields form={form} set={setForm} suggestions={suggestions}/>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginTop:4 }}>
-            <Field label="Cost Price (Rs.)"><input type="number" value={form.cost_price||''} onChange={e=>setForm(f=>({...f,cost_price:e.target.value}))} placeholder="Buy price" style={INP}/></Field>
-            <Field label="Sell Price (Rs.)"><input type="number" value={form.sell_price||''} onChange={e=>setForm(f=>({...f,sell_price:e.target.value}))} placeholder="Sell price" style={INP}/></Field>
-            <Field label="Quantity"><input type="number" value={form.quantity||''} onChange={e=>{
-              const v=e.target.value;
-              setForm(f=>({...f,quantity:v}));
-              // Sync to first color variant if only one variant
-              setColorVariants(cv=>cv.map((x,i)=>i===0?{...x,qty:v}:x));
-            }} placeholder="e.g. 5" style={INP}/></Field>
-            <Field label="Min Alert"><input type="number" value={form.min_quantity||''} onChange={e=>setForm(f=>({...f,min_quantity:e.target.value}))} placeholder="e.g. 2" style={INP}/></Field>
-          </div>
-          {/* ── Colour variants (Frames/SG) OR Power variants (RG) ── */}
-          <div style={{ marginTop:4, background:C.cream, borderRadius:12, padding:'14px 16px' }}>
-
-            {/* READING GLASSES — power grid */}
-            {addCat === 'Reading Glasses' ? (
-              <>
-                <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:12 }}>
-                  👓 Powers & Quantities
-                  <span style={{ fontSize:11, fontWeight:400, color:C.muted, marginLeft:8 }}>
-                    Enter 0 for powers you don't have
-                  </span>
+          {addStep === 'category' && (
+            <div style={{ padding:24 }}>
+              {/* Photo area */}
+              <div style={{ marginBottom:20 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:10 }}>
+                  {imgData ? '✓ Photo ready' : 'Add Photo (optional)'}
                 </div>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
-                  {powerVariants.map((v,i) => (
-                    <div key={v.power} style={{ background:'white', borderRadius:9, padding:'10px 10px',
-                      border:`1.5px solid ${parseInt(v.qty||0)>0?C.navy:C.border}`,
-                      transition:'border-color .15s' }}>
-                      <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:6, textAlign:'center' }}>
-                        {v.power}
-                      </div>
-                      <input
-                        type="number" min="0" value={v.qty}
-                        onChange={e=>setPowerVariants(pv=>pv.map((x,j)=>j===i?{...x,qty:e.target.value}:x))}
-                        placeholder="0"
-                        style={{ ...INP, padding:'6px 8px', fontSize:16, fontWeight:700, textAlign:'center',
-                          background:parseInt(v.qty||0)>0?'#f0f4ff':C.cream,
-                          border:`1.5px solid ${parseInt(v.qty||0)>0?C.navy:C.border}` }}/>
-                      <div style={{ fontSize:10, color:C.muted, textAlign:'center', marginTop:3 }}>
-                        {parseInt(v.qty||0)>0 ? `${v.qty} pcs` : 'none'}
-                      </div>
+                <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+                  {imgData && (
+                    <div style={{ width:120, height:100, border:`2px solid ${C.gold}`, borderRadius:10, overflow:'hidden', flexShrink:0 }}>
+                      <img src={imgData} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
                     </div>
-                  ))}
-                </div>
-                <div style={{ marginTop:10, background:'white', borderRadius:8, padding:'8px 12px', fontSize:12, color:C.muted, display:'flex', justifyContent:'space-between' }}>
-                  <span>
-                    {powerVariants.filter(v=>parseInt(v.qty||0)>0).length} powers selected ·{' '}
-                    <b style={{color:C.navy}}>
-                      {powerVariants.reduce((s,v)=>s+parseInt(v.qty||0),0)} total pairs
-                    </b>
-                  </span>
-                  <button onClick={()=>setPowerVariants(RG_POWERS.map(p=>({ power:p, qty:'0' })))}
-                    style={{ background:'none', border:'none', color:C.muted, cursor:'pointer', fontSize:11, fontFamily:'inherit' }}>
-                    Reset all to 0
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>🎨 Colours & Quantities</div>
-              <button onClick={()=>setColorVariants(v=>[...v,{color:'Black',qty:form.quantity||'1',image:null}])}
-                style={{ padding:'5px 12px', background:C.navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                + Add colour
-              </button>
-            </div>
-            {colorVariants.map((v,i)=>(
-              <div key={i} style={{ display:'grid', gridTemplateColumns:'44px 1fr 100px 44px 36px', gap:8, marginBottom:8, alignItems:'flex-start' }}>
-                {/* Variant image — shown if set via AI photo */}
-                <div style={{ flexShrink:0 }}>
-                  {v.image
-                    ? <div style={{ width:44, height:44, border:`2px solid ${C.gold}`, borderRadius:8, overflow:'hidden' }}>
-                        <img src={v.image} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                      </div>
-                    : <div style={{ width:44, height:44, border:`2px dashed ${C.border}`, borderRadius:8, background:C.cream, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>📷</div>
-                  }
-                </div>
-                <div style={{ flex:1 }}>
-                  <select value={FR_COLORS.includes(v.color) ? v.color : 'Other'}
-                    onChange={e=>{
-                      if(e.target.value==='Other') setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:''}:x));
-                      else setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:e.target.value}:x));
-                    }}
-                    style={{ ...INP, padding:'8px 10px', width:'100%' }}>
-                    {FR_COLORS.map(col=><option key={col}>{col}</option>)}
-                  </select>
-                  {(!FR_COLORS.includes(v.color) || v.color==='') && (
-                    <input value={v.color} onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:e.target.value}:x))}
-                      placeholder="Type color e.g. Dark Brown, Navy..."
-                      style={{ ...INP, padding:'8px 10px', marginTop:4, border:'1.5px solid #f59e0b', background:'#fffbeb' }}/>
+                  )}
+                  <label style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                    width:100, height:90, border:`2px dashed ${imgData?C.gold:C.border}`, borderRadius:10,
+                    cursor:'pointer', background:imgData?'#fdf9f0':C.cream, gap:6, position:'relative', flexShrink:0 }}>
+                    <span style={{ fontSize:28 }}>📷</span>
+                    <span style={{ fontSize:11, color:C.muted, fontWeight:600 }}>{imgData ? 'Change Photo' : 'Take/Upload'}</span>
+                    <input type="file" accept="image/*" capture="environment"
+                      style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
+                      onChange={handleImgPick}/>
+                  </label>
+                  {imgData && (
+                    <button onClick={()=>setImgData(null)}
+                      style={{ padding:'6px 12px', background:'#fee2e2', color:C.danger, border:'none', borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                      ✕ Remove
+                    </button>
                   )}
                 </div>
-                <input type="number" min="0" value={v.qty} placeholder="Qty"
-                  onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,qty:e.target.value}:x))}
-                  style={{ ...INP, padding:'8px 10px', fontWeight:700 }}/>
-                {/* Remove image button */}
-                {v.image
-                  ?<button onClick={()=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,image:null}:x))}
-                    style={{ background:'#fff7ed', color:'#c2410c', border:'1px solid #fed7aa', borderRadius:7, padding:'4px 6px', fontSize:11, cursor:'pointer', fontFamily:'inherit', height:44, whiteSpace:'nowrap' }}>✕ img</button>
-                  :<div/>
-                }
-                {colorVariants.length>1
-                  ?<button onClick={()=>setColorVariants(cv=>cv.filter((_,j)=>j!==i))}
-                    style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7, padding:'8px', fontSize:14, cursor:'pointer' }}>✕</button>
-                  :<div/>
-                }
               </div>
-            ))}
-            <div style={{ fontSize:11, color:C.muted, marginTop:4 }}>
-              Each colour saves as a separate inventory item.
-              {colorVariants.length>1 && <b style={{color:C.navy}}> {colorVariants.length} variants will be saved.</b>}
-            </div>
-            </>
-            )}
-          </div>
 
-          {/* Duplicate suggestion banner */}
-          {dupMatches.length > 0 && (
-            <div style={{ marginTop:8, background:'#fffbeb', border:`1.5px solid ${C.gold}`, borderRadius:10, padding:'10px 14px' }}>
-              <div style={{ fontSize:12, fontWeight:700, color:'#92400e', marginBottom:8 }}>
-                ⚠️ Similar item{dupMatches.length>1?'s':''} already in stock:
+              {/* Category grid */}
+              <div style={{ fontSize:12, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:12 }}>
+                Select Category *
               </div>
-              {dupMatches.slice(0,3).map(m=>(
-                <div key={m.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-                  background:'white', borderRadius:8, padding:'7px 10px', marginBottom:5, fontSize:12 }}>
-                  <div>
-                    <b style={{ color:C.navy }}>{m.name}</b>
-                    <span style={{ color:C.muted, marginLeft:8 }}>Qty: {m.quantity} · Rs.{parseFloat(m.sell_price).toLocaleString()}</span>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+                {[
+                  { cat:'Frames',          icon:'🕶️',  color:'#0f1f3d' },
+                  { cat:'Sunglasses',       icon:'😎',  color:'#0891b2' },
+                  { cat:'Reading Glasses',  icon:'👓',  color:'#7c3aed' },
+                  { cat:'Boxes',            icon:'📦',  color:'#b45309' },
+                  { cat:'Sunglass Pouches', icon:'👜',  color:'#be185d' },
+                  { cat:'Glass Cleaner',    icon:'🧴',  color:'#166534' },
+                  { cat:'Chains',           icon:'⛓️',  color:'#6b7280' },
+                  { cat:'Ear Tips',         icon:'🔧',  color:'#92400e' },
+                ].map(({cat, icon, color}) => (
+                  <button key={cat} onClick={()=>{
+                    setAddCat(cat);
+                    setForm(defaults(cat));
+                    setColorVariants([{color:'Black',qty:'1',image:null}]);
+                    setPowerVariants(RG_POWERS.map(p=>({power:p,qty:'0'})));
+                    setAddStep('form');
+                  }}
+                    style={{ padding:'14px 10px', borderRadius:12, border:`2px solid ${C.border}`,
+                      background:'white', cursor:'pointer', fontFamily:'inherit',
+                      display:'flex', flexDirection:'column', alignItems:'center', gap:6,
+                      transition:'all .15s' }}
+                    onMouseEnter={e=>{ e.currentTarget.style.border=`2px solid ${color}`; e.currentTarget.style.background='#f8f5ef'; }}
+                    onMouseLeave={e=>{ e.currentTarget.style.border=`2px solid ${C.border}`; e.currentTarget.style.background='white'; }}>
+                    <span style={{ fontSize:28 }}>{icon}</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:C.navy, textAlign:'center', lineHeight:1.3 }}>{cat}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {addStep === 'form' && (
+            <div data-add-form style={{ padding:24 }}>
+              {/* Photo + category summary bar */}
+              <div style={{ display:'flex', gap:12, alignItems:'center', background:C.cream, borderRadius:10, padding:'10px 14px', marginBottom:20 }}>
+                {imgData
+                  ? <img src={imgData} style={{ width:60, height:50, objectFit:'cover', borderRadius:8, border:`2px solid ${C.gold}`, flexShrink:0 }} alt=""/>
+                  : <div style={{ width:60, height:50, background:'#e0ddd6', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>📷</div>
+                }
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{CAT_ICON[addCat]} {addCat}</div>
+                  <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>
+                    {imgData ? '✓ Photo ready' : 'No photo — you can add one below'}
                   </div>
-                  <button onClick={()=>{ setSelected(m); setPanelTab('details'); setShowAdd(false); }}
-                    style={{ padding:'3px 10px', background:C.navy, color:'white', border:'none', borderRadius:6, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
-                    View
+                </div>
+                <button onClick={()=>{ setAddStep('category'); }}
+                  style={{ padding:'5px 12px', background:'white', border:`1px solid ${C.border}`, borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted, flexShrink:0 }}>
+                  ← Change
+                </button>
+                {!imgData && (
+                  <label style={{ padding:'5px 12px', background:C.navy, border:'none', borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.gold, flexShrink:0, position:'relative' }}>
+                    📷 Add Photo
+                    <input type="file" accept="image/*" capture="environment"
+                      style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
+                      onChange={handleImgPick}/>
+                  </label>
+                )}
+              </div>
+
+              {/* Duplicate warning */}
+              {dupMatches.length>0 && (
+                <div style={{ background:'#fef9c3', border:'1.5px solid #fde68a', borderRadius:10, padding:'10px 14px', marginBottom:16 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#92400e', marginBottom:6 }}>⚠️ Similar items already exist:</div>
+                  {dupMatches.slice(0,3).map((m,i)=>(
+                    <div key={i} style={{ fontSize:11, color:'#92400e' }}>• {m.name} ({m.category}) — {m.quantity} in stock</div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+                <CategoryFields form={form} set={setForm} suggestions={suggestions}/>
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginTop:4 }}>
+                <Field label="Cost Price (Rs.)"><input type="number" value={form.cost_price||''} onChange={e=>setForm(f=>({...f,cost_price:e.target.value}))} placeholder="Buy price" style={INP}/></Field>
+                <Field label="Sell Price (Rs.)"><input type="number" value={form.sell_price||''} onChange={e=>setForm(f=>({...f,sell_price:e.target.value}))} placeholder="Sell price" style={INP}/></Field>
+                <Field label="Quantity"><input type="number" value={form.quantity||''} onChange={e=>{ const v=e.target.value; setForm(f=>({...f,quantity:v})); if(addCat==='Frames'||addCat==='Sunglasses') setColorVariants(cv=>cv.map((c,i)=>i===0?{...c,qty:v}:c)); }} placeholder="0" style={INP}/></Field>
+                <Field label="Min Alert"><input type="number" value={form.min_quantity||''} onChange={e=>setForm(f=>({...f,min_quantity:e.target.value}))} placeholder="e.g. 2" style={INP}/></Field>
+              </div>
+
+              {/* Variants */}
+              {(addCat==='Frames'||addCat==='Sunglasses') && (
+                <div style={{ marginTop:16 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:8 }}>Colour Variants</div>
+                  {colorVariants.map((v,i)=>(
+                    <div key={i} style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}>
+                      <input value={v.color} onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,color:e.target.value}:x))} placeholder="Color" style={{ ...INP, flex:2 }}/>
+                      <input type="number" value={v.qty} onChange={e=>setColorVariants(cv=>cv.map((x,j)=>j===i?{...x,qty:e.target.value}:x))} placeholder="Qty" style={{ ...INP, flex:1 }}/>
+                      {colorVariants.length>1 && <button onClick={()=>setColorVariants(cv=>cv.filter((_,j)=>j!==i))} style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7, padding:'6px 10px', cursor:'pointer', fontFamily:'inherit' }}>✕</button>}
+                    </div>
+                  ))}
+                  <button onClick={()=>setColorVariants(cv=>[...cv,{color:'',qty:'1',image:null}])}
+                    style={{ fontSize:12, fontWeight:600, color:'#1e40af', background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:8, padding:'5px 12px', cursor:'pointer', fontFamily:'inherit', marginTop:4 }}>
+                    + Add Color
                   </button>
                 </div>
-              ))}
-              <div style={{ fontSize:11, color:'#92400e', marginTop:6 }}>
-                💡 If price is different, saving will add to existing stock and record both prices.
+              )}
+
+              {addCat==='Reading Glasses' && (
+                <div style={{ marginTop:16 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:8 }}>Powers & Quantities</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
+                    {powerVariants.map((v,i)=>(
+                      <div key={i} style={{ background:C.cream, borderRadius:8, padding:'6px 8px', textAlign:'center' }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:3 }}>{v.power}</div>
+                        <input type="number" value={v.qty} onChange={e=>setPowerVariants(pv=>pv.map((x,j)=>j===i?{...x,qty:e.target.value}:x))} placeholder="0" style={{ width:'100%', padding:'4px 6px', border:`1px solid ${C.border}`, borderRadius:6, fontSize:12, textAlign:'center', fontFamily:'inherit', outline:'none' }}/>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display:'flex', gap:10, marginTop:20 }}>
+                <button onClick={handleAddSave} disabled={addSaving}
+                  style={{ flex:1, padding:'12px', background:addSaving?C.muted:C.navy, color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:addSaving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                  {addSaving ? '⏳ Saving...' : `💾 Save ${addCat}`}
+                </button>
+                <button onClick={()=>{ setShowAdd(false); setImgData(null); setAddCat(''); setAddStep('category'); setForm(defaults('Frames')); setColorVariants([{color:'Black',qty:'1',image:null}]); }}
+                  style={{ padding:'12px 20px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+                  Cancel
+                </button>
               </div>
             </div>
           )}
-
-          {/* Preview */}
-          {buildName(form) && (
-            <div style={{ marginTop:10, background:C.cream, borderRadius:8, padding:'8px 14px', fontSize:12, color:C.muted }}>
-              Preview:{' '}
-              {addCat === 'Reading Glasses'
-                ? powerVariants.filter(v=>parseInt(v.qty||0)>0).slice(0,4).map((v,i)=>(
-                    <b key={i} style={{color:C.navy,marginRight:8}}>{buildName({...form,rg_power:v.power})} (×{v.qty})</b>
-                  ))
-                : colorVariants.slice(0,3).map((v,i)=>(
-                    <b key={i} style={{color:C.navy,marginRight:8}}>{buildName({...form,frame_color:v.color})} (×{v.qty||0})</b>
-                  ))
-              }
-              {addCat==='Reading Glasses' && powerVariants.filter(v=>parseInt(v.qty||0)>0).length>4 && `+${powerVariants.filter(v=>parseInt(v.qty||0)>0).length-4} more`}
-              {addCat!=='Reading Glasses' && colorVariants.length>3 && `+${colorVariants.length-3} more`}
-            </div>
-          )}
-
-          <div style={{ display:'flex', gap:8, marginTop:14 }}>
-            <button onClick={handleAdd} disabled={addSaving}
-              style={{ padding:'10px 22px', background:addSaving?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:addSaving?'not-allowed':'pointer', fontFamily:'inherit', minWidth:140 }}>
-              {addSaving ? '⏳ Saving...' : addCat==='Reading Glasses'
-                ? `💾 Save ${powerVariants.filter(v=>parseInt(v.qty||0)>0).length} Powers`
-                : `💾 Save ${colorVariants.length>1?`${colorVariants.length} variants`:'Item'}`}
-            </button>
-            <button onClick={()=>{setShowAdd(false);setForm(defaults(addCat));setImgData(null);setColorVariants([{color:'Black',qty:'1'}]);}}
-              style={{ padding:'10px 16px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
-              Cancel
-            </button>
-          </div>
         </div>
       )}
+
 
       {/* Category tabs */}
       <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, marginBottom:16, overflowX:'auto', background:'white', borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
