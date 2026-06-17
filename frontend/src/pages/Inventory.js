@@ -656,6 +656,102 @@ function AddVariantPanel({ item, items, onDone }) {
 
 // ── Phone Photo QR Component ─────────────────────────────────
 // ══════════════════════════════════════════════════════════════
+// ── Mobile Phone Uploader ─────────────────────────────────────
+// Shows on phone when PC is waiting — big simple button, no QR needed
+function MobilePhoneUploader() {
+  const [pending,    setPending]    = React.useState(false);
+  const [sending,    setSending]    = React.useState(false);
+  const [sent,       setSent]       = React.useState(false);
+  const [isMobile,   setIsMobile]   = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+    // Check if PC is waiting every 3 seconds (only on mobile)
+    if (window.innerWidth >= 768) return;
+    const check = async () => {
+      try {
+        const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('ko_token');
+        const r = await fetch(`${BASE}/scan-session/photo-session/pending`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const d = await r.json();
+        setPending(d.pending || false);
+      } catch { setPending(false); }
+    };
+    check();
+    const t = setInterval(check, 3000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (!isMobile || (!pending && !sent)) return null;
+
+  const handlePhoto = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSending(true);
+    try {
+      // Compress image
+      const b64 = await new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          const img = new Image();
+          img.onload = () => {
+            const MAX = 1000;
+            const ratio = Math.min(1, MAX / Math.max(img.width, img.height));
+            const c = document.createElement('canvas');
+            c.width  = Math.round(img.width * ratio);
+            c.height = Math.round(img.height * ratio);
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            res(c.toDataURL('image/jpeg', 0.85));
+          };
+          img.onerror = rej;
+          img.src = ev.target.result;
+        };
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      // Send to PC
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      await fetch(`${BASE}/scan-session/photo-session/upload-from-phone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ image: b64, formData: { category: '' } }),
+      });
+      setSent(true);
+      setPending(false);
+      setTimeout(() => setSent(false), 4000);
+    } catch(e) { alert('Failed to send photo. Try again.'); }
+    finally { setSending(false); }
+  };
+
+  return (
+    <div style={{ position:'fixed', bottom:20, left:'50%', transform:'translateX(-50%)',
+      zIndex:999, textAlign:'center' }}>
+      {sent ? (
+        <div style={{ background:'#166534', color:'white', borderRadius:16, padding:'14px 28px',
+          fontSize:15, fontWeight:700, boxShadow:'0 4px 20px rgba(0,0,0,.3)' }}>
+          ✅ Photo sent to PC!
+        </div>
+      ) : (
+        <label style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8,
+          background:'#0f1f3d', color:'#c9a84c', borderRadius:20, padding:'16px 32px',
+          fontSize:16, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 24px rgba(0,0,0,.4)',
+          border:'3px solid #c9a84c', position:'relative' }}>
+          {sending ? '⏳ Sending...' : '📷 Take Photo for PC'}
+          <span style={{ fontSize:11, color:'rgba(255,255,255,.7)', fontWeight:400 }}>
+            {sending ? 'Please wait...' : 'PC is waiting for your photo'}
+          </span>
+          {!sending && <input type="file" accept="image/*" capture="environment"
+            style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
+            onChange={handlePhoto}/>}
+        </label>
+      )}
+    </div>
+  );
+}
+
 export default function Inventory() {
   const [items,        setItems]       = useState([]);
   const [activeCat,    setActiveCat]   = useState('All');
@@ -1150,39 +1246,30 @@ export default function Inventory() {
       </div>
 
       {/* Phone photo session status banner */}
-      {pcPolling && (() => {
-        const BASE_ = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-        const phoneUrl = `${BASE_.replace('/api','')}/api/scan-session/photo-session/${pcSessionId}`;
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(phoneUrl)}`;
-        return (
-        <div style={{ background:'#eff6ff', border:'1.5px solid #93c5fd', borderRadius:12, padding:'16px',
-          marginBottom:16 }}>
-          <div style={{ display:'flex', alignItems:'flex-start', gap:16 }}>
-            <img src={qrUrl} alt="QR" style={{ width:100, height:100, borderRadius:8, border:'2px solid #93c5fd', flexShrink:0 }}/>
-            <div style={{ flex:1 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-                <div style={{ width:10, height:10, borderRadius:'50%', background:'#3b82f6' }}/>
-                <div style={{ fontSize:14, fontWeight:700, color:'#1e40af' }}>Waiting for photo from phone...</div>
+      {pcPolling && (
+        <div style={{ background:'#eff6ff', border:'1.5px solid #93c5fd', borderRadius:12, padding:'14px 18px',
+          marginBottom:16, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ width:10, height:10, borderRadius:'50%', background:'#3b82f6', flexShrink:0,
+              animation:'pulse 1.2s infinite' }}/>
+            <div>
+              <div style={{ fontSize:14, fontWeight:700, color:'#1e40af' }}>Waiting for photo from phone...</div>
+              <div style={{ fontSize:12, color:'#374151', marginTop:3 }}>
+                Open this app on your phone → go to Inventory → tap <b>📷 Add Photo</b> → photo appears here automatically
               </div>
-              <div style={{ fontSize:12, color:'#374151', marginBottom:8, lineHeight:1.5 }}>
-                <b>1.</b> Open your phone camera → scan QR code<br/>
-                <b>2.</b> Select category (Frames / Sunglasses / Reading Glasses)<br/>
-                <b>3.</b> Tap Take Photo → send → photo appears here
-              </div>
-              <div style={{ fontSize:10, color:'#6b7280', wordBreak:'break-all', background:'white', padding:'4px 8px', borderRadius:6, marginBottom:8 }}>
-                {phoneUrl}
-              </div>
-              <button onClick={()=>{ setPcPolling(false); setPcSessionId(null); clearInterval(pollIntervalRef.current); }}
-                style={{ padding:'6px 12px', background:'white', border:'1px solid #93c5fd', borderRadius:8,
-                  fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'#1e40af' }}>
-                Cancel
-              </button>
             </div>
           </div>
+          <button onClick={()=>{ setPcPolling(false); setPcSessionId(null); clearInterval(pollIntervalRef.current); }}
+            style={{ padding:'6px 14px', background:'white', border:'1px solid #93c5fd', borderRadius:8,
+              fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#1e40af', flexShrink:0 }}>
+            Cancel
+          </button>
         </div>
-        );
-      })()}
-      <style>{'.pcPulse,@keyframes pcPulse{0%,100%{opacity:1}50%{opacity:.2}}'}</style>
+      )}
+      <style>{'@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}'}</style>
+
+      {/* Mobile floating photo button — shows when PC is waiting */}
+      <MobilePhoneUploader />
 
       {/* Stats + Category Counts */}
       {(() => {
