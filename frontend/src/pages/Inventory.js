@@ -680,8 +680,15 @@ export default function Inventory() {
   const prevFrameColor = React.useRef('Black');
   const mergeLogRef    = React.useRef([]);
   const [loading,      setLoading]     = useState(true);
-  const [imgData,      setImgData]     = useState(null);
-  const imgDataRef = React.useRef(null); // mirrors imgData, survives any re-render
+  const [imgData,      setImgDataRaw]  = useState(null);
+  const imgDataRef = React.useRef(null);
+  const setImgData = React.useCallback((val) => {
+    if (!val && imgDataRef.current) {
+      console.error('IMAGE CLEARED by:', new Error().stack.split('\n')[2]);
+    }
+    imgDataRef.current = val || null;
+    setImgDataRaw(val);
+  }, []);
   const [form,         setForm]        = useState(defaults('Frames'));
   const [showStickers,   setShowStickers]  = useState(false);
   const [showPriceUpdate,setShowPriceUpdate]= useState(false);
