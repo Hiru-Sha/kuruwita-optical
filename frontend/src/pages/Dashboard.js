@@ -94,7 +94,7 @@ export default function Dashboard() {
   return (
     <div style={{fontFamily:"'DM Sans',sans-serif"}}>
       <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:mob?19:24,color:navy,margin:0}}>
-        <span style={{fontSize:10,background:'#dcfce7',color:'#166534',padding:'2px 8px',borderRadius:20,fontFamily:"'DM Sans',sans-serif",fontWeight:700,marginRight:8}}>BUILD v2.6</span>
+        <span style={{fontSize:10,background:'#dcfce7',color:'#166534',padding:'2px 8px',borderRadius:20,fontFamily:"'DM Sans',sans-serif",fontWeight:700,marginRight:8}}>BUILD v2.7</span>
         {greeting}, {user?.name?.split(' ')[0]}! 👋
       </h1>
       <p style={{fontSize:12,color:muted,margin:'3px 0 14px'}}>{dateStr}</p>
@@ -251,6 +251,7 @@ export default function Dashboard() {
           {label:'All Orders',   path:'/orders',      bg:navy,     color:'white',icon:'📋'},
           {label:'Inventory',    path:'/inventory',   bg:cream,    color:navy,   icon:'📦',bord:border},
           {label:'Calculator',   path:'/calculator',  bg:'#0f766e',color:'white',icon:'🧮'},
+          {label:'Lens Prices',  path:'/lens-prices', bg:'#b45309',color:'white',icon:'🔭'},
         ].map(a=>(
           <button key={a.label} onClick={()=>navigate(a.path)}
             style={{padding:mob?'14px 8px':'10px 14px',background:a.bg,color:a.color,border:a.bord?`1.5px solid ${a.bord}`:'none',borderRadius:10,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',justifyContent:'center',gap:6,textAlign:'center'}}>
