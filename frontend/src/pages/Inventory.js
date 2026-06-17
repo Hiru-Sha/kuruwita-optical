@@ -1576,10 +1576,14 @@ export default function Inventory() {
                       <div key={si} style={{ background:'white', border:'1px solid #fde68a', borderRadius:10, padding:'10px 12px', marginBottom:10 }}>
                         {/* Size header */}
                         <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:8 }}>
-                          <select value={sv.size} onChange={e=>setForm(f=>({ ...f, sizeVariants:f.sizeVariants.map((x,j)=>j===si?{...x,size:e.target.value}:x) }))}
+                          <select value={['XS','S','M','L','XL','XXL','Small','Medium','Large','Extra Large','One Size','36','38','40','42','44','46','48','50','52','54','56','58','60'].includes(sv.size)?sv.size:'Custom'}
+                            onChange={e=>{ if(e.target.value!=='Custom') setForm(f=>({ ...f, sizeVariants:f.sizeVariants.map((x,j)=>j===si?{...x,size:e.target.value}:x) })); }}
                             style={{ ...INP, flex:1 }}>
-                            {['XS','S','M','L','XL','XXL','Small','Medium','Large','Extra Large','One Size','36','38','40','42','44','46','48','50','52','54','56','58','60'].map(o=><option key={o}>{o}</option>)}
+                            {['XS','S','M','L','XL','XXL','Small','Medium','Large','Extra Large','One Size','36','38','40','42','44','46','48','50','52','54','56','58','60','Custom'].map(o=><option key={o}>{o}</option>)}
                           </select>
+                          <input value={sv.size} onChange={e=>setForm(f=>({ ...f, sizeVariants:f.sizeVariants.map((x,j)=>j===si?{...x,size:e.target.value}:x) }))}
+                            placeholder="e.g. 52-18 or XL"
+                            style={{ ...INP, flex:1 }}/>
                           <button onClick={()=>setForm(f=>({ ...f, sizeVariants:f.sizeVariants.filter((_,j)=>j!==si) }))}
                             style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:7, padding:'6px 10px', cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>✕</button>
                         </div>
