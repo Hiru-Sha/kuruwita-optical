@@ -1307,6 +1307,9 @@ export default function Inventory() {
           </div>
 
           {/* Category — large buttons, always visible, never clears image */}
+          <div style={{ background:'#fef9c3', padding:'4px 8px', borderRadius:6, marginBottom:8, fontSize:11 }}>
+            DEBUG: imgData={imgData?'HAS IMAGE ('+imgData.length+' chars)':'null'} | imgDataRef={imgDataRef.current?'HAS REF':'null'} | addCat={addCat}
+          </div>
           <div style={{ marginBottom:16 }}>
             <label style={LBL}>Category *</label>
             <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
