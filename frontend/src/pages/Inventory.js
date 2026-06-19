@@ -1284,43 +1284,40 @@ export default function Inventory() {
   const val = items.reduce((s,i)=>s+(parseFloat(i.cost_price||0)*i.quantity),0);
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
-        <div>
-          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:0 }}>📦 Inventory</h1>
-          <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Frames, sunglasses, accessories and supplies</p>
-        </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button onClick={()=>setShowScanner(true)}
-            style={{ padding:'9px 16px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>
-            📷 Scan QR
-          </button>
-          <button onClick={()=>{ setStickerItems(items); setShowStickers(true); }}
-            style={{ padding:'9px 16px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
-            🏷️ Print All Stickers
-          </button>
-          <button onClick={()=>{ setPriceUpdateItems(items.filter(i=>['Sunglasses','Frames','Reading Glasses'].includes(i.category))); setShowPriceUpdate(true); }}
-            style={{ padding:'9px 16px', background:'#fef9c3', border:`1.5px solid #fde68a`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#92400e' }}>
-            💰 Update Prices
-          </button>
-          <button onClick={()=>{ setShowAIScan(true); setAiStep('front'); setAiPhotos({front:null,arm:null,tag:null}); setAiResult(null); }}
-            style={{ padding:'9px 16px', background:'#7c3aed', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-            🤖 AI Photo Add
-          </button>
-          {/* Phone photo button — starts session so phone can push photo to PC */}
-          <button onClick={async ()=>{
-            const sid = await startPCPhotoSession();
-            if (!sid) return alert('Failed to start session');
-          }}
-            style={{ padding:'9px 16px', background:pcPolling?'#dcfce7':pcSessionId==='done'?'#dcfce7':'#0f1f3d',
-              color:pcPolling?'#166534':pcSessionId==='done'?'#166534':'#c9a84c',
-              border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-              display:'flex', alignItems:'center', gap:6 }}>
-            {pcSessionId==='done' ? '✅ Photo received!' : pcPolling ? '⏳ Waiting for phone...' : '📱 Add from Phone'}
-          </button>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif" }}>
+      {/* ── Page header ── */}
+      <div style={{ marginBottom:20 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12, marginBottom:14 }}>
+          <div>
+            <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, color:C.navy, margin:0 }}>Inventory</h1>
+            <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Frames, sunglasses, accessories and supplies</p>
+          </div>
+          {/* Primary action */}
           <button onClick={()=>{ if(showAdd){ setShowAdd(false); setImgData(null); setAddCat(''); setAddStep('category'); } else { setAddStep('category'); setImgData(null); setAddCat(''); setShowAdd(true); } }}
-            style={{ padding:'9px 20px', background:showAdd?C.cream:C.gold, color:showAdd?C.muted:C.navy, border:showAdd?`1.5px solid ${C.border}`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-            {showAdd?'✕ Cancel':'+ Add Item'}
+            style={{ padding:'11px 22px', background:showAdd?C.surface:C.gold, color:showAdd?C.muted:C.navy, border:`1.5px solid ${showAdd?C.border:C.gold}`, borderRadius:12, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', boxShadow:showAdd?'none':'0 4px 12px rgba(201,168,76,.3)' }}>
+            {showAdd ? '✕ Cancel' : '+ Add Item'}
+          </button>
+        </div>
+        {/* Secondary actions row */}
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {[
+            { label:'Scan QR',         icon:'📷', bg:C.surface, border:C.border, color:C.navy,    fn:()=>setShowScanner(true) },
+            { label:'Print Stickers',  icon:'🏷️', bg:C.surface, border:C.border, color:C.muted,   fn:()=>{ setStickerItems(items); setShowStickers(true); } },
+            { label:'Update Prices',   icon:'💰', bg:'#fef9c3', border:'#fde68a', color:'#92400e', fn:()=>{ setPriceUpdateItems(items.filter(i=>['Sunglasses','Frames','Reading Glasses'].includes(i.category))); setShowPriceUpdate(true); } },
+            { label:'AI Photo Add',    icon:'🤖', bg:'#7c3aed', border:'#7c3aed', color:'white',   fn:()=>{ setShowAIScan(true); setAiStep('front'); setAiPhotos({front:null,arm:null,tag:null}); setAiResult(null); } },
+          ].map(a=>(
+            <button key={a.label} onClick={a.fn}
+              style={{ padding:'8px 14px', background:a.bg, border:`1.5px solid ${a.border}`, borderRadius:10, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:a.color, display:'flex', alignItems:'center', gap:6, transition:'all .12s' }}
+              onMouseEnter={e=>{e.currentTarget.style.filter='brightness(0.95)';}}
+              onMouseLeave={e=>{e.currentTarget.style.filter='';}}>
+              <span>{a.icon}</span>{a.label}
+            </button>
+          ))}
+          {/* Phone session button */}
+          <button onClick={async()=>{ const sid=await startPCPhotoSession(); if(!sid) return alert('Failed to start session'); }}
+            style={{ padding:'8px 14px', background:pcPolling?'#dcfce7':pcSessionId==='done'?'#dcfce7':C.navy, color:pcPolling?'#166534':pcSessionId==='done'?'#166534':C.gold, border:'none', borderRadius:10, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:6, transition:'all .15s' }}>
+            <span>{pcSessionId==='done'?'✅':pcPolling?'⏳':'📱'}</span>
+            {pcSessionId==='done'?'Photo received!':pcPolling?'Waiting...':'Add from Phone'}
           </button>
         </div>
       </div>
@@ -1388,19 +1385,24 @@ export default function Inventory() {
             {/* Top row — summary cards */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:12 }}>
               {[
-                { l:'Total Items',  v:allItems.length,              dark:true,   sf:'all' },
-                { l:'Low Stock',    v:low,   c:C.danger,             sf:'low' },
-                { l:'Out of Stock', v:out,   c:'#9ca3af',            sf:'out' },
-                { l:'Stock Value',  v:`Rs.${Math.round(val/1000)}K`, c:C.success, sf:null },
+                { l:'Total Items',  v:allItems.length,              icon:'📦', dark:true,   sf:'all',  sub:'all items' },
+                { l:'Low Stock',    v:low,   c:C.danger,             icon:'⚠️', sf:'low',  sub:'need reorder' },
+                { l:'Out of Stock', v:out,   c:'#6b7280',            icon:'❌', sf:'out',  sub:'unavailable' },
+                { l:'Stock Value',  v:`Rs.${Math.round(val/1000)}K`, icon:'💰', c:C.success, sf:null, sub:'cost price' },
               ].map(s=>(
                 <div key={s.l} onClick={()=>s.sf && setStockFilter(s.sf)}
-                  style={{ background:s.dark?C.navy:stockFilter===s.sf?'#fef2f2':'white',
+                  style={{ background:s.dark?C.navy:stockFilter===s.sf?'#fef2f2':C.surface,
                     border:`2px solid ${stockFilter===s.sf?C.danger:s.dark?'transparent':C.border}`,
-                    borderRadius:10, padding:'12px 14px', textAlign:'center',
-                    cursor:s.sf?'pointer':'default', transition:'all .15s' }}>
-                  <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?C.gold:C.muted, marginBottom:4 }}>{s.l}</div>
-                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
-                  {s.sf && s.sf!=='all' && <div style={{ fontSize:9, color:C.muted, marginTop:2 }}>Click to filter</div>}
+                    borderRadius:14, padding:'14px 16px',
+                    cursor:s.sf?'pointer':'default', transition:'all .15s',
+                    boxShadow: s.dark?'0 4px 16px rgba(15,31,61,.2)':'0 1px 4px rgba(0,0,0,.04)' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                    <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:s.dark?'rgba(201,168,76,.8)':C.muted }}>{s.l}</div>
+                    <span style={{ fontSize:18 }}>{s.icon}</span>
+                  </div>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26, fontWeight:700, color:s.dark?'white':(s.c||C.navy), lineHeight:1 }}>{s.v}</div>
+                  <div style={{ fontSize:11, color:s.dark?'rgba(255,255,255,.5)':C.muted, marginTop:4 }}>{s.sub}</div>
+                  {s.sf && s.sf!=='all' && stockFilter!==s.sf && <div style={{ fontSize:9, color:C.gold, marginTop:4, fontWeight:600 }}>↑ click to filter</div>}
                 </div>
               ))}
             </div>
@@ -1417,9 +1419,9 @@ export default function Inventory() {
             )}
 
             {/* Category count chips — click to filter */}
-            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px' }}>
-              <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:10 }}>
-                Stock Count by Category — click to filter
+            <div style={{ background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:14, padding:'14px 16px', boxShadow:'0 1px 4px rgba(0,0,0,.04)' }}>
+              <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1.5px', marginBottom:12 }}>
+                Filter by Category
               </div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 {cats.map((cat,i) => {
@@ -1724,7 +1726,7 @@ export default function Inventory() {
       <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, marginBottom:16, overflowX:'auto', background:'white', borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
         {CATS.map(c=>(
           <button key={c} onClick={()=>setActiveCat(c)}
-            style={{ padding:'11px 14px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:activeCat===c?C.navy:C.muted, borderBottom:`2.5px solid ${activeCat===c?C.gold:'transparent'}`, marginBottom:-1 }}>
+            style={{ padding:'11px 16px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:activeCat===c?C.navy:C.muted, borderBottom:`3px solid ${activeCat===c?C.gold:'transparent'}`, marginBottom:-1, transition:'all .15s', display:'flex', alignItems:'center', gap:6 }}>
             {c==='All'?'📋 All':`${CAT_ICON[c]} ${c}`}
           </button>
         ))}
