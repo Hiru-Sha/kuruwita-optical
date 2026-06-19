@@ -166,7 +166,7 @@ function CategoryFields({ form, set, suggestions }) {
       <Field label="Shape">{sel('frame_shape',FR_SHAPES)}</Field>
       <Field label="Type">{sel('frame_type',FR_TYPES)}</Field>
       <Field label="Material">{sel('frame_material',FR_MATS)}</Field>
-      <Field label="Color">{sel('frame_color',[...new Set([...FR_COLORS,...(suggestions?.colors||[])].filter(Boolean))])}</Field>
+      <Field label="Color">{auto('frame_color','e.g. Black, Blue', [...new Set([...FR_COLORS,...(suggestions?.colors||[])].filter(Boolean))])}</Field>
       <Field label="Size">{sel('frame_size',[...new Set([...FR_SIZES,...(suggestions?.sizes||[])].filter(Boolean))])}</Field>
     </>;
     case 'Sunglasses': return <>{common(suggestions)}
@@ -174,14 +174,14 @@ function CategoryFields({ form, set, suggestions }) {
       <Field label="Type">{sel('sg_type',[...new Set([...SG_TYPES,...(suggestions?.sg_types||[])].filter(Boolean))])}</Field>
       <Field label="Shape">{sel('frame_shape',FR_SHAPES)}</Field>
       <Field label="Material">{sel('frame_material',FR_MATS)}</Field>
-      <Field label="Color">{sel('frame_color',[...new Set([...FR_COLORS,...(suggestions?.colors||[])].filter(Boolean))])}</Field>
+      <Field label="Color">{auto('frame_color','e.g. Black, Blue', [...new Set([...FR_COLORS,...(suggestions?.colors||[])].filter(Boolean))])}</Field>
       <Field label="Size">{sel('frame_size',[...new Set([...FR_SIZES,...(suggestions?.sizes||[])].filter(Boolean))])}</Field>
     </>;
     case 'Reading Glasses': return <>{common(suggestions)}
       <Field label="Lens Type">{sel('rg_lens_type',RG_TYPES)}</Field>
       <Field label="Material">{sel('rg_material',RG_MATS)}</Field>
       <Field label="Power">{sel('rg_power',RG_POWERS)}</Field>
-      <Field label="Color">{sel('frame_color',[...new Set([...FR_COLORS,...(suggestions?.colors||[])].filter(Boolean))])}</Field>
+      <Field label="Color">{auto('frame_color','e.g. Black, Blue', [...new Set([...FR_COLORS,...(suggestions?.colors||[])].filter(Boolean))])}</Field>
     </>;
     default: return <>{common(suggestions)}
       <Field label="Name / Type">{auto('item_name','Item name', suggestions?.names||[])}</Field>
@@ -806,7 +806,7 @@ export default function Inventory() {
   const [panelTab,     setPanelTab]    = useState('details');
   const [showAdd,      setShowAdd]     = useState(false);
   const [addStep,      setAddStep]     = useState('category'); // 'category' | 'form'
-  const [suggestions,  setSuggestions] = useState({ dealers:[], brands:[], names:[] });
+  const [suggestions,  setSuggestions] = useState({ dealers:[], brands:[], names:[], models:[], colors:[], frame_types:[], sg_types:[], materials:[], sizes:[] });
   const [addSaving,    setAddSaving]   = useState(false);
   const [dupMatches,   setDupMatches]  = useState([]);
   const [dupChecking,  setDupChecking] = useState(false);
