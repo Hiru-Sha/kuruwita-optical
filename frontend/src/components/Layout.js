@@ -288,15 +288,15 @@ export default function Layout() {
               style={{ width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', background:'var(--cream)', border:'1px solid var(--border)', borderRadius:8, cursor:'pointer', color:'var(--text)', transition:'all .12s', flexShrink:0 }}>
               <Icon name="menu" size={16}/>
             </button>
-            {/* Breadcrumb */}
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ width:28, height:28, background:'linear-gradient(135deg,#0f1f3d,#1a3560)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            {/* Breadcrumb — clickable to dashboard */}
+            <div style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer' }} onClick={()=>navigate('/dashboard')}>
+              <div style={{ width:28, height:28, background:'linear-gradient(135deg,#0f1f3d,#1a3560)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="3"/><path d="M20.188 10.934a8 8 0 11-16.376 0"/>
                 </svg>
               </div>
-              {!mob && <span style={{ fontSize:13, color:'var(--muted)' }}>Kuruwita Optical</span>}
-              {!mob && currentPage && <span style={{ color:'var(--muted)' }}>/</span>}
+              {!mob && <span style={{ fontSize:13, color:'var(--muted)', fontWeight:500 }}>Kuruwita Optical</span>}
+              {!mob && currentPage && <span style={{ color:'var(--border)', margin:'0 2px' }}>/</span>}
               {currentPage && <span style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>{currentPage}</span>}
             </div>
           </div>
@@ -423,6 +423,17 @@ export default function Layout() {
         }
         [data-theme="dark"] input::placeholder { color:#4b5563 !important; }
 
+        /* Dark mode — all surfaces */
+        [data-theme="dark"] { color-scheme: dark; }
+        [data-theme="dark"] aside, [data-theme="dark"] header, [data-theme="dark"] main { color:#e2e8f0; }
+        [data-theme="dark"] aside nav a { color:#cbd5e1 !important; }
+        [data-theme="dark"] aside nav a span[style*="background"] { opacity:1 !important; }
+        [data-theme="dark"] h1,[data-theme="dark"] h2,[data-theme="dark"] h3 { color:#f1f5f9 !important; }
+        [data-theme="dark"] p,[data-theme="dark"] span,[data-theme="dark"] div { color:inherit; }
+        /* KPI / stat cards in dark */
+        [data-theme="dark"] [style*="background:'white'"] { background:#1a1d27 !important; }
+        [data-theme="dark"] [style*='background:"white"'] { background:#1a1d27 !important; }
+
         /* Mobile touch */
         @media(max-width:768px){
           button,select,input,textarea { min-height:44px; font-size:15px !important; }
@@ -432,12 +443,6 @@ export default function Layout() {
         /* Nav hover fix */
         nav a:hover { color:var(--text) !important; }
         nav a:hover span { opacity:1 !important; }
-
-        /* Dark mode nav fix — ensure sidebar text always visible */
-        [data-theme="dark"] aside { background:#1a1d27 !important; }
-        [data-theme="dark"] aside nav a { color:#e2e8f0 !important; }
-        [data-theme="dark"] aside nav a[style*="background: #c9a84c"] { color:#0f1f3d !important; }
-        [data-theme="dark"] aside .section-label { color:#6b7280 !important; }
       `}</style>
 
       {/* QR Scanner */}

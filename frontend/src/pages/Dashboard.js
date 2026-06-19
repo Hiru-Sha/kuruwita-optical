@@ -240,24 +240,25 @@ export default function Dashboard() {
         </div>
       </button>
 
-      {/* Quick actions */}
+      {/* Quick actions with icons */}
       <div style={{display:'grid',gridTemplateColumns:mob?'repeat(3,1fr)':'repeat(5,1fr)',gap:8,marginBottom:16}}>
         {[
-          {label:'New Order',    path:'/orders/new',  color:'#0f1f3d', bg:'#c9a84c'},
-          {label:'Quick Sale',   path:'/quick-sale',  color:'white',   bg:'#16a34a'},
-          {label:'Repair',       path:'/repairs',     color:'white',   bg:'#0891b2'},
-          {label:'All Orders',   path:'/orders',      color:'white',   bg:'#0f1f3d'},
-          {label:'Inventory',    path:'/inventory',   color:'#0f1f3d', bg:'var(--cream)', bord:'var(--border)'},
-          {label:'Add Expense',  path:'/expenses',    color:'white',   bg:'#7c3aed'},
-          {label:'Deposit Cash', path:'/expenses',    color:'white',   bg:'#2563eb'},
-          {label:'Calculator',   path:'/calculator',  color:'white',   bg:'#0f766e'},
-          {label:'Lens Prices',  path:'/lens-prices', color:'white',   bg:'#b45309'},
-          {label:'Customers',    path:'/customers',   color:'white',   bg:'#be185d'},
+          {label:'New Order',    path:'/orders/new',  color:'#0f1f3d', bg:'#c9a84c',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>},
+          {label:'Quick Sale',   path:'/quick-sale',  color:'white',   bg:'#16a34a',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>},
+          {label:'Repair',       path:'/repairs',     color:'white',   bg:'#0891b2',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>},
+          {label:'All Orders',   path:'/orders',      color:'white',   bg:'#0f1f3d',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>},
+          {label:'Inventory',    path:'/inventory',   color:'#374151', bg:'var(--surface)', bord:'var(--border)', icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 001 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>},
+          {label:'Add Expense',  path:'/expenses',    color:'white',   bg:'#7c3aed',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>},
+          {label:'Deposit Cash', path:'/expenses',    color:'white',   bg:'#2563eb',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>},
+          {label:'Calculator',   path:'/calculator',  color:'white',   bg:'#0f766e',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="8" y1="21" x2="8" y2="3"/><line x1="2" y1="9" x2="20" y2="9"/><line x1="2" y1="15" x2="8" y2="15"/></svg>},
+          {label:'Lens Prices',  path:'/lens-prices', color:'white',   bg:'#b45309',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>},
+          {label:'Customers',    path:'/customers',   color:'white',   bg:'#be185d',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>},
         ].map(a=>(
           <button key={a.label} onClick={()=>navigate(a.path)}
-            style={{padding:'12px 8px',background:a.bg,color:a.color,border:a.bord?`1.5px solid ${a.bord}`:'none',borderRadius:12,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:"'Inter','DM Sans',sans-serif",textAlign:'center',transition:'all .15s',lineHeight:1.3}}
-            onMouseEnter={e=>{e.currentTarget.style.filter='brightness(1.08)';e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.15)';}}
+            style={{padding:mob?'14px 8px':'12px 8px',background:a.bg,color:a.color,border:a.bord?`1.5px solid ${a.bord}`:'none',borderRadius:12,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:"'Inter','DM Sans',sans-serif",display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,textAlign:'center',transition:'all .15s',lineHeight:1.3,minHeight:70}}
+            onMouseEnter={e=>{e.currentTarget.style.filter='brightness(1.08)';e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 6px 16px rgba(0,0,0,.18)';}}
             onMouseLeave={e=>{e.currentTarget.style.filter='';e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='';}}>
+            {a.icon}
             {a.label}
           </button>
         ))}
