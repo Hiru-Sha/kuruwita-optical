@@ -4,7 +4,11 @@
 // ============================================================
 import React, { useEffect, useState } from 'react';
 
-const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b' };
+const C = {
+  navy:'#0f1f3d', gold:'#c9a84c', cream:'var(--cream,#f8f5ef)',
+  border:'var(--border,#e0ddd6)', muted:'var(--muted,#6b7280)',
+  success:'#16a34a', danger:'#dc2626', surface:'var(--surface,#fff)'
+};
 const fmt  = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0,maximumFractionDigits:0});
 const thisMonth = () => new Date().toISOString().slice(0,7);
 
@@ -95,7 +99,7 @@ export default function Reports() {
   const totals = profit?.totals || {};
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1100 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4, flexWrap:'wrap', gap:10 }}>
         <div>
           <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:0 }}>Reports</h1>

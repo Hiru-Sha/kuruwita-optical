@@ -8,7 +8,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getInventory } from '../api';
 
-const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b' };
+const C = {
+  navy:'#0f1f3d', gold:'#c9a84c', cream:'var(--cream,#f8f5ef)',
+  border:'var(--border,#e0ddd6)', muted:'var(--muted,#6b7280)',
+  success:'#16a34a', danger:'#dc2626', surface:'var(--surface,#fff)'
+};
 const fmtM = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2});
 const fmtI = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 const ICON = { Frames:'🕶️', Sunglasses:'😎', 'Reading Glasses':'👓', Boxes:'📦', 'Sunglass Pouches':'👜', 'Glass Cleaner':'🧴', Chains:'⛓️', 'Ear Tips':'🔧' };

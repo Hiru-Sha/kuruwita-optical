@@ -173,7 +173,7 @@ export default function LensCalculator() {
     });
     return (
       <div style={{ minHeight:'100vh', background:'linear-gradient(135deg,#0f1f3d 0%,#1a3260 100%)',
-        fontFamily:"'DM Sans',sans-serif", padding:20, display:'flex', flexDirection:'column', alignItems:'center' }}>
+        fontFamily:"'Inter','Inter','DM Sans',sans-serif", padding:20, display:'flex', flexDirection:'column', alignItems:'center' }}>
         <div style={{ textAlign:'center', marginBottom:14, marginTop:10 }}>
           <div style={{ fontSize:11, color:C.gold, letterSpacing:'2px', textTransform:'uppercase', marginBottom:6 }}>Wickramakalutota Opticals</div>
           <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:'white', fontWeight:700 }}>Lens Price Guide</div>
@@ -283,7 +283,7 @@ export default function LensCalculator() {
 
   // ── Staff view ────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif", maxWidth:620, margin:'0 auto' }}>
+    <div style={{ fontFamily:"'Inter','Inter','DM Sans',sans-serif", maxWidth:620, margin:'0 auto' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
         <div>
           <button onClick={()=>navigate('/dashboard')} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, fontSize:13, fontFamily:'inherit', padding:0, display:'block', marginBottom:4 }}>← Dashboard</button>

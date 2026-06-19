@@ -257,7 +257,7 @@ export default function Settings() {
   };
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif", maxWidth:700 }}>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:700 }}>
       <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:'0 0 4px' }}>Settings</h1>
       <p style={{ fontSize:13, color:C.muted, marginBottom:24 }}>Manage your account and staff access</p>
 

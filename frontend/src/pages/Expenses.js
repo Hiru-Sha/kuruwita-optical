@@ -388,7 +388,7 @@ export default function Expenses() {
   ];
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1100 }}>
 
       {/* Toast */}
       {toast && (

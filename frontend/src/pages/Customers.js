@@ -388,7 +388,7 @@ export default function Customers() {
   };
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1100 }}>
       <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:navy, margin:'0 0 4px' }}>👥 Customers</h1>
       <p style={{ fontSize:13, color:muted, marginBottom:20 }}>Full profiles, order history and refraction records</p>
 

@@ -440,9 +440,26 @@ export default function Layout() {
           * { touch-action:manipulation; }
         }
 
-        /* Nav hover fix */
+        /* Nav hover */
         nav a:hover { color:var(--text) !important; }
         nav a:hover span { opacity:1 !important; }
+
+        /* Global improvements */
+        * { box-sizing:border-box; }
+        button { font-family:'Inter','DM Sans',sans-serif; }
+        input:focus, select:focus, textarea:focus {
+          outline:none !important;
+          border-color:#0f1f3d !important;
+          box-shadow: 0 0 0 3px rgba(15,31,61,.08) !important;
+        }
+        [data-theme="dark"] input:focus, [data-theme="dark"] select:focus {
+          border-color:#c9a84c !important;
+          box-shadow: 0 0 0 3px rgba(201,168,76,.12) !important;
+        }
+        button:active { transform:scale(.98); }
+
+        /* Dark mode text */
+        [data-theme="dark"] h1,[data-theme="dark"] h2,[data-theme="dark"] h3 { color:#f1f5f9 !important; }
       `}</style>
 
       {/* QR Scanner */}
