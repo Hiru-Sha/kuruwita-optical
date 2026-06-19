@@ -5,9 +5,10 @@ import { createCustomer, createOrder, getCustomers, getInventory } from '../api'
 import { QRScanner } from '../components/QRStickers';
 
 const C = {
-  navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
-  border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f',
-  danger:'#c0392b', white:'#ffffff', blue:'#1d4ed8',
+  navy:'#0f1f3d', gold:'#c9a84c', cream:'var(--cream,#f8f5ef)',
+  border:'var(--border,#e0ddd6)', muted:'var(--muted,#6b7280)',
+  success:'#16a34a', danger:'#dc2626', white:'var(--surface,#fff)', blue:'#1d4ed8',
+  surface:'var(--surface,#fff)',
 };
 
 const TITLES       = ['Mr.','Mrs.','Miss','Master','Baby','Rev.','Dr.'];
@@ -167,20 +168,40 @@ function findSupplierPrice(supplier, lens_type, lens_index, coating) {
 }
 
 function StepBar({ step }) {
-  const steps = ['Customer','Refraction','Frame & Lens','Payment'];
+  const steps = [
+    { label:'Customer',    icon:'👤' },
+    { label:'Refraction',  icon:'👁️' },
+    { label:'Frame & Lens',icon:'🕶️' },
+    { label:'Payment',     icon:'💳' },
+  ];
   return (
-    <div style={{ display:'flex', alignItems:'center', background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 20px', marginBottom:20, overflowX:'auto' }}>
+    <div style={{ display:'flex', alignItems:'center', background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:16, padding:'14px 20px', marginBottom:24, overflowX:'auto', boxShadow:'0 2px 8px rgba(0,0,0,.05)' }}>
       {steps.map((s,i) => {
         const n=i+1, done=step>n, active=step===n;
         return (
-          <React.Fragment key={s}>
-            <div style={{ display:'flex', alignItems:'center', gap:8, whiteSpace:'nowrap' }}>
-              <div style={{ width:26, height:26, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, flexShrink:0, background:done?C.success:active?C.navy:C.cream, color:done||active?'white':C.muted, border:`2px solid ${done?C.success:active?C.navy:C.border}` }}>
-                {done?'✓':n}
+          <React.Fragment key={s.label}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, whiteSpace:'nowrap' }}>
+              <div style={{ width:34, height:34, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+                background: done ? '#dcfce7' : active ? C.navy : C.cream,
+                border: `2px solid ${done ? C.success : active ? C.navy : C.border}`,
+                fontSize: done ? 14 : 13, fontWeight:700,
+                color: done ? C.success : active ? 'white' : C.muted,
+                boxShadow: active ? '0 4px 12px rgba(15,31,61,.25)' : 'none',
+                transition: 'all .2s',
+              }}>
+                {done ? '✓' : n}
               </div>
-              <span style={{ fontSize:13, fontWeight:active?700:500, color:active?C.navy:done?C.success:C.muted }}>{s}</span>
+              <div>
+                <div style={{ fontSize:12, fontWeight: active ? 700 : 500, color: active ? C.navy : done ? C.success : C.muted, lineHeight:1.2 }}>{s.label}</div>
+                {active && <div style={{ fontSize:10, color:C.gold, fontWeight:600 }}>Current step</div>}
+              </div>
             </div>
-            {i<steps.length-1 && <div style={{ flex:1, height:2, background:step>n?C.success:C.border, margin:'0 10px', minWidth:20 }}/>}
+            {i<steps.length-1 && (
+              <div style={{ flex:1, margin:'0 12px', minWidth:24, position:'relative', height:2 }}>
+                <div style={{ position:'absolute', inset:0, background:C.border, borderRadius:2 }}/>
+                <div style={{ position:'absolute', top:0, left:0, bottom:0, width: step>n ? '100%' : '0%', background:C.success, borderRadius:2, transition:'width .3s ease' }}/>
+              </div>
+            )}
           </React.Fragment>
         );
       })}
@@ -188,28 +209,31 @@ function StepBar({ step }) {
   );
 }
 
-const Field = ({ label, children, span }) => (
-  <div style={{ display:'flex', flexDirection:'column', gap:5, gridColumn:span?'1/-1':undefined }}>
-    <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted }}>{label}</label>
+const Field = ({ label, children, span, hint }) => (
+  <div style={{ display:'flex', flexDirection:'column', gap:6, gridColumn:span?'1/-1':undefined }}>
+    <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'flex', alignItems:'center', gap:6 }}>
+      {label}
+      {hint && <span style={{ fontSize:10, fontWeight:400, textTransform:'none', letterSpacing:0, color:C.gold }}>{hint}</span>}
+    </label>
     {children}
   </div>
 );
 
-const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%' };
+const INP = { padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:14, fontFamily:"'Inter','DM Sans',sans-serif", outline:'none', background:C.surface, color:'var(--text,'+C.navy+')', width:'100%', transition:'border-color .15s' };
 const SEL = { ...INP, cursor:'pointer' };
 
 const Card = ({ children, style={} }) => (
-  <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'18px 20px', marginBottom:14, ...style }}>
+  <div style={{ background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:16, padding:'20px 24px', marginBottom:16, boxShadow:'0 2px 8px rgba(0,0,0,.04)', ...style }}>
     {children}
   </div>
 );
 
-const SectionTitle = ({ icon, title, sub }) => (
-  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16, paddingBottom:12, borderBottom:`1px solid ${C.border}` }}>
-    <div style={{ width:36, height:36, borderRadius:10, background:C.navy, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>{icon}</div>
+const SectionTitle = ({ icon, title, sub, color='#0f1f3d' }) => (
+  <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:18, paddingBottom:14, borderBottom:`1.5px solid ${C.border}` }}>
+    <div style={{ width:40, height:40, borderRadius:12, background:`${color}15`, border:`1.5px solid ${color}30`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>{icon}</div>
     <div>
-      <div style={{ fontSize:15, fontWeight:700, color:C.navy, lineHeight:1.2 }}>{title}</div>
-      {sub && <div style={{ fontSize:11, color:C.muted, marginTop:1 }}>{sub}</div>}
+      <div style={{ fontSize:16, fontWeight:700, color:'var(--text,'+C.navy+')', lineHeight:1.2 }}>{title}</div>
+      {sub && <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>{sub}</div>}
     </div>
   </div>
 );
@@ -562,7 +586,7 @@ export default function NewOrder() {
           ← Back
         </button>
       </div>
-      <p style={{ fontSize:13, color:C.muted, marginBottom:20 }}>Fill all 4 steps to create an order</p>
+      <p style={{ fontSize:13, color:C.muted, marginBottom:24 }}>Complete all 4 steps to create a customer order</p>
       <StepBar step={step}/>
 
       {error && (
@@ -641,10 +665,13 @@ export default function NewOrder() {
       {/* STEP 2 */}
       {step===2 && (
         <Card>
-          <SectionTitle icon="🔭" title="Refraction Results" sub="Enter the patient's prescription details"/>
-          {[{label:'Right Eye (R)',p:'r'},{label:'Left Eye (L)',p:'l'}].map(eye=>(
-            <div key={eye.p} style={{ background:C.cream, borderRadius:10, padding:14, marginBottom:12 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:10 }}>{eye.label}</div>
+          <SectionTitle icon="👁️" title="Refraction Results" sub="Enter the patient's prescription details" color='#1d4ed8'/>
+          {[{label:'Right Eye (OD)',p:'r',color:'#0f1f3d'},{label:'Left Eye (OS)',p:'l',color:'#1d4ed8'}].map(eye=>(
+            <div key={eye.p} style={{ background:C.cream, borderRadius:14, padding:'16px 18px', marginBottom:12, border:`1px solid ${C.border}` }}>
+              <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:12, display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ width:30, height:30, borderRadius:9, background:eye.color, color:'white', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:800, flexShrink:0 }}>{eye.p.toUpperCase()}</span>
+                {eye.label}
+              </div>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                 <Field label="SPH">
                   <div style={{ display:'flex', gap:4 }}>
@@ -665,8 +692,8 @@ export default function NewOrder() {
               </div>
             </div>
           ))}
-          <button onClick={copyEye} style={{ background:C.cream, border:`1px solid ${C.border}`, borderRadius:7, padding:'6px 14px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted, marginBottom:14 }}>
-            Copy Right Eye to Left Eye
+          <button onClick={copyEye} style={{ background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:9, padding:'8px 16px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy, marginBottom:16, display:'flex', alignItems:'center', gap:8 }}>
+            ↓ Copy Right Eye to Left Eye
           </button>
           <Field label="Remarks / Clinical Notes">
             <textarea value={ref.notes} onChange={e=>setRef(r=>({...r,notes:e.target.value}))} placeholder="e.g. Presbyopia, recommend progressive lenses..." style={{ ...INP, resize:'vertical', minHeight:72, lineHeight:1.6 }}/>
@@ -687,7 +714,7 @@ export default function NewOrder() {
             )}
           </div>
           <div style={{ display:'flex', justifyContent:'space-between', marginTop:20 }}>
-            <button onClick={()=>setStep(1)} style={{ padding:'11px 20px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>← Back</button>
+            <button onClick={()=>setStep(1)} style={{ padding:'11px 22px', background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted, display:'flex', alignItems:'center', gap:6 }}>← Back</button>
             <button onClick={goNext} style={{ padding:'11px 28px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Next: Frame & Lens →</button>
           </div>
         </Card>
@@ -922,7 +949,7 @@ export default function NewOrder() {
           </Card>
 
           <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
-            <button onClick={()=>setStep(2)} style={{ padding:'11px 20px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>← Back</button>
+            <button onClick={()=>setStep(2)} style={{ padding:'11px 22px', background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted, display:'flex', alignItems:'center', gap:6 }}>← Back</button>
             <button onClick={goNext} style={{ padding:'11px 28px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Next: Payment →</button>
           </div>
         </div>
