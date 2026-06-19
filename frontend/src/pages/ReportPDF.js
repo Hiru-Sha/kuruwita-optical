@@ -44,15 +44,17 @@ function buildReportHTML(data, from, to) {
   const maxDay = Math.max(...daily.map(d=>parseFloat(d.order_revenue||0)+parseFloat(d.qs_revenue||0)+parseFloat(d.repair_revenue||0)),1);
   const dayBars = daily.map((d,i) => {
     const total = parseFloat(d.order_revenue||0)+parseFloat(d.qs_revenue||0)+parseFloat(d.repair_revenue||0);
-    const h = Math.max(2, Math.round(total/maxDay*50));
+    const h = Math.max(2, Math.round(total/maxDay*64));
     const x = 4 + i * (550/Math.max(daily.length,1));
     const w = Math.max(2, 550/Math.max(daily.length,1)-2);
-    return `<rect x="${x}" y="${54-h}" width="${w}" height="${h}" fill="#0f1f3d" rx="1" opacity="0.8"/>`;
+    return `<rect x="${x}" y="${68-h}" width="${w}" height="${h}" fill="#0f1f3d" rx="2" opacity="0.85"/>`;
   }).join('');
 
   const chartSVG = daily.length > 1 ? `
-    <svg viewBox="0 0 560 60" style="width:100%;height:60px;display:block;">
-      <line x1="0" y1="54" x2="560" y2="54" stroke="#e0ddd6" stroke-width="1"/>
+    <svg viewBox="0 0 560 80" style="width:100%;height:80px;display:block;">
+      <rect x="0" y="0" width="560" height="70" fill="#fafafa" rx="6"/>
+      <line x1="0" y1="70" x2="560" y2="70" stroke="#e5e7eb" stroke-width="1"/>
+      <line x1="0" y1="40" x2="560" y2="40" stroke="#f3f4f6" stroke-width="0.5" stroke-dasharray="4,4"/>
       ${dayBars}
     </svg>` : '';
 
@@ -74,7 +76,7 @@ function buildReportHTML(data, from, to) {
       <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${or.lens_type||'—'}</td>
       <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;text-align:right;">${fmtR(or.total_amount)}</td>
       <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;text-align:center;">
-        <span style="background:${or.status==='delivered'?'#dcfce7':'#dbeafe'};color:${or.status==='delivered'?'#2d7a4f':'#1e40af'};padding:1px 6px;border-radius:10px;font-size:10px;">${or.status}</span>
+        <span class="badge ${or.status==='delivered'?'badge-green':or.status==='overdue'?'badge-red':'badge-blue'}">${or.status}</span>
       </td>
     </tr>`).join('');
 
@@ -116,43 +118,88 @@ function buildReportHTML(data, from, to) {
 <meta charset="UTF-8">
 <title>Wickramakalutota Opticals — Business Report ${from} to ${to}</title>
 <style>
-  @page { size: A4 portrait; margin: 12mm; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  @page { size: A4 portrait; margin: 14mm 12mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; color: #0f1f3d; font-size: 12px; line-height: 1.5; }
-  h2 { font-size: 15px; font-weight: 700; color: #0f1f3d; margin: 18px 0 10px; padding-bottom: 5px; border-bottom: 2px solid #c9a84c; }
-  h3 { font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .8px; margin: 14px 0 6px; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
-  th { background: #0f1f3d; color: white; padding: 6px 10px; text-align: left; font-size: 11px; font-weight: 600; }
+  body { font-family: 'Inter', Arial, sans-serif; color: #111827; font-size: 12px; line-height: 1.6; background: white; }
+
+  /* Section headings */
+  h2 { font-size: 14px; font-weight: 700; color: #0f1f3d; margin: 20px 0 12px;
+       padding: 8px 14px; background: #f8f9fc; border-left: 4px solid #c9a84c;
+       border-radius: 0 8px 8px 0; letter-spacing: .3px; }
+  h3 { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase;
+       letter-spacing: 1.2px; margin: 12px 0 6px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 14px; border-radius: 8px; overflow: hidden; }
+  th { background: #0f1f3d; color: white; padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: .5px; }
   th.r { text-align: right; }
   th.c { text-align: center; }
-  .page-break { page-break-before: always; }
-  .grid4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
-  .grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
-  .grid2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin-bottom: 16px; }
-  .kpi { border: 1px solid #e0ddd6; border-radius: 8px; padding: 10px 12px; }
-  .kpi-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #6b7280; margin-bottom: 4px; }
-  .kpi-value { font-size: 18px; font-weight: 700; line-height: 1; }
-  .kpi-sub { font-size: 10px; color: #6b7280; margin-top: 2px; }
-  .dark { background: #0f1f3d; border-color: #0f1f3d; }
-  .dark .kpi-label { color: #c9a84c; }
+  td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #fafafa; }
+  tr.total td { background: #f0f2f7; font-weight: 700; border-top: 2px solid #e5e7eb; }
+
+  /* Page breaks */
+  .page-break { page-break-before: always; padding-top: 8px; }
+
+  /* KPI grids */
+  .grid4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+  .grid2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin-bottom: 14px; }
+
+  /* KPI card */
+  .kpi { border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; background: white; }
+  .kpi-icon { font-size: 18px; margin-bottom: 6px; display: block; }
+  .kpi-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #9ca3af; margin-bottom: 5px; }
+  .kpi-value { font-size: 20px; font-weight: 700; line-height: 1; letter-spacing: -.5px; }
+  .kpi-sub { font-size: 10px; color: #9ca3af; margin-top: 4px; }
+
+  /* Dark KPI card */
+  .dark { background: linear-gradient(135deg,#0f1f3d,#1a3260); border-color: #0f1f3d; }
+  .dark .kpi-label { color: rgba(201,168,76,.9); }
   .dark .kpi-value { color: white; }
-  .dark .kpi-sub { color: #ede9e0; }
-  .profit-box { background: ${parseFloat(s.netProfit)>=0?'#dcfce7':'#fee2e2'}; border: 2px solid ${parseFloat(s.netProfit)>=0?'#86efac':'#fca5a5'}; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
-  .profit-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: ${profitColor}; margin-bottom: 4px; }
-  .profit-value { font-size: 28px; font-weight: 700; color: ${profitColor}; }
-  .formula { background: #f8f5ef; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .formula span { font-weight: 700; }
-  .f-rev { color: #2d7a4f; }
-  .f-cog { color: #c0392b; }
-  .f-exp { color: #f97316; }
-  .f-net { color: ${profitColor}; font-size: 15px; }
-  .footer { margin-top: 20px; padding-top: 10px; border-top: 2px solid #0f1f3d; display: flex; justify-content: space-between; font-size: 10px; color: #6b7280; }
+  .dark .kpi-sub { color: rgba(255,255,255,.55); }
+
+  /* Profit highlight */
+  .profit-box { background: ${parseFloat(s.netProfit)>=0?'linear-gradient(135deg,#f0fdf4,#dcfce7)':'linear-gradient(135deg,#fff1f2,#fee2e2)'}; border: 2px solid ${parseFloat(s.netProfit)>=0?'#86efac':'#fca5a5'}; border-radius: 14px; padding: 20px 24px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .profit-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: ${profitColor}; margin-bottom: 6px; }
+  .profit-value { font-size: 32px; font-weight: 700; color: ${profitColor}; letter-spacing: -1px; line-height: 1; }
+  .profit-margin { font-size: 12px; color: ${profitColor}; margin-top: 5px; opacity: .8; }
+
+  /* Formula bar */
+  .formula { background: #f8f9fc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 16px; font-size: 12px; margin-bottom: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .f-rev { color: #16a34a; font-weight: 700; }
+  .f-cog { color: #dc2626; font-weight: 700; }
+  .f-exp { color: #f97316; font-weight: 700; }
+  .f-net { color: ${profitColor}; font-weight: 700; font-size: 14px; }
+  .op { color: #9ca3af; font-size: 14px; }
+
+  /* Pill badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 9.5px; font-weight: 700; }
+  .badge-green { background: #dcfce7; color: #16a34a; }
+  .badge-blue  { background: #dbeafe; color: #1d4ed8; }
+  .badge-red   { background: #fee2e2; color: #dc2626; }
+  .badge-gold  { background: #fef9c3; color: #92400e; }
+  .badge-gray  { background: #f3f4f6; color: #6b7280; }
+
+  /* Progress bar */
+  .prog-wrap { height: 5px; background: #f3f4f6; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .prog-bar  { height: 100%; border-radius: 3px; }
+
+  /* Section divider */
+  .divider { border: none; border-top: 1.5px solid #f3f4f6; margin: 16px 0; }
+
+  /* Footer */
+  .footer { margin-top: 24px; padding-top: 10px; border-top: 2px solid #0f1f3d; display: flex; justify-content: space-between; font-size: 10px; color: #9ca3af; }
+  .footer b { color: #0f1f3d; }
 </style>
 </head>
 <body>
 
 <!-- ══ COVER / HEADER ═════════════════════════════════════ -->
-<div style="background:#0f1f3d;border-radius:12px;padding:20px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;">
+<div style="background:linear-gradient(135deg,#0b1829 0%,#0f1f3d 60%,#162d52 100%);border-radius:14px;padding:22px 28px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(201,168,76,.06);pointer-events:none;"></div>
   <div>
     <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCACMAfQDASIAAhEBAxEB/8QAHQABAQACAwEBAQAAAAAAAAAAAAECBAYHCAUDCf/EAEQQAAEDAwIDBQYDBgELBQAAAAEAAgMEBREGIQcSMQgUQVFhEyJVcZLSMlKBCRUjQmKRQxYXJDRFU2NyobHRJTM1hML/xAAbAQEBAAMBAQEAAAAAAAAAAAAAAQIDBAYFB//EADARAQACAQMBBQYGAwEAAAAAAAABEQIDBFEhBRIxQWEGcYGRofATIjKxweEUI9Fy/9oADAMBAAIRAxEAPwDypj3j81Qr1c75pgrETCK4KIIipBTdBMJhXBKvLsggxjdRZcpQBUYost1MHyUEwmFcFTxQMBMBVUBBiQmFkFScKjHCY3Q+iu6gicqfqruqIAUIV3Q5yoMQFVcFMHxQTHzTCu6m5VFwoQmfVPBBAEIVTxUEwmFdkwgmEVIITCCYVwqPRQ5QMKEKjfxWWEGGEIWW4QOCDENIV5VkhVGO6JugzlQXCmCrgp/dBOXCmFmAfNQ7FBMJgK9UwgmyeKuEwEExlAAD0V6JuVQ6qADzWW6eKgxxurgK4KYQYkKcqzxkIB4IMA1F+mEQYj8TvmsgsR+J3zWSoFMKA5VVEIz4qDZZJhShFURUAmApndEFwETCFBNkwPJFURMIQqmFKGOFQ1XCJSgCjuiuEVGHRZBXARSgTZMJhAyibIgmEwFUQYkY3RXIQEIACvKiYShMD0QY9FMeqAeqClMbKY3VQXHyTCYQq0ACYTKmTnCgYTAV+abJQiKlYl3gguyuAsB81kEsVMIoSgZQoEJwgNVUacqpAIiYVBPFMIgFMIUQOibKIoKmd0wogqIixEz7zvmoNyn87vmVcKgAqiLIERMoCFEQTCYVymUBETwQEKZTIQTdVEUsRVESwRTm36Jn0SxURXwVERMogIURBEQlY5OdlBSAjR4pk+KrUFTJTZCqIgCJupYqioRUBlMJlMoCiZVUE3QA+aqfoghQgJgpulDEBZdEQhAyPNYk5VIKAFQRPmssKEIK0YCqgKKi5RRXKWCJlFQREQTCoCIoHgoqiCY9UWWUUGB/G75lVTHvu38Snigy2KqxBQqi7JkL62ipdOx6lpP8raapnsz3clT3eVzJImn/ABG468vUt8RnxwuRa8pLNpXUE1pl0dSzRlrZqOrZd6l0dVTv3jlZvuCP7EEeC5s913dWNLuzMzF+VfWY8GzHTvHvX+//ABwjKi+nJcrS4+7pmlZ8q6oP/wCls3ujttTYKK92Onlp2sPdbnTOlMnsZ9yx7Sd/ZyNBxno5jh5LZ+LMTETjMX7v4lO7xL4RQFQj1XYvAbTejdX6jn09qh9whq5me0t8lPUiJshaMvjILTl2PeHyI8lr3e6x2ujlrZxMxj1musrpac6mcYR4y67J9UznpuvWo7OvDz/e30//AHh9i2bb2fuHNHXRVT6a51ojdzexqqwuid/zNaASPTO68xl7b9mRHTvfL+3fHZOvPDyvaLBcK+gkusjWUFnhdyS3Gqy2EO/IzAzK/wDoYCfPA3WlcJLaXCK3xzmNvWeoAEkh8+UEhg9Mk+ZK5Lxkl1ZFrestWqpG89ucY6SGCP2VLFTndhgjGzWFuD55zkkhco4P8FLxrERXa+iez2J2HNe5uKiqH/DafwtP53D5Ar7ep2jo7fbxutznEYz1iv485n4fDzcuOhlnn+HhHX7+Tgei9KX/AFjdxa9PUTqqcYMjyeWOFv5pH9Gj/qfAFeouHnAnSWn7WRqKjp9R3KUD2ss7CIY/6Y2Z2H9R3Pp0XYmlNOWTS1njtNgt8NDRs35WDLnu/M9x3c4+Z3U1XqWy6VtD7rfbhDR0rdgX7ue78rGjdzvQL847W9qt52lqfgbSJxxnwiP1T8v2j6vubbs7S0I72p1n6Q+F/mp4ZuO+ibOCfKE/+V1JxZvXBnSImtlg0Zp+9XtuWua2Mmnpj/xHA+84fkb+pC4pxZ453vVjZrVYI5bLZn5a5wfipqW/1uH4Gn8rT8yei6hZG1oAaAAOgC9F2J7O7zprb/Wy/wDMZT9Zv6R8/Jw7ve6X6dHGPfX7P1q53VVVJUOip4TI4u9nBEI42+jWjYD0WOEAATPof7L3UREQ+QYRCfRTdBUKKH0z+iBlVTfH4Xf2UygEbq48kyiBj1VATKZQVTI6JnKmBhBchPFTHmqgICibIGVCqB6oUGICyQb9MlMHGcO/sgK5U2TZBd0UyioqbLEfI/2Vx5gj9EBAmfBFATYomyoYCJkJkKAimVdkBBlMhMqgmFMq+CguyhRNlREKqhUoEVARQY/zu+aeOU6vd8yslREKoRBgR+i7A0RU0OrtPR8Pr3UMhronufpqvlOBDM7d1I8+EUh6flfjzXASFgR8/wBNlo3GhGrjV1MdYnifvx5jozwz7sv2raaooa2eirKeSnqaeR0U0Mgw6N7TgtI8wVaaqmp2zsidhk8fs5Wno5uQRn5EAjyIXPbg3/OPpeS7QsdJrKy04NxYB711o2DAqAPGaMYDx1c3B6hcT0Zpi+6wu7LXp63yVs5wXubtHE0/zPf0a359fAFatPdYTp5TrVjOP6r8I9fdPjE/yynTnvRGPW/B8hzts5wuW1eiNX6Y03b9cVcTLSw1LDRe1qBHVcww5sjYj72M/r4kY3XMDVaD4VEttpptZ60i2dVPbm329/8AQP8AEePPr6t6LrTVF/vWqLvJdr/cZq+sftzyHZg/K1o2a30C0ae41t1nE6eNafOUdcvdHlHrPwiurPLDDSj803l6eXvl7T4Qa4pde6Ngu8fJFXRH2Fwp2/4UwG5H9Lh7w9DjwK5iF4d4Ma7n0BrKK4yGR9qqQIbjAz+aPOzwPzMPvD0yPFe3aOqp6qliqqaVk0EzBJFKw5a9pGQ4HyIIK/J/afsWezN1eEf68usenMfDy9Ho9huv8jT6+MeL4moNF6av9/t19vFqhrK62tc2ndJu0AnPvN6OwdxnOCSuQ9T4klfF1jqmw6StDrpfrlFRwbhgO8krvysYN3H5frheWOLHG7UGrzNbLKZbLZHZaWMf/pFQ3/iPHQH8jdvMla+yuxt/2x3cYmY08elzdR6Rz7o+NMtxutHa3M+M+Xm7h4sccrHpYzWvT4hvd5ZlruV3+jU7v63D8Th+Vv6kLy9qvUl91Vd3XS/3GatqTs3m2ZG38rGjZrfQfrlfJa3AxjA8lkAv1XsnsHadl4/6ovLzynx/qPSHndzvNTcT+aenAAsvBRCV9pyIV6u7C1ir7tpfU8tFqa4WcR3GJrmU1NSyh59iDkmaJ5B8NsBeUTlex/2es8MWkNWCWaOMm6Q45ngf4A80HXnbstldZtW6abWXusvJfbp3B9RBTxOYBI3IAhjYDn1BK5vw47ItoqbDRXHWuo7mKuphZK+ktwZGyHmAPIXua4uIzuQAM9Fxz9obLDLrPSpikZKRbKke64EZ9q3HRepeFev9M630nb7hYbrSTPdTxiamMrRNTv5QHMezqCDkdMHqMhQeadD8D+CnErS9ZddIan1VaTTVklGXXOSAnnYGnm9mQCWkOH8wPXphdS27R1VoPtKaa0tX1tNXup79QPZU0pzHPG+Vha7G+PIjfBB69V3Dw17MNohs94ruMU37snZXP7pJS3aOOI0+M87iQQMknrg46gLqOKj0Va+05pyi4f3Cer09TX23sjqZ5ef2rxKz2jmuwMszsDjBwT0wg948WrPLdOF2qrbbLe2prqu0VUFNCxoDpJHRODWg+BJI3Xmq8dmnh5oXhedT8Q9UXyKrpKUPrG0MsTY3zHpDCHMJcSSGjJ367Dp6d4h6j/yf0HqC/UMtNLU263T1cUbngh7o2Fwad+hIx+q4pqik0rx14INbFVQsprvSNqaKWR456OpAPKSPzMflrh4jmHiqPGHZq4eWTijxHq9P3ee4UNDHb5quPuszPatLZI2taXOaQdnnJwMkeC771F2RdDUjKeqj1ldrdQwyF9dNWyQn+FjYNPK1rTzY952Rjw32697E1uq9P9oW9Wi9MbR11DaaqnqInOGGvbNCDg9CPEHxBBXafb/qmycJLRDDUNcyS+R+0Y2QEOAhlIyPEZwfmoPPc3Cq13/tDVXDnRd+hdZmEPZc56hlQGxNhY+R2WYD3czi0AY36kYK7P4gcD+CvDKx22s1fqDWF1lr61lFH+7Xwc3O4E59mG5DQGnxJ6dV0z2b7No2+cW7Xa9c91/c8scuI6iX2UUswb/DY5wI2JztkZIA8cH2RxY07cNHaCp5eC9k0hYqzvTBVVskdNA2Clw4vkD3jlJB5dznbOASg6y4ldkax0emq656N1FdG1lJA+ZlLcOSZk/KCeQOa1paSBsdxnqF0z2WeGti4raxudnvlXcaWmpbaKuN1G9jXlxka3B5muGMOK/oFe6ykk09XFlVTvBpJMFsgIPuH1XjD9nrJHDxLvplkZGDYQBzOA/x4/NB9zizwA4T6Bq9N/vTVGr4orxchQtjhhgne9zgMe9ytEbQSMnDjvsPFci4gdkzQtu01WXa1aqv1sFBA+pqH1TI6xpjjaXPwwBhzyg4weq3+27NFJU8MvZyxvxqeMnleDge55LuvivVUp4W6taKmHJslaABID/gPVHnjhd2cuEvEDhxQ6ns191jyVjZAyaodBE5r2PLDmIMIG7TtzHbxXnjUfDq4WvjTNwwp7hT1FaLnHQwVUgMcbhIGua9w35cNcCQM9DjK9m9iieCPs4aea6eMESVeznAH/WJPNeaONUVhuHbGuFLqaqijsE94o466T2nKGwmCLmy8fhHgT4DJ2UHY2o+znwt4faDrdUa31XqK6MoY2OmbazBEXFz2sAjYQSd3Dq7ovqx9lTQOqdH0N90fqXUdu/eFIyqpv3iyOUYe0OaHs5WuHUZwf7rta9aKsOmOG1yreEWldJw3xtMDbp3RQljnZHvGV3XDckFzsEgZXLOGtxq6jQNhmv94t9fd3UMRrqinnjfHJNy++Wlnukc2fw7eSo8K9mm1VNm7U9islxjBqaG4VlLOBuznjhmaceYyNl7H7SGlblq3g5eNN6foIprlXyUsUIIDA3/AEiMuc4+DWtBcT5AryrwsIj7cs0nM0Rf5R3Qlxdtjln8V6/4xa5boTh9W6riZFVtoJqZ00LXgufE6eNkgbv+Lkc4j1AUgebOLXAHhXww4dP1BqDUuo6m4CMRU9PFNCwVlUW7NY0xktbnJO55Wg9T16q7OnB+bixdrgKi+RWi12xsZqZmsD5ZHP5uVjA4gDZpJcc422OV7B7QmibPxe4UctsrqSW5RRi4WSpErQHuLchmfyyNPKfIlp8F5u7Fuk+HeodS36m1xTUVXdaUQi32+4P5Wnd4lPsyQHuaQwEHOM9N8oOYXLghwNtPEex8Oqq562q73eKd88M1PUQuhYG834yGe7nkd4HwzjK492g+zVSaC0VWax03qGrrKKhcw1NJXsZ7RrHvDOZr2AA4LhkFvTO/gvQ2pKbUmm+KWjqHSVLpmw6IlLhdSwU9PNPJh3JE1pwSDhhHIMk5yQAsO1zUU8nZz1ewTRFxpocYeCf9YiVHWf7PSGKTSerTJGx5Fzh/E0HH8ELh/wC0ObHBrPS7mRtYRaqg+6MA4lb5Ll/7POaGHSWrhJNGzN0hxzPAz/BC4f8AtDpI6jWWmGwuZKf3TUj3HA7mUeSDsCx9kjh7XWairZb5qcSVFPHK4NnhABc0E4/h+q6z7NPAjS/Eux6hr75c7xSyW28yUEIo5Y2h0bWtILuZh97JPTHyXr7hjf7RqHQ1mr7PcKasgdRQ5MUgJYQxoLXDq1wIIIO4IXWfZL0rcdC2TV1uv9Za21VRqGWobHT10cxYxzG8pdyn3ScZwcHHgg8xdojhrpHhjxSsmnGXK9GyVdFFVV1TJyS1ETDK9jzGA1oJDW5APivYOjeE3Caq0hZaqn0RYq2Kagp5GVNVbYxNM0xtIe/b8RByfUleZP2gckU3Fq0GFwl/9AYMsIIz7ebbZeseCupLDd+FumJLbdqKoEVqpYpWsmbzRvZE1rmOGctIIIwVB4H4i6b07W8YBpfh3UV9V324uo/Z1tO2BsNU6ocz2bOX/CaMYPkD5L0BVdlnQekNE3DUettS6huDbbRvqqoWxscDcMblwY1wcT5DLhn0XTuo7Tc+FnaNtV91VFBFRvv7rux1PUNnLqXvTiXYbkggHPKd9l7U4iGk4jcGtR23R10tt1lutqmhpHQ1TCx73s90FwPu/r08UHRVn7MPDvXGhLfqjRWpNSWyO40wnpxcmxTgA52e1oaRuPBy6Q0BpKyWbj/BoniDNNiiukdJyUcAniqqj2sfIx4d0he1xycZAOF7b4TxQcNeCOnrVrW4260T2y3hlWZ6tgZG4FxI5s4PXwz6ZXiPUerrLdu1AdaU9SW2WTU9NVNqJGlv8BkkYMhB3Awwu33wqPZnEjhXwmoeH+oayp0bZrZBBbZ5JKyitkZqKdoYSZIxj8Y6j1C8XcLOGlLxL4pVmmdN3ySmslO19SLhXQgTd3a5rQfZgge0JcBjIA3PovfHEgRas4Wajtlgr7fVz3O01EFI5tUz2cj3xuDfeBIwSRuvFfZ10LpWPjnXaQ4sR0DZaKlc2Gjmqx7CWrzGQwvaeV/uOcQ3OCfPGFB2HrHgfwT0JX6atGobxrS5V9/re5076CWAhr/dBc9oblrcvHTJ6+ScZOyna7Bo+66j0fqC5SPtlNJVSUVwayQSxsaXODZGhpDsAkZBB6bdV3FxKs950lDpn/NVbdKaftpucYvdUY6amMdJzNzyudseYcwOMu6YXNeK1VTu4W6tAnhJNkrQAHj/AHD1R/LlrsgEHIKzC/CAfwWf8o/7L9ggvRCihCouQiYRYjEfjd8yslP5nfMqqwKoiKhlRyuyZQbVhutysN6pLzaap9LXUcolglb/ACuHn5g7gjxBIXNtZ8Vbjd7Q+x6dtNFpS0T5krKa2jldVSu3eXvAB5SScNHhgEldfHcLZ7zBgD92Up9eeX71ya200dXUx1M8bmPD79PLjybMNTLGJxiatptaAMAAAeAWS2u8wfDKX65fvV71B8Mpfql+9dFzwwqOWmQRuu2uHPHG8aP0HNp392x3Gohfi2zTPwynjOS5rwN3AHdoBHUgnAC6x71T/DKX65fvU71T/DKX65fvXJvdlob7TjT3GHei4n4x8WzS1s9HLvYZVL99TX276mu8l2vlfPXVkn88jtmD8rW9Gt9BgL5oGFuGqg+GUv1y/eneoPhlJ9Uv3rpwxjTxjHDGojyimEz3puZagKq2e9QfDKT65fvTvVP8Mpfrl+9ZXPCVHLXTK2O9QfDKX65fvV71T/DKT65fvS54Kjlq5TlytrvdP8Mpfrl+9BVU/hbaX65fvS54Kjlq8uEAw8PaSHDo4bH+62u9QfDaX65fvTvMHw2l+uX70v0K9WtKXyge1e6TH53F3/dY8oPXdbXeoB/syl+uX71RV0/wyl+uX70v0K9Wpg+BwmPVbXeoPhlL9cv3p3qn+GUv1S/elzwVHLV3Hip16hbfeqf4ZS/XL96d7p/hlJ9cv3pc8FQ1SARjGQeowjsuYGOJcwfyuOQP06La73T/AAyk+uX7073B8MpPrl+9LngqOWqMjoSPkhW0Kqn+GUn1y/ene6f4ZSfXL96XPBXq1d+mUAW13un+GUn1y/ene4PhlL9cv3pc8FQ1iT0yVBgdFtd7g+GUn1S/er3un+GUn1y/epc8FerUyfZ+zBcGH+TJ5f7dFGsAAwAAOmFud7p/hlJ9Uv3p3uD4ZSfXL96tzwU1QCPEpl3TJ/utrvdP8MpPrl+9O9U/wyk+uX70ueCo5afKFC1pIJAJByDjxW73qn+GUn1y/ene6f4ZS/VL96XPBXq1nySSEGSR7y3oXOJx8srE7/iOfmtrvdP8MpPrl+9BU0+f/jKX65fvUueCo5aoA8Ag26Lb71Tj/ZlJ9cv3p3qD4ZSfXL96XPBXq1mPewkse5hd1LXEZ+eFgGMGcADJycDqt3vdP8LpPrl+9O90/haqP65fvTvTwV6vzoKOsr6uOjoaaeqqJDiOKFhe5x9AF9CbSeoYo5pnWeZ4haXzexcyV0bR1LgxxcAPMjZfnpm9VFhuc9ZBFHLHU00tLUQPc5rXwyDDmhwPM046OByMeO6+hp3UFq01c2XexWepbcoWPbTvqa0PjiLmlpPK1jS/YnZxx5grVnlqxM92Pv59Pq2YY6cx+aXHoYJpgPYwTSZPKOSMuyeuNh1X6UlJWPuDKOmp6gVkrwxsTGObI5x6DHXK5Zp/U1rt3C6tsUpru+1F5ZUFlLUOgf7IRYLuflLT7wxynr18FoXrVs9dUWF9PBLG2x/+xJPUmaom/iB5EkuASNsAAYAJUjU1ZymIxXuacREzk+ZNZLwb620VlHNDcedzBHVnkIc3OfeeceB3ytGCGWeT2cEMs0nXljYXO/sFyyLWbIuJUOs46Ose5tRLUPpZaznaC8OBax3KOVo5umCtKyakiodOVthnop/YVVU2q7xR1RgqA5rSORzsEPZvnlI2O6RnrV1x4/v5E46d9Muf6cddG6J5idG6N4OCwt5SD5Y81+1RQ1cTCaihqY2hvMfaQOaMee46eq5DQavmt+sKPUNPTzVHdIfYsjrqt08hbyFufaEAtcM5aQPdOMLYh1lFT2K+2qKG81LbxS93c6uupmER5w7mDeQAnbGTurlqasVWPHn8/kRhpz45ON1tBXwWygrquN4o60PNI97w5r/Zu5XYGdsHboF+U1LVwRtknpqmGN/4XSROa13yJG6+zW6kfPZNNW6KjEBsT5nNlbJvMXyiTy93GMZ3819HVGs2Xy11tLLRVbp6ydk7ppqvPI5pyfdY1rXk5xlwyPDdSM9W4vHzn9+n06nd06n833X/AFw/qqoNllldLSDZCUKhGUDdEHRFAz7zvmVVP5nfNVUFFUVBETCAiYRKDCYRMICIiAoVUIQRRUBFKDCYVUwlCIssJhKETdMbqoIomPVUBBAVcphYoMk/VY5KuCguyhPkmUQXfzUV8EIQT9UyVcJhQRXZTdMnxVF2QkIE5QgmQrlMBEDKmfVUBMIImFTtuoN1AwEV8FAEFCYRFaADzTARAoJsn9lU2REHRUIqqoiYRKBERBFVFQgZTclEHVUMIqilDH+Z3zVQ/id8yiQCJ4rJUQBXAVREYkKLIqYQtNlQMqFUHCKm6ZWRWKIY28VFmDssevRARMFMFFERMICYTKICImUBEyiCKoiAoVcplBAFUUUFRRVUEREBQjKqIJhVMpugImCmNkBFAqoIp4rJEoTCuPJEyqCIiAieCfogIiICIhCAiiqCk+SiYRARN1uWS1115ucVut1O6eolOA0dGjzcfADzKDTVAX7XCjqrfWy0VbA+CoicWvjeMEH/AMeq/EFARUFFLGJ/E75lRXHvO+ah6qWMgqVjhXHqlhlMqYTCWLzJlYq49UsXPom3kpgIQEsZZRYfqrv5pYpOFMqJhLF5k5lOUZV5Qli8yhKYTASwzlMqYVACtgiiqWCK4UIUsMophMK2KmygG6ywFLEVIU6J1VsUYQkeCxwmFLFB3V5vRY4QhLFQqAbqkK2Lj1VJAWICFLF5lchYBVLF2T3VFBulilEIUSxk0+au3osEwljIkKKYT9VLFVyplEsCiAIRulgCsshYYVASxdvJRMJhWxcpzeixCBLKZsfyvDuVpwc4cMg/MeK7G4e8R47TNHQXK10FPRSENfUUdOInM/qc0fjH/X5rrZXxSxz3XvEM36d9PS2i390YS2OWqpxLM4eYJ2b8guBEjOVMKOUsZZCKsaCDlEsf/9k=" alt="Wickramakalutota Opticals" style="height:56px;object-fit:contain;max-width:220px;margin-bottom:6px;"/>
     <div style="font-size:11px;color:#c9a84c;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Business Report</div>
@@ -168,9 +215,9 @@ function buildReportHTML(data, from, to) {
 <!-- ══ NET PROFIT HIGHLIGHT ══════════════════════════════ -->
 <div class="profit-box">
   <div>
-    <div class="profit-label">Net Profit for period</div>
+    <div class="profit-label">📊 Net Profit for Period</div>
     <div class="profit-value">${fmtR(s.netProfit)}</div>
-    <div style="font-size:11px;color:${profitColor};margin-top:3px;">Net margin: ${s.profitMargin}%</div>
+    <div class="profit-margin">Net margin: ${s.profitMargin}% &nbsp;|&nbsp; ${fmtDate(from)} – ${fmtDate(to)}</div>
   </div>
   <div style="text-align:right;">
     <div style="font-size:11px;color:${profitColor};margin-bottom:4px;">Revenue</div>
@@ -182,32 +229,28 @@ function buildReportHTML(data, from, to) {
 
 <!-- ══ PROFIT FORMULA ════════════════════════════════════ -->
 <div class="formula">
-  <span class="f-rev">${fmtR(s.totalRevenue)}</span>
-  <span style="color:#6b7280;">revenue</span>
-  <span style="color:#6b7280;">−</span>
-  <span class="f-cog">${fmtR(s.grossProfit > 0 ? parseFloat(s.totalRevenue)-parseFloat(s.grossProfit) : 0)}</span>
-  <span style="color:#6b7280;">cost of goods</span>
-  <span style="color:#6b7280;">−</span>
-  <span style="color:#f97316;font-weight:700;">${fmtR(s.totalExpenses)}</span>
-  <span style="color:#6b7280;">expenses</span>
-  <span style="color:#6b7280;">=</span>
-  <span class="f-net">${fmtR(s.netProfit)}</span>
-  <span style="color:${profitColor};">net profit</span>
+  <span class="f-rev">${fmtR(s.totalRevenue)}</span><span class="op" style="margin:0 2px;">Revenue</span>
+  <span class="op">−</span>
+  <span class="f-cog">${fmtR(s.grossProfit > 0 ? parseFloat(s.totalRevenue)-parseFloat(s.grossProfit) : 0)}</span><span class="op" style="margin:0 2px;">COGS</span>
+  <span class="op">−</span>
+  <span class="f-exp">${fmtR(s.totalExpenses)}</span><span class="op" style="margin:0 2px;">Expenses</span>
+  <span class="op">=</span>
+  <span class="f-net">${fmtR(s.netProfit)}</span><span style="color:${profitColor};font-size:11px;margin-left:2px;">Net Profit (${s.profitMargin}%)</span>
 </div>
 
 <!-- ══ KPI GRID ════════════════════════════════════════════ -->
 <div class="grid4">
-  <div class="kpi dark"><div class="kpi-label">Total Revenue</div><div class="kpi-value">${fmtR(s.totalRevenue)}</div><div class="kpi-sub">Orders + Sales + Repairs</div></div>
-  <div class="kpi"><div class="kpi-label">Orders Revenue</div><div class="kpi-value" style="color:#0f1f3d">${fmtR(o.revenue)}</div><div class="kpi-sub">${o.total_orders} orders</div></div>
-  <div class="kpi"><div class="kpi-label">Quick Sales</div><div class="kpi-value" style="color:#2563eb">${fmtR(qs.revenue)}</div><div class="kpi-sub">${qs.total_sales} sales</div></div>
-  <div class="kpi"><div class="kpi-label">Repair Revenue</div><div class="kpi-value" style="color:#0891b2">${fmtR(rep.revenue)}</div><div class="kpi-sub">${rep.total_repairs} repairs</div></div>
+  <div class="kpi dark"><span class="kpi-icon">💵</span><div class="kpi-label">Total Revenue</div><div class="kpi-value">${fmtR(s.totalRevenue)}</div><div class="kpi-sub">Orders + Sales + Repairs</div></div>
+  <div class="kpi"><span class="kpi-icon">📋</span><div class="kpi-label">Orders Revenue</div><div class="kpi-value" style="color:#0f1f3d">${fmtR(o.revenue)}</div><div class="kpi-sub">${o.total_orders} orders</div></div>
+  <div class="kpi"><span class="kpi-icon">🛍️</span><div class="kpi-label">Quick Sales</div><div class="kpi-value" style="color:#2563eb">${fmtR(qs.revenue)}</div><div class="kpi-sub">${qs.total_sales} sales</div></div>
+  <div class="kpi"><span class="kpi-icon">🔧</span><div class="kpi-label">Repair Revenue</div><div class="kpi-value" style="color:#0891b2">${fmtR(rep.revenue)}</div><div class="kpi-sub">${rep.total_repairs} repairs</div></div>
 </div>
 
 <div class="grid4">
-  <div class="kpi"><div class="kpi-label">Total Expenses</div><div class="kpi-value" style="color:#c0392b">${fmtR(s.totalExpenses)}</div><div class="kpi-sub">${ex.total_expenses} transactions</div></div>
-  <div class="kpi"><div class="kpi-label">Stock Purchased</div><div class="kpi-value" style="color:#c0392b">${fmtR(totalStockSpend)}</div><div class="kpi-sub">${totalStockCount} items from ${data.stockPurchases.length} dealer${data.stockPurchases.length!==1?'s':''}</div></div>
-  <div class="kpi"><div class="kpi-label">Cash Deposited</div><div class="kpi-value" style="color:#2563eb">${fmtR(dep.total)}</div><div class="kpi-sub">${dep.count} deposits</div></div>
-  <div class="kpi"><div class="kpi-label">Collected</div><div class="kpi-value" style="color:#2d7a4f">${fmtR(o.collected)}</div><div class="kpi-sub">${fmtR(o.outstanding)} still owed</div></div>
+  <div class="kpi"><span class="kpi-icon">💸</span><div class="kpi-label">Total Expenses</div><div class="kpi-value" style="color:#dc2626">${fmtR(s.totalExpenses)}</div><div class="kpi-sub">${ex.total_expenses} transactions</div></div>
+  <div class="kpi"><span class="kpi-icon">🛒</span><div class="kpi-label">Stock Purchased</div><div class="kpi-value" style="color:#dc2626">${fmtR(totalStockSpend)}</div><div class="kpi-sub">${totalStockCount} items from ${data.stockPurchases.length} dealer${data.stockPurchases.length!==1?'s':''}</div></div>
+  <div class="kpi"><span class="kpi-icon">🏦</span><div class="kpi-label">Cash Deposited</div><div class="kpi-value" style="color:#2563eb">${fmtR(dep.total)}</div><div class="kpi-sub">${dep.count} deposits</div></div>
+  <div class="kpi"><span class="kpi-icon">✅</span><div class="kpi-label">Collected</div><div class="kpi-value" style="color:#16a34a">${fmtR(o.collected)}</div><div class="kpi-sub">${fmtR(o.outstanding)} still owed</div></div>
 </div>
 
 <!-- ══ DAILY REVENUE CHART ════════════════════════════════ -->
@@ -272,11 +315,11 @@ ${qs.list && qs.list.length > 0 ? `
       <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;text-align:right;color:#c0392b;">${parseFloat(s.discount||0)>0?fmtR(s.discount):'—'}</td>
       <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;text-align:right;font-weight:600;">${fmtR(s.total)}</td>
       <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;text-align:center;">
-        <span style="background:${s.payment_method==='cash'?'#dcfce7':'#dbeafe'};color:${s.payment_method==='cash'?'#2d7a4f':'#1e40af'};padding:1px 6px;border-radius:10px;font-size:10px;">${s.payment_method}</span>
+        <span class="badge ${s.payment_method==='cash'?'badge-green':'badge-blue'}">${s.payment_method}</span>
       </td>
     </tr>`;
   }).join('')}
-  <tr style="background:#f8f5ef;font-weight:700;">
+  <tr class="total">
     <td colspan="6" style="padding:6px 8px;border:1px solid #e0ddd6;">TOTAL (${qs.list.length} sales)</td>
     <td style="padding:6px 8px;border:1px solid #e0ddd6;text-align:right;color:#2d7a4f;">${fmtR(qs.revenue)}</td>
     <td style="padding:6px 8px;border:1px solid #e0ddd6;"></td>
@@ -311,7 +354,7 @@ ${data.expenses.byCategory.length > 0 ? `
 <table>
   <tr><th>Category</th><th class="c">Count</th><th class="r">Amount</th></tr>
   ${expCatRows}
-  <tr style="background:#f8f5ef;font-weight:700;">
+  <tr class="total">
     <td style="padding:6px 10px;border:1px solid #e0ddd6;">TOTAL</td>
     <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center;">${ex.total_expenses}</td>
     <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:#c0392b;">${fmtR(s.totalExpenses)}</td>
@@ -324,7 +367,7 @@ ${data.stockPurchases.length > 0 ? `
 <table>
   <tr><th>Dealer</th><th class="c">Purchases</th><th class="r">Total Spent</th></tr>
   ${dealerRows}
-  <tr style="background:#f8f5ef;font-weight:700;">
+  <tr class="total">
     <td style="padding:6px 10px;border:1px solid #e0ddd6;">TOTAL</td>
     <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center;">${totalStockCount}</td>
     <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:#c0392b;">${fmtR(totalStockSpend)}</td>
