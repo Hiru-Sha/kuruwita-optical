@@ -413,26 +413,66 @@ export default function QuickSale() {
 
           {/* Payment */}
           {cart.length>0&&(
-            <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'14px',marginBottom:12}}>
-              <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:10}}>Payment</div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,marginBottom:12}}>
-                {[['cash','💵 Cash'],['bank','🏦 Bank'],['card','💳 Card']].map(([v,l])=>(
-                  <button key={v} onClick={()=>setPayMethod(v)} style={{padding:'10px 4px',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',border:`1.5px solid ${payMethod===v?C.navy:C.border}`,background:payMethod===v?C.navy:'white',color:payMethod===v?'white':C.muted}}>{l}</button>
-                ))}
-              </div>
-              <input type="number" value={amtPaid} onChange={e=>setAmtPaid(e.target.value)} placeholder={`Min: ${fmtI(total)}`} style={{...INP,fontSize:18,fontWeight:700,marginBottom:8}}/>
-              <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
-                <button onClick={()=>setAmtPaid(String(total))} style={{padding:'8px 14px',background:C.navy,color:'white',border:'none',borderRadius:7,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>Exact</button>
-                {[500,1000,2000,5000,10000].filter(v=>v>total).slice(0,3).map(v=>(
-                  <button key={v} onClick={()=>setAmtPaid(String(v))} style={{padding:'8px 12px',background:C.cream,border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,cursor:'pointer',fontFamily:'inherit',color:C.muted}}>{fmtI(v)}</button>
-                ))}
-              </div>
-              {paid>=total&&total>0&&(
-                <div style={{background:change>0?'#fef9c3':'#dcfce7',borderRadius:9,padding:'10px 14px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <span style={{fontSize:13,fontWeight:600,color:C.navy}}>{change>0?'💰 Change':'✅ Exact'}</span>
-                  {change>0&&<span style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:'#854d0e'}}>{fmtM(change)}</span>}
+            <div style={{background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:16,overflow:'hidden',marginBottom:12,boxShadow:'0 4px 16px rgba(0,0,0,.07)'}}>
+              {/* Sale total bar */}
+              <div style={{background:C.navy,padding:'16px 18px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,letterSpacing:'2px',textTransform:'uppercase',color:'rgba(201,168,76,.8)',marginBottom:4}}>Sale Total</div>
+                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:28,fontWeight:700,color:'white'}}>{fmtM(total)}</div>
                 </div>
-              )}
+                {discAmt>0&&(
+                  <div style={{textAlign:'right'}}>
+                    <div style={{fontSize:11,color:'rgba(255,255,255,.5)',marginBottom:2}}>Discount applied</div>
+                    <div style={{fontSize:15,fontWeight:700,color:'#4ade80'}}>− {fmtM(discAmt)}</div>
+                  </div>
+                )}
+              </div>
+              <div style={{padding:'16px 18px'}}>
+                {/* Payment method */}
+                <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:10}}>Payment Method</div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:16}}>
+                  {[['cash','💵 Cash'],['bank','🏦 Bank'],['card','💳 Card']].map(([v,l])=>(
+                    <button key={v} onClick={()=>setPayMethod(v)} style={{
+                      padding:'12px 8px',borderRadius:12,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',
+                      border:`2px solid ${payMethod===v?C.navy:C.border}`,
+                      background:payMethod===v?C.navy:C.surface,
+                      color:payMethod===v?'white':C.muted,
+                      boxShadow:payMethod===v?'0 4px 12px rgba(15,31,61,.2)':'none',
+                      transition:'all .15s'
+                    }}>{l}</button>
+                  ))}
+                </div>
+                {/* Amount */}
+                <div style={{fontSize:11,fontWeight:700,letterSpacing:'1px',textTransform:'uppercase',color:C.muted,marginBottom:6}}>Amount Received</div>
+                <input type="number" value={amtPaid} onChange={e=>setAmtPaid(e.target.value)}
+                  placeholder={`Min: ${fmtI(total)}`}
+                  style={{...INP,fontSize:22,fontWeight:700,marginBottom:10,padding:'13px 16px',
+                    border:`2px solid ${paid>=total&&total>0?C.success:C.border}`,
+                    color:C.navy,background:C.cream}}/>
+                {/* Quick amount chips */}
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:12}}>
+                  <button onClick={()=>setAmtPaid(String(total))}
+                    style={{padding:'8px 16px',background:C.navy,color:'white',border:'none',borderRadius:20,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                    Exact
+                  </button>
+                  {[500,1000,2000,5000,10000].filter(v=>v>=total).slice(0,4).map(v=>(
+                    <button key={v} onClick={()=>setAmtPaid(String(v))}
+                      style={{padding:'8px 14px',background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',color:C.navy}}>
+                      {fmtI(v)}
+                    </button>
+                  ))}
+                </div>
+                {/* Change / exact indicator */}
+                {paid>=total&&total>0&&(
+                  <div style={{background:change>0?'#fef9c3':'#dcfce7',border:`1.5px solid ${change>0?'#fde68a':'#86efac'}`,borderRadius:12,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <div>
+                      <div style={{fontSize:11,fontWeight:700,color:change>0?'#92400e':C.success,textTransform:'uppercase',letterSpacing:'1px'}}>{change>0?'Change Due':'Exact Amount'}</div>
+                      {change>0&&<div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:'#92400e',marginTop:2}}>{fmtM(change)}</div>}
+                    </div>
+                    {change===0&&<div style={{fontSize:24}}>✅</div>}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -542,46 +582,75 @@ export default function QuickSale() {
 
           {/* Desktop right panel */}
           <div style={{position:'sticky',top:80}}>
-            <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden'}}>
-              <div style={{background:C.navy,padding:'16px 18px'}}>
-                <div style={{fontSize:11,color:C.gold,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:10}}>Sale Total</div>
+            <div style={{background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:16,overflow:'hidden',boxShadow:'0 8px 24px rgba(0,0,0,.08)'}}>
+              {/* Total bar */}
+              <div style={{background:C.navy,padding:'18px 20px'}}>
+                <div style={{fontSize:10,fontWeight:700,letterSpacing:'2px',textTransform:'uppercase',color:'rgba(201,168,76,.8)',marginBottom:8}}>Sale Total</div>
                 {cart.length===0
-                  ?<div style={{fontSize:13,color:'#ede9e0'}}>No items yet</div>
-                  :<>
-                    {cart.map(item=>{const ln=(parseFloat(item.price)||0)*(parseInt(item.qty)||1)-(parseFloat(item.item_discount)||0);return<div key={item.inventory_id} style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'#ede9e0',marginBottom:3}}><span>{item.name} ×{item.qty}</span><span>{fmtM(ln)}</span></div>;})}
-                    {discAmt>0&&<div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'#86efac',marginBottom:3}}><span>Discount</span><span>− {fmtM(discAmt)}</span></div>}
-                    <div style={{borderTop:'1px solid rgba(255,255,255,.2)',marginTop:8,paddingTop:8,display:'flex',justifyContent:'space-between'}}>
-                      <span style={{color:'white',fontWeight:700,fontSize:14}}>TOTAL</span>
-                      <span style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:C.gold}}>{fmtM(total)}</span>
+                  ? <div style={{fontSize:15,color:'rgba(255,255,255,.35)',fontStyle:'italic'}}>No items yet</div>
+                  : <>
+                    {cart.map(item=>{const ln=(parseFloat(item.price)||0)*(parseInt(item.qty)||1)-(parseFloat(item.item_discount)||0);return(
+                      <div key={item.inventory_id} style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'rgba(255,255,255,.7)',marginBottom:4}}>
+                        <span style={{flex:1,marginRight:8,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.name} ×{item.qty}</span>
+                        <span style={{flexShrink:0}}>{fmtM(ln)}</span>
+                      </div>);
+                    })}
+                    {discAmt>0&&<div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'#4ade80',marginBottom:4}}><span>Discount</span><span>− {fmtM(discAmt)}</span></div>}
+                    <div style={{borderTop:'1px solid rgba(255,255,255,.15)',marginTop:10,paddingTop:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                      <span style={{color:'rgba(255,255,255,.6)',fontWeight:600,fontSize:12,textTransform:'uppercase',letterSpacing:'1px'}}>Total</span>
+                      <span style={{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:C.gold}}>{fmtM(total)}</span>
                     </div>
                   </>
                 }
               </div>
-              <div style={{padding:'16px 18px'}}>
+              <div style={{padding:'18px 20px'}}>
                 <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:10}}>Payment Method</div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginBottom:12}}>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:16}}>
                   {[['cash','💵 Cash'],['bank','🏦 Bank'],['card','💳 Card']].map(([v,l])=>(
-                    <button key={v} onClick={()=>setPayMethod(v)} style={{padding:'8px 4px',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',border:`1.5px solid ${payMethod===v?C.navy:C.border}`,background:payMethod===v?C.navy:'white',color:payMethod===v?'white':C.muted}}>{l}</button>
+                    <button key={v} onClick={()=>setPayMethod(v)} style={{
+                      padding:'11px 6px',borderRadius:12,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit',
+                      border:`2px solid ${payMethod===v?C.navy:C.border}`,
+                      background:payMethod===v?C.navy:C.surface,
+                      color:payMethod===v?'white':C.muted,
+                      boxShadow:payMethod===v?'0 4px 12px rgba(15,31,61,.2)':'none',
+                      transition:'all .15s'
+                    }}>{l}</button>
                   ))}
                 </div>
-                <div style={{marginBottom:10}}>
-                  <label style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.8px',color:C.muted,display:'block',marginBottom:5}}>Amount Received</label>
-                  <input type="number" value={amtPaid} onChange={e=>setAmtPaid(e.target.value)} placeholder={`Min: ${fmtI(total)}`} style={{...INP,fontSize:16,fontWeight:700}}/>
-                </div>
-                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:12}}>
-                  <button onClick={()=>setAmtPaid(String(total))} style={{padding:'5px 12px',background:C.navy,color:'white',border:'none',borderRadius:7,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>Exact</button>
-                  {[500,1000,2000,5000,10000].filter(v=>v>total).slice(0,3).map(v=>(
-                    <button key={v} onClick={()=>setAmtPaid(String(v))} style={{padding:'5px 10px',background:C.cream,border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,cursor:'pointer',fontFamily:'inherit',color:C.muted}}>{fmtI(v)}</button>
+                <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:C.muted,marginBottom:6}}>Amount Received</div>
+                <input type="number" value={amtPaid} onChange={e=>setAmtPaid(e.target.value)}
+                  placeholder={`Min: ${fmtI(total)}`}
+                  style={{...INP,fontSize:20,fontWeight:700,marginBottom:10,padding:'13px 14px',
+                    border:`2px solid ${paid>=total&&total>0?C.success:C.border}`,background:C.cream}}/>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:14}}>
+                  <button onClick={()=>setAmtPaid(String(total))}
+                    style={{padding:'7px 14px',background:C.navy,color:'white',border:'none',borderRadius:20,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                    Exact
+                  </button>
+                  {[500,1000,2000,5000,10000].filter(v=>v>=total).slice(0,3).map(v=>(
+                    <button key={v} onClick={()=>setAmtPaid(String(v))}
+                      style={{padding:'7px 12px',background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',color:C.navy}}>
+                      {fmtI(v)}
+                    </button>
                   ))}
                 </div>
                 {paid>=total&&total>0&&(
-                  <div style={{background:change>0?'#fef9c3':'#dcfce7',borderRadius:9,padding:'10px 14px',marginBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{fontSize:13,fontWeight:600,color:C.navy}}>{change>0?'💰 Change':'✅ Exact'}</span>
-                    {change>0&&<span style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:'#854d0e'}}>{fmtM(change)}</span>}
+                  <div style={{background:change>0?'#fef9c3':'#dcfce7',border:`1.5px solid ${change>0?'#fde68a':'#86efac'}`,borderRadius:12,padding:'12px 16px',marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:change>0?'#92400e':C.success}}>{change>0?'Change Due':'Exact Amount'}</div>
+                      {change>0&&<div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:'#92400e',marginTop:2}}>{fmtM(change)}</div>}
+                    </div>
+                    {change===0&&<span style={{fontSize:24}}>✅</span>}
                   </div>
                 )}
                 <button onClick={complete} disabled={saving||cart.length===0||paid<total}
-                  style={{width:'100%',padding:'13px',fontSize:15,fontWeight:700,cursor:cart.length===0||paid<total||saving?'not-allowed':'pointer',background:cart.length===0||paid<total?C.border:C.success,color:cart.length===0||paid<total?C.muted:'white',border:'none',borderRadius:10,fontFamily:'inherit'}}>
+                  style={{width:'100%',padding:'14px',fontSize:14,fontWeight:700,
+                    cursor:cart.length===0||paid<total||saving?'not-allowed':'pointer',
+                    background:cart.length===0||paid<total?C.border:C.success,
+                    color:cart.length===0||paid<total?C.muted:'white',
+                    border:'none',borderRadius:12,fontFamily:'inherit',
+                    boxShadow:cart.length>0&&paid>=total?'0 4px 16px rgba(22,163,74,.35)':'none',
+                    transition:'all .2s'}}>
                   {saving?'⏳ Processing...':cart.length===0?'Add items to continue':paid<total?`Need ${fmtM(total-paid)} more`:`✅ Complete Sale · ${fmtM(total)}`}
                 </button>
               </div>
