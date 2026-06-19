@@ -651,86 +651,93 @@ export default function QuickSale() {
                   return (
                     <React.Fragment key={sale.id}>
                       {showDate && (
-                        <div style={{padding:'6px 16px',background:'#f8f5ef',fontSize:11,fontWeight:700,color:C.muted,textTransform:'uppercase',letterSpacing:'1px',borderBottom:`1px solid ${C.border}`}}>
-                          {new Date(sale.created_at).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long',year:'numeric'})}
+                        <div style={{padding:'8px 4px',fontSize:11,fontWeight:700,color:C.muted,textTransform:'uppercase',letterSpacing:'1.5px',display:'flex',alignItems:'center',gap:10,marginTop:4}}>
+                          <div style={{flex:1,height:1,background:C.border}}/>
+                          {new Date(sale.created_at).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+                          <div style={{flex:1,height:1,background:C.border}}/>
                         </div>
                       )}
-                      <div style={{display:'grid',gridTemplateColumns:mob?'1fr 80px 70px':'1fr 200px 90px 80px 70px',gap:0,padding:'11px 16px',borderBottom:`1px solid ${C.cream}`,alignItems:'center'}}>
-                        <div>
-                          <div style={{fontSize:13,fontWeight:600,color:C.navy}}>{sale.sale_number}</div>
-                          <div style={{fontSize:11,color:C.muted}}>
-                            {sale.customer_name&&<span>👤 {sale.customer_name} · </span>}
+                      <div style={{
+                        background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:14,
+                        padding:'14px 16px', marginBottom:8,
+                        display:'flex', alignItems:'center', justifyContent:'space-between', gap:12,
+                        boxShadow:'0 1px 4px rgba(0,0,0,.04)', transition:'box-shadow .15s'
+                      }}
+                        onMouseEnter={e=>e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.09)'}
+                        onMouseLeave={e=>e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,.04)'}>
+
+                        {/* Left: Sale number + time + customer */}
+                        <div style={{minWidth:90, flexShrink:0}}>
+                          <div style={{fontSize:13,fontWeight:700,color:C.navy}}>{sale.sale_number}</div>
+                          <div style={{fontSize:11,color:C.muted,marginTop:2}}>
                             {new Date(sale.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}
                           </div>
-                          {/* Show items on mobile */}
-                          {(() => {
-                            let items = [];
-                            try {
-                              items = Array.isArray(sale.items) ? sale.items
-                                : typeof sale.items==='string' ? JSON.parse(sale.items)
-                                : [];
-                            } catch(e){}
-                            return items.length > 0 ? (
-                              <div style={{marginTop:2}}>
-                                {items.map((it,i) => (
-                                  <span key={i} style={{fontSize:11,color:C.navy,fontWeight:500}}>
-                                    {i>0 ? ', ' : ''}{it.name}{it.qty>1?` ×${it.qty}`:''}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : null;
-                          })()}
+                          {sale.customer_name && (
+                            <div style={{fontSize:11,color:'#1d4ed8',fontWeight:500,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:110}}>
+                              {sale.customer_name}
+                            </div>
+                          )}
                         </div>
-                        {!mob&&<div style={{fontSize:12,color:C.muted}}>
+
+                        {/* Middle: Items list */}
+                        <div style={{flex:1, minWidth:0}}>
                           {(() => {
                             let items = [];
-                            try {
-                              items = Array.isArray(sale.items) ? sale.items
-                                : typeof sale.items==='string' ? JSON.parse(sale.items)
-                                : [];
-                            } catch(e){}
-                            if (!items.length) return <span style={{color:C.muted}}>—</span>;
+                            try { items = Array.isArray(sale.items)?sale.items:typeof sale.items==='string'?JSON.parse(sale.items):[]; } catch(e){}
+                            if (!items.length) return <span style={{fontSize:12,color:C.muted}}>—</span>;
                             return (
-                              <div>
+                              <div style={{display:'flex',flexWrap:'wrap',gap:'4px 8px'}}>
                                 {items.map((it,i) => (
-                                  <div key={i} style={{fontSize:12,color:C.navy,fontWeight:500,lineHeight:1.4}}>
+                                  <span key={i} style={{
+                                    display:'inline-flex', alignItems:'center', gap:4,
+                                    background:C.cream, border:`1px solid ${C.border}`,
+                                    borderRadius:20, padding:'3px 10px', fontSize:12, color:C.navy, fontWeight:500
+                                  }}>
                                     {it.name}
-                                    <span style={{color:C.muted,marginLeft:4}}>×{it.qty||1}</span>
-                                  </div>
+                                    {(it.qty||1)>1 && <span style={{background:C.navy,color:'white',borderRadius:10,padding:'0 5px',fontSize:10,fontWeight:700}}>×{it.qty}</span>}
+                                  </span>
                                 ))}
                               </div>
                             );
                           })()}
-                        </div>}
-                        {!mob&&<div style={{fontSize:12}}>
-                          <span style={{background:sale.payment_method==='cash'?'#dcfce7':'#dbeafe',color:sale.payment_method==='cash'?C.success:'#1e40af',padding:'2px 8px',borderRadius:20,fontSize:11,fontWeight:600}}>
-                            {sale.payment_method==='cash'?'💵 Cash':'🏦 Bank'}
+                        </div>
+
+                        {/* Right: Payment + Amount + Buttons */}
+                        <div style={{display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
+                          <span style={{
+                            background:sale.payment_method==='cash'?'#dcfce7':'#dbeafe',
+                            color:sale.payment_method==='cash'?C.success:'#1e40af',
+                            padding:'3px 10px',borderRadius:20,fontSize:11,fontWeight:700,whiteSpace:'nowrap'
+                          }}>
+                            {sale.payment_method==='cash'?'Cash':'Bank'}
                           </span>
-                        </div>}
-                        <div style={{textAlign:'right',fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:C.navy}}>{fmtM(sale.total)}</div>
-                        <div style={{textAlign:'center',display:'flex',gap:4,justifyContent:'center'}}>
-                          <button onClick={async()=>{
-                            try {
+                          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:C.navy,whiteSpace:'nowrap'}}>
+                            {fmtM(sale.total)}
+                          </div>
+                          <div style={{display:'flex',gap:5}}>
+                            <button onClick={async()=>{
+                              try {
+                                const BASE=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
+                                const token=localStorage.getItem('ko_token');
+                                const res=await fetch(`${BASE}/quick-sales/${sale.id}`,{headers:{Authorization:`Bearer ${token}`}});
+                                const full=await res.json();
+                                openPrint(buildQuickSaleBill(sale, full.items||[]));
+                              } catch(e){ openPrint(buildQuickSaleBill(sale,[])); }
+                            }}
+                              style={{width:32,height:32,background:'#fef9f0',color:'#92400e',border:`1px solid ${C.gold}`,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,cursor:'pointer',fontFamily:'inherit'}}>
+                              🖨️
+                            </button>
+                            <button onClick={async()=>{
+                              if(!window.confirm(`Delete ${sale.sale_number}?`)) return;
                               const BASE=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
                               const token=localStorage.getItem('ko_token');
-                              const res=await fetch(`${BASE}/quick-sales/${sale.id}`,{headers:{Authorization:`Bearer ${token}`}});
-                              const full=await res.json();
-                              openPrint(buildQuickSaleBill(sale, full.items||[]));
-                            } catch(e){ openPrint(buildQuickSaleBill(sale,[])); }
-                          }}
-                            style={{background:C.gold+'30',color:'#92400e',border:`1px solid ${C.gold}`,borderRadius:7,padding:'5px 10px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
-                            🖨️
-                          </button>
-                          <button onClick={async()=>{
-                            if(!window.confirm(`Delete sale ${sale.sale_number}? This will also remove any bank receipt.`)) return;
-                            const BASE=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
-                            const token=localStorage.getItem('ko_token');
-                            await fetch(`${BASE}/quick-sales/${sale.id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});
-                            loadHistory();
-                          }}
-                            style={{background:'#fee2e2',color:'#c0392b',border:'1px solid #fca5a5',borderRadius:7,padding:'5px 8px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
-                            🗑️
-                          </button>
+                              await fetch(`${BASE}/quick-sales/${sale.id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});
+                              loadHistory();
+                            }}
+                              style={{width:32,height:32,background:'#fef2f2',color:C.danger,border:'1px solid #fecaca',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,cursor:'pointer',fontFamily:'inherit'}}>
+                              🗑️
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </React.Fragment>
