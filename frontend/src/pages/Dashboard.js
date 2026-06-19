@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRScanner } from '../components/QRStickers';
 
-const navy=  '#0f1f3d', gold='#c9a84c', cream='#f8f5ef',
-      border='#e0ddd6', muted='#6b7280', success='#2d7a4f', danger='#c0392b';
+const navy=  '#0f1f3d', gold='#c9a84c', cream='var(--cream)',
+      border='var(--border)', muted='var(--muted)', success='#16a34a', danger='#dc2626';
 
 const fmt   = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0,maximumFractionDigits:0});
 const today = () => new Date().toISOString().split('T')[0];
@@ -240,23 +240,25 @@ export default function Dashboard() {
         </div>
       </button>
 
-      {/* Quick actions — 2 cols on mobile, 3 on desktop */}
-      <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(3,1fr)',gap:8,marginBottom:14}}>
+      {/* Quick actions */}
+      <div style={{display:'grid',gridTemplateColumns:mob?'repeat(3,1fr)':'repeat(5,1fr)',gap:8,marginBottom:16}}>
         {[
-          {label:'+ New Order',  path:'/orders/new',  bg:gold,     color:navy,   icon:'📋'},
-          {label:'Quick Sale',   path:'/quick-sale',  bg:success,  color:'white',icon:'🛍️'},
-          {label:'Repair',       path:'/repairs',     bg:'#0891b2',color:'white',icon:'🔧'},
-          {label:'Add Expense',  path:'/expenses',    bg:'#7c3aed',color:'white',icon:'💸'},
-          {label:'Deposit Cash', path:'/expenses',    bg:'#2563eb',color:'white',icon:'🏦'},
-          {label:'All Orders',   path:'/orders',      bg:navy,     color:'white',icon:'📋'},
-          {label:'Inventory',    path:'/inventory',   bg:cream,    color:navy,   icon:'📦',bord:border},
-          {label:'Calculator',   path:'/calculator',  bg:'#0f766e',color:'white',icon:'🧮'},
-          {label:'Lens Prices',  path:'/lens-prices', bg:'#b45309',color:'white',icon:'🔭'},
+          {label:'New Order',    path:'/orders/new',  color:'#0f1f3d', bg:'#c9a84c'},
+          {label:'Quick Sale',   path:'/quick-sale',  color:'white',   bg:'#16a34a'},
+          {label:'Repair',       path:'/repairs',     color:'white',   bg:'#0891b2'},
+          {label:'All Orders',   path:'/orders',      color:'white',   bg:'#0f1f3d'},
+          {label:'Inventory',    path:'/inventory',   color:'#0f1f3d', bg:'var(--cream)', bord:'var(--border)'},
+          {label:'Add Expense',  path:'/expenses',    color:'white',   bg:'#7c3aed'},
+          {label:'Deposit Cash', path:'/expenses',    color:'white',   bg:'#2563eb'},
+          {label:'Calculator',   path:'/calculator',  color:'white',   bg:'#0f766e'},
+          {label:'Lens Prices',  path:'/lens-prices', color:'white',   bg:'#b45309'},
+          {label:'Customers',    path:'/customers',   color:'white',   bg:'#be185d'},
         ].map(a=>(
           <button key={a.label} onClick={()=>navigate(a.path)}
-            style={{padding:mob?'14px 8px':'10px 14px',background:a.bg,color:a.color,border:a.bord?`1.5px solid ${a.bord}`:'none',borderRadius:10,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',justifyContent:'center',gap:6,textAlign:'center'}}>
-            <span style={{fontSize:mob?20:15}}>{a.icon}</span>
-            <span style={{fontSize:mob?12:13}}>{a.label}</span>
+            style={{padding:'12px 8px',background:a.bg,color:a.color,border:a.bord?`1.5px solid ${a.bord}`:'none',borderRadius:12,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:"'Inter','DM Sans',sans-serif",textAlign:'center',transition:'all .15s',lineHeight:1.3}}
+            onMouseEnter={e=>{e.currentTarget.style.filter='brightness(1.08)';e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.15)';}}
+            onMouseLeave={e=>{e.currentTarget.style.filter='';e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='';}}>
+            {a.label}
           </button>
         ))}
       </div>
