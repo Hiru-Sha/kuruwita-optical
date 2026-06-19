@@ -150,21 +150,43 @@ function CategoryFields({ form, set, suggestions }) {
       )}
     </>
   );
+  const auto = (key, placeholder, sugg) =>
+    <AutoInput value={form[key]||''} onChange={v=>set(f=>({...f,[key]:v}))} placeholder={placeholder} style={INP} suggestions={sugg||[]}/>;
   const common = (sugg) => <>
     <Field label="Brand">
-      <AutoInput value={form.brand||''} onChange={v=>set(f=>({...f,brand:v}))} placeholder="Brand name" style={INP}
-        suggestions={sugg?.brands||[]}/>
+      {auto('brand','e.g. Tom Ford, Ray-Ban', sugg?.brands||[])}
     </Field>
-    <Field label="Dealer">
-      <AutoInput value={form.dealer||''} onChange={v=>set(f=>({...f,dealer:v}))} placeholder="Supplier" style={INP}
-        suggestions={sugg?.dealers||[]}/>
+    <Field label="Dealer / Supplier">
+      {auto('dealer','e.g. Negombo Optical', sugg?.dealers||[])}
     </Field>
   </>;
   switch(form.category) {
-    case 'Frames': return <>{common(suggestions)}<Field label="Model Name">{inp('frame_name','e.g. RB3025')}</Field><Field label="Shape">{sel('frame_shape',FR_SHAPES)}</Field><Field label="Type">{sel('frame_type',FR_TYPES)}</Field><Field label="Material">{sel('frame_material',FR_MATS)}</Field><Field label="Color">{sel('frame_color',FR_COLORS)}</Field><Field label="Size">{sel('frame_size',FR_SIZES)}</Field></>;
-    case 'Sunglasses': return <>{common(suggestions)}<Field label="Model">{inp('frame_name','Model code')}</Field><Field label="Type">{sel('sg_type',SG_TYPES)}</Field><Field label="Shape">{sel('frame_shape',FR_SHAPES)}</Field><Field label="Material">{sel('frame_material',FR_MATS)}</Field><Field label="Color">{sel('frame_color',FR_COLORS)}</Field><Field label="Size">{sel('frame_size',FR_SIZES)}</Field></>;
-    case 'Reading Glasses': return <>{common(suggestions)}<Field label="Lens Type">{sel('rg_lens_type',RG_TYPES)}</Field><Field label="Material">{sel('rg_material',RG_MATS)}</Field><Field label="Power">{sel('rg_power',RG_POWERS)}</Field><Field label="Color">{sel('frame_color',FR_COLORS)}</Field></>;
-    default: return <>{common(suggestions)}<Field label="Name / Type">{inp('item_name','Item name')}</Field>{['Boxes','Sunglass Pouches','Chains'].includes(form.category)&&<Field label="Color">{sel('frame_color',FR_COLORS)}</Field>}</>;
+    case 'Frames': return <>{common(suggestions)}
+      <Field label="Model Name">{auto('frame_name','e.g. A2658, RB3025', suggestions?.models||[])}</Field>
+      <Field label="Shape">{sel('frame_shape',FR_SHAPES)}</Field>
+      <Field label="Type">{sel('frame_type',FR_TYPES)}</Field>
+      <Field label="Material">{sel('frame_material',FR_MATS)}</Field>
+      <Field label="Color">{sel('frame_color',[...new Set([...FR_COLORS,...(suggestions?.colors||[])].filter(Boolean))])}</Field>
+      <Field label="Size">{sel('frame_size',[...new Set([...FR_SIZES,...(suggestions?.sizes||[])].filter(Boolean))])}</Field>
+    </>;
+    case 'Sunglasses': return <>{common(suggestions)}
+      <Field label="Model">{auto('frame_name','Model code', suggestions?.models||[])}</Field>
+      <Field label="Type">{sel('sg_type',[...new Set([...SG_TYPES,...(suggestions?.sg_types||[])].filter(Boolean))])}</Field>
+      <Field label="Shape">{sel('frame_shape',FR_SHAPES)}</Field>
+      <Field label="Material">{sel('frame_material',FR_MATS)}</Field>
+      <Field label="Color">{sel('frame_color',[...new Set([...FR_COLORS,...(suggestions?.colors||[])].filter(Boolean))])}</Field>
+      <Field label="Size">{sel('frame_size',[...new Set([...FR_SIZES,...(suggestions?.sizes||[])].filter(Boolean))])}</Field>
+    </>;
+    case 'Reading Glasses': return <>{common(suggestions)}
+      <Field label="Lens Type">{sel('rg_lens_type',RG_TYPES)}</Field>
+      <Field label="Material">{sel('rg_material',RG_MATS)}</Field>
+      <Field label="Power">{sel('rg_power',RG_POWERS)}</Field>
+      <Field label="Color">{sel('frame_color',[...new Set([...FR_COLORS,...(suggestions?.colors||[])].filter(Boolean))])}</Field>
+    </>;
+    default: return <>{common(suggestions)}
+      <Field label="Name / Type">{auto('item_name','Item name', suggestions?.names||[])}</Field>
+      {['Boxes','Sunglass Pouches','Chains'].includes(form.category)&&<Field label="Color">{sel('frame_color',FR_COLORS)}</Field>}
+    </>;
   }
 }
 
@@ -828,10 +850,17 @@ export default function Inventory() {
         const arr = Array.isArray(r) ? r : Array.isArray(r.data) ? r.data : [];
         setItems(arr);
         // Build autocomplete suggestions from existing data
+        const uniq = (fn) => [...new Set(arr.map(fn).filter(Boolean))].sort();
         setSuggestions({
-          dealers: [...new Set(arr.map(i=>i.dealer).filter(Boolean))].sort(),
-          brands:  [...new Set(arr.map(i=>i.brand).filter(Boolean))].sort(),
-          names:   [...new Set(arr.map(i=>i.item_name).filter(Boolean))].sort(),
+          dealers:     uniq(i=>i.dealer),
+          brands:      uniq(i=>i.brand),
+          names:       uniq(i=>i.item_name),
+          models:      uniq(i=>i.frame_name),
+          colors:      uniq(i=>i.frame_color),
+          frame_types: uniq(i=>i.frame_type),
+          sg_types:    uniq(i=>i.sg_type),
+          materials:   uniq(i=>i.frame_material),
+          sizes:       uniq(i=>i.frame_size),
         });
       })
       .catch(()=>setItems([]))
