@@ -445,17 +445,17 @@ export default function Repairs() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:0 }}>🔧 Repairs</h1>
-          <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Arm repair, nose pads, polishing, screws and other frame repairs</p>
+          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, color:C.navy, margin:0 }}>Repairs</h1>
+          <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Frame repairs, adjustments & parts replacement</p>
         </div>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={()=>{ setPastMode(false); setRepairDate(''); setShowAdd(s=>!s); setError(''); }}
-            style={{ padding:'9px 22px', background:showAdd&&!pastMode?C.cream:C.gold, color:showAdd&&!pastMode?C.muted:C.navy, border:showAdd&&!pastMode?`1.5px solid ${C.border}`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-            {showAdd && !pastMode ? '✕ Cancel' : '🔧 New Repair'}
+            style={{ padding:'10px 22px', background:showAdd&&!pastMode?C.surface:C.gold, color:showAdd&&!pastMode?C.muted:C.navy, border:`1.5px solid ${showAdd&&!pastMode?C.border:C.gold}`, borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:7 }}>
+            {showAdd && !pastMode ? '✕ Cancel' : '+ New Repair'}
           </button>
           <button onClick={()=>{ setPastMode(true); setShowAdd(true); setError(''); if(!repairDate) setRepairDate(new Date().toISOString().split('T')[0]); }}
-            style={{ padding:'9px 18px', background:showAdd&&pastMode?'#fffbeb':'white', color:'#b45309', border:`1.5px solid ${showAdd&&pastMode?'#f59e0b':'#fed7aa'}`, borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-            📅 {showAdd && pastMode ? '✕ Cancel Past' : 'Add Past Repair'}
+            style={{ padding:'10px 18px', background:showAdd&&pastMode?'#fffbeb':C.surface, color:'#b45309', border:`1.5px solid ${showAdd&&pastMode?'#f59e0b':C.border}`, borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            {showAdd && pastMode ? '✕ Cancel' : '📅 Add Past'}
           </button>
         </div>
       </div>
@@ -479,23 +479,29 @@ export default function Repairs() {
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:10, margin:'16px 0' }}>
         {[
-          { l:'Today',         v:fmt(summary?.today_revenue||0),       sub:`${summary?.today_count||0} repairs`,      dark:true },
-          { l:'This Month',    v:fmt(summary?.this_month_revenue||0),  sub:`${summary?.this_month_count||0} repairs`,  c:'#2563eb' },
-          { l:'Pending',       v:summary?.pending_count||0,            sub:'awaiting collection',                      c:C.danger },
-          { l:'Total Revenue', v:fmt(summary?.total_revenue||0),       sub:`${summary?.total||0} all time`,           c:C.success },
+          { l:'Today',         v:fmt(summary?.today_revenue||0),      sub:`${summary?.today_count||0} repairs`,     dark:true },
+          { l:'This Month',    v:fmt(summary?.this_month_revenue||0), sub:`${summary?.this_month_count||0} repairs`, c:'#2563eb' },
+          { l:'Pending',       v:summary?.pending_count||0,           sub:'awaiting collection',                     c:C.danger },
+          { l:'Total Revenue', v:fmt(summary?.total_revenue||0),      sub:`${summary?.total||0} all time`,          c:C.success },
         ].map(s=>(
-          <div key={s.l} style={{ background:s.dark?C.navy:'white', border:`1px solid ${s.dark?C.navy:C.border}`, borderRadius:12, padding:'12px 14px' }}>
-            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?C.gold:C.muted, marginBottom:4 }}>{s.l}</div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
-            {s.sub && <div style={{ fontSize:11, color:s.dark?'#ede9e0':C.muted, marginTop:2 }}>{s.sub}</div>}
+          <div key={s.l} style={{ background:s.dark?C.navy:C.surface, border:`1.5px solid ${s.dark?C.navy:C.border}`, borderRadius:14, padding:'14px 16px', boxShadow:'0 2px 8px rgba(0,0,0,.05)' }}>
+            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:s.dark?C.gold:C.muted, marginBottom:6 }}>{s.l}</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
+            {s.sub && <div style={{ fontSize:11, color:s.dark?'rgba(255,255,255,.6)':C.muted, marginTop:3 }}>{s.sub}</div>}
           </div>
         ))}
       </div>
 
       {/* Add repair form */}
       {showAdd && (
-        <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:22, marginBottom:20 }}>
-          <div style={{ fontSize:15, fontWeight:700, color:C.navy, marginBottom:16 }}>🔧 New Repair</div>
+        <div style={{ background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:16, padding:24, marginBottom:20, boxShadow:'0 4px 16px rgba(0,0,0,.06)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20, paddingBottom:16, borderBottom:`1.5px solid ${C.border}` }}>
+            <div style={{ width:40, height:40, borderRadius:12, background:'rgba(15,31,61,.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>🔧</div>
+            <div>
+              <div style={{ fontSize:16, fontWeight:700, color:C.navy }}>{pastMode ? 'Add Past Repair' : 'New Repair'}</div>
+              <div style={{ fontSize:12, color:C.muted, marginTop:1 }}>Fill in repair details below</div>
+            </div>
+          </div>
 
           {error && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:9, padding:'10px 14px', fontSize:13, marginBottom:14 }}>⚠️ {error}</div>}
 
@@ -505,10 +511,18 @@ export default function Repairs() {
             <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
               {REPAIR_TYPES.map(rt=>(
                 <button key={rt.label} onClick={()=>handleSelectType(rt)}
-                  style={{ padding:'9px 14px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${form.repair_type===rt.label?C.navy:C.border}`, background:form.repair_type===rt.label?C.navy:'white', color:form.repair_type===rt.label?'white':C.muted, display:'flex', alignItems:'center', gap:6 }}>
-                  <span style={{ fontSize:16 }}>{rt.icon}</span>
-                  <span>{rt.label}</span>
-                  {rt.price > 0 && <span style={{ fontSize:11, opacity:.7 }}>Rs.{rt.price}</span>}
+                  style={{ padding:'10px 14px', borderRadius:12, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                    border:`2px solid ${form.repair_type===rt.label?C.navy:C.border}`,
+                    background:form.repair_type===rt.label?C.navy:C.surface,
+                    color:form.repair_type===rt.label?'white':C.navy,
+                    display:'flex', alignItems:'center', gap:7,
+                    boxShadow: form.repair_type===rt.label?'0 4px 12px rgba(15,31,61,.25)':'0 1px 3px rgba(0,0,0,.05)',
+                    transition:'all .15s' }}>
+                  <span style={{ fontSize:18 }}>{rt.icon}</span>
+                  <div>
+                    <div style={{ lineHeight:1.2 }}>{rt.label}</div>
+                    {rt.price > 0 && <div style={{ fontSize:10, opacity:.7, fontWeight:500 }}>Rs.{rt.price}</div>}
+                  </div>
                 </button>
               ))}
             </div>
@@ -516,17 +530,17 @@ export default function Repairs() {
 
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Customer Name (optional)</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Customer Name (optional)</label>
               <input value={form.customer_name} onChange={e=>setForm(f=>({...f,customer_name:e.target.value}))} placeholder="Walk-in customer" style={INP}/>
             </div>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Phone (optional)</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Phone (optional)</label>
               <input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="07X XXX XXXX" type="tel" style={INP}/>
             </div>
           </div>
 
           <div style={{ marginBottom:12 }}>
-            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Description (optional)</label>
+            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Description (optional)</label>
             <input value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}
               placeholder="e.g. Left arm loose, needs tightening — RayBan frame" style={INP}/>
           </div>
@@ -535,17 +549,17 @@ export default function Repairs() {
 
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr', gap:12, marginBottom:14 }}>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Charge (Rs.) *</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Charge (Rs.) *</label>
               <input type="number" value={form.charge} onChange={e=>setForm(f=>({...f,charge:e.target.value}))}
                 placeholder="0 for free" style={{ ...INP, fontSize:18, fontWeight:700 }}/>
             </div>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Repair Cost (Rs.)</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Repair Cost (Rs.)</label>
               <input type="number" value={form.repair_cost} onChange={e=>setForm(f=>({...f,repair_cost:e.target.value}))}
                 placeholder="Your cost" style={{ ...INP, fontSize:18, fontWeight:700 }}/>
             </div>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Payment</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Payment</label>
               <select value={form.payment_method} onChange={e=>setForm(f=>({...f,payment_method:e.target.value}))} style={{ ...INP, cursor:'pointer' }}>
                 <option value="cash">💵 Cash</option>
                 <option value="bank">🏦 Bank</option>
@@ -553,7 +567,7 @@ export default function Repairs() {
               </select>
             </div>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Status</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Status</label>
               <select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))} style={{ ...INP, cursor:'pointer' }}>
                 <option value="done">✅ Done now</option>
                 <option value="pending">⏳ Pending (leaving frame)</option>
@@ -561,7 +575,7 @@ export default function Repairs() {
               </select>
             </div>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Notes</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Notes</label>
               <input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Optional" style={INP}/>
             </div>
           </div>
