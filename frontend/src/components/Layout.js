@@ -40,6 +40,28 @@ const Icon = ({ name, size=18, color='currentColor' }) => {
   );
 };
 
+// Colour map for each nav icon — bg + icon color
+const NAV_COLORS = {
+  dashboard:  { bg:'rgba(15,31,61,.1)',   color:'#0f1f3d' },
+  orders:     { bg:'rgba(37,99,235,.12)', color:'#2563eb' },
+  balance:    { bg:'rgba(220,38,38,.1)',  color:'#dc2626' },
+  sale:       { bg:'rgba(22,163,74,.12)', color:'#16a34a' },
+  repairs:    { bg:'rgba(8,145,178,.12)', color:'#0891b2' },
+  customers:  { bg:'rgba(124,58,237,.1)', color:'#7c3aed' },
+  walkin:     { bg:'rgba(180,83,9,.1)',   color:'#b45309' },
+  rx:         { bg:'rgba(190,24,93,.1)',  color:'#be185d' },
+  lab:        { bg:'rgba(15,118,110,.1)', color:'#0f766e' },
+  inventory:  { bg:'rgba(217,119,6,.12)',  color:'#d97706' },
+  lens:       { bg:'rgba(139,92,246,.12)',color:'#8b5cf6' },
+  calculator: { bg:'rgba(15,118,110,.12)',color:'#0f766e' },
+  purchase:   { bg:'rgba(37,99,235,.1)',  color:'#2563eb' },
+  reports:    { bg:'rgba(15,31,61,.1)',   color:'#0f1f3d' },
+  expenses:   { bg:'rgba(220,38,38,.1)',  color:'#dc2626' },
+  eod:        { bg:'rgba(107,114,128,.1)',color:'#6b7280' },
+  import:     { bg:'rgba(22,163,74,.1)',  color:'#16a34a' },
+  settings:   { bg:'rgba(107,114,128,.1)',color:'#6b7280' },
+};
+
 const NAV = [
   { to:'/dashboard',       icon:'dashboard',  label:'Dashboard',     section:'main'      },
   { to:'/orders',          icon:'orders',     label:'Orders',        section:'main'      },
@@ -171,14 +193,14 @@ export default function Layout() {
         }}>
           {/* Sidebar header */}
           <div style={{ padding:'20px 16px 16px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }} onClick={()=>{ navigate('/dashboard'); setOpen(false); }}>
               <div style={{ width:36, height:36, borderRadius:10, background:'linear-gradient(135deg,#0f1f3d,#1a3560)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="3"/><path d="M20.188 10.934a8 8 0 11-16.376 0M12 2v2M12 20v2"/>
                 </svg>
               </div>
               <div>
-                <div style={{ fontSize:13, fontWeight:700, color:'var(--text)', fontFamily:"'Playfair Display',serif" }}>Kuruwita Optical</div>
+                <div onClick={()=>navigate('/dashboard')} style={{ fontSize:13, fontWeight:700, color:'var(--text)', fontFamily:"'Playfair Display',serif", cursor:'pointer' }}>Kuruwita Optical</div>
                 <div style={{ fontSize:10, color:'var(--muted)', letterSpacing:'1px', textTransform:'uppercase' }}>Management</div>
               </div>
             </div>
@@ -205,24 +227,28 @@ export default function Layout() {
               const items = visibleNav.filter(n => n.section === sk);
               if (!items.length) return null;
               return (
-                <div key={sk} style={{ marginBottom:4 }}>
-                  <div style={{ padding:'10px 8px 4px', fontSize:10, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'1.2px' }}>{sl}</div>
+                <div key={sk} style={{ marginBottom:8 }}>
+                  <div style={{ padding:'10px 8px 5px', fontSize:9.5, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'1.5px' }}>{sl}</div>
                   {items.map(n => (
                     <NavLink key={n.to} to={n.to}
                       style={({ isActive }) => ({
                         display: 'flex', alignItems: 'center', gap:10,
-                        padding: '8px 10px', borderRadius: 8, marginBottom:1,
-                        textDecoration: 'none', fontSize:13, fontWeight: isActive ? 600 : 400,
-                        color: isActive ? 'white' : 'var(--muted)',
-                        background: isActive ? '#0f1f3d' : 'transparent',
+                        padding: '8px 10px', borderRadius: 9, marginBottom:2,
+                        textDecoration: 'none', fontSize:13,
+                        fontWeight: isActive ? 600 : 400,
+                        color: isActive ? '#0f1f3d' : 'var(--text)',
+                        background: isActive ? '#c9a84c' : 'transparent',
                         transition: 'all .12s',
-                      })}
-                      onMouseEnter={e => { if (!e.currentTarget.style.background.includes('0f1f3d')) e.currentTarget.style.background = 'var(--cream)'; e.currentTarget.style.color = 'var(--text)'; }}
-                      onMouseLeave={e => { if (!e.currentTarget.className?.includes('active')) { e.currentTarget.style.background = ''; e.currentTarget.style.color = ''; } }}>
+                      })}>
                       {({ isActive }) => (
                         <>
-                          <span style={{ opacity: isActive ? 1 : 0.6, flexShrink:0 }}>
-                            <Icon name={n.icon} size={15} color={isActive ? '#c9a84c' : 'currentColor'}/>
+                          <span style={{
+                            width:28, height:28, borderRadius:7, flexShrink:0,
+                            display:'flex', alignItems:'center', justifyContent:'center',
+                            background: isActive ? 'rgba(15,31,61,.2)' : NAV_COLORS[n.icon]?.bg || 'rgba(107,114,128,.1)',
+                            transition:'all .12s',
+                          }}>
+                            <Icon name={n.icon} size={14} color={isActive ? '#0f1f3d' : (NAV_COLORS[n.icon]?.color || 'var(--muted)')}/>
                           </span>
                           {n.label}
                         </>
@@ -405,6 +431,13 @@ export default function Layout() {
 
         /* Nav hover fix */
         nav a:hover { color:var(--text) !important; }
+        nav a:hover span { opacity:1 !important; }
+
+        /* Dark mode nav fix — ensure sidebar text always visible */
+        [data-theme="dark"] aside { background:#1a1d27 !important; }
+        [data-theme="dark"] aside nav a { color:#e2e8f0 !important; }
+        [data-theme="dark"] aside nav a[style*="background: #c9a84c"] { color:#0f1f3d !important; }
+        [data-theme="dark"] aside .section-label { color:#6b7280 !important; }
       `}</style>
 
       {/* QR Scanner */}
