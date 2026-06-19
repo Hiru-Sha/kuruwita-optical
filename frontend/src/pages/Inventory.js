@@ -10,26 +10,28 @@ import { getInventory, createItem, updateItem, deleteItem } from '../api';
 // ── Autocomplete input ────────────────────────────────────────
 function AutoInput({ value, onChange, placeholder, style, suggestions=[] }) {
   const [open, setOpen] = React.useState(false);
-  const filtered = suggestions.filter(s =>
-    s && value && s.toLowerCase().includes(value.toLowerCase()) && s.toLowerCase() !== value.toLowerCase()
-  ).slice(0, 6);
+  // When empty show all, when typing filter by match
+  const filtered = (value
+    ? suggestions.filter(s => s && s.toLowerCase().includes(value.toLowerCase()))
+    : suggestions
+  ).slice(0, 10);
 
   return (
     <div style={{ position:'relative' }}>
       <input value={value} onChange={e=>{ onChange(e.target.value); setOpen(true); }}
         onFocus={()=>setOpen(true)}
-        onBlur={()=>setTimeout(()=>setOpen(false), 150)}
+        onBlur={()=>setTimeout(()=>setOpen(false), 200)}
         placeholder={placeholder} style={style}/>
       {open && filtered.length > 0 && (
         <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white',
-          border:'1.5px solid #c9a84c', borderRadius:8, boxShadow:'0 4px 16px rgba(0,0,0,.12)',
-          zIndex:100, overflow:'hidden', marginTop:2 }}>
+          border:'1.5px solid #c9a84c', borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,.15)',
+          zIndex:200, overflow:'hidden', marginTop:2, maxHeight:220, overflowY:'auto' }}>
           {filtered.map((s,i)=>(
-            <div key={i} onMouseDown={()=>{ onChange(s); setOpen(false); }}
+            <div key={i} onMouseDown={e=>{ e.preventDefault(); onChange(s); setOpen(false); }}
               style={{ padding:'9px 13px', cursor:'pointer', fontSize:13, color:'#0f1f3d',
-                borderBottom:'1px solid #f8f5ef' }}
+                borderBottom:'1px solid #f8f5ef', background: value===s ? '#fdf9f0' : 'white' }}
               onMouseEnter={e=>e.currentTarget.style.background='#f8f5ef'}
-              onMouseLeave={e=>e.currentTarget.style.background='white'}>
+              onMouseLeave={e=>e.currentTarget.style.background=value===s?'#fdf9f0':'white'}>
               {s}
             </div>
           ))}
