@@ -1,17 +1,7 @@
 /* eslint-disable */
-// ============================================================
-//  App.js
-//  Added:
-//    1. <ToastProvider> — overrides window.alert() globally so
-//       all existing alert() calls become toasts automatically
-//    2. <ErrorBoundary> — wraps every page so one page crash
-//       doesn't take down the whole app
-// ============================================================
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth }  from './context/AuthContext';
-import { ToastProvider }          from './components/Toast';
-import ErrorBoundary              from './components/ErrorBoundary';
 import Login          from './pages/Login';
 import Layout         from './components/Layout';
 import MobileScan     from './pages/MobileScan';
@@ -36,8 +26,8 @@ import BulkImport     from './pages/BulkImport';
 import ReportPDF      from './pages/ReportPDF';
 import WalkInRx       from './pages/WalkInRx';
 import ActivityView   from './pages/ActivityView';
-import WarrantyClaims from './pages/WarrantyClaims';
 import EndOfDay       from './pages/EndOfDay';
+import WarrantyClaims from './pages/WarrantyClaims';
 
 const LensCalculator = React.lazy(() =>
   import('./pages/LensCalculator').catch(() => ({
@@ -49,11 +39,11 @@ function Protected({ children }) {
   const { user, loading } = useAuth();
   if (loading) return (
     <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      height: '100vh', fontFamily: "'DM Sans',sans-serif",
-      color: '#6b7280', flexDirection: 'column', gap: 12,
+      display:'flex', alignItems:'center', justifyContent:'center',
+      height:'100vh', fontFamily:"'DM Sans',sans-serif",
+      color:'#6b7280', flexDirection:'column', gap:12,
     }}>
-      <div style={{ fontSize: 32 }}>👁️</div>
+      <div style={{ fontSize:32 }}>👁️</div>
       <div>Loading...</div>
     </div>
   );
@@ -66,63 +56,48 @@ function AdminOnly({ children }) {
   return <Navigate to="/dashboard" replace />;
 }
 
-// Wraps a page in ErrorBoundary so crashes are contained
-function Page({ component: Component }) {
-  return (
-    <ErrorBoundary>
-      <Component />
-    </ErrorBoundary>
-  );
-}
-
 export default function App() {
   return (
-    // ToastProvider must wrap everything so window.alert override
-    // is active for all pages from the first render
-    <ToastProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/scan"  element={<MobileScan />} />
-            <Route path="/" element={<Protected><Layout /></Protected>}>
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="dashboard"      element={<Page component={Dashboard} />} />
-              <Route path="orders"         element={<Page component={Orders} />} />
-              <Route path="orders/new"     element={<Page component={NewOrder} />} />
-              <Route path="customers"      element={<Page component={Customers} />} />
-              <Route path="inventory"      element={<Page component={Inventory} />} />
-              <Route path="lens-prices"    element={<Page component={LensPrices} />} />
-              <Route path="quick-sale"     element={<Page component={QuickSale} />} />
-              <Route path="settings"       element={<Page component={Settings} />} />
-              <Route path="balance"        element={<Page component={BalanceFollowUp} />} />
-              <Route path="rx-tracker"     element={<Page component={RxTracker} />} />
-              <Route path="dealers"        element={<Page component={DealerPurchases} />} />
-              <Route path="repairs"        element={<Page component={Repairs} />} />
-              <Route path="lab-receivings" element={<Page component={LabReceivings} />} />
-              <Route path="kalutota"       element={<Page component={KalutotaAccount} />} />
-              <Route path="bulk-import"    element={<Page component={BulkImport} />} />
-              <Route path="report-pdf"     element={<Page component={ReportPDF} />} />
-              <Route path="walkin-rx"      element={<Page component={WalkInRx} />} />
-              <Route path="activity"       element={<Page component={ActivityView} />} />
-              <Route path="warranty"      element={<Page component={WarrantyClaims} />} />
-              <Route path="end-of-day"     element={<Page component={EndOfDay} />} />
-              <Route path="calculator" element={
-                <ErrorBoundary>
-                  <Suspense fallback={<div>Loading...</div>}>
-                    <LensCalculator />
-                  </Suspense>
-                </ErrorBoundary>
-              } />
-              {/* Admin-only routes */}
-              <Route path="grinding" element={<AdminOnly><Page component={Grinding} /></AdminOnly>} />
-              <Route path="reports"  element={<AdminOnly><Page component={Reports}  /></AdminOnly>} />
-              <Route path="expenses" element={<AdminOnly><Page component={Expenses} /></AdminOnly>} />
-            </Route>
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </ToastProvider>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/scan"  element={<MobileScan />} />
+          <Route path="/" element={<Protected><Layout /></Protected>}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard"      element={<Dashboard />} />
+            <Route path="orders"         element={<Orders />} />
+            <Route path="orders/new"     element={<NewOrder />} />
+            <Route path="customers"      element={<Customers />} />
+            <Route path="inventory"      element={<Inventory />} />
+            <Route path="lens-prices"    element={<LensPrices />} />
+            <Route path="quick-sale"     element={<QuickSale />} />
+            <Route path="settings"       element={<Settings />} />
+            <Route path="balance"        element={<BalanceFollowUp />} />
+            <Route path="rx-tracker"     element={<RxTracker />} />
+            <Route path="dealers"        element={<DealerPurchases />} />
+            <Route path="repairs"        element={<Repairs />} />
+            <Route path="warranty"       element={<WarrantyClaims />} />
+            <Route path="lab-receivings" element={<LabReceivings />} />
+            <Route path="kalutota"       element={<KalutotaAccount />} />
+            <Route path="bulk-import"    element={<BulkImport />} />
+            <Route path="report-pdf"     element={<ReportPDF />} />
+            <Route path="walkin-rx"      element={<WalkInRx />} />
+            <Route path="activity"       element={<ActivityView />} />
+            <Route path="end-of-day"     element={<EndOfDay />} />
+            <Route path="calculator" element={
+              <Suspense fallback={<div>Loading...</div>}>
+                <LensCalculator />
+              </Suspense>
+            } />
+            {/* Admin-only routes */}
+            <Route path="grinding" element={<AdminOnly><Grinding /></AdminOnly>} />
+            <Route path="reports"  element={<AdminOnly><Reports  /></AdminOnly>} />
+            <Route path="expenses" element={<AdminOnly><Expenses /></AdminOnly>} />
+          </Route>
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

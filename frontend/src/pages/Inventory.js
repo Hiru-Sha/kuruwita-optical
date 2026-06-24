@@ -134,24 +134,43 @@ const buildName = (form) => {
 
 function CategoryFields({ form, set, suggestions }) {
   const inp = (key, placeholder) => <input value={form[key]||''} onChange={e=>set(f=>({...f,[key]:e.target.value}))} placeholder={placeholder} style={INP}/>;
-  const sel = (key, options) => (
-    <>
-      <select value={options.includes(form[key]||'') ? (form[key]||'') : 'Other'}
-        onChange={e => {
-          if (e.target.value === 'Other') set(f=>({...f,[key]:''}));
-          else set(f=>({...f,[key]:e.target.value}));
-        }} style={SEL}>
-        {options.map(o=><option key={o}>{o}</option>)}
-      </select>
-      {/* Show text input when Other selected or value not in list */}
-      {(!options.includes(form[key]||'') || form[key] === '') && key === 'frame_color' && (
-        <input value={form[key]||''} onChange={e=>set(f=>({...f,[key]:e.target.value}))}
-          placeholder="Type custom color..."
-          style={{ ...INP, marginTop:4, border:'1.5px solid #f59e0b', background:'#fffbeb' }}
-          autoFocus/>
-      )}
-    </>
-  );
+  const sel = (key, options) => {
+    const baseOpts  = options.includes('Other') ? options : [...options, 'Other'];
+    const showOther = !options.filter(o => o !== 'Other').includes(form[key] || '');
+    const PLACEHOLDERS = {
+      frame_shape:    'e.g. Pentagon, Heart, Rimless round...',
+      frame_type:     'e.g. Semi-rimless...',
+      frame_material: 'e.g. Wood, Carbon fibre, Rubber...',
+      frame_color:    'e.g. Rose Gold, Marble, Matte...',
+      frame_size:     'e.g. 53mm, X-Large...',
+      sg_type:        'e.g. Mirrored, UV400 polarised...',
+      rg_lens_type:   'e.g. Trifocal...',
+      rg_material:    'e.g. Titanium...',
+      rg_power:       'e.g. +4.50, +5.00...',
+    };
+    return (
+      <>
+        <select
+          value={showOther ? 'Other' : (form[key] || '')}
+          onChange={e => {
+            if (e.target.value === 'Other') set(f => ({ ...f, [key]: '' }));
+            else set(f => ({ ...f, [key]: e.target.value }));
+          }}
+          style={SEL}>
+          {baseOpts.map(o => <option key={o}>{o}</option>)}
+        </select>
+        {showOther && (
+          <input
+            value={form[key] || ''}
+            onChange={e => set(f => ({ ...f, [key]: e.target.value }))}
+            placeholder={PLACEHOLDERS[key] || 'Type custom value...'}
+            style={{ ...INP, marginTop: 4, border: '1.5px solid #f59e0b', background: '#fffbeb' }}
+            autoFocus
+          />
+        )}
+      </>
+    );
+  };
   const auto = (key, placeholder, sugg) =>
     <AutoInput value={form[key]||''} onChange={v=>set(f=>({...f,[key]:v}))} placeholder={placeholder} style={INP} suggestions={sugg||[]}/>;
   const common = (sugg) => <>
@@ -803,6 +822,10 @@ export default function Inventory() {
   const [activeCat,    setActiveCat]   = useState('All');
   const [stockFilter,  setStockFilter]  = useState('all'); // 'all' | 'low' | 'out'
   const [subFilter,    setSubFilter]   = useState('');
+  const [totalCount,       setTotalCount]       = useState(null);
+  const [frameMatFilter,   setFrameMatFilter]   = useState('');
+  const [frameColFilter,   setFrameColFilter]   = useState('');
+  const [frameShapeFilter, setFrameShapeFilter] = useState('');
   const [search,       setSearch]      = useState('');
   const [selected,     setSelected]    = useState(null);
   const [panelTab,     setPanelTab]    = useState('details');
@@ -851,6 +874,7 @@ export default function Inventory() {
       .then(r=>{
         const arr = Array.isArray(r) ? r : Array.isArray(r.data) ? r.data : [];
         setItems(arr);
+        if (r && typeof r.total === 'number') setTotalCount(r.total);
         // Build autocomplete suggestions from existing data
         const uniq = (fn) => [...new Set(arr.map(fn).filter(Boolean))].sort();
         setSuggestions({
@@ -1385,7 +1409,7 @@ export default function Inventory() {
             {/* Top row — summary cards */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:12 }}>
               {[
-                { l:'Total Items',  v:allItems.length,              icon:'📦', dark:true,   sf:'all',  sub:'all items' },
+                { l:'Total Items',  v:totalCount !== null ? totalCount : allItems.length, icon:'📦', dark:true, sf:'all', sub:'all items' },
                 { l:'Low Stock',    v:low,   c:C.danger,             icon:'⚠️', sf:'low',  sub:'need reorder' },
                 { l:'Out of Stock', v:out,   c:'#6b7280',            icon:'❌', sf:'out',  sub:'unavailable' },
                 { l:'Stock Value',  v:`Rs.${Math.round(val/1000)}K`, icon:'💰', c:C.success, sf:null, sub:'cost price' },
@@ -1436,8 +1460,8 @@ export default function Inventory() {
                     <button key={i} onClick={()=>{
                       if (cat.dark) { setActiveCat('All'); setSubFilter(''); }
                       else if (cat.sub==='accs') { setActiveCat('Boxes'); setSubFilter(''); }
-                      else if (cat.indent) { setActiveCat(cat.cat); setSubFilter(cat.sub); }
-                      else { setActiveCat(cat.cat||'All'); setSubFilter(''); }
+                      else if (cat.indent) { setActiveCat(cat.cat); setSubFilter(cat.sub); setFrameMatFilter(''); setFrameColFilter(''); setFrameShapeFilter(''); }
+                      else { setActiveCat(cat.cat||'All'); setSubFilter(''); setFrameMatFilter(''); setFrameColFilter(''); setFrameShapeFilter(''); }
                     }} style={{
                       padding: cat.indent ? '4px 10px 4px 18px' : '5px 12px',
                       borderRadius:20,
@@ -1462,6 +1486,69 @@ export default function Inventory() {
               </div>
             </div>
           </div>
+
+          {/* Frame sub-filters — material / color / shape */}
+          {activeCat === 'Frames' && (() => {
+            const allFrames  = items.filter(i => i.category === 'Frames');
+            const liveMats   = [...new Set(allFrames.map(i=>i.frame_material).filter(Boolean))].sort();
+            const liveCols   = [...new Set(allFrames.map(i=>i.frame_color).filter(Boolean))].sort();
+            const liveShapes = [...new Set(allFrames.map(i=>i.frame_shape).filter(Boolean))].sort();
+            const DOT = {
+              Black:'#111', Gold:'#c9a84c', Silver:'#9ca3af', Brown:'#92400e',
+              Gunmetal:'#374151', Blue:'#1d4ed8', Red:'#dc2626', Pink:'#ec4899',
+              Tortoise:'#78350f', Crystal:'#e0e7ef',
+            };
+            const chip = (active) => ({
+              padding:'4px 11px', borderRadius:20, cursor:'pointer', fontFamily:'inherit',
+              fontSize:11, fontWeight: active ? 700 : 500, border:'none', transition:'all .12s',
+              background: active ? C.navy : C.cream, color: active ? 'white' : C.muted,
+            });
+            return (
+              <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 14px', marginTop:10 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1.5px', marginBottom:10 }}>
+                  Frame filters
+                </div>
+
+                {/* Material row */}
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8, flexWrap:'wrap' }}>
+                  <span style={{ fontSize:11, color:C.muted, fontWeight:600, minWidth:52, flexShrink:0 }}>Material</span>
+                  <button style={chip(!frameMatFilter)} onClick={()=>setFrameMatFilter('')}>All</button>
+                  {[...new Set(['Plastic','Metal','TR90','Titanium','Acetate','Mixed',...liveMats])].map(m=>(
+                    <button key={m} style={chip(frameMatFilter===m)} onClick={()=>setFrameMatFilter(p=>p===m?'':m)}>{m}</button>
+                  ))}
+                </div>
+
+                {/* Color row */}
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8, flexWrap:'wrap' }}>
+                  <span style={{ fontSize:11, color:C.muted, fontWeight:600, minWidth:52, flexShrink:0 }}>Color</span>
+                  <button style={chip(!frameColFilter)} onClick={()=>setFrameColFilter('')}>All</button>
+                  {[...new Set(['Black','Gold','Silver','Brown','Gunmetal','Blue','Red','Pink','Tortoise','Crystal',...liveCols])].map(col=>(
+                    <button key={col} style={{ ...chip(frameColFilter===col), display:'flex', alignItems:'center', gap:4 }}
+                      onClick={()=>setFrameColFilter(p=>p===col?'':col)}>
+                      <span style={{ width:9, height:9, borderRadius:'50%', flexShrink:0, background: DOT[col]||'#888', border: col==='Crystal'||col==='Silver'?'1px solid #ccc':'none' }}/>
+                      {col}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Shape row */}
+                <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+                  <span style={{ fontSize:11, color:C.muted, fontWeight:600, minWidth:52, flexShrink:0 }}>Shape</span>
+                  <button style={chip(!frameShapeFilter)} onClick={()=>setFrameShapeFilter('')}>All</button>
+                  {[...new Set(['Round','Oval','Rectangle','Square','Cat-eye','Aviator','Wayfarer',...liveShapes])].map(sh=>(
+                    <button key={sh} style={chip(frameShapeFilter===sh)} onClick={()=>setFrameShapeFilter(p=>p===sh?'':sh)}>{sh}</button>
+                  ))}
+                </div>
+
+                {(frameMatFilter||frameColFilter||frameShapeFilter) && (
+                  <button onClick={()=>{setFrameMatFilter('');setFrameColFilter('');setFrameShapeFilter('');}}
+                    style={{ marginTop:8, fontSize:11, fontWeight:600, color:C.danger, background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', padding:0 }}>
+                    ✕ Clear frame filters
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         );
       })()}
 
@@ -1779,7 +1866,13 @@ export default function Inventory() {
                   if (subFilter==='RayBan') return (item.brand||'').toLowerCase().includes('rayban');
                   return item.sg_type===subFilter;
                 }
-                if (activeCat==='Frames') return item.frame_type===subFilter;
+                if (activeCat==='Frames') {
+                  if (frameMatFilter   && item.frame_material !== frameMatFilter)  return false;
+                  if (frameColFilter   && item.frame_color    !== frameColFilter)   return false;
+                  if (frameShapeFilter && item.frame_shape    !== frameShapeFilter) return false;
+                  if (subFilter        && item.frame_type     !== subFilter)        return false;
+                  return true;
+                }
                 if (activeCat==='Reading Glasses') {
                   if (!subFilter) return true;
                   return (item.rg_lens_type||'').toLowerCase().includes(subFilter.toLowerCase());

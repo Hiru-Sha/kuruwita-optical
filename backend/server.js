@@ -1,7 +1,5 @@
 // ============================================================
 //  Kuruwita Optical — Express Server
-//  Fixed: rate limiting added to /api/auth/login to prevent
-//         brute-force password attacks
 // ============================================================
 require('dotenv').config();
 const express   = require('express');
@@ -9,19 +7,13 @@ const cors      = require('cors');
 const rateLimit = require('express-rate-limit');
 const app       = express();
 
-// ── Rate limiter: max 10 login attempts per IP per 15 minutes ─
-// This prevents brute-force attacks on staff passwords.
-// Legitimate users will never hit this limit.
 const loginLimiter = rateLimit({
-  windowMs:        15 * 60 * 1000,  // 15 minutes
-  max:             10,               // 10 attempts per window
+  windowMs: 15 * 60 * 1000,
+  max: 10,
   standardHeaders: true,
-  legacyHeaders:   false,
-  message:         { error: 'Too many login attempts. Please wait 15 minutes and try again.' },
-  skip: (req) => {
-    // Don't rate-limit in development
-    return process.env.NODE_ENV === 'development';
-  },
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please wait 15 minutes and try again.' },
+  skip: (req) => process.env.NODE_ENV === 'development',
 });
 
 app.use(cors({
@@ -45,10 +37,10 @@ app.use(cors({
 app.options('*', cors());
 app.use(express.json({ limit: '25mb' }));
 
-// ── Apply rate limit to login only ───────────────────────────
+// Rate limit login only
 app.use('/api/auth/login', loginLimiter);
 
-// ── Routes ───────────────────────────────────────────────────
+// Routes
 app.use('/api/auth',              require('./routes/auth'));
 app.use('/api/orders',            require('./routes/orders'));
 app.use('/api/customers',         require('./routes/customers'));
@@ -64,8 +56,8 @@ app.use('/api/stock-adjustments', require('./routes/stockAdjustments'));
 app.use('/api/walkin-rx',         require('./routes/walkInRx'));
 app.use('/api/kalutota',          require('./routes/kalutota'));
 app.use('/api/dealer-purchases',  require('./routes/dealerPurchases'));
-app.use('/api/warranties',        require('./routes/warranties'));
 app.use('/api/repairs',           require('./routes/repairs'));
+app.use('/api/warranties',        require('./routes/warranties'));
 app.use('/api/dashboard-today',   require('./routes/dashboardToday'));
 app.use('/api/full-report',       require('./routes/fullReport'));
 app.use('/api/scan-session',      require('./routes/scanSession'));
