@@ -64,6 +64,7 @@ app.use('/api/stock-adjustments', require('./routes/stockAdjustments'));
 app.use('/api/walkin-rx',         require('./routes/walkInRx'));
 app.use('/api/kalutota',          require('./routes/kalutota'));
 app.use('/api/dealer-purchases',  require('./routes/dealerPurchases'));
+app.use('/api/warranties',        require('./routes/warranties'));
 app.use('/api/repairs',           require('./routes/repairs'));
 app.use('/api/dashboard-today',   require('./routes/dashboardToday'));
 app.use('/api/full-report',       require('./routes/fullReport'));

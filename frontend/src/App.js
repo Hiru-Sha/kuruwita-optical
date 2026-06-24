@@ -36,6 +36,7 @@ import BulkImport     from './pages/BulkImport';
 import ReportPDF      from './pages/ReportPDF';
 import WalkInRx       from './pages/WalkInRx';
 import ActivityView   from './pages/ActivityView';
+import WarrantyClaims from './pages/WarrantyClaims';
 import EndOfDay       from './pages/EndOfDay';
 
 const LensCalculator = React.lazy(() =>
@@ -104,6 +105,7 @@ export default function App() {
               <Route path="report-pdf"     element={<Page component={ReportPDF} />} />
               <Route path="walkin-rx"      element={<Page component={WalkInRx} />} />
               <Route path="activity"       element={<Page component={ActivityView} />} />
+              <Route path="warranty"      element={<Page component={WarrantyClaims} />} />
               <Route path="end-of-day"     element={<Page component={EndOfDay} />} />
               <Route path="calculator" element={
                 <ErrorBoundary>

@@ -11,6 +11,7 @@ const NAV = [
   { to:'/rx-tracker',   icon:'📄', label:'Rx Tracker',     section:'main'      },
   { to:'/quick-sale',   icon:'🛍️', label:'Quick Sale',     section:'main'      },
   { to:'/repairs',       icon:'🔧', label:'Repairs',        section:'main'      },
+  { to:'/warranty',      icon:'🛡️', label:'Warranty',        section:'main'      },
   { to:'/walkin-rx',    icon:'👁️', label:'Walk-in Rx',     section:'main'      },
   { to:'/customers',    icon:'👥', label:'Customers',       section:'main'      },
   { to:'/inventory',    icon:'📦', label:'Inventory',       section:'inventory' },
