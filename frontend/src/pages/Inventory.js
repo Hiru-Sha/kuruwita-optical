@@ -1485,10 +1485,9 @@ export default function Inventory() {
                 })}
               </div>
             </div>
-          </div>
 
-          {/* Frame sub-filters — material / color / shape */}
-          {activeCat === 'Frames' && (() => {
+            {/* Frame sub-filters — material / color / shape */}
+            {activeCat === 'Frames' && (() => {
             const allFrames  = items.filter(i => i.category === 'Frames');
             const liveMats   = [...new Set(allFrames.map(i=>i.frame_material).filter(Boolean))].sort();
             const liveCols   = [...new Set(allFrames.map(i=>i.frame_color).filter(Boolean))].sort();
@@ -1548,7 +1547,8 @@ export default function Inventory() {
                 )}
               </div>
             );
-          })()}
+            })()}
+          </div>
         );
       })()}
 
