@@ -1,7 +1,9 @@
 // ============================================================
 //  Dashboard Today Route — /api/dashboard-today
-//  Returns ALL dashboard data in ONE query round-trip
-//  Replaces 6 separate API calls from the frontend
+//  Fixed:
+//    1. Promise.all order mismatch (placeholder was at index 7,
+//       shifting activeOrders → NaN, reminders → wrong data)
+//    2. Reminders query now JOINs customers for name & phone
 // ============================================================
 const router = require('express').Router();
 const pool   = require('../db/pool');
@@ -13,191 +15,177 @@ router.get('/', auth, async (req, res) => {
 
   try {
     const [
-      monthRevenue,
-      todayOrders,
-      todayQS,
-      todayExpenses,
-      todayDeposits,
-      todayRepairs,
-      totalBalance,
-      activeOrders,
-      lensJobsOut,
-      reminders,
-      allTimeCashRes,
+      monthRevenue,   // 0
+      todayOrders,    // 1
+      todayQS,        // 2
+      todayExpenses,  // 3
+      todayDeposits,  // 4
+      todayRepairs,   // 5
+      totalBalance,   // 6
+      activeOrders,   // 7  ← Fixed: no longer the placeholder position
+      lensJobsOut,    // 8
+      reminders,      // 9
     ] = await Promise.all([
 
-      // Month revenue — orders only (always safe)
+      // 0: Month revenue
       pool.query(`
         SELECT
           COALESCE(SUM(total_amount),0)   AS total,
           COALESCE(SUM(advance_amount),0) AS collected,
-
           COALESCE(SUM(balance_amount),0) AS owed,
           COUNT(id)                        AS order_count
         FROM orders
         WHERE TO_CHAR(created_at,'YYYY-MM') = $1
       `, [month]),
 
-      // Today's orders — no payment_method column on orders table, treat all as cash
+      // 1: Today's orders
       pool.query(`
-        SELECT advance_amount, 'cash' AS payment_method
+        SELECT advance_amount, COALESCE(payment_method,'cash') AS payment_method
         FROM orders WHERE created_at::date = $1 AND status != 'cancelled'
-      `, [today]).catch(()=>({ rows:[] })),
+      `, [today]).catch(() => ({ rows: [] })),
 
-      // Today's quick sales — safe
+      // 2: Today's quick sales
       pool.query(`
         SELECT COALESCE(total,0) AS total FROM quick_sales
         WHERE created_at::date = $1
-      `, [today]).catch(()=>({ rows:[] })),
+      `, [today]).catch(() => ({ rows: [] })),
 
-      // Today's expenses — safe
+      // 3: Today's expenses
       pool.query(`
         SELECT amount FROM expenses WHERE date = $1
-      `, [today]).catch(()=>({ rows:[] })),
+      `, [today]).catch(() => ({ rows: [] })),
 
-      // Today's deposits — exclude any linked to orders that no longer exist
+      // 4: Today's deposits
       pool.query(`
         SELECT cd.amount FROM cash_deposits cd
         WHERE cd.date = $1
           AND (cd.order_id IS NULL OR EXISTS (
             SELECT 1 FROM orders o WHERE o.id = cd.order_id
           ))
-      `, [today]).catch(()=>pool.query(`SELECT amount FROM cash_deposits WHERE date = $1`, [today])).catch(()=>({ rows:[] })),
+      `, [today]).catch(() => pool.query(
+        'SELECT amount FROM cash_deposits WHERE date = $1', [today]
+      )).catch(() => ({ rows: [] })),
 
-      // Today's repairs — safe, no status filter
+      // 5: Today's repairs
       pool.query(`
         SELECT COALESCE(charge,0) AS charge FROM repairs
         WHERE created_at::date = $1
-      `, [today]).catch(()=>({ rows:[] })),
+      `, [today]).catch(() => ({ rows: [] })),
 
-      // Total outstanding balance
+      // 6: Total outstanding balance
       pool.query(`
         SELECT COALESCE(SUM(balance_amount),0) AS b
         FROM orders
         WHERE balance_amount > 0 AND status != 'cancelled'
       `),
 
-      // placeholder — allTimeCash computed separately below
-      Promise.resolve({ rows:[{ total_cash_in_hand:0, total_deposited:0 }] }),
-
-      // Active orders count
+      // 7: Active orders count
       pool.query(`
         SELECT COUNT(*) AS c
         FROM orders
         WHERE status IN ('created','called','overdue')
       `),
 
-      // Lens jobs out
+      // 8: Lens jobs out
       pool.query(`
         SELECT COUNT(*) AS c
         FROM orders
         WHERE lens_step BETWEEN 1 AND 2
       `),
 
-      // Balance reminders — use customer fields directly from orders table
+      // 9: Balance reminders — Fixed: JOIN customers for name & phone
       pool.query(`
-        SELECT id, order_number, deliver_date,
-               balance_amount, customer_name, phone,
-               frame, total_amount, status
-        FROM orders
-        WHERE balance_amount > 0
-          AND status NOT IN ('cancelled','delivered')
-          AND deliver_date IS NOT NULL
-          AND deliver_date <= CURRENT_DATE + INTERVAL '7 days'
-        ORDER BY deliver_date ASC
+        SELECT o.id, o.order_number, o.deliver_date,
+               o.balance_amount, c.name AS customer_name, c.phone,
+               o.frame, o.total_amount, o.status
+        FROM orders o
+        JOIN customers c ON o.customer_id = c.id
+        WHERE o.balance_amount > 0
+          AND o.status NOT IN ('cancelled','delivered')
+          AND o.deliver_date IS NOT NULL
+          AND o.deliver_date <= CURRENT_DATE + INTERVAL '7 days'
+        ORDER BY o.deliver_date ASC
         LIMIT 10
-      `).catch(()=>({ rows:[] })),
+      `).catch(() => ({ rows: [] })),
     ]);
 
     const mr = monthRevenue.rows[0];
 
-    // Fetch month QS and repairs separately with safe fallback
+    // Month QS and repairs (safe fallback)
     let qs_month_total = 0, qs_month_count = 0;
     let rep_month_total = 0, rep_month_count = 0;
     try {
       const qsM = await pool.query(
         `SELECT COALESCE(SUM(total),0) AS t, COUNT(*) AS c
          FROM quick_sales WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [month]);
-      qs_month_total = parseFloat(qsM.rows[0].t||0);
-      qs_month_count = parseInt(qsM.rows[0].c||0);
-    } catch(e) { console.log('QS month skip:', e.message); }
+      qs_month_total = parseFloat(qsM.rows[0].t || 0);
+      qs_month_count = parseInt(qsM.rows[0].c   || 0);
+    } catch (e) { console.log('QS month skip:', e.message); }
+
     try {
       const repM = await pool.query(
         `SELECT COALESCE(SUM(COALESCE(charge,0)),0) AS t, COUNT(*) AS c
          FROM repairs WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [month]);
-      rep_month_total = parseFloat(repM.rows[0].t||0);
-      rep_month_count = parseInt(repM.rows[0].c||0);
-    } catch(e) { console.log('Repairs month skip:', e.message); }
+      rep_month_total = parseFloat(repM.rows[0].t || 0);
+      rep_month_count = parseInt(repM.rows[0].c   || 0);
+    } catch (e) { console.log('Repairs month skip:', e.message); }
 
     mr.qs_total     = qs_month_total;
     mr.qs_count     = qs_month_count;
     mr.repair_total = rep_month_total;
     mr.repair_count = rep_month_count;
-    mr.grand_total  = parseFloat(mr.total||0) + qs_month_total + rep_month_total;
-    // Collected = delivered orders total + all QS + all repairs this month
-    mr.collected    = parseFloat(mr.collected||0) + qs_month_total + rep_month_total;
+    mr.grand_total  = parseFloat(mr.total || 0) + qs_month_total + rep_month_total;
+    mr.collected    = parseFloat(mr.collected || 0) + qs_month_total + rep_month_total;
 
-    // Daily summary — split cash vs bank
-    const orderCash    = todayOrders.rows.filter(r=>!r.payment_method||r.payment_method==='cash').reduce((s,r)=>s+parseFloat(r.advance_amount||0),0);
-    const orderBank    = todayOrders.rows.filter(r=>r.payment_method&&r.payment_method!=='cash').reduce((s,r)=>s+parseFloat(r.advance_amount||0),0);
+    // Daily cash split
+    const orderCash    = todayOrders.rows.filter(r => !r.payment_method || r.payment_method === 'cash').reduce((s, r) => s + parseFloat(r.advance_amount || 0), 0);
+    const orderBank    = todayOrders.rows.filter(r => r.payment_method && r.payment_method !== 'cash').reduce((s, r) => s + parseFloat(r.advance_amount || 0), 0);
     const orderIncome  = orderCash + orderBank;
-    const qsIncome     = todayQS.rows.reduce((s,r)=>s+parseFloat(r.total||0),0);
-    const repairIncome = todayRepairs.rows.reduce((s,r)=>s+parseFloat(r.charge||0),0);
+    const qsIncome     = todayQS.rows.reduce((s, r) => s + parseFloat(r.total   || 0), 0);
+    const repairIncome = todayRepairs.rows.reduce((s, r) => s + parseFloat(r.charge || 0), 0);
     const totalIncome  = orderIncome + qsIncome + repairIncome;
-    const totalExp     = todayExpenses.rows.reduce((s,r)=>s+parseFloat(r.amount||0),0);
-    const totalDep     = todayDeposits.rows.reduce((s,r)=>s+parseFloat(r.amount||0),0);
-    // Cash in hand = only cash payments, not bank transfers
+    const totalExp     = todayExpenses.rows.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+    const totalDep     = todayDeposits.rows.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
     const todayCashIn  = orderCash + qsIncome + repairIncome;
     const cashInHand   = todayCashIn - totalExp - totalDep;
     const bankToday    = orderBank;
-    // All-time cash — compute with separate awaited queries
+
+    // All-time cash
     let allTimeCash = 0, allTimeDeposits = 0;
     try {
       const [atOrders, atQS, atRepairs, atExp, atDep] = await Promise.all([
-        pool.query(`SELECT COALESCE(SUM(advance_amount),0) AS v FROM orders`).catch(()=>({rows:[{v:'0'}]})),
-        pool.query(`SELECT COALESCE(SUM(total),0) AS v FROM quick_sales`).catch(()=>({rows:[{v:'0'}]})),
-        pool.query(`SELECT COALESCE(SUM(charge),0) AS v FROM repairs`).catch(()=>({rows:[{v:'0'}]})),
-        pool.query(`SELECT COALESCE(SUM(amount),0) AS v FROM expenses`).catch(()=>({rows:[{v:'0'}]})),
-        pool.query(`SELECT COALESCE(SUM(amount),0) AS v FROM cash_deposits`).catch(()=>({rows:[{v:'0'}]})),
+        pool.query('SELECT COALESCE(SUM(advance_amount),0) AS v FROM orders').catch(() => ({ rows: [{ v: '0' }] })),
+        pool.query('SELECT COALESCE(SUM(total),0) AS v FROM quick_sales').catch(() => ({ rows: [{ v: '0' }] })),
+        pool.query('SELECT COALESCE(SUM(charge),0) AS v FROM repairs').catch(() => ({ rows: [{ v: '0' }] })),
+        pool.query('SELECT COALESCE(SUM(amount),0) AS v FROM expenses').catch(() => ({ rows: [{ v: '0' }] })),
+        pool.query('SELECT COALESCE(SUM(amount),0) AS v FROM cash_deposits').catch(() => ({ rows: [{ v: '0' }] })),
       ]);
-      const ov = parseFloat(atOrders.rows[0].v)||0;
-      const qv = parseFloat(atQS.rows[0].v)||0;
-      const rv = parseFloat(atRepairs.rows[0].v)||0;
-      const ev = parseFloat(atExp.rows[0].v)||0;
-      const dv = parseFloat(atDep.rows[0].v)||0;
-      allTimeCash    = ov + qv + rv - ev - dv;
+      const ov = parseFloat(atOrders.rows[0].v)  || 0;
+      const qv = parseFloat(atQS.rows[0].v)      || 0;
+      const rv = parseFloat(atRepairs.rows[0].v) || 0;
+      const ev = parseFloat(atExp.rows[0].v)     || 0;
+      const dv = parseFloat(atDep.rows[0].v)     || 0;
+      allTimeCash     = ov + qv + rv - ev - dv;
       allTimeDeposits = dv;
-      console.log(`[CASH] o=${ov} qs=${qv} r=${rv} exp=${ev} dep=${dv} => ${allTimeCash}`);
-    } catch(e) { console.error('[CASH ERROR]', e.message); }
+    } catch (e) { console.error('[CASH ERROR]', e.message); }
 
     res.json({
-      // Month stats
-      month_revenue:  mr,
-      total_balance:  totalBalance.rows[0].b,
-      active_orders:  parseInt(activeOrders.rows[0].c),
-      lens_jobs_out:  parseInt(lensJobsOut.rows[0].c),
-      reminders:      reminders.rows,
+      month_revenue: mr,
+      total_balance: totalBalance.rows[0].b,
+      active_orders: parseInt(activeOrders.rows[0].c),
+      lens_jobs_out: parseInt(lensJobsOut.rows[0].c),
+      reminders:     reminders.rows,
 
-      // Daily cash
       daily_cash: {
-        orderIncome,
-        orderCash,
-        orderBank,
-        qsIncome,
-        repairIncome,
-        totalIncome,
-        totalExp,
-        totalDep,
-        cashInHand,
-        allTimeCash,
-        allTimeDeposits,
-        bankToday,
-        orderCount:   todayOrders.rows.length,
-        qsCount:      todayQS.rows.length,
-        repairCount:  todayRepairs.rows.length,
-        expCount:     todayExpenses.rows.length,
-        depCount:     todayDeposits.rows.length,
-        _raw_allTimeCashRes: allTimeCashRes?.rows?.[0],
+        orderIncome, orderCash, orderBank,
+        qsIncome, repairIncome, totalIncome,
+        totalExp, totalDep, cashInHand,
+        allTimeCash, allTimeDeposits, bankToday,
+        orderCount:  todayOrders.rows.length,
+        qsCount:     todayQS.rows.length,
+        repairCount: todayRepairs.rows.length,
+        expCount:    todayExpenses.rows.length,
+        depCount:    todayDeposits.rows.length,
       },
     });
   } catch (err) {

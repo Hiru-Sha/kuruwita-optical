@@ -1,5 +1,6 @@
 // ============================================================
 //  Expenses Routes — /api/expenses
+//  Fixed: DELETE now requires admin role
 // ============================================================
 const router = require('express').Router();
 const pool   = require('../db/pool');
@@ -46,10 +47,7 @@ router.get('/summary', auth, async (req, res) => {
         FROM expenses
         WHERE TO_CHAR(date,'YYYY-MM') = $1`, [m]),
     ]);
-    res.json({
-      by_category: byCat.rows,
-      totals:      totals.rows[0],
-    });
+    res.json({ by_category: byCat.rows, totals: totals.rows[0] });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
 
@@ -63,15 +61,24 @@ router.post('/', auth, async (req, res) => {
     const result = await pool.query(`
       INSERT INTO expenses (date, category, description, amount, payment_method, notes, added_by)
       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [date || new Date().toISOString().split('T')[0],
-       category, description, parseFloat(amount),
-       payment_method || 'cash', notes || null, req.user.id]);
+      [
+        date || new Date().toISOString().split('T')[0],
+        category, description,
+        parseFloat(amount),
+        payment_method || 'cash',
+        notes || null,
+        req.user.id,
+      ]
+    );
     res.status(201).json(result.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
 
-// DELETE /api/expenses/:id
+// DELETE /api/expenses/:id — Fixed: admin only
 router.delete('/:id', auth, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin only' });
+  }
   try {
     await pool.query('DELETE FROM expenses WHERE id = $1', [req.params.id]);
     res.json({ message: 'Deleted' });
