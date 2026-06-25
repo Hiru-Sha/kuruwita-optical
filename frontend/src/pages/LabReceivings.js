@@ -193,8 +193,9 @@ function ReceiveModal({ order, onClose, onSave }) {
 }
 
 // ── Pay All from Lab modal ────────────────────────────────────
-function PayAllModal({ lab, orders, onClose, onDone }) {
-  const unpaid    = orders.filter(o => o.lens_company === lab && parseFloat(o.lab_bill_amount||0) > 0 && !o.lab_paid);
+function PayAllModal({ lab, orders, onClose, onDone, title }) {
+  // If lab is null, orders are already pre-filtered (Pay Selected mode)
+  const unpaid    = lab ? orders.filter(o => o.lens_company === lab && parseFloat(o.lab_bill_amount||0) > 0 && !o.lab_paid) : orders;
   const total     = unpaid.reduce((s,o) => s + parseFloat(o.lab_bill_amount||0), 0);
   const [payDate,   setPayDate]   = useState(today());
   const [payMethod, setPayMethod] = useState('cash');
@@ -231,7 +232,7 @@ function PayAllModal({ lab, orders, onClose, onDone }) {
     <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.6)', zIndex:400, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
       onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
       <div style={{ background:'white', borderRadius:16, padding:24, width:'100%', maxWidth:440, boxShadow:'0 20px 60px rgba(0,0,0,.3)' }}>
-        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, color:C.navy, marginBottom:4 }}>Pay All to {lab}</div>
+        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, color:C.navy, marginBottom:4 }}>{title || `Pay All to ${lab}`}</div>
         <div style={{ fontSize:13, color:C.muted, marginBottom:16 }}>{unpaid.length} unpaid orders · Total: <b style={{color:C.danger}}>{fmt(total)}</b></div>
 
         {/* Order list */}
@@ -296,8 +297,10 @@ export default function LabReceivings() {
   const [stepFilt, setStepFilt] = useState('pending');
   const [search,   setSearch]   = useState('');
   const [selected, setSelected] = useState(null);
-  const [payAllLab,setPayAllLab]= useState(null);
-  const [toast,    setToast]    = useState('');
+  const [payAllLab,  setPayAllLab]   = useState(null);
+  const [selectedIds,setSelectedIds] = useState(new Set());
+  const [showPaySel, setShowPaySel]  = useState(false);
+  const [toast,      setToast]       = useState('');
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(''), 4000); };
 
@@ -308,6 +311,7 @@ export default function LabReceivings() {
       const data = await res.json();
       const arr  = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [];
       setOrders(arr.filter(o => o.status !== 'cancelled' && !o.customer_own_frame));
+      setSelectedIds(new Set()); // clear selection on reload
     } catch(e) { console.error(e); }
     finally { setLoading(false); }
   },[]);
@@ -370,8 +374,24 @@ export default function LabReceivings() {
     labUnpaid[lab] = (labUnpaid[lab]||0) + parseFloat(o.lab_bill_amount||0);
   });
 
+  // Selectable = only unpaid orders with a bill amount
+  const selectableFiltered = filtered.filter(o => parseFloat(o.lab_bill_amount||0) > 0 && !o.lab_paid);
+  const selTotal   = [...selectedIds].reduce((s,id)=>{ const o=orders.find(x=>x.id===id); return s+parseFloat(o?.lab_bill_amount||0); },0);
+  const allSelectable = selectableFiltered.length > 0 && selectableFiltered.every(o=>selectedIds.has(o.id));
+  const someSelected  = selectedIds.size > 0;
+
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const n = new Set(prev);
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
+  });
+  const toggleAll = () => {
+    if (allSelectable) setSelectedIds(new Set());
+    else setSelectedIds(new Set(selectableFiltered.map(o=>o.id)));
+  };
+
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:"'DM Sans',sans-serif", paddingBottom: someSelected ? 80 : 0 }}>
       {toast && (
         <div style={{ position:'fixed', bottom:24, right:24, background:C.navy, color:'white', padding:'12px 20px', borderRadius:12, fontSize:14, fontWeight:600, borderLeft:`4px solid ${C.gold}`, zIndex:500 }}>
           {toast}
@@ -379,6 +399,15 @@ export default function LabReceivings() {
       )}
 
       {selected && <ReceiveModal order={selected} onClose={()=>setSelected(null)} onSave={handleSave}/>}
+      {showPaySel && (
+        <PayAllModal
+          lab={null}
+          orders={orders.filter(o=>selectedIds.has(o.id))}
+          onClose={()=>setShowPaySel(false)}
+          onDone={msg=>{ showToast(msg); setShowPaySel(false); setSelectedIds(new Set()); load(); }}
+          title="Pay Selected Orders"
+        />
+      )}
       {payAllLab && <PayAllModal lab={payAllLab} orders={orders} onClose={()=>setPayAllLab(null)}
         onDone={msg=>{ showToast(msg); setPayAllLab(null); load(); }}/>}
 
@@ -445,7 +474,11 @@ export default function LabReceivings() {
 
       {/* Order list */}
       <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'120px 1fr 120px 110px 110px 90px 50px', padding:'10px 16px', background:C.cream, fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', color:C.muted, borderBottom:`1px solid ${C.border}` }}>
+        <div style={{ display:'grid', gridTemplateColumns:'36px 120px 1fr 120px 110px 110px 90px 50px', padding:'10px 16px', background:C.cream, fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', color:C.muted, borderBottom:`1px solid ${C.border}` }}>
+          <span>
+            <input type="checkbox" checked={allSelectable} ref={el=>{ if(el){ el.indeterminate=someSelected&&!allSelectable; }}}
+              onChange={toggleAll} style={{ cursor:'pointer', width:15, height:15 }}/>
+          </span>
           <span>Order</span><span>Customer / Lens</span><span>Lab</span><span>Bill</span><span>Status</span><span>Lab Paid</span><span></span>
         </div>
 
@@ -462,7 +495,14 @@ export default function LabReceivings() {
                 const hasBill = parseFloat(order.lab_bill_amount||0) > 0;
                 const isPaid  = order.lab_paid;
                 return (
-                  <div key={order.id} style={{ display:'grid', gridTemplateColumns:'120px 1fr 120px 110px 110px 90px 50px', padding:'12px 16px', borderBottom:`1px solid ${C.cream}`, alignItems:'center' }}>
+                  <div key={order.id} style={{ display:'grid', gridTemplateColumns:'36px 120px 1fr 120px 110px 110px 90px 50px', padding:'12px 16px', borderBottom:`1px solid ${C.cream}`, alignItems:'center', background: selectedIds.has(order.id)?'#f0f9ff':undefined }}>
+                    <div>
+                      {(!order.lab_paid && parseFloat(order.lab_bill_amount||0)>0) && (
+                        <input type="checkbox" checked={selectedIds.has(order.id)}
+                          onChange={()=>toggleSelect(order.id)}
+                          style={{ cursor:'pointer', width:15, height:15 }}/>
+                      )}
+                    </div>
                     <div>
                       <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{order.order_number}</div>
                       <div style={{ fontSize:11, color:C.muted }}>{fmtDate(order.created_at?.slice(0,10))}</div>
@@ -510,6 +550,27 @@ export default function LabReceivings() {
           </div>
         )}
       </div>
+      {/* ── Sticky bottom bar when orders selected ─────────── */}
+      {someSelected && (
+        <div style={{ position:'fixed', bottom:0, left:0, right:0, background:C.navy, color:'white', padding:'14px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', zIndex:100, boxShadow:'0 -4px 20px rgba(0,0,0,.3)', flexWrap:'wrap', gap:10 }}>
+          <div>
+            <span style={{ fontSize:14, fontWeight:700 }}>{selectedIds.size} order{selectedIds.size!==1?'s':''} selected</span>
+            <span style={{ fontSize:13, color:C.gold, marginLeft:12, fontFamily:"'Playfair Display',serif" }}>
+              Total: Rs. {selTotal.toLocaleString()}
+            </span>
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={()=>setSelectedIds(new Set())}
+              style={{ padding:'8px 16px', background:'rgba(255,255,255,.15)', color:'white', border:'1px solid rgba(255,255,255,.3)', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+              Clear
+            </button>
+            <button onClick={()=>setShowPaySel(true)}
+              style={{ padding:'8px 20px', background:C.gold, color:C.navy, border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              ✅ Pay {selectedIds.size} order{selectedIds.size!==1?'s':''} — Rs. {selTotal.toLocaleString()}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
