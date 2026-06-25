@@ -6,10 +6,18 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const C = {
-  navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
-  border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
+  navy:    'var(--navy)',
+  gold:    'var(--gold)',
+  cream:   'var(--bg-sunken)',
+  surface: 'var(--bg-surface)',
+  border:  'var(--border)',
+  muted:   'var(--text-muted)',
+  success: 'var(--success)',
+  danger:  'var(--danger)',
+  warning: 'var(--warning)',
+  info:    'var(--info)',
 };
-const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%' };
+const INP = { padding:'10px 13px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:14, fontFamily:"var(--font-body)", outline:'none', background:'var(--bg-sunken)', color:'var(--navy)', width:'100%' };
 
 // ── All features that can be toggled per staff ────────────────
 const ALL_FEATURES = [
@@ -70,13 +78,13 @@ function PermissionEditor({ permissions, onChange, compact=false }) {
         return (
           <div key={group} style={{ marginBottom:14 }}>
             {/* Group header with select-all toggle */}
-            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, paddingBottom:6, borderBottom:`1px solid ${C.border}` }}>
-              <div style={{ flex:1, fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted }}>{group}</div>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, paddingBottom:6, borderBottom:`1px solid var(--border)` }}>
+              <div style={{ flex:1, fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:'var(--text-muted)' }}>{group}</div>
               <button onClick={()=>setGroup(group, !allOn)}
                 style={{ padding:'3px 10px', fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-                  border:`1px solid ${allOn?C.success:C.border}`,
+                  border:`1px solid ${allOn?'var(--success)':'var(--border)'}`,
                   background:allOn?'#dcfce7':someOn?'#fef9c3':'white',
-                  color:allOn?C.success:someOn?'#92400e':C.muted,
+                  color:allOn?'var(--success)':someOn?'#92400e':'var(--text-muted)',
                   borderRadius:20 }}>
                 {allOn?'All on':'All off'}
               </button>
@@ -88,18 +96,18 @@ function PermissionEditor({ permissions, onChange, compact=false }) {
                 return (
                   <div key={f.key} onClick={()=>toggle(f.key)}
                     style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:9, cursor:'pointer',
-                      border:`1.5px solid ${on?C.navy:C.border}`,
+                      border:`1.5px solid ${on?'var(--navy)':'var(--border)'}`,
                       background:on?'#f0f4ff':'white',
                       transition:'all .1s' }}>
                     {/* Toggle pill */}
-                    <div style={{ width:36, height:20, borderRadius:10, background:on?C.navy:C.border, position:'relative', flexShrink:0, transition:'background .15s' }}>
-                      <div style={{ position:'absolute', top:3, left:on?19:3, width:14, height:14, borderRadius:'50%', background:'white', transition:'left .15s' }}/>
+                    <div style={{ width:36, height:20, borderRadius:'var(--r-md)', background:on?'var(--navy)':'var(--border)', position:'relative', flexShrink:0, transition:'background .15s' }}>
+                      <div style={{ position:'absolute', top:3, left:on?19:3, width:14, height:14, borderRadius:'50%', background:'var(--bg-surface)', transition:'left .15s' }}/>
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:13, fontWeight:600, color:on?C.navy:C.muted, display:'flex', alignItems:'center', gap:5 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:on?'var(--navy)':'var(--text-muted)', display:'flex', alignItems:'center', gap:5 }}>
                         <span>{f.icon}</span> {f.label}
                       </div>
-                      {!compact && <div style={{ fontSize:11, color:C.muted, marginTop:1 }}>{f.desc}</div>}
+                      {!compact && <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:1 }}>{f.desc}</div>}
                     </div>
                   </div>
                 );
@@ -257,22 +265,22 @@ export default function Settings() {
   };
 
   return (
-    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:700 }}>
-      <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:'0 0 4px' }}>Settings</h1>
-      <p style={{ fontSize:13, color:C.muted, marginBottom:24 }}>Manage your account and staff access</p>
+    <div style={{ fontFamily:"var(--font-body)", maxWidth:700 }}>
+      <h1 style={{ fontFamily:"var(--font-display)", fontSize:24, color:'var(--navy)', margin:'0 0 4px' }}>Settings</h1>
+      <p style={{ fontSize:13, color:'var(--text-muted)', marginBottom:24 }}>Manage your account and staff access</p>
 
       {/* ── CHANGE PASSWORD ── */}
-      <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:22, marginBottom:20 }}>
-        <div style={{ fontSize:16, fontWeight:700, color:C.navy, marginBottom:4 }}>🔒 Change Password</div>
-        <div style={{ fontSize:13, color:C.muted, marginBottom:18 }}>
-          Logged in as: <b style={{color:C.navy}}>{user?.name}</b>
-          <span style={{ marginLeft:8, background:ROLE_INFO[user?.role]?.bg||C.cream, color:ROLE_INFO[user?.role]?.color||C.muted, fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:20 }}>
+      <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:22, marginBottom:20 }}>
+        <div style={{ fontSize:16, fontWeight:700, color:'var(--navy)', marginBottom:4 }}>🔒 Change Password</div>
+        <div style={{ fontSize:13, color:'var(--text-muted)', marginBottom:18 }}>
+          Logged in as: <b style={{color:'var(--navy)'}}>{user?.name}</b>
+          <span style={{ marginLeft:8, background:ROLE_INFO[user?.role]?.bg||'var(--bg-sunken)', color:ROLE_INFO[user?.role]?.color||'var(--text-muted)', fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:20 }}>
             {user?.role}
           </span>
         </div>
 
-        {pwMsg   && <div style={{ background:'#dcfce7', border:`1px solid #86efac`, color:C.success, borderRadius:9, padding:'10px 14px', fontSize:13, marginBottom:14 }}>{pwMsg}</div>}
-        {pwError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger,  borderRadius:9, padding:'10px 14px', fontSize:13, marginBottom:14 }}>{pwError}</div>}
+        {pwMsg   && <div style={{ background:'#dcfce7', border:`1px solid #86efac`, color:'var(--success)', borderRadius:9, padding:'10px 14px', fontSize:13, marginBottom:14 }}>{pwMsg}</div>}
+        {pwError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:'var(--danger)',  borderRadius:9, padding:'10px 14px', fontSize:13, marginBottom:14 }}>{pwError}</div>}
 
         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
           {[
@@ -281,13 +289,13 @@ export default function Settings() {
             { l:'Confirm New Password', k:'confirm', },
           ].map(f=>(
             <div key={f.k}>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>{f.l}</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:'var(--text-muted)', display:'block', marginBottom:5 }}>{f.l}</label>
               <input type="password" value={pwForm[f.k]} onChange={e=>setPwForm(p=>({...p,[f.k]:e.target.value}))}
                 placeholder={f.l} style={INP}/>
             </div>
           ))}
           <button onClick={handleChangePassword} disabled={pwSaving}
-            style={{ padding:'10px 22px', background:pwSaving?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', alignSelf:'flex-start' }}>
+            style={{ padding:'10px 22px', background:pwSaving?'var(--text-muted)':'var(--navy)', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', alignSelf:'flex-start' }}>
             {pwSaving?'Saving...':'Save New Password'}
           </button>
         </div>
@@ -295,39 +303,39 @@ export default function Settings() {
 
       {/* ── STAFF MANAGEMENT ── */}
       {isAdmin && (
-        <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:22, marginBottom:20 }}>
+        <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:22, marginBottom:20 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
-            <div style={{ fontSize:16, fontWeight:700, color:C.navy }}>👥 Staff Accounts</div>
+            <div style={{ fontSize:16, fontWeight:700, color:'var(--navy)' }}>👥 Staff Accounts</div>
             <button onClick={()=>{ setShowAddStaff(s=>!s); setStaffError(''); setStaffMsg(''); }}
-              style={{ padding:'7px 16px', background:showAddStaff?C.cream:C.gold, color:showAddStaff?C.muted:C.navy, border:showAddStaff?`1.5px solid ${C.border}`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              style={{ padding:'7px 16px', background:showAddStaff?'var(--bg-sunken)':'var(--gold)', color:showAddStaff?'var(--text-muted)':'var(--navy)', border:showAddStaff?`1.5px solid var(--border)`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               {showAddStaff?'✕ Cancel':'+ Add Staff'}
             </button>
           </div>
-          <div style={{ fontSize:13, color:C.muted, marginBottom:18 }}>Manage who can login and which features they can access</div>
+          <div style={{ fontSize:13, color:'var(--text-muted)', marginBottom:18 }}>Manage who can login and which features they can access</div>
 
           {/* Add staff form */}
           {showAddStaff && (
-            <div style={{ background:C.cream, borderRadius:12, padding:20, marginBottom:18, border:`1px solid ${C.border}` }}>
-              <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:16 }}>New Staff Account</div>
+            <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-lg)', padding:20, marginBottom:18, border:`1px solid var(--border)` }}>
+              <div style={{ fontSize:14, fontWeight:700, color:'var(--navy)', marginBottom:16 }}>New Staff Account</div>
 
-              {staffError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:8, padding:'9px 13px', fontSize:13, marginBottom:12 }}>{staffError}</div>}
-              {staffMsg   && <div style={{ background:'#dcfce7', border:`1px solid #86efac`, color:C.success, borderRadius:8, padding:'9px 13px', fontSize:13, marginBottom:12 }}>{staffMsg}</div>}
+              {staffError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:'var(--danger)', borderRadius:'var(--r-sm)', padding:'9px 13px', fontSize:13, marginBottom:12 }}>{staffError}</div>}
+              {staffMsg   && <div style={{ background:'#dcfce7', border:`1px solid #86efac`, color:'var(--success)', borderRadius:'var(--r-sm)', padding:'9px 13px', fontSize:13, marginBottom:12 }}>{staffMsg}</div>}
 
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
                 <div>
-                  <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Full Name *</label>
+                  <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:'var(--text-muted)', display:'block', marginBottom:5 }}>Full Name *</label>
                   <input value={staffForm.full_name} onChange={e=>setStaffForm(f=>({...f,full_name:e.target.value}))} placeholder="e.g. Nimal Perera" style={INP}/>
                 </div>
                 <div>
-                  <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Username *</label>
+                  <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:'var(--text-muted)', display:'block', marginBottom:5 }}>Username *</label>
                   <input value={staffForm.username} onChange={e=>setStaffForm(f=>({...f,username:e.target.value.toLowerCase().replace(/\s/g,'')}))} placeholder="e.g. nimal" style={INP}/>
                 </div>
                 <div>
-                  <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Password *</label>
+                  <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:'var(--text-muted)', display:'block', marginBottom:5 }}>Password *</label>
                   <input type="password" value={staffForm.password} onChange={e=>setStaffForm(f=>({...f,password:e.target.value}))} placeholder="Min 6 characters" style={INP}/>
                 </div>
                 <div>
-                  <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>Role *</label>
+                  <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:'var(--text-muted)', display:'block', marginBottom:5 }}>Role *</label>
                   <select value={staffForm.role}
                     onChange={e=>setStaffForm(f=>({...f, role:e.target.value, permissions: e.target.value==='admin' ? ALL_FEATURES.map(f=>f.key) : DEFAULT_STAFF_PERMS }))}
                     style={{ ...INP, cursor:'pointer' }}>
@@ -339,10 +347,10 @@ export default function Settings() {
 
               {/* Permissions — only shown for staff role */}
               {staffForm.role === 'staff' && (
-                <div style={{ background:'white', borderRadius:10, padding:16, marginBottom:14, border:`1px solid ${C.border}` }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:12 }}>
+                <div style={{ background:'var(--bg-surface)', borderRadius:'var(--r-md)', padding:16, marginBottom:14, border:`1px solid var(--border)` }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:'var(--navy)', marginBottom:12 }}>
                     Feature Access
-                    <span style={{ marginLeft:8, fontSize:11, color:C.muted, fontWeight:400 }}>
+                    <span style={{ marginLeft:8, fontSize:11, color:'var(--text-muted)', fontWeight:400 }}>
                       {staffForm.permissions.length} of {ALL_FEATURES.length} features enabled
                     </span>
                   </div>
@@ -355,25 +363,25 @@ export default function Settings() {
               )}
 
               {staffForm.role === 'admin' && (
-                <div style={{ background:'#f5f3ff', border:`1px solid #c4b5fd`, borderRadius:10, padding:'11px 14px', marginBottom:14, fontSize:13, color:'#7c3aed' }}>
+                <div style={{ background:'#f5f3ff', border:`1px solid #c4b5fd`, borderRadius:'var(--r-md)', padding:'11px 14px', marginBottom:14, fontSize:13, color:'#7c3aed' }}>
                   Admin has full access to all features — no restrictions.
                 </div>
               )}
 
               <button onClick={handleAddStaff} disabled={staffSaving}
-                style={{ padding:'10px 22px', background:staffSaving?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                style={{ padding:'10px 22px', background:staffSaving?'var(--text-muted)':'var(--navy)', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                 {staffSaving?'Creating...':'Create Account'}
               </button>
             </div>
           )}
 
           {/* Messages */}
-          {resetMsg && <div style={{ background:'#dcfce7', border:`1px solid #86efac`, color:C.success, borderRadius:9, padding:'9px 14px', fontSize:13, marginBottom:12 }}>{resetMsg}</div>}
-          {permMsg  && <div style={{ background:'#dcfce7', border:`1px solid #86efac`, color:C.success, borderRadius:9, padding:'9px 14px', fontSize:13, marginBottom:12 }}>{permMsg}</div>}
+          {resetMsg && <div style={{ background:'#dcfce7', border:`1px solid #86efac`, color:'var(--success)', borderRadius:9, padding:'9px 14px', fontSize:13, marginBottom:12 }}>{resetMsg}</div>}
+          {permMsg  && <div style={{ background:'#dcfce7', border:`1px solid #86efac`, color:'var(--success)', borderRadius:9, padding:'9px 14px', fontSize:13, marginBottom:12 }}>{permMsg}</div>}
 
           {/* Staff list */}
           {!staffList.length
-            ? <div style={{ textAlign:'center', padding:'20px 0', color:C.muted, fontSize:13 }}>No staff accounts yet</div>
+            ? <div style={{ textAlign:'center', padding:'20px 0', color:'var(--text-muted)', fontSize:13 }}>No staff accounts yet</div>
             : staffList.map(s=>{
                 const info          = ROLE_INFO[s.role] || ROLE_INFO.staff;
                 const isCurrentUser = s.id === user?.id;
@@ -381,7 +389,7 @@ export default function Settings() {
                 const isEditingPerm = editPermId === s.id;
                 const isEditingReset= resetId    === s.id;
                 return (
-                  <div key={s.id} style={{ border:`1px solid ${C.border}`, borderRadius:12, marginBottom:12, overflow:'hidden', background:'white' }}>
+                  <div key={s.id} style={{ border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', marginBottom:12, overflow:'hidden', background:'var(--bg-surface)' }}>
 
                     {/* Staff row header */}
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 16px' }}>
@@ -390,15 +398,15 @@ export default function Settings() {
                           {s.full_name?.charAt(0)||'?'}
                         </div>
                         <div>
-                          <div style={{ fontSize:14, fontWeight:700, color:C.navy, display:'flex', alignItems:'center', gap:8 }}>
+                          <div style={{ fontSize:14, fontWeight:700, color:'var(--navy)', display:'flex', alignItems:'center', gap:8 }}>
                             {s.full_name}
-                            {isCurrentUser && <span style={{ fontSize:11, color:C.muted, fontWeight:400 }}>(you)</span>}
+                            {isCurrentUser && <span style={{ fontSize:11, color:'var(--text-muted)', fontWeight:400 }}>(you)</span>}
                             <span style={{ background:info.bg, color:info.color, fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>{info.label}</span>
                           </div>
-                          <div style={{ fontSize:12, color:C.muted, marginTop:1 }}>@{s.username}</div>
+                          <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:1 }}>@{s.username}</div>
                           {/* Permission summary */}
                           {s.role !== 'admin' && (
-                            <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>
+                            <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:3 }}>
                               {perms.length} features · {perms.slice(0,4).map(k=>ALL_FEATURES.find(f=>f.key===k)?.icon||'').join('')}
                               {perms.length>4?` +${perms.length-4} more`:''}
                             </div>
@@ -416,16 +424,16 @@ export default function Settings() {
                               if (isEditingPerm) { setEditPermId(null); }
                               else { setEditPermId(s.id); setEditPermData(perms); setResetId(null); }
                             }}
-                              style={{ padding:'5px 12px', background:isEditingPerm?'#fee2e2':'#eff6ff', border:`1px solid ${isEditingPerm?'#fca5a5':'#93c5fd'}`, borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:isEditingPerm?C.danger:'#1e40af' }}>
+                              style={{ padding:'5px 12px', background:isEditingPerm?'#fee2e2':'#eff6ff', border:`1px solid ${isEditingPerm?'#fca5a5':'#93c5fd'}`, borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:isEditingPerm?'var(--danger)':'#1e40af' }}>
                               {isEditingPerm ? '✕ Cancel' : '🔐 Permissions'}
                             </button>
                           )}
                           <button onClick={()=>{ setResetId(resetId===s.id?null:s.id); setResetPw(''); setEditPermId(null); }}
-                            style={{ padding:'5px 12px', background:C.cream, border:`1px solid ${C.border}`, borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+                            style={{ padding:'5px 12px', background:'var(--bg-sunken)', border:`1px solid var(--border)`, borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>
                             🔑 Reset PW
                           </button>
                           <button onClick={()=>handleDeleteStaff(s.id, s.full_name)}
-                            style={{ padding:'5px 10px', background:'#fee2e2', border:`1px solid #fca5a5`, borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
+                            style={{ padding:'5px 10px', background:'#fee2e2', border:`1px solid #fca5a5`, borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'var(--danger)' }}>
                             🗑️
                           </button>
                         </div>
@@ -434,10 +442,10 @@ export default function Settings() {
 
                     {/* Permission editor — expands inline */}
                     {isEditingPerm && (
-                      <div style={{ borderTop:`1px solid ${C.border}`, padding:'16px 16px 20px', background:C.cream }}>
-                        <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:14 }}>
+                      <div style={{ borderTop:`1px solid var(--border)`, padding:'16px 16px 20px', background:'var(--bg-sunken)' }}>
+                        <div style={{ fontSize:13, fontWeight:700, color:'var(--navy)', marginBottom:14 }}>
                           Feature Access for {s.full_name}
-                          <span style={{ marginLeft:8, fontSize:11, color:C.muted, fontWeight:400 }}>
+                          <span style={{ marginLeft:8, fontSize:11, color:'var(--text-muted)', fontWeight:400 }}>
                             {editPermData.length} of {ALL_FEATURES.length} enabled
                           </span>
                         </div>
@@ -448,11 +456,11 @@ export default function Settings() {
                         />
                         <div style={{ display:'flex', gap:8, marginTop:16 }}>
                           <button onClick={()=>handleSavePermissions(s.id)} disabled={savingPerm}
-                            style={{ padding:'10px 22px', background:savingPerm?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                            style={{ padding:'10px 22px', background:savingPerm?'var(--text-muted)':'var(--navy)', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                             {savingPerm?'Saving...':'Save Permissions'}
                           </button>
                           <button onClick={()=>setEditPermId(null)}
-                            style={{ padding:'10px 16px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+                            style={{ padding:'10px 16px', background:'var(--bg-surface)', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>
                             Cancel
                           </button>
                           <button onClick={()=>setEditPermData(DEFAULT_STAFF_PERMS)}
@@ -465,11 +473,11 @@ export default function Settings() {
 
                     {/* Password reset — expands inline */}
                     {isEditingReset && (
-                      <div style={{ borderTop:`1px solid ${C.border}`, padding:'12px 16px', background:C.cream, display:'flex', gap:8 }}>
+                      <div style={{ borderTop:`1px solid var(--border)`, padding:'12px 16px', background:'var(--bg-sunken)', display:'flex', gap:8 }}>
                         <input type="password" value={resetPw} onChange={e=>setResetPw(e.target.value)}
                           placeholder="New password (min 6 chars)" style={{ ...INP, flex:1 }}/>
                         <button onClick={()=>handleResetPassword(s.id)}
-                          style={{ padding:'10px 16px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                          style={{ padding:'10px 16px', background:'var(--navy)', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
                           Save
                         </button>
                       </div>
@@ -482,7 +490,7 @@ export default function Settings() {
       )}
 
       {!isAdmin && (
-        <div style={{ background:'#eff6ff', border:`1px solid #bae6fd`, borderRadius:12, padding:'16px 18px' }}>
+        <div style={{ background:'#eff6ff', border:`1px solid #bae6fd`, borderRadius:'var(--r-lg)', padding:'16px 18px' }}>
           <div style={{ fontSize:14, fontWeight:600, color:'#0369a1', marginBottom:4 }}>Staff Account</div>
           <div style={{ fontSize:13, color:'#0369a1' }}>
             You are logged in as <b>{user?.name}</b>. Contact your admin to change permissions or access level.

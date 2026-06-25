@@ -9,8 +9,16 @@ import { buildRepairBill, openPrint as openRepairPrint } from '../components/Pri
 import React, { useEffect, useState, useCallback } from 'react';
 
 const C = {
-  navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
-  border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
+  navy:    'var(--navy)',
+  gold:    'var(--gold)',
+  cream:   'var(--bg-sunken)',
+  surface: 'var(--bg-surface)',
+  border:  'var(--border)',
+  muted:   'var(--text-muted)',
+  success: 'var(--success)',
+  danger:  'var(--danger)',
+  warning: 'var(--warning)',
+  info:    'var(--info)',
 };
 const fmt     = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtFull = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2});
@@ -18,7 +26,7 @@ const fmtDate = (d) => { if(!d) return '—'; return new Date(d).toLocaleDateStr
 const fmtTime = (d) => { if(!d) return '—'; return new Date(d).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); };
 const thisMonth = () => new Date().toISOString().slice(0,7);
 
-const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
+const INP = { padding:'10px 13px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:14, fontFamily:"var(--font-body)", outline:'none', background:'var(--bg-sunken)', color:'var(--navy)', width:'100%', boxSizing:'border-box' };
 
 // ── Common repair types with typical charges ──────────────────
 const REPAIR_TYPES = [
@@ -338,17 +346,17 @@ export default function Repairs() {
   };
 
   const STATUS_STYLE = {
-    done:      { bg:'#dcfce7', color:C.success,  label:'✅ Done'      },
+    done:      { bg:'#dcfce7', color:'var(--success)',  label:'✅ Done'      },
     pending:   { bg:'#fef9c3', color:'#854d0e',  label:'⏳ Pending'   },
     collected: { bg:'#dbeafe', color:'#1e40af',  label:'📦 Collected' },
   };
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:"var(--font-body)" }}>
 
       {/* Toast */}
       {toast && (
-        <div style={{ position:'fixed', bottom:24, right:24, background:C.navy, color:'white', padding:'12px 20px', borderRadius:12, fontSize:14, fontWeight:600, borderLeft:`4px solid ${C.gold}`, zIndex:500 }}>
+        <div style={{ position:'fixed', bottom:24, right:24, background:'var(--navy)', color:'white', padding:'12px 20px', borderRadius:'var(--r-lg)', fontSize:14, fontWeight:600, borderLeft:`4px solid var(--gold)`, zIndex:500 }}>
           {toast}
         </div>
       )}
@@ -361,49 +369,49 @@ export default function Repairs() {
         return (
           <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.55)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
             onClick={e=>{ if(e.target===e.currentTarget){ setPayRepair(null); setPayErr(''); } }}>
-            <div style={{ background:'white', borderRadius:16, padding:28, width:'100%', maxWidth:380, boxShadow:'0 20px 60px rgba(0,0,0,.25)' }}>
+            <div style={{ background:'var(--bg-surface)', borderRadius:'var(--r-xl)', padding:28, width:'100%', maxWidth:380, boxShadow:'var(--shadow-xl)' }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
                 <div>
-                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, color:C.navy }}>Record Payment</div>
-                  <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>{payRepair.repair_number} · {payRepair.customer_name}</div>
+                  <div style={{ fontFamily:"var(--font-display)", fontSize:18, color:'var(--navy)' }}>Record Payment</div>
+                  <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:2 }}>{payRepair.repair_number} · {payRepair.customer_name}</div>
                 </div>
                 <button onClick={()=>{ setPayRepair(null); setPayErr(''); }}
-                  style={{ background:C.cream, border:'none', borderRadius:8, padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>✕</button>
+                  style={{ background:'var(--bg-sunken)', border:'none', borderRadius:'var(--r-sm)', padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>✕</button>
               </div>
-              <div style={{ background:balance>0?'#fee2e2':'#dcfce7', borderRadius:10, padding:'12px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontSize:12, color:C.muted }}>Balance due</span>
-                <span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:balance>0?C.danger:C.success }}>{fmtFull(balance)}</span>
+              <div style={{ background:balance>0?'#fee2e2':'#dcfce7', borderRadius:'var(--r-md)', padding:'12px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:12, color:'var(--text-muted)' }}>Balance due</span>
+                <span style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:700, color:balance>0?'var(--danger)':'var(--success)' }}>{fmtFull(balance)}</span>
               </div>
               {balance <= 0 ? (
-                <div style={{ textAlign:'center', color:C.success, fontSize:14, fontWeight:600, padding:'10px 0' }}>Fully paid</div>
+                <div style={{ textAlign:'center', color:'var(--success)', fontSize:14, fontWeight:600, padding:'10px 0' }}>Fully paid</div>
               ) : (
                 <>
-                  {payErr && <div style={{ background:'#fef2f2', color:C.danger, borderRadius:8, padding:'8px 12px', fontSize:13, marginBottom:12 }}>{payErr}</div>}
+                  {payErr && <div style={{ background:'#fef2f2', color:'var(--danger)', borderRadius:'var(--r-sm)', padding:'8px 12px', fontSize:13, marginBottom:12 }}>{payErr}</div>}
                   <div style={{ marginBottom:12 }}>
-                    <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Amount (Rs.)</label>
+                    <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', display:'block', marginBottom:4 }}>Amount (Rs.)</label>
                     <input type="number" value={payAmt} onChange={e=>setPayAmt(e.target.value)}
                       placeholder={`Max: Rs. ${balance.toLocaleString()}`}
-                      style={{ width:'100%', padding:'10px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:15, fontFamily:'inherit', outline:'none', background:C.cream }}/>
-                    <button onClick={()=>setPayAmt(String(balance))} style={{ marginTop:6, padding:'5px 12px', background:C.navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Full balance</button>
+                      style={{ width:'100%', padding:'10px 12px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:15, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)' }}/>
+                    <button onClick={()=>setPayAmt(String(balance))} style={{ marginTop:6, padding:'5px 12px', background:'var(--navy)', color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Full balance</button>
                   </div>
                   <div style={{ marginBottom:12 }}>
-                    <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Payment Date</label>
+                    <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', display:'block', marginBottom:4 }}>Payment Date</label>
                     <input type="date" value={payDate} onChange={e=>setPayDate(e.target.value)}
-                      style={{ width:'100%', padding:'9px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:'inherit', outline:'none', background:C.cream }}/>
+                      style={{ width:'100%', padding:'9px 12px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:14, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)' }}/>
                   </div>
                   <div style={{ marginBottom:16 }}>
-                    <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Method</label>
+                    <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', display:'block', marginBottom:4 }}>Method</label>
                     <div style={{ display:'flex', gap:8 }}>
                       {[['cash','Cash'],['bank','Bank'],['card','Card']].map(([v,l])=>(
                         <button key={v} onClick={()=>setPayMethod(v)}
-                          style={{ flex:1, padding:'9px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${payMethod===v?C.navy:C.border}`, background:payMethod===v?C.navy:'white', color:payMethod===v?'white':C.muted }}>
+                          style={{ flex:1, padding:'9px', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${payMethod===v?'var(--navy)':'var(--border)'}`, background:payMethod===v?'var(--navy)':'white', color:payMethod===v?'white':'var(--text-muted)' }}>
                           {l}
                         </button>
                       ))}
                     </div>
                   </div>
                   <button onClick={handleRecordPayment} disabled={payLoading}
-                    style={{ width:'100%', padding:'13px', background:payLoading?C.muted:C.success, color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:payLoading?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                    style={{ width:'100%', padding:'13px', background:payLoading?'var(--text-muted)':'var(--success)', color:'white', border:'none', borderRadius:'var(--r-md)', fontSize:14, fontWeight:700, cursor:payLoading?'not-allowed':'pointer', fontFamily:'inherit' }}>
                     {payLoading ? 'Saving...' : `Record ${payAmt?'Rs. '+parseFloat(payAmt||0).toLocaleString():'Payment'}`}
                   </button>
                 </>
@@ -414,9 +422,9 @@ export default function Repairs() {
       })()}
 
       {lastDone && (
-        <div style={{ background:'#dcfce7', border:`1.5px solid #86efac`, borderRadius:12, padding:'14px 18px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10 }}>
+        <div style={{ background:'#dcfce7', border:`1.5px solid #86efac`, borderRadius:'var(--r-lg)', padding:'14px 18px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10 }}>
           <div>
-            <div style={{ fontSize:14, color:C.success, fontWeight:600 }}>
+            <div style={{ fontSize:14, color:'var(--success)', fontWeight:600 }}>
               <b>{lastDone.repair_number}</b> recorded — {lastDone.customer_name||'walk-in'}
             </div>
             {lastDone.payment_method && lastDone.payment_method !== 'cash' && (
@@ -431,11 +439,11 @@ export default function Repairs() {
                 🗂️ Print Job Card
               </button>
               <button onClick={()=>{ openRepairPrint(buildRepairBill(lastDone)); setLastDone(null); }}
-              style={{ padding:'8px 18px', background:C.gold, color:C.navy, border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              style={{ padding:'8px 18px', background:'var(--gold)', color:'var(--navy)', border:'none', borderRadius:'var(--r-sm)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               🖨️ Print Receipt
             </button>
             <button onClick={()=>setLastDone(null)}
-              style={{ padding:'8px 14px', background:'white', border:`1.5px solid #86efac`, borderRadius:8, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+              style={{ padding:'8px 14px', background:'var(--bg-surface)', border:`1.5px solid #86efac`, borderRadius:'var(--r-sm)', fontSize:13, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>
               Skip
             </button>
           </div>
@@ -445,16 +453,16 @@ export default function Repairs() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, color:C.navy, margin:0 }}>Repairs</h1>
-          <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Frame repairs, adjustments & parts replacement</p>
+          <h1 style={{ fontFamily:"var(--font-display)", fontSize:28, color:'var(--navy)', margin:0 }}>Repairs</h1>
+          <p style={{ fontSize:13, color:'var(--text-muted)', margin:'4px 0 0' }}>Frame repairs, adjustments & parts replacement</p>
         </div>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={()=>{ setPastMode(false); setRepairDate(''); setShowAdd(s=>!s); setError(''); }}
-            style={{ padding:'10px 22px', background:showAdd&&!pastMode?C.surface:C.gold, color:showAdd&&!pastMode?C.muted:C.navy, border:`1.5px solid ${showAdd&&!pastMode?C.border:C.gold}`, borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:7 }}>
+            style={{ padding:'10px 22px', background:showAdd&&!pastMode?'var(--bg-surface)':'var(--gold)', color:showAdd&&!pastMode?'var(--text-muted)':'var(--navy)', border:`1.5px solid ${showAdd&&!pastMode?'var(--border)':'var(--gold)'}`, borderRadius:'var(--r-md)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:7 }}>
             {showAdd && !pastMode ? '✕ Cancel' : '+ New Repair'}
           </button>
           <button onClick={()=>{ setPastMode(true); setShowAdd(true); setError(''); if(!repairDate) setRepairDate(new Date().toISOString().split('T')[0]); }}
-            style={{ padding:'10px 18px', background:showAdd&&pastMode?'#fffbeb':C.surface, color:'#b45309', border:`1.5px solid ${showAdd&&pastMode?'#f59e0b':C.border}`, borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            style={{ padding:'10px 18px', background:showAdd&&pastMode?'#fffbeb':'var(--bg-surface)', color:'#b45309', border:`1.5px solid ${showAdd&&pastMode?'#f59e0b':'var(--border)'}`, borderRadius:'var(--r-md)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
             {showAdd && pastMode ? '✕ Cancel' : '📅 Add Past'}
           </button>
         </div>
@@ -462,13 +470,13 @@ export default function Repairs() {
 
       {/* Past mode date picker — shown prominently at top of form */}
       {showAdd && pastMode && (
-        <div style={{ background:'#fffbeb', border:'2px solid #f59e0b', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+        <div style={{ background:'#fffbeb', border:'2px solid #f59e0b', borderRadius:'var(--r-md)', padding:'12px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
           <span style={{ fontSize:13, fontWeight:700, color:'#92400e' }}>📅 Date this repair was done:</span>
           <input type="date" value={repairDate} onChange={e=>setRepairDate(e.target.value)}
             max={new Date().toISOString().split('T')[0]}
-            style={{ padding:'8px 14px', border:'2px solid #f59e0b', borderRadius:8, fontSize:15, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:'#92400e' }}/>
+            style={{ padding:'8px 14px', border:'2px solid #f59e0b', borderRadius:'var(--r-sm)', fontSize:15, fontWeight:700, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'#92400e' }}/>
           {repairDate && (
-            <span style={{ fontSize:13, color:'#92400e', background:'#fef3c7', padding:'4px 12px', borderRadius:20, fontWeight:600 }}>
+            <span style={{ fontSize:13, color:'#92400e', background:'#fef3c7', padding:'4px 12px', borderRadius:'var(--r-full)', fontWeight:600 }}>
               {new Date(repairDate+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
             </span>
           )}
@@ -481,40 +489,40 @@ export default function Repairs() {
         {[
           { l:'Today',         v:fmt(summary?.today_revenue||0),      sub:`${summary?.today_count||0} repairs`,     dark:true },
           { l:'This Month',    v:fmt(summary?.this_month_revenue||0), sub:`${summary?.this_month_count||0} repairs`, c:'#2563eb' },
-          { l:'Pending',       v:summary?.pending_count||0,           sub:'awaiting collection',                     c:C.danger },
-          { l:'Total Revenue', v:fmt(summary?.total_revenue||0),      sub:`${summary?.total||0} all time`,          c:C.success },
+          { l:'Pending',       v:summary?.pending_count||0,           sub:'awaiting collection',                     c:'var(--danger)' },
+          { l:'Total Revenue', v:fmt(summary?.total_revenue||0),      sub:`${summary?.total||0} all time`,          c:'var(--success)' },
         ].map(s=>(
-          <div key={s.l} style={{ background:s.dark?C.navy:C.surface, border:`1.5px solid ${s.dark?C.navy:C.border}`, borderRadius:14, padding:'14px 16px', boxShadow:'0 2px 8px rgba(0,0,0,.05)' }}>
-            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:s.dark?C.gold:C.muted, marginBottom:6 }}>{s.l}</div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
-            {s.sub && <div style={{ fontSize:11, color:s.dark?'rgba(255,255,255,.6)':C.muted, marginTop:3 }}>{s.sub}</div>}
+          <div key={s.l} style={{ background:s.dark?'var(--navy)':'var(--bg-surface)', border:`1.5px solid ${s.dark?'var(--navy)':'var(--border)'}`, borderRadius:'var(--r-lg)', padding:'14px 16px', boxShadow:'0 2px 8px rgba(0,0,0,.05)' }}>
+            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:s.dark?'var(--gold)':'var(--text-muted)', marginBottom:6 }}>{s.l}</div>
+            <div style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||'var(--navy)') }}>{s.v}</div>
+            {s.sub && <div style={{ fontSize:11, color:s.dark?'rgba(255,255,255,.6)':'var(--text-muted)', marginTop:3 }}>{s.sub}</div>}
           </div>
         ))}
       </div>
 
       {/* Add repair form */}
       {showAdd && (
-        <div style={{ background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:16, padding:24, marginBottom:20, boxShadow:'0 4px 16px rgba(0,0,0,.06)' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20, paddingBottom:16, borderBottom:`1.5px solid ${C.border}` }}>
-            <div style={{ width:40, height:40, borderRadius:12, background:'rgba(15,31,61,.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>🔧</div>
+        <div style={{ background:'var(--bg-surface)', border:`1.5px solid var(--border)`, borderRadius:'var(--r-xl)', padding:24, marginBottom:20, boxShadow:'0 4px 16px rgba(0,0,0,.06)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20, paddingBottom:16, borderBottom:`1.5px solid var(--border)` }}>
+            <div style={{ width:40, height:40, borderRadius:'var(--r-lg)', background:'rgba(15,31,61,.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>🔧</div>
             <div>
-              <div style={{ fontSize:16, fontWeight:700, color:C.navy }}>{pastMode ? 'Add Past Repair' : 'New Repair'}</div>
-              <div style={{ fontSize:12, color:C.muted, marginTop:1 }}>Fill in repair details below</div>
+              <div style={{ fontSize:16, fontWeight:700, color:'var(--navy)' }}>{pastMode ? 'Add Past Repair' : 'New Repair'}</div>
+              <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:1 }}>Fill in repair details below</div>
             </div>
           </div>
 
-          {error && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:9, padding:'10px 14px', fontSize:13, marginBottom:14 }}>⚠️ {error}</div>}
+          {error && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:'var(--danger)', borderRadius:9, padding:'10px 14px', fontSize:13, marginBottom:14 }}>⚠️ {error}</div>}
 
           {/* Repair type quick-pick */}
           <div style={{ marginBottom:16 }}>
-            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:8 }}>Repair Type *</label>
+            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:'var(--text-muted)', display:'block', marginBottom:8 }}>Repair Type *</label>
             <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
               {REPAIR_TYPES.map(rt=>(
                 <button key={rt.label} onClick={()=>handleSelectType(rt)}
-                  style={{ padding:'10px 14px', borderRadius:12, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-                    border:`2px solid ${form.repair_type===rt.label?C.navy:C.border}`,
-                    background:form.repair_type===rt.label?C.navy:C.surface,
-                    color:form.repair_type===rt.label?'white':C.navy,
+                  style={{ padding:'10px 14px', borderRadius:'var(--r-lg)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                    border:`2px solid ${form.repair_type===rt.label?'var(--navy)':'var(--border)'}`,
+                    background:form.repair_type===rt.label?'var(--navy)':'var(--bg-surface)',
+                    color:form.repair_type===rt.label?'white':'var(--navy)',
                     display:'flex', alignItems:'center', gap:7,
                     boxShadow: form.repair_type===rt.label?'0 4px 12px rgba(15,31,61,.25)':'0 1px 3px rgba(0,0,0,.05)',
                     transition:'all .15s' }}>
@@ -530,17 +538,17 @@ export default function Repairs() {
 
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Customer Name (optional)</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', display:'block', marginBottom:6 }}>Customer Name (optional)</label>
               <input value={form.customer_name} onChange={e=>setForm(f=>({...f,customer_name:e.target.value}))} placeholder="Walk-in customer" style={INP}/>
             </div>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Phone (optional)</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', display:'block', marginBottom:6 }}>Phone (optional)</label>
               <input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="07X XXX XXXX" type="tel" style={INP}/>
             </div>
           </div>
 
           <div style={{ marginBottom:12 }}>
-            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Description (optional)</label>
+            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', display:'block', marginBottom:6 }}>Description (optional)</label>
             <input value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}
               placeholder="e.g. Left arm loose, needs tightening — RayBan frame" style={INP}/>
           </div>
@@ -549,17 +557,17 @@ export default function Repairs() {
 
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr', gap:12, marginBottom:14 }}>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Charge (Rs.) *</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', display:'block', marginBottom:6 }}>Charge (Rs.) *</label>
               <input type="number" value={form.charge} onChange={e=>setForm(f=>({...f,charge:e.target.value}))}
                 placeholder="0 for free" style={{ ...INP, fontSize:18, fontWeight:700 }}/>
             </div>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Repair Cost (Rs.)</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', display:'block', marginBottom:6 }}>Repair Cost (Rs.)</label>
               <input type="number" value={form.repair_cost} onChange={e=>setForm(f=>({...f,repair_cost:e.target.value}))}
                 placeholder="Your cost" style={{ ...INP, fontSize:18, fontWeight:700 }}/>
             </div>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Payment</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', display:'block', marginBottom:6 }}>Payment</label>
               <select value={form.payment_method} onChange={e=>setForm(f=>({...f,payment_method:e.target.value}))} style={{ ...INP, cursor:'pointer' }}>
                 <option value="cash">💵 Cash</option>
                 <option value="bank">🏦 Bank</option>
@@ -567,7 +575,7 @@ export default function Repairs() {
               </select>
             </div>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Status</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', display:'block', marginBottom:6 }}>Status</label>
               <select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))} style={{ ...INP, cursor:'pointer' }}>
                 <option value="done">✅ Done now</option>
                 <option value="pending">⏳ Pending (leaving frame)</option>
@@ -575,17 +583,17 @@ export default function Repairs() {
               </select>
             </div>
             <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Notes</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', display:'block', marginBottom:6 }}>Notes</label>
               <input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Optional" style={INP}/>
             </div>
           </div>
 
           {/* Quick total display */}
           {parseFloat(form.charge) > 0 && (
-            <div style={{ background:C.navy, borderRadius:10, padding:'12px 16px', marginBottom:14 }}>
+            <div style={{ background:'var(--navy)', borderRadius:'var(--r-md)', padding:'12px 16px', marginBottom:14 }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: parseFloat(form.repair_cost) > 0 ? 8 : 0 }}>
                 <span style={{ fontSize:13, color:'#ede9e0' }}>{form.repair_type || 'Repair'} · {form.payment_method === 'bank' ? '🏦 Bank' : '💵 Cash'}</span>
-                <span style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:C.gold }}>{fmtFull(form.charge)}</span>
+                <span style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:700, color:'var(--gold)' }}>{fmtFull(form.charge)}</span>
               </div>
               {parseFloat(form.repair_cost) > 0 && (
                 <div style={{ display:'flex', gap:16, flexWrap:'wrap', borderTop:'1px solid rgba(255,255,255,.15)', paddingTop:8 }}>
@@ -610,11 +618,11 @@ export default function Repairs() {
 
           <div style={{ display:'flex', gap:8 }}>
             <button onClick={handleAdd} disabled={saving}
-              style={{ padding:'11px 24px', background:saving?C.muted:C.success, color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+              style={{ padding:'11px 24px', background:saving?'var(--text-muted)':'var(--success)', color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
               {saving ? '⏳ Saving...' : '✅ Save Repair'}
             </button>
             <button onClick={()=>{ setShowAdd(false); setError(''); }}
-              style={{ padding:'11px 16px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+              style={{ padding:'11px 16px', background:'var(--bg-sunken)', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>
               Cancel
             </button>
           </div>
@@ -624,46 +632,46 @@ export default function Repairs() {
       {/* Filters */}
       <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap', alignItems:'center' }}>
         <input type="month" value={month} onChange={e=>setMonth(e.target.value)}
-          style={{ padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy }}/>
+          style={{ padding:'8px 12px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)', color:'var(--navy)' }}/>
         {/* Custom date range */}
         <button onClick={()=>setDateFilter(dateFilter==='custom'?'all':'custom')}
-          style={{ padding:'7px 12px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-            border:`1.5px solid ${dateFilter==='custom'?C.gold:C.border}`,
-            background:dateFilter==='custom'?'#fef9f0':'white', color:dateFilter==='custom'?'#92400e':C.muted }}>
+          style={{ padding:'7px 12px', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+            border:`1.5px solid ${dateFilter==='custom'?'var(--gold)':'var(--border)'}`,
+            background:dateFilter==='custom'?'#fef9f0':'white', color:dateFilter==='custom'?'#92400e':'var(--text-muted)' }}>
           📅 Date Range
         </button>
         {dateFilter==='custom' && (
           <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
             <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
-              style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:12, fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy }}/>
-            <span style={{ fontSize:11, color:C.muted }}>to</span>
+              style={{ padding:'6px 10px', border:`1.5px solid var(--gold)`, borderRadius:'var(--r-sm)', fontSize:12, fontFamily:'inherit', outline:'none', background:'#fef9f0', color:'var(--navy)' }}/>
+            <span style={{ fontSize:11, color:'var(--text-muted)' }}>to</span>
             <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
-              style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:12, fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy }}/>
+              style={{ padding:'6px 10px', border:`1.5px solid var(--gold)`, borderRadius:'var(--r-sm)', fontSize:12, fontFamily:'inherit', outline:'none', background:'#fef9f0', color:'var(--navy)' }}/>
             {(dateFrom||dateTo) && <button onClick={()=>{setDateFrom('');setDateTo('');}}
-              style={{ padding:'4px 8px', background:'#fee2e2', border:'none', borderRadius:8, fontSize:11, cursor:'pointer', fontFamily:'inherit', color:C.danger }}>✕</button>}
+              style={{ padding:'4px 8px', background:'#fee2e2', border:'none', borderRadius:'var(--r-sm)', fontSize:11, cursor:'pointer', fontFamily:'inherit', color:'var(--danger)' }}>✕</button>}
           </div>
         )}
         <div style={{ display:'flex', gap:6 }}>
           {[['all','All'],['done','✅ Done'],['pending','⏳ Pending'],['collected','📦 Collected']].map(([v,l])=>(
             <button key={v} onClick={()=>setStatusFilt(v)}
-              style={{ padding:'7px 14px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${statusFilt===v?C.navy:C.border}`, background:statusFilt===v?C.navy:'white', color:statusFilt===v?'white':C.muted }}>
+              style={{ padding:'7px 14px', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${statusFilt===v?'var(--navy)':'var(--border)'}`, background:statusFilt===v?'var(--navy)':'white', color:statusFilt===v?'white':'var(--text-muted)' }}>
               {l}
             </button>
           ))}
         </div>
-        <span style={{ marginLeft:'auto', fontSize:13, color:C.muted }}>
+        <span style={{ marginLeft:'auto', fontSize:13, color:'var(--text-muted)' }}>
           {repairs.length} records · {fmt(repairs.reduce((s,r)=>s+parseFloat(r.charge||0),0))}
         </span>
       </div>
 
       {/* Repair list */}
-      <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
+      <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden' }}>
         {loading
-          ? <div style={{ padding:32, textAlign:'center', color:C.muted }}>Loading...</div>
+          ? <div style={{ padding:32, textAlign:'center', color:'var(--text-muted)' }}>Loading...</div>
           : !repairs.length
-            ? <div style={{ padding:48, textAlign:'center', color:C.muted }}>
+            ? <div style={{ padding:48, textAlign:'center', color:'var(--text-muted)' }}>
                 <div style={{ fontSize:44, marginBottom:12 }}>🔧</div>
-                <div style={{ fontSize:15, fontWeight:600, color:C.navy, marginBottom:6 }}>No repairs recorded</div>
+                <div style={{ fontSize:15, fontWeight:600, color:'var(--navy)', marginBottom:6 }}>No repairs recorded</div>
                 <div style={{ fontSize:13 }}>Click "🔧 New Repair" to record your first repair</div>
               </div>
             : repairs.filter(repair => {
@@ -681,14 +689,14 @@ export default function Repairs() {
                 return (
                   <React.Fragment key={repair.id}>
                     {showDateHead && (
-                      <div style={{ padding:'7px 18px', background:C.cream, fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px', borderBottom:`1px solid ${C.border}` }}>
+                      <div style={{ padding:'7px 18px', background:'var(--bg-sunken)', fontSize:11, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'1px', borderBottom:`1px solid var(--border)` }}>
                         {new Date(repair.created_at).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
                       </div>
                     )}
-                    <div style={{ display:'flex', gap:14, padding:'14px 18px', borderBottom:`1px solid ${C.cream}`, alignItems:'flex-start' }}>
+                    <div style={{ display:'flex', gap:14, padding:'14px 18px', borderBottom:`1px solid var(--bg-sunken)`, alignItems:'flex-start' }}>
 
                       {/* Icon */}
-                      <div style={{ width:44, height:44, borderRadius:10, background:'#f0f9ff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>
+                      <div style={{ width:44, height:44, borderRadius:'var(--r-md)', background:'#f0f9ff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>
                         {rt?.icon || '🔧'}
                       </div>
 
@@ -696,21 +704,21 @@ export default function Repairs() {
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4, flexWrap:'wrap', gap:6 }}>
                           <div>
-                            <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{repair.repair_type}</div>
+                            <div style={{ fontSize:14, fontWeight:700, color:'var(--navy)' }}>{repair.repair_type}</div>
                             {repair.customer_name && (
-                              <div style={{ fontSize:12, color:C.muted }}>👤 {repair.customer_name}{repair.phone?` · 📞 ${repair.phone}`:''}</div>
+                              <div style={{ fontSize:12, color:'var(--text-muted)' }}>👤 {repair.customer_name}{repair.phone?` · 📞 ${repair.phone}`:''}</div>
                             )}
                           </div>
                           <div style={{ textAlign:'right', flexShrink:0 }}>
-                            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:C.navy }}>
-                              {parseFloat(repair.charge)===0 ? <span style={{ color:C.muted, fontSize:13 }}>Free</span> : fmtFull(repair.charge)}
+                            <div style={{ fontFamily:"var(--font-display)", fontSize:17, fontWeight:700, color:'var(--navy)' }}>
+                              {parseFloat(repair.charge)===0 ? <span style={{ color:'var(--text-muted)', fontSize:13 }}>Free</span> : fmtFull(repair.charge)}
                             </div>
-                            <div style={{ fontSize:10, color:C.muted }}>{repair.payment_method==='bank'?'🏦 Bank':repair.payment_method==='free'?'🎁':'💵 Cash'}</div>
+                            <div style={{ fontSize:10, color:'var(--text-muted)' }}>{repair.payment_method==='bank'?'🏦 Bank':repair.payment_method==='free'?'🎁':'💵 Cash'}</div>
                             {parseFloat(repair.repair_cost) > 0 && (
                               <div style={{ fontSize:10, marginTop:2 }}>
-                                <span style={{ color:C.muted }}>Cost: {fmtFull(repair.repair_cost)}</span>
+                                <span style={{ color:'var(--text-muted)' }}>Cost: {fmtFull(repair.repair_cost)}</span>
                                 <span style={{ marginLeft:4, fontWeight:700,
-                                  color: parseFloat(repair.charge)-parseFloat(repair.repair_cost) >= 0 ? C.success : C.danger }}>
+                                  color: parseFloat(repair.charge)-parseFloat(repair.repair_cost) >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                                   · Profit: {fmtFull(parseFloat(repair.charge)-parseFloat(repair.repair_cost))}
                                 </span>
                               </div>
@@ -719,18 +727,18 @@ export default function Repairs() {
                         </div>
 
                         {repair.description && (
-                          <div style={{ fontSize:12, color:C.muted, marginBottom:6, fontStyle:'italic' }}>{repair.description}</div>
+                          <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:6, fontStyle:'italic' }}>{repair.description}</div>
                         )}
 
                         <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
                           <span style={{ background:st.bg, color:st.color, fontSize:11, fontWeight:700, padding:'3px 9px', borderRadius:20 }}>{st.label}</span>
-                          <span style={{ fontSize:11, color:C.muted }}>{repair.repair_number}</span>
-                          <span style={{ fontSize:11, color:C.muted }}>{fmtTime(repair.created_at)}</span>
+                          <span style={{ fontSize:11, color:'var(--text-muted)' }}>{repair.repair_number}</span>
+                          <span style={{ fontSize:11, color:'var(--text-muted)' }}>{fmtTime(repair.created_at)}</span>
 
                           {/* Status actions */}
                           {repair.status==='pending' && (
                             <button onClick={()=>handleStatusChange(repair.id,'done')}
-                              style={{ padding:'4px 11px', background:'#dcfce7', color:C.success, border:`1px solid #86efac`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                              style={{ padding:'4px 11px', background:'#dcfce7', color:'var(--success)', border:`1px solid #86efac`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                               Mark Done
                             </button>
                           )}
@@ -747,17 +755,17 @@ export default function Repairs() {
                             🗂️ Job Card
                           </button>
                           <button onClick={()=>openRepairPrint(buildRepairBill(repair))}
-                            style={{ padding:'4px 11px', background:C.gold+'30', color:'#92400e', border:`1px solid ${C.gold}`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                            style={{ padding:'4px 11px', background:'rgba(201,168,76,.18)', color:'#92400e', border:`1px solid var(--gold)`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                             🖨️ Print
                           </button>
                           {(() => {
                             const bal = Math.max(0, parseFloat(repair.charge||0) - parseFloat(repair.advance||0));
                             return bal > 0 ? (
                               <button onClick={()=>{ setPayRepair(repair); setPayAmt(''); setPayErr(''); setPayDate(new Date().toISOString().split('T')[0]); }}
-                                style={{ padding:'4px 11px', background:'#dcfce7', color:C.success, border:`1px solid #86efac`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                                style={{ padding:'4px 11px', background:'#dcfce7', color:'var(--success)', border:`1px solid #86efac`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                                 Bal: {fmtFull(bal)}
                               </button>
-                            ) : <span style={{ fontSize:10, color:C.success, fontWeight:700 }}>Paid ✓</span>;
+                            ) : <span style={{ fontSize:10, color:'var(--success)', fontWeight:700 }}>Paid ✓</span>;
                           })()}
 
                           {/* Delete */}
@@ -775,9 +783,9 @@ export default function Repairs() {
 
         {/* Month total */}
         {repairs.length > 0 && (
-          <div style={{ padding:'12px 18px', background:C.cream, display:'flex', justifyContent:'space-between', fontSize:14, fontWeight:700, borderTop:`1px solid ${C.border}` }}>
-            <span style={{ color:C.muted }}>Month Total</span>
-            <span style={{ color:C.navy }}>{fmt(repairs.reduce((s,r)=>s+parseFloat(r.charge||0),0))}</span>
+          <div style={{ padding:'12px 18px', background:'var(--bg-sunken)', display:'flex', justifyContent:'space-between', fontSize:14, fontWeight:700, borderTop:`1px solid var(--border)` }}>
+            <span style={{ color:'var(--text-muted)' }}>Month Total</span>
+            <span style={{ color:'var(--navy)' }}>{fmt(repairs.reduce((s,r)=>s+parseFloat(r.charge||0),0))}</span>
           </div>
         )}
       </div>

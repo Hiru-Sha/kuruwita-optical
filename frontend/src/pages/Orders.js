@@ -8,8 +8,16 @@ import { getOrders, getOrder, updateOrder, deleteOrder, addCallLog } from '../ap
 import PrintReceipt from '../components/PrintReceipt';
 
 const C = {
-  navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
-  border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
+  navy:    'var(--navy)',
+  gold:    'var(--gold)',
+  cream:   'var(--bg-sunken)',
+  surface: 'var(--bg-surface)',
+  border:  'var(--border)',
+  muted:   'var(--text-muted)',
+  success: 'var(--success)',
+  danger:  'var(--danger)',
+  warning: 'var(--warning)',
+  info:    'var(--info)',
 };
 const fmtMoney = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 const printCoating = c => ({'Blue Cut':'Blue Filter','Photo Gray':'Photochromic','Blue Cut + Photo Gray':'Blue Filter + Photochromic','Blue Cut + HMC':'Blue Filter + HMC','Photo Gray + HMC':'Photochromic + HMC','Blue Cut + Photo Gray + HMC':'Blue Filter + Photochromic + HMC'}[c]||c);
@@ -17,12 +25,12 @@ const STATUSES = ['all','created','called','delivered','overdue','balance_due'];
 const STATUS_STYLE = {
   created:   { bg:'#dbeafe', color:'#1e40af' },
   called:    { bg:'#fef9c3', color:'#854d0e' },
-  delivered: { bg:'#dcfce7', color:'#2d7a4f' },
-  overdue:   { bg:'#fee2e2', color:'#c0392b' },
+  delivered: { bg:'#dcfce7', color:'var(--success)' },
+  overdue:   { bg:'#fee2e2', color:'var(--danger)' },
 };
 const Badge = ({ status }) => {
-  const s = STATUS_STYLE[status] || { bg:'#f3f4f6', color:'#6b7280' };
-  return <span style={{ background:s.bg, color:s.color, fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:20, textTransform:'capitalize' }}>{status}</span>;
+  const s = STATUS_STYLE[status] || { bg:'#f3f4f6', color:'var(--text-muted)' };
+  return <span style={{ background:s.bg, color:s.color, fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:'var(--r-full)', textTransform:'capitalize' }}>{status}</span>;
 };
 
 // Date filter helper
@@ -57,72 +65,61 @@ function PaymentModal({ order, onClose, onSave }) {
     if (amt > balance + 0.01) return setError(`Cannot pay more than balance due (${fmtMoney(balance)})`);
     setSaving(true);
     try {
-      // FIXED: Call POST /payment instead of PATCH order directly.
-      // This records to payment_logs so the payment appears in today's income.
-      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-      const token = localStorage.getItem('ko_token');
-      const res   = await fetch(`${BASE}/orders/${order.id}/payment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          amount:       amt,
-          payment_method: method,
-          payment_type: amt >= balance - 0.01 ? 'balance' : 'partial',
-          payment_date: payDate,
-          notes: `${amt >= balance - 0.01 ? 'Full balance' : 'Partial payment'} collected`,
-        }),
+      await updateOrder(order.id, {
+        advance_amount:  parseFloat(order.advance_amount || 0) + amt,
+        balance_amount:  Math.max(0, balance - amt),
+        last_payment_date: payDate,
+        last_payment_method: method,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
-      onSave(`Payment of ${fmtMoney(amt)} recorded on ${new Date(payDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}. New balance: ${fmtMoney(data.new_balance)}`);
-    } catch(e) { setError(e.message || 'Failed to record payment.'); }
+      onSave(`Payment of ${fmtMoney(amt)} recorded on ${new Date(payDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}. New balance: ${fmtMoney(Math.max(0,balance-amt))}`);
+    } catch(e) { setError('Failed to record payment.'); }
     finally { setSaving(false); }
   };
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.55)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
       onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
-      <div style={{ background:'white', borderRadius:16, padding:28, width:'100%', maxWidth:400, boxShadow:'0 20px 60px rgba(0,0,0,.25)' }}>
+      <div style={{ background:'var(--bg-surface)', borderRadius:'var(--r-xl)', padding:28, width:'100%', maxWidth:400, boxShadow:'var(--shadow-xl)' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
           <div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, color:C.navy }}>Record Payment</div>
-            <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>{order.order_number} · {order.customer_name}</div>
+            <div style={{ fontFamily:"var(--font-display)", fontSize:18, color:'var(--navy)' }}>Record Payment</div>
+            <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:2 }}>{order.order_number} · {order.customer_name}</div>
           </div>
-          <button onClick={onClose} style={{ background:C.cream, border:'none', borderRadius:8, padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>✕</button>
+          <button onClick={onClose} style={{ background:'var(--bg-sunken)', border:'none', borderRadius:'var(--r-sm)', padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>✕</button>
         </div>
-        <div style={{ background:balance>0?'#fee2e2':'#dcfce7', borderRadius:10, padding:'12px 16px', marginBottom:18, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <span style={{ fontSize:13, color:C.muted }}>Balance due</span>
-          <span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:balance>0?C.danger:C.success }}>{fmtMoney(balance)}</span>
+        <div style={{ background:balance>0?'#fee2e2':'#dcfce7', borderRadius:'var(--r-md)', padding:'12px 16px', marginBottom:18, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontSize:13, color:'var(--text-muted)' }}>Balance due</span>
+          <span style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:700, color:balance>0?'var(--danger)':'var(--success)' }}>{fmtMoney(balance)}</span>
         </div>
         {balance<=0 ? (
-          <div style={{ textAlign:'center', padding:'12px 0', color:C.success, fontSize:14, fontWeight:600 }}>This order is fully paid</div>
+          <div style={{ textAlign:'center', padding:'12px 0', color:'var(--success)', fontSize:14, fontWeight:600 }}>This order is fully paid</div>
         ) : (
           <>
-            {error&&<div style={{ background:'#fef2f2', color:C.danger, borderRadius:8, padding:'9px 14px', fontSize:13, marginBottom:14 }}>{error}</div>}
+            {error&&<div style={{ background:'#fef2f2', color:'var(--danger)', borderRadius:'var(--r-sm)', padding:'9px 14px', fontSize:13, marginBottom:14 }}>{error}</div>}
             <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:5 }}>Amount (Rs.) *</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', display:'block', marginBottom:5 }}>Amount (Rs.) *</label>
               <input type="number" value={amount} onChange={e=>setAmount(e.target.value)}
                 placeholder={`Max: Rs. ${balance.toLocaleString()}`}
-                style={{ width:'100%', padding:'11px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:15, fontFamily:'inherit', outline:'none', background:C.cream }}/>
+                style={{ width:'100%', padding:'11px 13px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:15, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)' }}/>
               <div style={{ display:'flex', gap:6, marginTop:6 }}>
-                <button onClick={()=>setAmount(String(balance))} style={{ padding:'5px 12px', background:C.navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Full balance</button>
+                <button onClick={()=>setAmount(String(balance))} style={{ padding:'5px 12px', background:'var(--navy)', color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Full balance</button>
                 {[1000,2000,5000].filter(v=>v<balance).map(v=>(
-                  <button key={v} onClick={()=>setAmount(String(v))} style={{ padding:'5px 12px', background:C.cream, border:`1px solid ${C.border}`, borderRadius:7, fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>Rs.{v.toLocaleString()}</button>
+                  <button key={v} onClick={()=>setAmount(String(v))} style={{ padding:'5px 12px', background:'var(--bg-sunken)', border:`1px solid var(--border)`, borderRadius:7, fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>Rs.{v.toLocaleString()}</button>
                 ))}
               </div>
             </div>
             {/* Payment Date */}
             <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:5 }}>Payment Date</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', display:'block', marginBottom:5 }}>Payment Date</label>
               <input type="date" value={payDate} onChange={e=>setPayDate(e.target.value)}
-                style={{ width:'100%', padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy, fontWeight:600 }}/>
+                style={{ width:'100%', padding:'10px 13px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:14, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)', color:'var(--navy)', fontWeight:600 }}/>
               <div style={{ display:'flex', gap:6, marginTop:6 }}>
                 {[
                   { label:'Today',     val:new Date().toISOString().split('T')[0] },
                   { label:'Yesterday', val:new Date(Date.now()-86400000).toISOString().split('T')[0] },
                 ].map(d=>(
                   <button key={d.label} onClick={()=>setPayDate(d.val)}
-                    style={{ padding:'4px 12px', background:payDate===d.val?C.navy:C.cream, color:payDate===d.val?'white':C.muted, border:`1px solid ${payDate===d.val?C.navy:C.border}`, borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                    style={{ padding:'4px 12px', background:payDate===d.val?'var(--navy)':'var(--bg-sunken)', color:payDate===d.val?'white':'var(--text-muted)', border:`1px solid ${payDate===d.val?'var(--navy)':'var(--border)'}`, borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                     {d.label}
                   </button>
                 ))}
@@ -131,18 +128,18 @@ function PaymentModal({ order, onClose, onSave }) {
 
             {/* Payment Method */}
             <div style={{ marginBottom:20 }}>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:5 }}>Payment Method</label>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', display:'block', marginBottom:5 }}>Payment Method</label>
               <div style={{ display:'flex', gap:8 }}>
                 {[['cash','💵 Cash'],['bank','🏦 Bank'],['card','💳 Card']].map(([val,label])=>(
                   <button key={val} onClick={()=>setMethod(val)}
-                    style={{ flex:1, padding:'9px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${method===val?C.navy:C.border}`, background:method===val?C.navy:'white', color:method===val?'white':C.muted }}>
+                    style={{ flex:1, padding:'9px', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${method===val?'var(--navy)':'var(--border)'}`, background:method===val?'var(--navy)':'white', color:method===val?'white':'var(--text-muted)' }}>
                     {label}
                   </button>
                 ))}
               </div>
             </div>
             <button onClick={handlePay} disabled={saving}
-              style={{ width:'100%', padding:'13px', background:saving?C.muted:C.success, color:'white', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+              style={{ width:'100%', padding:'13px', background:saving?'var(--text-muted)':'var(--success)', color:'white', border:'none', borderRadius:'var(--r-md)', fontSize:15, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
               {saving?'Saving...':` Record ${amount?fmtMoney(parseFloat(amount)||0):'Payment'}`}
             </button>
           </>
@@ -379,24 +376,24 @@ export default function Orders() {
     load();
   };
 
-  const INP = { padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:13, fontFamily:'inherit', outline:'none', background:C.surface, color:'var(--text,#111827)', transition:'border-color .15s' };
+  const INP = { padding:'10px 14px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-md)', fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'var(--text,#111827)', transition:'border-color .15s' };
 
   return (
-    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1400 }}>
+    <div style={{ fontFamily:"var(--font-body)", maxWidth:1400 }}>
 
       {/* Toast */}
       {toast && (
-        <div style={{ position:'fixed', bottom:24, right:24, background:C.navy, color:'white', padding:'13px 20px', borderRadius:12, fontSize:14, fontWeight:600, borderLeft:`4px solid ${C.gold}`, zIndex:500, boxShadow:'0 4px 20px rgba(0,0,0,.2)' }}>
+        <div style={{ position:'fixed', bottom:24, right:24, background:'var(--navy)', color:'white', padding:'13px 20px', borderRadius:'var(--r-lg)', fontSize:14, fontWeight:600, borderLeft:`4px solid var(--gold)`, zIndex:500, boxShadow:'0 4px 20px rgba(0,0,0,.2)' }}>
           {toast}
         </div>
       )}
 
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
-        <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:C.navy, margin:'0 0 4px' }}>Orders</h1>
-        <p style={{ fontSize:13, color:C.muted, margin:0 }}>Manage customer orders and lens jobs</p>
+        <h1 style={{ fontFamily:"var(--font-display)", fontSize:26, color:'var(--navy)', margin:'0 0 4px' }}>Orders</h1>
+        <p style={{ fontSize:13, color:'var(--text-muted)', margin:0 }}>Manage customer orders and lens jobs</p>
         <button onClick={()=>navigate('/orders/new')}
-          style={{ padding:'9px 20px', background:C.gold, color:C.navy, border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+          style={{ padding:'9px 20px', background:'var(--gold)', color:'var(--navy)', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
           + New Order
         </button>
       </div>
@@ -412,54 +409,54 @@ export default function Orders() {
       <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap', alignItems:'center' }}>
         {DATE_FILTERS.map(df=>(
           <button key={df.key} onClick={()=>{ setDateFilter(df.key); if(df.key!=='custom'){setDateFrom('');setDateTo('');} }}
-            style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-              border:`1.5px solid ${dateFilter===df.key?C.navy:C.border}`,
-              background:dateFilter===df.key?C.navy:'white',
-              color:dateFilter===df.key?'white':C.muted }}>
+            style={{ padding:'6px 14px', borderRadius:'var(--r-full)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+              border:`1.5px solid ${dateFilter===df.key?'var(--navy)':'var(--border)'}`,
+              background:dateFilter===df.key?'var(--navy)':'white',
+              color:dateFilter===df.key?'white':'var(--text-muted)' }}>
             {df.label}
           </button>
         ))}
         <button onClick={()=>setDateFilter('custom')}
-          style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-            border:`1.5px solid ${dateFilter==='custom'?C.gold:C.border}`,
+          style={{ padding:'6px 14px', borderRadius:'var(--r-full)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+            border:`1.5px solid ${dateFilter==='custom'?'var(--gold)':'var(--border)'}`,
             background:dateFilter==='custom'?'#fef9f0':'white',
-            color:dateFilter==='custom'?'#92400e':C.muted }}>
+            color:dateFilter==='custom'?'#92400e':'var(--text-muted)' }}>
           📅 Custom Range
         </button>
         {dateFilter==='custom' && (
           <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', width:'100%', marginTop:6 }}>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ fontSize:12, color:C.muted, fontWeight:600 }}>From</span>
+              <span style={{ fontSize:12, color:'var(--text-muted)', fontWeight:600 }}>From</span>
               <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
-                style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:13,
-                  fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy, cursor:'pointer' }}/>
+                style={{ padding:'6px 10px', border:`1.5px solid var(--gold)`, borderRadius:'var(--r-sm)', fontSize:13,
+                  fontFamily:'inherit', outline:'none', background:'#fef9f0', color:'var(--navy)', cursor:'pointer' }}/>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ fontSize:12, color:C.muted, fontWeight:600 }}>To</span>
+              <span style={{ fontSize:12, color:'var(--text-muted)', fontWeight:600 }}>To</span>
               <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
-                style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:13,
-                  fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy, cursor:'pointer' }}/>
+                style={{ padding:'6px 10px', border:`1.5px solid var(--gold)`, borderRadius:'var(--r-sm)', fontSize:13,
+                  fontFamily:'inherit', outline:'none', background:'#fef9f0', color:'var(--navy)', cursor:'pointer' }}/>
             </div>
             {(dateFrom||dateTo) && (
               <button onClick={()=>{ setDateFrom(''); setDateTo(''); }}
-                style={{ padding:'5px 10px', background:'#fee2e2', border:'none', borderRadius:8,
-                  fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
+                style={{ padding:'5px 10px', background:'#fee2e2', border:'none', borderRadius:'var(--r-sm)',
+                  fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'var(--danger)' }}>
                 ✕ Clear
               </button>
             )}
-            <span style={{ fontSize:11, color:C.muted }}>
+            <span style={{ fontSize:11, color:'var(--text-muted)' }}>
               {dateFrom&&dateTo ? `${new Date(dateFrom).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})} – ${new Date(dateTo).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}` : 'Pick date range'}
             </span>
           </div>
         )}
         <button onClick={()=>setMissingCosts(s=>!s)}
-          style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-            border:`1.5px solid ${missingCosts?'#f97316':C.border}`,
+          style={{ padding:'6px 14px', borderRadius:'var(--r-full)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+            border:`1.5px solid ${missingCosts?'#f97316':'var(--border)'}`,
             background:missingCosts?'#fff7ed':'white',
-            color:missingCosts?'#c2410c':C.muted }}>
+            color:missingCosts?'#c2410c':'var(--text-muted)' }}>
           {missingCosts ? '⚠️ Missing Costs ✓' : '⚠️ Missing Costs'}
         </button>
-        <span style={{ fontSize:12, color:C.muted, alignSelf:'center', marginLeft:4 }}>
+        <span style={{ fontSize:12, color:'var(--text-muted)', alignSelf:'center', marginLeft:4 }}>
           {filteredOrders.length} order{filteredOrders.length!==1?'s':''}
           {missingCosts && <span style={{ marginLeft:6, color:'#c2410c', fontWeight:700 }}>— need costs entered</span>}
         </span>
@@ -469,10 +466,10 @@ export default function Orders() {
       <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:14 }}>
         {STATUSES.map(s=>(
           <button key={s} onClick={()=>setFilter(s)}
-            style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-              border:`1.5px solid ${filter===s?C.gold:C.border}`,
-              background:filter===s?C.gold:'white',
-              color:filter===s?C.navy:C.muted }}>
+            style={{ padding:'6px 14px', borderRadius:'var(--r-full)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+              border:`1.5px solid ${filter===s?'var(--gold)':'var(--border)'}`,
+              background:filter===s?'var(--gold)':'white',
+              color:filter===s?'var(--navy)':'var(--text-muted)' }}>
             {s==='balance_due'?'💰 Balance Due':s==='all'?'All':s.charAt(0).toUpperCase()+s.slice(1)}
           </button>
         ))}
@@ -480,20 +477,20 @@ export default function Orders() {
 
       {/* Order list with row numbers */}
       {loading
-        ? <p style={{ color:C.muted, fontSize:13, padding:'20px 0' }}>Loading orders...</p>
+        ? <p style={{ color:'var(--text-muted)', fontSize:13, padding:'20px 0' }}>Loading orders...</p>
         : !filteredOrders.length
-          ? <p style={{ color:C.muted, fontSize:13, padding:'20px 0' }}>No orders found</p>
+          ? <p style={{ color:'var(--text-muted)', fontSize:13, padding:'20px 0' }}>No orders found</p>
           : filteredOrders.map((o, idx) => (
             <div key={o.id} onClick={()=>openOrder(o.id)}
-              style={{ background:'white', border:`1.5px solid ${selected?.id===o.id?C.gold:o.status==='overdue'?'#fca5a5':C.border}`,
-                borderLeft:o.status==='overdue'?`4px solid ${C.danger}`:undefined,
-                borderRadius:14, padding:'14px 16px', marginBottom:8, cursor:'pointer', transition:'border-color .15s',
+              style={{ background:'var(--bg-surface)', border:`1.5px solid ${selected?.id===o.id?'var(--gold)':o.status==='overdue'?'#fca5a5':'var(--border)'}`,
+                borderLeft:o.status==='overdue'?`4px solid var(--danger)`:undefined,
+                borderRadius:'var(--r-lg)', padding:'14px 16px', marginBottom:8, cursor:'pointer', transition:'border-color .15s',
                 display:'flex', gap:12, alignItems:'flex-start' }}>
 
               {/* Row number */}
-              <div style={{ width:28, height:28, borderRadius:'50%', background:C.cream, border:`1px solid ${C.border}`,
+              <div style={{ width:28, height:28, borderRadius:'50%', background:'var(--bg-sunken)', border:`1px solid var(--border)`,
                 display:'flex', alignItems:'center', justifyContent:'center',
-                fontSize:11, fontWeight:700, color:C.muted, flexShrink:0, marginTop:2 }}>
+                fontSize:11, fontWeight:700, color:'var(--text-muted)', flexShrink:0, marginTop:2 }}>
                 {idx + 1}
               </div>
 
@@ -501,24 +498,24 @@ export default function Orders() {
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                    <span style={{ fontSize:12, fontWeight:700, color:C.muted }}>{o.order_number}</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:'var(--text-muted)' }}>{o.order_number}</span>
                     <Badge status={o.status}/>
                     {o.has_rx && !o.rx_returned && (
                       <span style={{ background:'#e0f2fe', color:'#0369a1', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>Rx</span>
                     )}
                     {(!parseFloat(o.lens_buy_price) || (!parseFloat(o.frame_buy_price) && !o.customer_own_frame)) && (
-                      <span style={{ background:'#fff7ed', color:'#c2410c', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, border:'1px solid #fed7aa' }}>
+                      <span style={{ background:'#fff7ed', color:'#c2410c', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:'var(--r-full)', border:'1px solid #fed7aa' }}>
                         ⚠️ No cost
                       </span>
                     )}
                   </div>
-                  <span style={{ fontSize:11, color:C.muted, flexShrink:0 }}>{o.deliver_date?.slice(0,10)}</span>
+                  <span style={{ fontSize:11, color:'var(--text-muted)', flexShrink:0 }}>{o.deliver_date?.slice(0,10)}</span>
                 </div>
-                <div style={{ fontSize:15, fontWeight:600, color:C.navy, marginBottom:4 }}>{o.customer_name}</div>
+                <div style={{ fontSize:15, fontWeight:600, color:'var(--navy)', marginBottom:4 }}>{o.customer_name}</div>
                 <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
-                  <span style={{ fontSize:12, color:C.muted }}>{o.phone}</span>
-                  <span style={{ fontSize:12, color:C.muted }}>{o.frame||'—'}</span>
-                  <span style={{ fontSize:12, fontWeight:700, color:parseFloat(o.balance_amount)>0?C.danger:C.success }}>
+                  <span style={{ fontSize:12, color:'var(--text-muted)' }}>{o.phone}</span>
+                  <span style={{ fontSize:12, color:'var(--text-muted)' }}>{o.frame||'—'}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:parseFloat(o.balance_amount)>0?'var(--danger)':'var(--success)' }}>
                     Balance: {fmtMoney(o.balance_amount)}
                   </span>
                 </div>
@@ -531,26 +528,26 @@ export default function Orders() {
       {selected && (
         <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.45)', zIndex:200, display:'flex', alignItems:'flex-start', justifyContent:'flex-end' }}
           onClick={e=>{ if(e.target===e.currentTarget) setSelected(null); }}>
-          <div style={{ background:'white', width:'100%', maxWidth:480, height:'100vh', overflowY:'auto', padding:24, boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
+          <div style={{ background:'var(--bg-surface)', width:'100%', maxWidth:480, height:'100vh', overflowY:'auto', padding:24, boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
 
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
               <div>
-                <div style={{ fontSize:12, color:C.muted, fontWeight:700, marginBottom:2 }}>{selected.order_number}</div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:C.navy }}>{selected.customer_name}</div>
-                <div style={{ fontSize:13, color:C.muted }}>📞 {selected.phone} · Age {selected.age}</div>
+                <div style={{ fontSize:12, color:'var(--text-muted)', fontWeight:700, marginBottom:2 }}>{selected.order_number}</div>
+                <div style={{ fontFamily:"var(--font-display)", fontSize:20, color:'var(--navy)' }}>{selected.customer_name}</div>
+                <div style={{ fontSize:13, color:'var(--text-muted)' }}>📞 {selected.phone} · Age {selected.age}</div>
               </div>
-              <button onClick={()=>setSelected(null)} style={{ background:C.cream, border:'none', borderRadius:8, padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted, fontWeight:600 }}>✕ Close</button>
+              <button onClick={()=>setSelected(null)} style={{ background:'var(--bg-sunken)', border:'none', borderRadius:'var(--r-sm)', padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)', fontWeight:600 }}>✕ Close</button>
             </div>
 
             {/* Status */}
             <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:8, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>Order Status</div>
+              <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', marginBottom:8, paddingBottom:6, borderBottom:`1px solid var(--bg-sunken)` }}>Order Status</div>
               <div style={{ display:'flex', gap:8 }}>
                 {['created','called','delivered'].map(s=>{
                   const st=STATUS_STYLE[s];
                   return (
                     <button key={s} onClick={()=>handleStatus(selected.id,s)}
-                      style={{ flex:1, padding:'9px 8px', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`2px solid ${selected.status===s?C.navy:C.border}`, background:selected.status===s?st.bg:'white', color:st.color }}>
+                      style={{ flex:1, padding:'9px 8px', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`2px solid ${selected.status===s?'var(--navy)':'var(--border)'}`, background:selected.status===s?st.bg:'white', color:st.color }}>
                       {s==='created'?'Created':s==='called'?'Called':'Delivered'}
                     </button>
                   );
@@ -561,16 +558,16 @@ export default function Orders() {
             {/* Lens job */}
             {selected.lens_company && selected.lens_company!=='In-Shop' && (
               <div style={{ marginBottom:20 }}>
-                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:8, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>
+                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', marginBottom:8, paddingBottom:6, borderBottom:`1px solid var(--bg-sunken)` }}>
                   Lens Job — {selected.lens_company}
                 </div>
-                <div style={{ background:C.cream, borderRadius:10, padding:14 }}>
+                <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-md)', padding:14 }}>
                   <div style={{ display:'flex' }}>
                     {['Sent','Grinding','Ready','Received'].map((label,i)=>(
                       <div key={i} onClick={()=>handleLensStep(selected.id,i)}
                         style={{ flex:1, textAlign:'center', padding:'8px 4px', fontSize:11, fontWeight:600, cursor:'pointer',
-                          color:i<(selected.lens_step||0)?C.success:i===(selected.lens_step||0)?C.navy:'#9ca3af',
-                          borderBottom:`3px solid ${i<(selected.lens_step||0)?C.success:i===(selected.lens_step||0)?C.gold:C.border}` }}>
+                          color:i<(selected.lens_step||0)?'var(--success)':i===(selected.lens_step||0)?'var(--navy)':'#9ca3af',
+                          borderBottom:`3px solid ${i<(selected.lens_step||0)?'var(--success)':i===(selected.lens_step||0)?'var(--gold)':'var(--border)'}` }}>
                         {label}
                       </div>
                     ))}
@@ -581,7 +578,7 @@ export default function Orders() {
 
             {/* Payment */}
             <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:10, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>Payment</div>
+              <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', marginBottom:10, paddingBottom:6, borderBottom:`1px solid var(--bg-sunken)` }}>Payment</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
                 {[
                   { l:'Frame price', v:fmtMoney(selected.frame_sell_price||selected.total_amount) },
@@ -589,28 +586,28 @@ export default function Orders() {
                   { l:'Total',       v:fmtMoney(selected.total_amount), bold:true },
                   { l:'Advance paid',v:fmtMoney(selected.advance_amount) },
                 ].map(item=>(
-                  <div key={item.l} style={{ background:C.cream, borderRadius:8, padding:'10px 12px' }}>
-                    <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:3 }}>{item.l}</div>
-                    <div style={{ fontSize:13, fontWeight:item.bold?700:600, color:C.navy }}>{item.v}</div>
+                  <div key={item.l} style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-sm)', padding:'10px 12px' }}>
+                    <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', marginBottom:3 }}>{item.l}</div>
+                    <div style={{ fontSize:13, fontWeight:item.bold?700:600, color:'var(--navy)' }}>{item.v}</div>
                   </div>
                 ))}
               </div>
-              <div style={{ background:parseFloat(selected.balance_amount)>0?'#fee2e2':'#dcfce7', borderRadius:10, padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <div style={{ background:parseFloat(selected.balance_amount)>0?'#fee2e2':'#dcfce7', borderRadius:'var(--r-md)', padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                 <div>
-                  <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:parseFloat(selected.balance_amount)>0?C.danger:C.success, marginBottom:3 }}>Balance Due</div>
-                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:parseFloat(selected.balance_amount)>0?C.danger:C.success }}>
+                  <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:parseFloat(selected.balance_amount)>0?'var(--danger)':'var(--success)', marginBottom:3 }}>Balance Due</div>
+                  <div style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:700, color:parseFloat(selected.balance_amount)>0?'var(--danger)':'var(--success)' }}>
                     {fmtMoney(selected.balance_amount)}
                   </div>
                   {selected.last_payment_date && (
-                    <div style={{ fontSize:11, color:C.muted, marginTop:4 }}>
+                    <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:4 }}>
                       Last paid: {(() => { const r = selected.last_payment_date; const d = new Date(r.includes('T') ? r : r + 'T00:00:00'); return isNaN(d) ? r : d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); })()}
                       {selected.last_payment_method && ` · ${selected.last_payment_method}`}
                     </div>
                   )}
                 </div>
                 {parseFloat(selected.balance_amount)>0
-                  ? <button onClick={()=>setShowPay(true)} style={{ padding:'10px 18px', background:C.success, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Record Payment</button>
-                  : <span style={{ fontSize:13, fontWeight:700, color:C.success }}>Fully paid</span>
+                  ? <button onClick={()=>setShowPay(true)} style={{ padding:'10px 18px', background:'var(--success)', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Record Payment</button>
+                  : <span style={{ fontSize:13, fontWeight:700, color:'var(--success)' }}>Fully paid</span>
                 }
               </div>
             </div>
@@ -618,11 +615,11 @@ export default function Orders() {
             {/* Bank Receipt Status — shows if order was paid by bank/card */}
             {(selected.payment_method && selected.payment_method !== 'cash') && (
               <div style={{ marginBottom:20 }}>
-                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:10, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>
+                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', marginBottom:10, paddingBottom:6, borderBottom:`1px solid var(--bg-sunken)` }}>
                   Bank / Card Receipt
                 </div>
                 {bankReceipt ? (
-                  <div style={{ background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:10, padding:'12px 14px' }}>
+                  <div style={{ background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:'var(--r-md)', padding:'12px 14px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
                       <div>
                         <div style={{ fontSize:13, fontWeight:700, color:'#1e40af', marginBottom:2 }}>
@@ -633,14 +630,14 @@ export default function Orders() {
                           {bankReceipt.bank_name ? ` · ${bankReceipt.bank_name}` : ''}
                         </div>
                       </div>
-                      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:'#1e40af' }}>
+                      <div style={{ fontFamily:"var(--font-display)", fontSize:18, fontWeight:700, color:'#1e40af' }}>
                         {fmtMoney(bankReceipt.amount)}
                       </div>
                     </div>
                     {!showEditBank ? (
                       <div style={{ display:'flex', gap:8 }}>
                         <button onClick={()=>{ setShowEditBank(true); setBankEditAmt(String(bankReceipt.amount)); }}
-                          style={{ padding:'6px 14px', background:'white', border:'1px solid #93c5fd', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#1e40af' }}>
+                          style={{ padding:'6px 14px', background:'var(--bg-surface)', border:'1px solid #93c5fd', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#1e40af' }}>
                           ✏️ Edit Amount
                         </button>
                         <button onClick={async()=>{
@@ -651,14 +648,14 @@ export default function Orders() {
                           setBankReceipt(null);
                           showToast('Bank receipt removed');
                         }}
-                          style={{ padding:'6px 14px', background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
+                          style={{ padding:'6px 14px', background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'var(--danger)' }}>
                           ✕ Cancel Receipt
                         </button>
                       </div>
                     ) : (
                       <div style={{ display:'flex', gap:8, alignItems:'center', marginTop:8 }}>
                         <input type="number" value={bankEditAmt} onChange={e=>setBankEditAmt(e.target.value)}
-                          style={{ flex:1, padding:'8px 12px', border:'1.5px solid #93c5fd', borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none' }}/>
+                          style={{ flex:1, padding:'8px 12px', border:'1.5px solid #93c5fd', borderRadius:'var(--r-sm)', fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none' }}/>
                         <button onClick={async()=>{
                           const BASE_=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
                           const tk_=localStorage.getItem('ko_token');
@@ -669,18 +666,18 @@ export default function Orders() {
                           setBankReceipt(r); setShowEditBank(false);
                           showToast('Bank receipt updated');
                         }}
-                          style={{ padding:'8px 16px', background:'#1e40af', color:'white', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                          style={{ padding:'8px 16px', background:'#1e40af', color:'white', border:'none', borderRadius:'var(--r-sm)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                           Save
                         </button>
                         <button onClick={()=>setShowEditBank(false)}
-                          style={{ padding:'8px 12px', background:'white', border:'1px solid #93c5fd', borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+                          style={{ padding:'8px 12px', background:'var(--bg-surface)', border:'1px solid #93c5fd', borderRadius:'var(--r-sm)', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>
                           Cancel
                         </button>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div style={{ background:'#fef9c3', border:'1px solid #fde68a', borderRadius:10, padding:'12px 14px' }}>
+                  <div style={{ background:'#fef9c3', border:'1px solid #fde68a', borderRadius:'var(--r-md)', padding:'12px 14px' }}>
                     <div style={{ fontSize:13, fontWeight:600, color:'#92400e', marginBottom:8 }}>
                       ⚠️ No bank receipt found for this {selected.payment_method} payment
                     </div>
@@ -701,7 +698,7 @@ export default function Orders() {
                       setBankReceipt(r);
                       showToast('Bank receipt created');
                     }}
-                      style={{ padding:'8px 16px', background:'#1e40af', color:'white', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                      style={{ padding:'8px 16px', background:'#1e40af', color:'white', border:'none', borderRadius:'var(--r-sm)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                       + Create Bank Receipt
                     </button>
                   </div>
@@ -711,10 +708,10 @@ export default function Orders() {
 
             {/* Cost of Goods */}
             <div style={{ marginBottom:20 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>
-                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted }}>Cost of Goods</div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, paddingBottom:6, borderBottom:`1px solid var(--bg-sunken)` }}>
+                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)' }}>Cost of Goods</div>
                 <button onClick={()=>{ setShowLensCost(s=>!s); setLensCostForm({ frameBuy:selected.frame_buy_price||'', lensBuy:selected.lens_buy_price||'', lensSell:selected.lens_sell_price||'', company:selected.lens_company||'' }); }}
-                  style={{ padding:'4px 12px', background:showLensCost?'#fee2e2':'#eff6ff', color:showLensCost?C.danger:'#1e40af', border:`1px solid ${showLensCost?'#fca5a5':'#93c5fd'}`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  style={{ padding:'4px 12px', background:showLensCost?'#fee2e2':'#eff6ff', color:showLensCost?'var(--danger)':'#1e40af', border:`1px solid ${showLensCost?'#fca5a5':'#93c5fd'}`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                   {showLensCost?'✕ Cancel':'✏️ Update Costs'}
                 </button>
               </div>
@@ -722,39 +719,39 @@ export default function Orders() {
               {/* Current cost summary — frame + lens */}
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:showLensCost?10:0 }}>
                 {selected.customer_own_frame ? (
-                  <div style={{ background:'#f0fdf4', borderRadius:8, padding:'8px 10px', border:'1px solid #86efac' }}>
-                    <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Frame Buy</div>
-                    <div style={{ fontSize:11, fontWeight:700, color:C.success }}>Customer Frame</div>
+                  <div style={{ background:'#f0fdf4', borderRadius:'var(--r-sm)', padding:'8px 10px', border:'1px solid #86efac' }}>
+                    <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', marginBottom:2 }}>Frame Buy</div>
+                    <div style={{ fontSize:11, fontWeight:700, color:'var(--success)' }}>Customer Frame</div>
                   </div>
                 ) : (
-                <div style={{ background:parseFloat(selected.frame_buy_price)>0?C.cream:'#fef9c3', borderRadius:8, padding:'8px 10px', border:parseFloat(selected.frame_buy_price)>0?'none':'1px solid #fde68a' }}>
-                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Frame Buy</div>
-                  <div style={{ fontSize:12, fontWeight:700, color:parseFloat(selected.frame_buy_price)>0?C.success:'#92400e' }}>
+                <div style={{ background:parseFloat(selected.frame_buy_price)>0?'var(--bg-sunken)':'#fef9c3', borderRadius:'var(--r-sm)', padding:'8px 10px', border:parseFloat(selected.frame_buy_price)>0?'none':'1px solid #fde68a' }}>
+                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', marginBottom:2 }}>Frame Buy</div>
+                  <div style={{ fontSize:12, fontWeight:700, color:parseFloat(selected.frame_buy_price)>0?'var(--success)':'#92400e' }}>
                     {parseFloat(selected.frame_buy_price)>0?fmtMoney(selected.frame_buy_price):'Not set'}
                   </div>
                 </div>
                 )}
-                <div style={{ background:parseFloat(selected.lens_buy_price)>0?C.cream:'#fef9c3', borderRadius:8, padding:'8px 10px', border:parseFloat(selected.lens_buy_price)>0?'none':'1px solid #fde68a' }}>
-                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Lens Buy</div>
-                  <div style={{ fontSize:12, fontWeight:700, color:parseFloat(selected.lens_buy_price)>0?C.success:'#92400e' }}>
+                <div style={{ background:parseFloat(selected.lens_buy_price)>0?'var(--bg-sunken)':'#fef9c3', borderRadius:'var(--r-sm)', padding:'8px 10px', border:parseFloat(selected.lens_buy_price)>0?'none':'1px solid #fde68a' }}>
+                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', marginBottom:2 }}>Lens Buy</div>
+                  <div style={{ fontSize:12, fontWeight:700, color:parseFloat(selected.lens_buy_price)>0?'var(--success)':'#92400e' }}>
                     {parseFloat(selected.lens_buy_price)>0?fmtMoney(selected.lens_buy_price):'Not set'}
                   </div>
                 </div>
-                <div style={{ background:C.cream, borderRadius:8, padding:'8px 10px' }}>
-                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Total COGS</div>
-                  <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>
+                <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-sm)', padding:'8px 10px' }}>
+                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', marginBottom:2 }}>Total COGS</div>
+                  <div style={{ fontSize:12, fontWeight:700, color:'var(--navy)' }}>
                     {fmtMoney((selected.customer_own_frame?0:parseFloat(selected.frame_buy_price)||0)+(parseFloat(selected.lens_buy_price)||0))}
                   </div>
                 </div>
-                <div style={{ background:C.cream, borderRadius:8, padding:'8px 10px' }}>
-                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>Lab</div>
-                  <div style={{ fontSize:12, fontWeight:600, color:C.navy }}>{selected.lens_company||'—'}</div>
+                <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-sm)', padding:'8px 10px' }}>
+                  <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', marginBottom:2 }}>Lab</div>
+                  <div style={{ fontSize:12, fontWeight:600, color:'var(--navy)' }}>{selected.lens_company||'—'}</div>
                 </div>
               </div>
 
               {/* Update form */}
               {showLensCost && (
-                <div style={{ background:'#eff6ff', border:`1px solid #93c5fd`, borderRadius:10, padding:'14px 16px' }}>
+                <div style={{ background:'#eff6ff', border:`1px solid #93c5fd`, borderRadius:'var(--r-md)', padding:'14px 16px' }}>
                   <div style={{ fontSize:12, fontWeight:700, color:'#1e40af', marginBottom:6 }}>
                     Enter frame cost from your receipt + lens cost from lab bill
                   </div>
@@ -763,42 +760,42 @@ export default function Orders() {
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
                     {selected.customer_own_frame ? (
-                      <div style={{ background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:8, padding:'9px 12px' }}>
-                        <div style={{ fontSize:10, fontWeight:700, color:C.success }}>Customer's own frame</div>
-                        <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>No frame cost needed</div>
+                      <div style={{ background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:'var(--r-sm)', padding:'9px 12px' }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:'var(--success)' }}>Customer's own frame</div>
+                        <div style={{ fontSize:10, color:'var(--text-muted)', marginTop:2 }}>No frame cost needed</div>
                       </div>
                     ) : (
                     <div>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Frame Buy Price (Rs.)</label>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', display:'block', marginBottom:4 }}>Frame Buy Price (Rs.)</label>
                       <input type="number" value={lensCostForm.frameBuy} onChange={e=>setLensCostForm(f=>({...f,frameBuy:e.target.value}))}
                         placeholder="What you paid for frame"
-                        style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #86efac`, borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
-                      <div style={{ fontSize:10, color:C.muted, marginTop:3 }}>From dealer / Kalutota receipt</div>
+                        style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #86efac`, borderRadius:'var(--r-sm)', fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'var(--navy)' }}/>
+                      <div style={{ fontSize:10, color:'var(--text-muted)', marginTop:3 }}>From dealer / Kalutota receipt</div>
                     </div>
                     )}
                     <div>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Lens Buy Price (Rs.)</label>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', display:'block', marginBottom:4 }}>Lens Buy Price (Rs.)</label>
                       <input type="number" value={lensCostForm.lensBuy} onChange={e=>setLensCostForm(f=>({...f,lensBuy:e.target.value}))}
                         placeholder="What lab charged you"
-                        style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #93c5fd`, borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
-                      <div style={{ fontSize:10, color:C.muted, marginTop:3 }}>Negombo Optical / Solex bill</div>
+                        style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #93c5fd`, borderRadius:'var(--r-sm)', fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'var(--navy)' }}/>
+                      <div style={{ fontSize:10, color:'var(--text-muted)', marginTop:3 }}>Negombo Optical / Solex bill</div>
                     </div>
                     <div>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Lens Sell Price (Rs.)</label>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', display:'block', marginBottom:4 }}>Lens Sell Price (Rs.)</label>
                       <input type="number" value={lensCostForm.lensSell} onChange={e=>setLensCostForm(f=>({...f,lensSell:e.target.value}))}
                         placeholder="What you charge customer"
-                        style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #93c5fd`, borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
+                        style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #93c5fd`, borderRadius:'var(--r-sm)', fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'var(--navy)' }}/>
                     </div>
                     <div style={{ gridColumn:'1/-1' }}>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Lab / Supplier</label>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', display:'block', marginBottom:4 }}>Lab / Supplier</label>
                       <input value={lensCostForm.company} onChange={e=>setLensCostForm(f=>({...f,company:e.target.value}))}
                         placeholder="e.g. Negombo Optical, Solex..."
-                        style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #93c5fd`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
+                        style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #93c5fd`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'var(--navy)' }}/>
                     </div>
                   </div>
                   {lensCostForm.buy && lensCostForm.sell && (
-                    <div style={{ background:'white', borderRadius:7, padding:'8px 12px', marginBottom:10, fontSize:12 }}>
-                      Margin: <b style={{ color:parseFloat(lensCostForm.sell)-parseFloat(lensCostForm.buy)>0?C.success:C.danger }}>
+                    <div style={{ background:'var(--bg-surface)', borderRadius:7, padding:'8px 12px', marginBottom:10, fontSize:12 }}>
+                      Margin: <b style={{ color:parseFloat(lensCostForm.sell)-parseFloat(lensCostForm.buy)>0?'var(--success)':'var(--danger)' }}>
                         Rs.{(parseFloat(lensCostForm.sell||0)-parseFloat(lensCostForm.buy||0)).toLocaleString()}
                         {' '}({Math.round((parseFloat(lensCostForm.sell||0)-parseFloat(lensCostForm.buy||0))/parseFloat(lensCostForm.sell||1)*100)}%)
                       </b>
@@ -810,7 +807,7 @@ export default function Orders() {
                     </div>
                   )}
                   <button onClick={handleLensCostSave} disabled={savingLens}
-                    style={{ padding:'10px 22px', background:savingLens?C.muted:'#1e40af', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:savingLens?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                    style={{ padding:'10px 22px', background:savingLens?'var(--text-muted)':'#1e40af', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:savingLens?'not-allowed':'pointer', fontFamily:'inherit' }}>
                     {savingLens?'Saving...':'💾 Save Costs'}
                   </button>
                 </div>
@@ -819,7 +816,7 @@ export default function Orders() {
 
             {/* Details */}
             <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:8, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>Details</div>
+              <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', marginBottom:8, paddingBottom:6, borderBottom:`1px solid var(--bg-sunken)` }}>Details</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                 {[
                   { l:'Frame',   v:selected.frame },
@@ -827,9 +824,9 @@ export default function Orders() {
                   { l:'Coating', v:printCoating(selected.lens_coating) },
                   { l:'Deliver', v:selected.deliver_date?.slice(0,10) },
                 ].map(item=>(
-                  <div key={item.l} style={{ background:C.cream, borderRadius:8, padding:'10px 12px' }}>
-                    <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:3 }}>{item.l}</div>
-                    <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{item.v||'—'}</div>
+                  <div key={item.l} style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-sm)', padding:'10px 12px' }}>
+                    <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', marginBottom:3 }}>{item.l}</div>
+                    <div style={{ fontSize:13, fontWeight:600, color:'var(--navy)' }}>{item.v||'—'}</div>
                   </div>
                 ))}
               </div>
@@ -837,10 +834,10 @@ export default function Orders() {
 
             {/* Prescription */}
             {selected.has_rx && (
-              <div style={{ marginBottom:20, background:'#e0f2fe', borderRadius:10, padding:'12px 14px' }}>
+              <div style={{ marginBottom:20, background:'#e0f2fe', borderRadius:'var(--r-md)', padding:'12px 14px' }}>
                 <div style={{ fontSize:12, color:'#0369a1', fontWeight:700, marginBottom:4 }}>Prescription from {selected.rx_hospital||'hospital'}</div>
                 {selected.rx_returned
-                  ? <span style={{ fontSize:11, color:C.success }}>Returned to customer</span>
+                  ? <span style={{ fontSize:11, color:'var(--success)' }}>Returned to customer</span>
                   : <button onClick={handleRxReturned} style={{ background:'#0369a1', color:'white', border:'none', borderRadius:7, padding:'5px 12px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Mark as Returned</button>
                 }
               </div>
@@ -849,14 +846,14 @@ export default function Orders() {
             {/* Refraction */}
             {selected.refraction && (
               <div style={{ marginBottom:20 }}>
-                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:8, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>Refraction</div>
+                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', marginBottom:8, paddingBottom:6, borderBottom:`1px solid var(--bg-sunken)` }}>Refraction</div>
                 <div style={{ overflowX:'auto' }}>
                   <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
-                    <thead><tr>{['Eye','SPH','CYL','AXIS','ADD','VA'].map(h=><th key={h} style={{ background:C.cream, padding:'6px 8px', textAlign:'center', fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, border:`1px solid ${C.border}` }}>{h}</th>)}</tr></thead>
+                    <thead><tr>{['Eye','SPH','CYL','AXIS','ADD','VA'].map(h=><th key={h} style={{ background:'var(--bg-sunken)', padding:'6px 8px', textAlign:'center', fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', border:`1px solid var(--border)` }}>{h}</th>)}</tr></thead>
                     <tbody>
                       {[['Right',selected.refraction.r_sph,selected.refraction.r_cyl,selected.refraction.r_axis,selected.refraction.r_add,selected.refraction.r_va],
                         ['Left', selected.refraction.l_sph,selected.refraction.l_cyl,selected.refraction.l_axis,selected.refraction.l_add,selected.refraction.l_va]].map(row=>(
-                        <tr key={row[0]}>{row.map((v,i)=><td key={i} style={{ padding:'6px 8px', textAlign:'center', border:`1px solid ${C.border}`, fontWeight:i===0?700:400, color:C.navy, background:i===0?C.cream:'white' }}>{v||'—'}</td>)}</tr>
+                        <tr key={row[0]}>{row.map((v,i)=><td key={i} style={{ padding:'6px 8px', textAlign:'center', border:`1px solid var(--border)`, fontWeight:i===0?700:400, color:'var(--navy)', background:i===0?'var(--bg-sunken)':'white' }}>{v||'—'}</td>)}</tr>
                       ))}
                     </tbody>
                   </table>
@@ -866,11 +863,11 @@ export default function Orders() {
 
             {/* Call log */}
             <div style={{ marginBottom:16 }}>
-              <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:8, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>Call Log</div>
+              <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', marginBottom:8, paddingBottom:6, borderBottom:`1px solid var(--bg-sunken)` }}>Call Log</div>
               <div style={{ marginBottom:8 }}>
                 {selected.call_logs?.length
                   ? selected.call_logs.map((l,i)=>(
-                    <div key={i} style={{ fontSize:12, color:C.navy, padding:'5px 0', borderBottom:`1px solid ${C.cream}` }}>
+                    <div key={i} style={{ fontSize:12, color:'var(--navy)', padding:'5px 0', borderBottom:`1px solid var(--bg-sunken)` }}>
                       {l.note} <span style={{ color:'#9ca3af', marginLeft:8 }}>· {new Date(l.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span>
                     </div>
                   ))
@@ -879,25 +876,25 @@ export default function Orders() {
               </div>
               <div style={{ display:'flex', gap:8 }}>
                 <input value={logNote} onChange={e=>setLogNote(e.target.value)} placeholder="Add call note..."
-                  style={{ flex:1, padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream }}
+                  style={{ flex:1, padding:'8px 12px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)' }}
                   onKeyDown={e=>e.key==='Enter'&&handleAddLog()}/>
-                <button onClick={handleAddLog} style={{ padding:'8px 14px', background:C.navy, color:'white', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Add</button>
+                <button onClick={handleAddLog} style={{ padding:'8px 14px', background:'var(--navy)', color:'white', border:'none', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Add</button>
               </div>
             </div>
 
             {/* Free Gifts */}
             <div style={{ marginBottom:20 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>
-                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted }}>Free Gifts</div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, paddingBottom:6, borderBottom:`1px solid var(--bg-sunken)` }}>
+                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)' }}>Free Gifts</div>
                 <button onClick={()=>{ setShowGifts(s=>!s); setGiftItems([]); setGiftSearch(''); setGiftResults([]); }}
-                  style={{ padding:'4px 12px', background:showGifts?'#fee2e2':'#f0fdf4', color:showGifts?C.danger:'#166534', border:`1px solid ${showGifts?'#fca5a5':'#86efac'}`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  style={{ padding:'4px 12px', background:showGifts?'#fee2e2':'#f0fdf4', color:showGifts?'var(--danger)':'#166534', border:`1px solid ${showGifts?'#fca5a5':'#86efac'}`, borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                   {showGifts?'✕ Cancel':'+ Add Gift'}
                 </button>
               </div>
 
               {/* Show existing gift notes */}
               {selected.notes?.includes('Gifts given:') && (
-                <div style={{ background:'#f0fdf4', border:`1px solid #86efac`, borderRadius:8, padding:'8px 12px', marginBottom:showGifts?10:0, fontSize:12, color:'#166534' }}>
+                <div style={{ background:'#f0fdf4', border:`1px solid #86efac`, borderRadius:'var(--r-sm)', padding:'8px 12px', marginBottom:showGifts?10:0, fontSize:12, color:'#166534' }}>
                   {selected.notes.split('\n').filter(l=>l.startsWith('Gifts given:')).map((l,i)=>(
                     <div key={i}>🎁 {l.replace('Gifts given: ','')}</div>
                   ))}
@@ -905,7 +902,7 @@ export default function Orders() {
               )}
 
               {showGifts && (
-                <div style={{ background:'#f0fdf4', border:`1px solid #86efac`, borderRadius:10, padding:'14px' }}>
+                <div style={{ background:'#f0fdf4', border:`1px solid #86efac`, borderRadius:'var(--r-md)', padding:'14px' }}>
                   <div style={{ fontSize:12, color:'#166534', fontWeight:700, marginBottom:10 }}>
                     Search items to give as free gift — stock will be deducted automatically
                   </div>
@@ -915,9 +912,9 @@ export default function Orders() {
                     <input value={giftSearch}
                       onChange={e=>{ setGiftSearch(e.target.value); searchGiftItems(e.target.value); }}
                       placeholder="Search: lens cleaner, chain, pouch, box..."
-                      style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #86efac`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:'white', color:C.navy, boxSizing:'border-box' }}/>
+                      style={{ width:'100%', padding:'9px 12px', border:`1.5px solid #86efac`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'var(--navy)', boxSizing:'border-box' }}/>
                     {giftResults.length>0 && (
-                      <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white', border:`1px solid #86efac`, borderRadius:8, boxShadow:'0 4px 16px rgba(0,0,0,.1)', zIndex:50, overflow:'hidden', marginTop:4 }}>
+                      <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'var(--bg-surface)', border:`1px solid #86efac`, borderRadius:'var(--r-sm)', boxShadow:'0 4px 16px rgba(0,0,0,.1)', zIndex:50, overflow:'hidden', marginTop:4 }}>
                         {giftResults.map(item=>(
                           <div key={item.id}
                             onMouseDown={()=>{
@@ -929,8 +926,8 @@ export default function Orders() {
                             style={{ padding:'9px 12px', cursor:'pointer', borderBottom:`1px solid #f0fdf4`, display:'flex', justifyContent:'space-between', alignItems:'center' }}
                             onMouseEnter={e=>e.currentTarget.style.background='#f0fdf4'}
                             onMouseLeave={e=>e.currentTarget.style.background='white'}>
-                            <span style={{ fontSize:13, fontWeight:600, color:C.navy }}>{item.name||item.item_name}</span>
-                            <span style={{ fontSize:11, color:item.quantity>0?C.success:C.danger, fontWeight:600 }}>
+                            <span style={{ fontSize:13, fontWeight:600, color:'var(--navy)' }}>{item.name||item.item_name}</span>
+                            <span style={{ fontSize:11, color:item.quantity>0?'var(--success)':'var(--danger)', fontWeight:600 }}>
                               {item.quantity} in stock
                             </span>
                           </div>
@@ -943,18 +940,18 @@ export default function Orders() {
                   {giftItems.length>0 && (
                     <div style={{ marginBottom:10 }}>
                       {giftItems.map((gi,i)=>(
-                        <div key={i} style={{ display:'flex', alignItems:'center', gap:8, background:'white', borderRadius:7, padding:'7px 10px', marginBottom:6, border:`1px solid #86efac` }}>
+                        <div key={i} style={{ display:'flex', alignItems:'center', gap:8, background:'var(--bg-surface)', borderRadius:7, padding:'7px 10px', marginBottom:6, border:`1px solid #86efac` }}>
                           <span style={{ flex:1, fontSize:13, fontWeight:600, color:'#166534' }}>🎁 {gi.name}</span>
                           <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                             <button onClick={()=>setGiftItems(p=>p.map((x,j)=>j===i?{...x,qty:Math.max(1,x.qty-1)}:x))}
-                              style={{ width:24, height:24, border:`1px solid #86efac`, borderRadius:5, background:'white', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit' }}>−</button>
+                              style={{ width:24, height:24, border:`1px solid #86efac`, borderRadius:5, background:'var(--bg-surface)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit' }}>−</button>
                             <span style={{ fontSize:13, fontWeight:700, minWidth:20, textAlign:'center' }}>{gi.qty}</span>
                             <button onClick={()=>setGiftItems(p=>p.map((x,j)=>j===i?{...x,qty:Math.min(x.stock,x.qty+1)}:x))}
-                              style={{ width:24, height:24, border:`1px solid #86efac`, borderRadius:5, background:'white', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit' }}>+</button>
+                              style={{ width:24, height:24, border:`1px solid #86efac`, borderRadius:5, background:'var(--bg-surface)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit' }}>+</button>
                           </div>
-                          <span style={{ fontSize:11, color:C.muted }}>/{gi.stock}</span>
+                          <span style={{ fontSize:11, color:'var(--text-muted)' }}>/{gi.stock}</span>
                           <button onClick={()=>setGiftItems(p=>p.filter((_,j)=>j!==i))}
-                            style={{ background:'#fee2e2', color:C.danger, border:'none', borderRadius:5, padding:'3px 8px', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>✕</button>
+                            style={{ background:'#fee2e2', color:'var(--danger)', border:'none', borderRadius:5, padding:'3px 8px', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>✕</button>
                         </div>
                       ))}
                     </div>
@@ -966,7 +963,7 @@ export default function Orders() {
                     <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                       {['Lens Cleaner','Chain','Temple Tip','Box','Pouch','Cloth'].map(name=>(
                         <button key={name} onClick={()=>searchGiftItems(name)}
-                          style={{ padding:'4px 10px', background:'white', border:`1px solid #86efac`, borderRadius:20, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#166534' }}>
+                          style={{ padding:'4px 10px', background:'var(--bg-surface)', border:`1px solid #86efac`, borderRadius:'var(--r-full)', fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#166534' }}>
                           {name}
                         </button>
                       ))}
@@ -974,7 +971,7 @@ export default function Orders() {
                   </div>
 
                   <button onClick={handleSaveGifts} disabled={savingGifts||!giftItems.length}
-                    style={{ width:'100%', padding:'10px', background:savingGifts||!giftItems.length?C.muted:'#166534', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:savingGifts||!giftItems.length?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                    style={{ width:'100%', padding:'10px', background:savingGifts||!giftItems.length?'var(--text-muted)':'#166534', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:savingGifts||!giftItems.length?'not-allowed':'pointer', fontFamily:'inherit' }}>
                     {savingGifts?'Saving...':giftItems.length?`Save ${giftItems.length} Gift Item${giftItems.length>1?'s':''}  — Deduct from Stock`:'Search and add items above'}
                   </button>
                 </div>
@@ -982,14 +979,14 @@ export default function Orders() {
             </div>
 
             {/* Actions */}
-            <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:16, paddingTop:16, borderTop:`1px solid ${C.border}` }}>
-              <button onClick={()=>setShowPrint(true)} style={{ padding:'10px 16px', background:C.gold, color:C.navy, border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Print</button>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:16, paddingTop:16, borderTop:`1px solid var(--border)` }}>
+              <button onClick={()=>setShowPrint(true)} style={{ padding:'10px 16px', background:'var(--gold)', color:'var(--navy)', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Print</button>
               <a href={`https://wa.me/94${selected.phone?.replace(/^0/,'')}?text=${encodeURIComponent(`Hello ${selected.customer_name}, your order ${selected.order_number} is ready. Balance: ${fmtMoney(selected.balance_amount)}. Thank you!`)}`}
                 target="_blank" rel="noreferrer"
                 style={{ padding:'10px 16px', background:'#25D366', color:'white', borderRadius:9, fontSize:13, fontWeight:600, textDecoration:'none' }}>
                 WhatsApp
               </a>
-              <button onClick={handleDelete} style={{ padding:'10px 16px', background:'#fee2e2', color:C.danger, border:`1.5px solid #fca5a5`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>Delete</button>
+              <button onClick={handleDelete} style={{ padding:'10px 16px', background:'#fee2e2', color:'var(--danger)', border:`1.5px solid #fca5a5`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>Delete</button>
             </div>
           </div>
         </div>

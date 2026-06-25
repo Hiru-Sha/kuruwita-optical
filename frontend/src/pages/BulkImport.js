@@ -7,13 +7,21 @@
 import React, { useState, useRef } from 'react';
 
 const C = {
-  navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
-  border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
+  navy:    'var(--navy)',
+  gold:    'var(--gold)',
+  cream:   'var(--bg-sunken)',
+  surface: 'var(--bg-surface)',
+  border:  'var(--border)',
+  muted:   'var(--text-muted)',
+  success: 'var(--success)',
+  danger:  'var(--danger)',
+  warning: 'var(--warning)',
+  info:    'var(--info)',
 };
 const fmt  = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
-const INP  = { padding:'9px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
+const INP  = { padding:'9px 12px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:"var(--font-body)", outline:'none', background:'var(--bg-sunken)', color:'var(--navy)', width:'100%', boxSizing:'border-box' };
 const SEL  = { ...INP, cursor:'pointer' };
-const LBL  = { fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:4, display:'block' };
+const LBL  = { fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:'var(--text-muted)', marginBottom:4, display:'block' };
 
 const LENS_TYPES   = ['Single Vision','Bifocal','Progressive','Reading','Sunglass Lens','Photochromic'];
 const COATINGS     = ['CR (White)','HMC','Hard Coat','Blue Filter','Photochromic','Blue + Photochromic','AR Coat'];
@@ -296,19 +304,19 @@ export default function BulkImport() {
   ];
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:"var(--font-body)" }}>
       <div style={{ marginBottom:4 }}>
-        <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:0 }}>📥 Bulk Import Past Records</h1>
-        <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Enter past sales, quick sales and repairs. Use Ctrl+Enter to save quickly.</p>
+        <h1 style={{ fontFamily:"var(--font-display)", fontSize:24, color:'var(--navy)', margin:0 }}>📥 Bulk Import Past Records</h1>
+        <p style={{ fontSize:13, color:'var(--text-muted)', margin:'4px 0 0' }}>Enter past sales, quick sales and repairs. Use Ctrl+Enter to save quickly.</p>
       </div>
 
       {/* Progress */}
       {saved.length > 0 && (
-        <div style={{ background:'#dcfce7', border:`1px solid #86efac`, borderRadius:10, padding:'10px 16px', marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <span style={{ fontSize:14, color:C.success, fontWeight:600 }}>
+        <div style={{ background:'#dcfce7', border:`1px solid #86efac`, borderRadius:'var(--r-md)', padding:'10px 16px', marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontSize:14, color:'var(--success)', fontWeight:600 }}>
             ✅ {saved.length} record{saved.length!==1?'s':''} imported so far
           </span>
-          <span style={{ fontSize:12, color:C.success }}>
+          <span style={{ fontSize:12, color:'var(--success)' }}>
             {saved.filter(s=>s.type==='order').length} orders ·
             {' '}{saved.filter(s=>s.type==='sale').length} quick sales ·
             {' '}{saved.filter(s=>s.type==='repair').length} repairs
@@ -321,27 +329,27 @@ export default function BulkImport() {
         {/* ── LEFT: Entry form ── */}
         <div>
           {/* Tabs */}
-          <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, background:'white', borderRadius:'12px 12px 0 0', padding:'0 4px', marginBottom:0 }}>
+          <div style={{ display:'flex', borderBottom:`1px solid var(--border)`, background:'var(--bg-surface)', borderRadius:'12px 12px 0 0', padding:'0 4px', marginBottom:0 }}>
             {TABS.map(t=>(
               <button key={t.key} onClick={()=>{ setActiveTab(t.key); setError(''); }}
-                style={{ padding:'11px 18px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:activeTab===t.key?C.navy:C.muted, borderBottom:`2.5px solid ${activeTab===t.key?C.gold:'transparent'}`, marginBottom:-1 }}>
-                {t.label} {t.count>0&&<span style={{ background:C.gold, color:C.navy, fontSize:10, fontWeight:700, padding:'1px 7px', borderRadius:20, marginLeft:4 }}>{t.count}</span>}
+                style={{ padding:'11px 18px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:activeTab===t.key?'var(--navy)':'var(--text-muted)', borderBottom:`2.5px solid ${activeTab===t.key?'var(--gold)':'transparent'}`, marginBottom:-1 }}>
+                {t.label} {t.count>0&&<span style={{ background:'var(--gold)', color:'var(--navy)', fontSize:10, fontWeight:700, padding:'1px 7px', borderRadius:'var(--r-full)', marginLeft:4 }}>{t.count}</span>}
               </button>
             ))}
           </div>
 
-          <div style={{ background:'white', border:`1px solid ${C.border}`, borderTop:'none', borderRadius:'0 0 14px 14px', padding:'20px 22px' }} onKeyDown={handleKeyDown}>
-            {error && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:8, padding:'9px 13px', fontSize:13, marginBottom:14 }}>⚠️ {error}</div>}
+          <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderTop:'none', borderRadius:'0 0 14px 14px', padding:'20px 22px' }} onKeyDown={handleKeyDown}>
+            {error && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:'var(--danger)', borderRadius:'var(--r-sm)', padding:'9px 13px', fontSize:13, marginBottom:14 }}>⚠️ {error}</div>}
 
             {/* ── ORDER FORM ── */}
             {activeTab==='orders' && (
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
                 {/* Date — first and most important */}
-                <div style={{ background:'#eff6ff', borderRadius:10, padding:'12px 14px' }}>
+                <div style={{ background:'#eff6ff', borderRadius:'var(--r-md)', padding:'12px 14px' }}>
                   <label style={{ ...LBL, color:'#1e40af' }}>📅 Date of Order *</label>
                   <input ref={firstFieldRef} type="date" value={orderForm.date}
                     onChange={e=>setOrderForm(f=>({...f,date:e.target.value}))}
-                    style={{ ...INP, fontSize:16, fontWeight:700, background:'white' }}/>
+                    style={{ ...INP, fontSize:16, fontWeight:700, background:'var(--bg-surface)' }}/>
                   <div style={{ fontSize:11, color:'#1e40af', marginTop:5 }}>This sets the order's actual creation date in the system</div>
                 </div>
 
@@ -376,7 +384,7 @@ export default function BulkImport() {
                   <div style={{ display:'flex', gap:8 }}>
                     {[[false,'🏪 Our frame'],[true,"👤 Customer's frame"]].map(([v,l])=>(
                       <button key={String(v)} onClick={()=>setOrderForm(f=>({...f,customer_own_frame:v}))}
-                        style={{ flex:1, padding:'8px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${orderForm.customer_own_frame===v?C.navy:C.border}`, background:orderForm.customer_own_frame===v?C.navy:'white', color:orderForm.customer_own_frame===v?'white':C.muted }}>
+                        style={{ flex:1, padding:'8px', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${orderForm.customer_own_frame===v?'var(--navy)':'var(--border)'}`, background:orderForm.customer_own_frame===v?'var(--navy)':'white', color:orderForm.customer_own_frame===v?'white':'var(--text-muted)' }}>
                         {l}
                       </button>
                     ))}
@@ -478,8 +486,8 @@ export default function BulkImport() {
                 </div>
 
                 {/* Prices — same as New Order Step 4 */}
-                <div style={{ background:C.cream, borderRadius:10, padding:'14px 16px' }}>
-                  <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:12 }}>💰 Pricing</div>
+                <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-md)', padding:'14px 16px' }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'var(--navy)', marginBottom:12 }}>💰 Pricing</div>
 
                   {/* Frame + Lens prices */}
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
@@ -505,7 +513,7 @@ export default function BulkImport() {
                     const advance = parseFloat(orderForm.advance||0) || (orderForm.status==='delivered' ? displayTotal : 0);
                     const balance = Math.max(0, displayTotal - advance);
                     return (
-                      <div style={{ background:'white', borderRadius:9, padding:'12px 14px', marginBottom:10 }}>
+                      <div style={{ background:'var(--bg-surface)', borderRadius:9, padding:'12px 14px', marginBottom:10 }}>
                         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
                           <div>
                             <label style={LBL}>Total Amount (Rs.)</label>
@@ -513,7 +521,7 @@ export default function BulkImport() {
                               placeholder={String(autoTotal||'')}
                               style={{ ...INP, fontSize:16, fontWeight:700 }}/>
                             {autoTotal>0 && !orderForm.total && (
-                              <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>Auto: Rs.{autoTotal.toLocaleString()}</div>
+                              <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:3 }}>Auto: Rs.{autoTotal.toLocaleString()}</div>
                             )}
                           </div>
                           <div>
@@ -525,13 +533,13 @@ export default function BulkImport() {
                         </div>
                         {/* Balance */}
                         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-                          padding:'10px 14px', borderRadius:8,
+                          padding:'10px 14px', borderRadius:'var(--r-sm)',
                           background: balance===0?'#dcfce7':'#fef9c3',
                           border: `1px solid ${balance===0?'#86efac':'#fde047'}` }}>
-                          <span style={{ fontSize:13, fontWeight:700, color: balance===0?'#2d7a4f':'#92400e' }}>
+                          <span style={{ fontSize:13, fontWeight:700, color: balance===0?'var(--success)':'#92400e' }}>
                             {balance===0 ? '✅ Fully Paid' : `⏳ Balance Due`}
                           </span>
-                          <span style={{ fontSize:16, fontWeight:700, color: balance===0?'#2d7a4f':'#92400e' }}>
+                          <span style={{ fontSize:16, fontWeight:700, color: balance===0?'var(--success)':'#92400e' }}>
                             Rs.{balance.toLocaleString()}
                           </span>
                         </div>
@@ -553,14 +561,14 @@ export default function BulkImport() {
                 </div>
 
                 {/* Refraction — same layout as New Order */}
-                <div style={{ background:C.cream, borderRadius:10, padding:'12px 14px' }}>
+                <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-md)', padding:'12px 14px' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:orderForm.has_rx?14:0 }}>
-                    <label style={{ fontSize:13, fontWeight:700, color:C.navy }}>👁️ Refraction / Prescription</label>
+                    <label style={{ fontSize:13, fontWeight:700, color:'var(--navy)' }}>👁️ Refraction / Prescription</label>
                     <div onClick={()=>setOrderForm(f=>({...f,has_rx:!f.has_rx}))}
-                      style={{ width:44, height:24, borderRadius:12, background:orderForm.has_rx?C.navy:C.border,
+                      style={{ width:44, height:24, borderRadius:'var(--r-lg)', background:orderForm.has_rx?'var(--navy)':'var(--border)',
                         position:'relative', cursor:'pointer', transition:'background .2s', flexShrink:0 }}>
                       <div style={{ position:'absolute', top:3, left:orderForm.has_rx?23:3, width:18, height:18,
-                        borderRadius:'50%', background:'white', transition:'left .2s' }}/>
+                        borderRadius:'50%', background:'var(--bg-surface)', transition:'left .2s' }}/>
                     </div>
                   </div>
                   {orderForm.has_rx && (
@@ -574,9 +582,9 @@ export default function BulkImport() {
                           <button key={opt.val} onClick={()=>setOrderForm(f=>({...f,rx_source:opt.val}))}
                             style={{ flex:1, padding:'8px 10px', borderRadius:9, fontSize:12, fontWeight:600,
                               cursor:'pointer', fontFamily:'inherit', textAlign:'left',
-                              border:`2px solid ${orderForm.rx_source===opt.val ? C.navy : C.border}`,
-                              background: orderForm.rx_source===opt.val ? C.navy : 'white',
-                              color: orderForm.rx_source===opt.val ? 'white' : C.muted }}>
+                              border:`2px solid ${orderForm.rx_source===opt.val ? 'var(--navy)' : 'var(--border)'}`,
+                              background: orderForm.rx_source===opt.val ? 'var(--navy)' : 'white',
+                              color: orderForm.rx_source===opt.val ? 'white' : 'var(--text-muted)' }}>
                             <div>{opt.label}</div>
                             <div style={{ fontSize:10, opacity:.7, marginTop:2 }}>{opt.desc}</div>
                           </button>
@@ -584,12 +592,12 @@ export default function BulkImport() {
                       </div>
 
                       {[{label:'Right Eye (R)',p:'r'},{label:'Left Eye (L)',p:'l'}].map(eye=>(
-                        <div key={eye.p} style={{ background:'white', borderRadius:9, padding:12, marginBottom:10 }}>
-                          <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>{eye.label}</div>
+                        <div key={eye.p} style={{ background:'var(--bg-surface)', borderRadius:9, padding:12, marginBottom:10 }}>
+                          <div style={{ fontSize:12, fontWeight:700, color:'var(--navy)', marginBottom:8 }}>{eye.label}</div>
                           <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                             {/* SPH */}
                             <div>
-                              <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4 }}>SPH</div>
+                              <div style={{ fontSize:10, fontWeight:700, color:'var(--text-muted)', marginBottom:4 }}>SPH</div>
                               <div style={{ display:'flex', gap:4 }}>
                                 <select value={orderForm[eye.p+'_sph_s']} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_sph_s']:e.target.value}))}
                                   style={{ ...SEL, width:50, padding:'8px 4px' }}>
@@ -603,7 +611,7 @@ export default function BulkImport() {
                             </div>
                             {/* CYL */}
                             <div>
-                              <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4 }}>CYL</div>
+                              <div style={{ fontSize:10, fontWeight:700, color:'var(--text-muted)', marginBottom:4 }}>CYL</div>
                               <div style={{ display:'flex', gap:4 }}>
                                 <select value={orderForm[eye.p+'_cyl_s']} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_cyl_s']:e.target.value}))}
                                   style={{ ...SEL, width:50, padding:'8px 4px' }}>
@@ -617,7 +625,7 @@ export default function BulkImport() {
                             </div>
                             {/* AXIS */}
                             <div>
-                              <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4 }}>AXIS</div>
+                              <div style={{ fontSize:10, fontWeight:700, color:'var(--text-muted)', marginBottom:4 }}>AXIS</div>
                               <select value={orderForm[eye.p+'_axis']} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_axis']:e.target.value}))}
                                 style={{ ...SEL, width:76 }}>
                                 {AXES.map(v=><option key={v}>{v}</option>)}
@@ -625,7 +633,7 @@ export default function BulkImport() {
                             </div>
                             {/* ADD */}
                             <div>
-                              <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4 }}>ADD</div>
+                              <div style={{ fontSize:10, fontWeight:700, color:'var(--text-muted)', marginBottom:4 }}>ADD</div>
                               <select value={orderForm[eye.p+'_add']} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_add']:e.target.value}))}
                                 style={{ ...SEL, width:84 }}>
                                 {DIOPTERS.map(v=><option key={v}>{v}</option>)}
@@ -633,7 +641,7 @@ export default function BulkImport() {
                             </div>
                             {/* VA */}
                             <div>
-                              <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4 }}>V/A</div>
+                              <div style={{ fontSize:10, fontWeight:700, color:'var(--text-muted)', marginBottom:4 }}>V/A</div>
                               <select value={orderForm[eye.p+'_va']} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_va']:e.target.value}))}
                                 style={{ ...SEL, width:80 }}>
                                 {VA_OPTIONS.map(v=><option key={v}>{v}</option>)}
@@ -641,7 +649,7 @@ export default function BulkImport() {
                             </div>
                             {/* PD */}
                             <div>
-                              <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4 }}>PD</div>
+                              <div style={{ fontSize:10, fontWeight:700, color:'var(--text-muted)', marginBottom:4 }}>PD</div>
                               <input value={orderForm[eye.p+'_pd']||''} onChange={e=>setOrderForm(f=>({...f,[eye.p+'_pd']:e.target.value}))}
                                 placeholder="32" style={{ ...INP, width:64 }}/>
                             </div>
@@ -653,9 +661,9 @@ export default function BulkImport() {
                       <button onClick={()=>setOrderForm(f=>({...f,
                         l_sph_s:f.r_sph_s, l_sph:f.r_sph, l_cyl_s:f.r_cyl_s, l_cyl:f.r_cyl,
                         l_axis:f.r_axis, l_add:f.r_add, l_va:f.r_va, l_pd:f.r_pd,
-                      }))} style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:7,
+                      }))} style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:7,
                         padding:'6px 14px', fontSize:12, cursor:'pointer', fontFamily:'inherit',
-                        color:C.muted, marginBottom:10 }}>
+                        color:'var(--text-muted)', marginBottom:10 }}>
                         ↓ Copy Right Eye to Left Eye
                       </button>
 
@@ -699,11 +707,11 @@ export default function BulkImport() {
             {/* ── QUICK SALE FORM ── */}
             {activeTab==='sales' && (
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                <div style={{ background:'#eff6ff', borderRadius:10, padding:'12px 14px' }}>
+                <div style={{ background:'#eff6ff', borderRadius:'var(--r-md)', padding:'12px 14px' }}>
                   <label style={{ ...LBL, color:'#1e40af' }}>📅 Date of Sale *</label>
                   <input ref={firstFieldRef} type="date" value={saleForm.date}
                     onChange={e=>setSaleForm(f=>({...f,date:e.target.value}))}
-                    style={{ ...INP, fontSize:16, fontWeight:700, background:'white' }}/>
+                    style={{ ...INP, fontSize:16, fontWeight:700, background:'var(--bg-surface)' }}/>
                 </div>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                   <div><label style={LBL}>Customer Name (optional)</label><input value={saleForm.customer_name} onChange={e=>setSaleForm(f=>({...f,customer_name:e.target.value}))} placeholder="Walk-in customer" style={INP}/></div>
@@ -735,11 +743,11 @@ export default function BulkImport() {
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
 
                 {/* Date */}
-                <div style={{ background:'#eff6ff', borderRadius:10, padding:'12px 14px' }}>
+                <div style={{ background:'#eff6ff', borderRadius:'var(--r-md)', padding:'12px 14px' }}>
                   <label style={{ ...LBL, color:'#1e40af' }}>📅 Date of Repair *</label>
                   <input ref={firstFieldRef} type="date" value={repairForm.date}
                     onChange={e=>setRepairForm(f=>({...f,date:e.target.value}))}
-                    style={{ ...INP, fontSize:16, fontWeight:700, background:'white' }}/>
+                    style={{ ...INP, fontSize:16, fontWeight:700, background:'var(--bg-surface)' }}/>
                   <div style={{ fontSize:11, color:'#2563eb', marginTop:4 }}>This sets the actual repair date in the system</div>
                 </div>
 
@@ -822,7 +830,7 @@ export default function BulkImport() {
             {/* Save button */}
             <div style={{ marginTop:16, display:'flex', gap:10, alignItems:'center' }}>
               <button onClick={handleSave} disabled={saving}
-                style={{ flex:1, padding:'13px', background:saving?C.muted:C.success, color:'white', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                style={{ flex:1, padding:'13px', background:saving?'var(--text-muted)':'var(--success)', color:'white', border:'none', borderRadius:'var(--r-md)', fontSize:15, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
                 {saving ? '⏳ Saving...' : `✅ Save & Next  (or Ctrl+Enter)`}
               </button>
               <button onClick={()=>{
@@ -831,12 +839,12 @@ export default function BulkImport() {
                 if(activeTab==='repairs') setRepairForm(defaultRepair());
                 setError('');
               }}
-                style={{ padding:'13px 16px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+                style={{ padding:'13px 16px', background:'var(--bg-sunken)', border:`1.5px solid var(--border)`, borderRadius:'var(--r-md)', fontSize:13, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>
                 🗑️ Clear
               </button>
             </div>
 
-            <div style={{ marginTop:8, fontSize:12, color:C.muted, textAlign:'center' }}>
+            <div style={{ marginTop:8, fontSize:12, color:'var(--text-muted)', textAlign:'center' }}>
               💡 Tip: Set the date, fill in details, press <b>Ctrl+Enter</b> to save and move to the next record. Date stays the same so you can enter multiple records for the same day quickly.
             </div>
           </div>
@@ -844,41 +852,41 @@ export default function BulkImport() {
 
         {/* ── RIGHT: Saved records log ── */}
         <div style={{ position:'sticky', top:80 }}>
-          <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
-            <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontSize:14, fontWeight:700, color:C.navy }}>📥 Imported ({saved.length})</span>
-              {saved.length>0 && <button onClick={()=>setSaved([])} style={{ background:'none', border:'none', color:C.muted, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>Clear log</button>}
+          <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+            <div style={{ padding:'12px 16px', borderBottom:`1px solid var(--border)`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:14, fontWeight:700, color:'var(--navy)' }}>📥 Imported ({saved.length})</span>
+              {saved.length>0 && <button onClick={()=>setSaved([])} style={{ background:'none', border:'none', color:'var(--text-muted)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>Clear log</button>}
             </div>
 
             {!saved.length
-              ? <div style={{ padding:'28px 16px', textAlign:'center', color:C.muted, fontSize:13 }}>
+              ? <div style={{ padding:'28px 16px', textAlign:'center', color:'var(--text-muted)', fontSize:13 }}>
                   <div style={{ fontSize:32, marginBottom:8 }}>📥</div>
                   Records you save will appear here
                 </div>
               : <div style={{ maxHeight:480, overflowY:'auto' }}>
                   {saved.map((s,i)=>(
-                    <div key={i} style={{ padding:'10px 16px', borderBottom:`1px solid ${C.cream}`, display:'flex', gap:10, alignItems:'center' }}>
+                    <div key={i} style={{ padding:'10px 16px', borderBottom:`1px solid var(--bg-sunken)`, display:'flex', gap:10, alignItems:'center' }}>
                       <div style={{ fontSize:20 }}>{s.type==='order'?'📋':s.type==='sale'?'🛍️':'🔧'}</div>
                       <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>{s.num}</div>
-                        <div style={{ fontSize:11, color:C.muted, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.date} · {s.name}</div>
+                        <div style={{ fontSize:12, fontWeight:700, color:'var(--navy)' }}>{s.num}</div>
+                        <div style={{ fontSize:11, color:'var(--text-muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.date} · {s.name}</div>
                       </div>
-                      <div style={{ fontSize:13, fontWeight:700, color:C.success, flexShrink:0 }}>{fmt(s.total)}</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:'var(--success)', flexShrink:0 }}>{fmt(s.total)}</div>
                     </div>
                   ))}
                 </div>
             }
 
             {saved.length > 0 && (
-              <div style={{ padding:'10px 16px', background:C.cream, fontSize:13, fontWeight:700, display:'flex', justifyContent:'space-between', borderTop:`1px solid ${C.border}` }}>
-                <span style={{ color:C.muted }}>Total imported</span>
-                <span style={{ color:C.navy }}>{fmt(saved.reduce((s,r)=>s+r.total,0))}</span>
+              <div style={{ padding:'10px 16px', background:'var(--bg-sunken)', fontSize:13, fontWeight:700, display:'flex', justifyContent:'space-between', borderTop:`1px solid var(--border)` }}>
+                <span style={{ color:'var(--text-muted)' }}>Total imported</span>
+                <span style={{ color:'var(--navy)' }}>{fmt(saved.reduce((s,r)=>s+r.total,0))}</span>
               </div>
             )}
           </div>
 
           {/* Instructions */}
-          <div style={{ background:'#fffbeb', border:`1px solid #fde68a`, borderRadius:12, padding:'14px 16px', marginTop:12 }}>
+          <div style={{ background:'#fffbeb', border:`1px solid #fde68a`, borderRadius:'var(--r-lg)', padding:'14px 16px', marginTop:12 }}>
             <div style={{ fontSize:13, fontWeight:700, color:'#92400e', marginBottom:8 }}>📌 How to enter past records</div>
             <div style={{ fontSize:12, color:'#78350f', lineHeight:1.7 }}>
               <div>1. Pick the type (Order / Quick Sale / Repair)</div>

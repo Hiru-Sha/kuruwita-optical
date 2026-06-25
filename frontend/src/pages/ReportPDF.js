@@ -6,8 +6,16 @@
 import React, { useState } from 'react';
 
 const C = {
-  navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
-  border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
+  navy:    'var(--navy)',
+  gold:    'var(--gold)',
+  cream:   'var(--bg-sunken)',
+  surface: 'var(--bg-surface)',
+  border:  'var(--border)',
+  muted:   'var(--text-muted)',
+  success: 'var(--success)',
+  danger:  'var(--danger)',
+  warning: 'var(--warning)',
+  info:    'var(--info)',
 };
 const fmt  = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtD = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2});
@@ -47,7 +55,7 @@ function buildReportHTML(data, from, to) {
     const h = Math.max(2, Math.round(total/maxDay*64));
     const x = 4 + i * (550/Math.max(daily.length,1));
     const w = Math.max(2, 550/Math.max(daily.length,1)-2);
-    return `<rect x="${x}" y="${68-h}" width="${w}" height="${h}" fill="#0f1f3d" rx="2" opacity="0.85"/>`;
+    return `<rect x="${x}" y="${68-h}" width="${w}" height="${h}" fill="var(--navy)" rx="2" opacity="0.85"/>`;
   }).join('');
 
   const chartSVG = daily.length > 1 ? `
@@ -110,7 +118,7 @@ function buildReportHTML(data, from, to) {
       <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:right;font-weight:600;color:#c0392b;">${fmtR(d.total)}</td>
     </tr>`).join('');
 
-  const profitColor = parseFloat(s.netProfit) >= 0 ? '#2d7a4f' : '#c0392b';
+  const profitColor = parseFloat(s.netProfit) >= 0 ? 'var(--success)' : 'var(--danger)';
 
   return `<!DOCTYPE html>
 <html>
@@ -391,7 +399,7 @@ ${data.labBills.by_lab && data.labBills.by_lab.length > 0 ? `
       <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center">${l.orders_with_bill}</td>
       <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right">${fmtR(l.lab_total)}</td>
       <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:#2d7a4f">${fmtR(l.total_paid)}</td>
-      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:${parseFloat(l.total_unpaid)>0?'#c0392b':'#6b7280'};font-weight:${parseFloat(l.total_unpaid)>0?'700':'400'}">${fmtR(l.total_unpaid)}</td>
+      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:${parseFloat(l.total_unpaid)>0?'var(--danger)':'var(--text-muted)'};font-weight:${parseFloat(l.total_unpaid)>0?'700':'400'}">${fmtR(l.total_unpaid)}</td>
     </tr>`).join('')}
 </table>` : ''}` : ''}
 
@@ -560,19 +568,19 @@ export default function ReportPDF() {
   const ex = data?.expenses || {};
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
-      <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:0 }}>📄 Business Report</h1>
-      <p style={{ fontSize:13, color:C.muted, margin:'4px 0 20px' }}>Select a date range to generate a full PDF report with all business data</p>
+    <div style={{ fontFamily:"var(--font-body)" }}>
+      <h1 style={{ fontFamily:"var(--font-display)", fontSize:24, color:'var(--navy)', margin:0 }}>📄 Business Report</h1>
+      <p style={{ fontSize:13, color:'var(--text-muted)', margin:'4px 0 20px' }}>Select a date range to generate a full PDF report with all business data</p>
 
       {/* Date range picker */}
-      <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:20 }}>
-        <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:14 }}>📅 Select Date Range</div>
+      <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:20, marginBottom:20 }}>
+        <div style={{ fontSize:14, fontWeight:700, color:'var(--navy)', marginBottom:14 }}>📅 Select Date Range</div>
 
         {/* Presets */}
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14 }}>
           {presets.map(p=>(
             <button key={p.label} onClick={()=>applyPreset(p)}
-              style={{ padding:'7px 14px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${from===p.from&&to===p.to?C.navy:C.border}`, background:from===p.from&&to===p.to?C.navy:'white', color:from===p.from&&to===p.to?'white':C.muted }}>
+              style={{ padding:'7px 14px', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${from===p.from&&to===p.to?'var(--navy)':'var(--border)'}`, background:from===p.from&&to===p.to?'var(--navy)':'white', color:from===p.from&&to===p.to?'white':'var(--text-muted)' }}>
               {p.label}
             </button>
           ))}
@@ -581,17 +589,17 @@ export default function ReportPDF() {
         {/* Date inputs */}
         <div style={{ display:'flex', gap:12, alignItems:'flex-end', flexWrap:'wrap' }}>
           <div>
-            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>From</label>
+            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:'var(--text-muted)', display:'block', marginBottom:5 }}>From</label>
             <input type="date" value={from} onChange={e=>{ setFrom(e.target.value); setData(null); }}
-              style={{ padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy }}/>
+              style={{ padding:'10px 14px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:14, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)', color:'var(--navy)' }}/>
           </div>
           <div>
-            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, display:'block', marginBottom:5 }}>To</label>
+            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:'var(--text-muted)', display:'block', marginBottom:5 }}>To</label>
             <input type="date" value={to} onChange={e=>{ setTo(e.target.value); setData(null); }}
-              style={{ padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy }}/>
+              style={{ padding:'10px 14px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:14, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)', color:'var(--navy)' }}/>
           </div>
           <button onClick={fetchData} disabled={loading}
-            style={{ padding:'10px 24px', background:loading?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:loading?'not-allowed':'pointer', fontFamily:'inherit' }}>
+            style={{ padding:'10px 24px', background:loading?'var(--text-muted)':'var(--navy)', color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:loading?'not-allowed':'pointer', fontFamily:'inherit' }}>
             {loading ? '⏳ Loading...' : '📊 Generate Report'}
           </button>
           {data && (
@@ -602,16 +610,16 @@ export default function ReportPDF() {
           )}
         </div>
 
-        {error && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:9, padding:'10px 14px', fontSize:13, marginTop:12 }}>⚠️ {error}</div>}
+        {error && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:'var(--danger)', borderRadius:9, padding:'10px 14px', fontSize:13, marginTop:12 }}>⚠️ {error}</div>}
       </div>
 
       {/* Preview */}
       {data && (
         <>
           {/* Summary KPI cards */}
-          <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:16 }}>
+          <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:20, marginBottom:16 }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-              <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>
+              <div style={{ fontSize:14, fontWeight:700, color:'var(--navy)' }}>
                 Preview — {fmtDate(from)} to {fmtDate(to)}
               </div>
               <button onClick={downloadPDF}
@@ -621,49 +629,49 @@ export default function ReportPDF() {
             </div>
 
             {/* Net profit banner */}
-            <div style={{ background:parseFloat(s.netProfit)>=0?'#dcfce7':'#fee2e2', border:`2px solid ${parseFloat(s.netProfit)>=0?'#86efac':'#fca5a5'}`, borderRadius:12, padding:'16px 20px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
+            <div style={{ background:parseFloat(s.netProfit)>=0?'#dcfce7':'#fee2e2', border:`2px solid ${parseFloat(s.netProfit)>=0?'#86efac':'#fca5a5'}`, borderRadius:'var(--r-lg)', padding:'16px 20px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
               <div>
-                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:parseFloat(s.netProfit)>=0?C.success:C.danger, marginBottom:4 }}>Net Profit</div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:32, fontWeight:700, color:parseFloat(s.netProfit)>=0?C.success:C.danger }}>{fmt(s.netProfit)}</div>
-                <div style={{ fontSize:12, color:parseFloat(s.netProfit)>=0?C.success:C.danger, marginTop:3 }}>Net margin: {s.profitMargin}%</div>
+                <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:parseFloat(s.netProfit)>=0?'var(--success)':'var(--danger)', marginBottom:4 }}>Net Profit</div>
+                <div style={{ fontFamily:"var(--font-display)", fontSize:32, fontWeight:700, color:parseFloat(s.netProfit)>=0?'var(--success)':'var(--danger)' }}>{fmt(s.netProfit)}</div>
+                <div style={{ fontSize:12, color:parseFloat(s.netProfit)>=0?'var(--success)':'var(--danger)', marginTop:3 }}>Net margin: {s.profitMargin}%</div>
               </div>
               <div style={{ textAlign:'right' }}>
-                <div style={{ fontSize:12, color:C.muted, marginBottom:2 }}>Revenue</div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:C.navy, marginBottom:8 }}>{fmt(s.totalRevenue)}</div>
-                <div style={{ fontSize:12, color:C.muted, marginBottom:2 }}>Expenses</div>
-                <div style={{ fontSize:18, fontWeight:700, color:C.danger }}>{fmt(s.totalExpenses)}</div>
+                <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:2 }}>Revenue</div>
+                <div style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:700, color:'var(--navy)', marginBottom:8 }}>{fmt(s.totalRevenue)}</div>
+                <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:2 }}>Expenses</div>
+                <div style={{ fontSize:18, fontWeight:700, color:'var(--danger)' }}>{fmt(s.totalExpenses)}</div>
               </div>
             </div>
 
             {/* 8 KPI boxes */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:10, marginBottom:16 }}>
               {[
-                { l:'Orders',         v:o.total_orders||0,    sub:`${fmt(o.revenue)} revenue`,      c:C.navy },
+                { l:'Orders',         v:o.total_orders||0,    sub:`${fmt(o.revenue)} revenue`,      c:'var(--navy)' },
                 { l:'Quick Sales',    v:qs.total_sales||0,    sub:`${fmt(qs.revenue)} revenue`,     c:'#2563eb' },
                 { l:'Repairs',        v:r.total_repairs||0,   sub:`${fmt(r.revenue)} revenue`,      c:'#0891b2' },
-                { l:'Expenses',       v:ex.total_expenses||0, sub:fmt(s.totalExpenses),              c:C.danger },
-                { l:'Stock Purchased',v:fmt(data.stockPurchases.reduce((s,r)=>s+parseFloat(r.total||0),0)), sub:`${data.stockPurchases.length} dealers`, c:C.danger },
+                { l:'Expenses',       v:ex.total_expenses||0, sub:fmt(s.totalExpenses),              c:'var(--danger)' },
+                { l:'Stock Purchased',v:fmt(data.stockPurchases.reduce((s,r)=>s+parseFloat(r.total||0),0)), sub:`${data.stockPurchases.length} dealers`, c:'var(--danger)' },
                 { l:'Cash Deposited', v:fmt(data.deposits?.total||0), sub:`${data.deposits?.count||0} deposits`, c:'#2563eb' },
-                { l:'Collected',      v:fmt(o.collected||0),  sub:`${fmt(o.outstanding)} owed`,    c:C.success },
-                { l:'Gross Profit',   v:fmt(s.grossProfit),   sub:`before expenses`,                c:C.success },
+                { l:'Collected',      v:fmt(o.collected||0),  sub:`${fmt(o.outstanding)} owed`,    c:'var(--success)' },
+                { l:'Gross Profit',   v:fmt(s.grossProfit),   sub:`before expenses`,                c:'var(--success)' },
               ].map(k=>(
-                <div key={k.l} style={{ background:C.cream, borderRadius:10, padding:'12px 14px' }}>
-                  <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:4 }}>{k.l}</div>
-                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:k.c }}>{k.v}</div>
-                  <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{k.sub}</div>
+                <div key={k.l} style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-md)', padding:'12px 14px' }}>
+                  <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:'var(--text-muted)', marginBottom:4 }}>{k.l}</div>
+                  <div style={{ fontFamily:"var(--font-display)", fontSize:18, fontWeight:700, color:k.c }}>{k.v}</div>
+                  <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:2 }}>{k.sub}</div>
                 </div>
               ))}
             </div>
 
             {/* Profit formula */}
-            <div style={{ background:C.cream, borderRadius:10, padding:'12px 16px', display:'flex', gap:10, alignItems:'center', flexWrap:'wrap', fontSize:14 }}>
-              <span style={{ color:C.success, fontWeight:700 }}>{fmt(s.totalRevenue)}</span>
-              <span style={{ color:C.muted }}>revenue −</span>
-              <span style={{ color:C.danger, fontWeight:700 }}>{fmt(parseFloat(s.totalRevenue)-parseFloat(s.grossProfit))}</span>
-              <span style={{ color:C.muted }}>cost of goods −</span>
+            <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-md)', padding:'12px 16px', display:'flex', gap:10, alignItems:'center', flexWrap:'wrap', fontSize:14 }}>
+              <span style={{ color:'var(--success)', fontWeight:700 }}>{fmt(s.totalRevenue)}</span>
+              <span style={{ color:'var(--text-muted)' }}>revenue −</span>
+              <span style={{ color:'var(--danger)', fontWeight:700 }}>{fmt(parseFloat(s.totalRevenue)-parseFloat(s.grossProfit))}</span>
+              <span style={{ color:'var(--text-muted)' }}>cost of goods −</span>
               <span style={{ color:'#f97316', fontWeight:700 }}>{fmt(s.totalExpenses)}</span>
-              <span style={{ color:C.muted }}>expenses =</span>
-              <span style={{ color:parseFloat(s.netProfit)>=0?C.success:C.danger, fontWeight:700, fontSize:16 }}>{fmt(s.netProfit)} net profit</span>
+              <span style={{ color:'var(--text-muted)' }}>expenses =</span>
+              <span style={{ color:parseFloat(s.netProfit)>=0?'var(--success)':'var(--danger)', fontWeight:700, fontSize:16 }}>{fmt(s.netProfit)} net profit</span>
             </div>
           </div>
 
@@ -672,18 +680,18 @@ export default function ReportPDF() {
 
             {/* Expenses by category */}
             {data.expenses.byCategory.length > 0 && (
-              <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
-                <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>💸 Expenses by Category</div>
+              <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+                <div style={{ padding:'12px 16px', borderBottom:`1px solid var(--border)`, fontSize:13, fontWeight:700, color:'var(--navy)' }}>💸 Expenses by Category</div>
                 {data.expenses.byCategory.map(e=>{
                   const maxE = parseFloat(data.expenses.byCategory[0]?.total)||1;
                   return (
-                    <div key={e.category} style={{ padding:'9px 16px', borderBottom:`1px solid ${C.cream}` }}>
+                    <div key={e.category} style={{ padding:'9px 16px', borderBottom:`1px solid var(--bg-sunken)` }}>
                       <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4, fontSize:13 }}>
-                        <span style={{ color:C.navy, fontWeight:500 }}>{e.category}</span>
-                        <span style={{ color:C.danger, fontWeight:700 }}>{fmt(e.total)}</span>
+                        <span style={{ color:'var(--navy)', fontWeight:500 }}>{e.category}</span>
+                        <span style={{ color:'var(--danger)', fontWeight:700 }}>{fmt(e.total)}</span>
                       </div>
-                      <div style={{ height:4, background:C.cream, borderRadius:2, overflow:'hidden' }}>
-                        <div style={{ height:'100%', width:`${parseFloat(e.total)/maxE*100}%`, background:C.danger, borderRadius:2 }}/>
+                      <div style={{ height:4, background:'var(--bg-sunken)', borderRadius:2, overflow:'hidden' }}>
+                        <div style={{ height:'100%', width:`${parseFloat(e.total)/maxE*100}%`, background:'var(--danger)', borderRadius:2 }}/>
                       </div>
                     </div>
                   );
@@ -693,21 +701,21 @@ export default function ReportPDF() {
 
             {/* Top frames */}
             {data.topFrames.length > 0 && (
-              <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
-                <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>🕶️ Top Frames</div>
+              <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+                <div style={{ padding:'12px 16px', borderBottom:`1px solid var(--border)`, fontSize:13, fontWeight:700, color:'var(--navy)' }}>🕶️ Top Frames</div>
                 {data.topFrames.slice(0,7).map((f,i)=>{
                   const fname = f.frame||f.name||f.frame_name||'—';
                   const frev  = f.revenue||f.total||0;
                   const funits= f.units||f.count||0;
                   return (
-                    <div key={i} style={{ padding:'9px 16px', borderBottom:`1px solid ${C.cream}`, display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:13 }}>
+                    <div key={i} style={{ padding:'9px 16px', borderBottom:`1px solid var(--bg-sunken)`, display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:13 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                        <span style={{ width:20, height:20, borderRadius:'50%', background:i===0?C.gold:i===1?'#c0c0c0':i===2?'#cd7f32':C.cream, display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:i<3?'white':C.muted }}>{i+1}</span>
-                        <span style={{ color:C.navy, fontWeight:500 }}>{fname}</span>
+                        <span style={{ width:20, height:20, borderRadius:'50%', background:i===0?'var(--gold)':i===1?'#c0c0c0':i===2?'#cd7f32':'var(--bg-sunken)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:i<3?'white':'var(--text-muted)' }}>{i+1}</span>
+                        <span style={{ color:'var(--navy)', fontWeight:500 }}>{fname}</span>
                       </div>
                       <div style={{ textAlign:'right' }}>
-                        <div style={{ color:C.success, fontWeight:700 }}>{fmt(frev)}</div>
-                        <div style={{ fontSize:11, color:C.muted }}>{funits} sold</div>
+                        <div style={{ color:'var(--success)', fontWeight:700 }}>{fmt(frev)}</div>
+                        <div style={{ fontSize:11, color:'var(--text-muted)' }}>{funits} sold</div>
                       </div>
                     </div>
                   );
@@ -718,10 +726,10 @@ export default function ReportPDF() {
 
           <div style={{ textAlign:'center', padding:'16px 0' }}>
             <button onClick={downloadPDF}
-              style={{ padding:'14px 36px', background:'#2563eb', color:'white', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit', display:'inline-flex', alignItems:'center', gap:10 }}>
+              style={{ padding:'14px 36px', background:'#2563eb', color:'white', border:'none', borderRadius:'var(--r-md)', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit', display:'inline-flex', alignItems:'center', gap:10 }}>
               ⬇️ Download Full PDF Report
             </button>
-            <div style={{ fontSize:12, color:C.muted, marginTop:8 }}>
+            <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:8 }}>
               Opens in new window → automatically prints/saves as PDF · Includes full order list, all tables, and charts
             </div>
           </div>
@@ -729,9 +737,9 @@ export default function ReportPDF() {
       )}
 
       {!data && !loading && (
-        <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:60, textAlign:'center', color:C.muted }}>
+        <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:60, textAlign:'center', color:'var(--text-muted)' }}>
           <div style={{ fontSize:48, marginBottom:16 }}>📊</div>
-          <div style={{ fontSize:16, fontWeight:600, color:C.navy, marginBottom:8 }}>Select a date range and click Generate Report</div>
+          <div style={{ fontSize:16, fontWeight:600, color:'var(--navy)', marginBottom:8 }}>Select a date range and click Generate Report</div>
           <div style={{ fontSize:13 }}>The report will include all orders, quick sales, repairs, expenses, stock purchases and profit analysis</div>
         </div>
       )}

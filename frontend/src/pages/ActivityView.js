@@ -7,8 +7,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const C = {
-  navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
-  border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
+  navy:    'var(--navy)',
+  gold:    'var(--gold)',
+  cream:   'var(--bg-sunken)',
+  surface: 'var(--bg-surface)',
+  border:  'var(--border)',
+  muted:   'var(--text-muted)',
+  success: 'var(--success)',
+  danger:  'var(--danger)',
+  warning: 'var(--warning)',
+  info:    'var(--info)',
 };
 const fmt     = n => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 const fmtD    = d => {
@@ -44,9 +52,9 @@ const STATUS_COLOR = {
   collected: { bg:'#f0fdf4', color:'#166534' },
   pending:   { bg:'#fef9c3', color:'#92400e' },
   completed: { bg:'#dcfce7', color:'#166534' },
-  cancelled: { bg:'#f3f4f6', color:'#6b7280' },
+  cancelled: { bg:'#f3f4f6', color:'var(--text-muted)' },
 };
-const sc = s => STATUS_COLOR[s] || { bg:C.cream, color:C.muted };
+const sc = s => STATUS_COLOR[s] || { bg:'var(--bg-sunken)', color:'var(--text-muted)' };
 
 // ── Expanded detail panels ────────────────────────────────────
 
@@ -80,20 +88,20 @@ function OrderDetail({ order, onClose, onRefresh }) {
   };
 
   return (
-    <div style={{ background:C.cream, borderRadius:12, padding:'16px', marginTop:8 }}>
+    <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-lg)', padding:'16px', marginTop:8 }}>
 
       {/* Status + actions */}
       <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14 }}>
         {['created','called','delivered'].map(s=>(
           <button key={s} onClick={()=>updateStatus(s)}
-            style={{ padding:'6px 12px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer',
-              fontFamily:'inherit', border:`1.5px solid ${order.status===s?C.navy:C.border}`,
-              background:order.status===s?C.navy:'white', color:order.status===s?'white':C.muted }}>
+            style={{ padding:'6px 12px', borderRadius:'var(--r-full)', fontSize:12, fontWeight:600, cursor:'pointer',
+              fontFamily:'inherit', border:`1.5px solid ${order.status===s?'var(--navy)':'var(--border)'}`,
+              background:order.status===s?'var(--navy)':'white', color:order.status===s?'white':'var(--text-muted)' }}>
             {s.charAt(0).toUpperCase()+s.slice(1)}
           </button>
         ))}
         <button onClick={()=>whatsapp(`Hello ${order.customer_name}, your order ${order.order_number} is ready for collection. Please visit Wickramakalutota Opticals. Thank you!`)}
-          style={{ padding:'6px 12px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', background:'#25D366', color:'white', border:'none', marginLeft:'auto' }}>
+          style={{ padding:'6px 12px', borderRadius:'var(--r-full)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', background:'#25D366', color:'white', border:'none', marginLeft:'auto' }}>
           💬 WhatsApp
         </button>
       </div>
@@ -108,28 +116,28 @@ function OrderDetail({ order, onClose, onRefresh }) {
           { l:'Supplier',    v:order.lens_company||'—' },
           { l:'Deliver By',  v:order.deliver_date?fmtD(order.deliver_date+'T00:00:00'):'—' },
         ].map(row=>(
-          <div key={row.l} style={{ background:'white', borderRadius:8, padding:'8px 10px' }}>
-            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>{row.l}</div>
-            <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{row.v}</div>
+          <div key={row.l} style={{ background:'var(--bg-surface)', borderRadius:'var(--r-sm)', padding:'8px 10px' }}>
+            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', marginBottom:2 }}>{row.l}</div>
+            <div style={{ fontSize:13, fontWeight:600, color:'var(--navy)' }}>{row.v}</div>
           </div>
         ))}
       </div>
 
       {/* Payment summary */}
-      <div style={{ background:'white', borderRadius:10, padding:'12px 14px', marginBottom:12 }}>
+      <div style={{ background:'var(--bg-surface)', borderRadius:'var(--r-md)', padding:'12px 14px', marginBottom:12 }}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8, fontSize:13 }}>
-          <span style={{ color:C.muted }}>Total</span>
-          <span style={{ fontWeight:700, color:C.navy }}>{fmt(order.total_amount)}</span>
+          <span style={{ color:'var(--text-muted)' }}>Total</span>
+          <span style={{ fontWeight:700, color:'var(--navy)' }}>{fmt(order.total_amount)}</span>
         </div>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8, fontSize:13 }}>
-          <span style={{ color:C.muted }}>Paid</span>
-          <span style={{ fontWeight:700, color:C.success }}>{fmt(order.advance_amount)}</span>
+          <span style={{ color:'var(--text-muted)' }}>Paid</span>
+          <span style={{ fontWeight:700, color:'var(--success)' }}>{fmt(order.advance_amount)}</span>
         </div>
-        <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, borderTop:`1px solid ${C.border}`, paddingTop:8 }}>
-          <span style={{ fontWeight:700, color:parseFloat(order.balance_amount)>0?C.danger:C.success }}>
+        <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, borderTop:`1px solid var(--border)`, paddingTop:8 }}>
+          <span style={{ fontWeight:700, color:parseFloat(order.balance_amount)>0?'var(--danger)':'var(--success)' }}>
             {parseFloat(order.balance_amount)>0?'Balance Due':'Fully Paid'}
           </span>
-          <span style={{ fontWeight:700, color:parseFloat(order.balance_amount)>0?C.danger:C.success }}>
+          <span style={{ fontWeight:700, color:parseFloat(order.balance_amount)>0?'var(--danger)':'var(--success)' }}>
             {parseFloat(order.balance_amount)>0?fmt(order.balance_amount):'✓'}
           </span>
         </div>
@@ -139,19 +147,19 @@ function OrderDetail({ order, onClose, onRefresh }) {
       {parseFloat(order.balance_amount) > 0 && (
         !paying ? (
           <button onClick={()=>{ setPaying(true); setPayAmt(String(order.balance_amount)); }}
-            style={{ width:'100%', padding:'10px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', marginBottom:8 }}>
+            style={{ width:'100%', padding:'10px', background:'var(--navy)', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', marginBottom:8 }}>
             💵 Record Balance Payment
           </button>
         ) : (
           <div style={{ display:'flex', gap:8, marginBottom:8 }}>
             <input type="number" value={payAmt} onChange={e=>setPayAmt(e.target.value)}
-              style={{ flex:1, padding:'9px 12px', border:`1.5px solid ${C.navy}`, borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none' }}/>
+              style={{ flex:1, padding:'9px 12px', border:`1.5px solid var(--navy)`, borderRadius:'var(--r-sm)', fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none' }}/>
             <button onClick={recordPayment} disabled={saving}
-              style={{ padding:'9px 18px', background:C.success, color:'white', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              style={{ padding:'9px 18px', background:'var(--success)', color:'white', border:'none', borderRadius:'var(--r-sm)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               {saving?'Saving...':'✓ Save'}
             </button>
             <button onClick={()=>setPaying(false)}
-              style={{ padding:'9px 12px', background:C.cream, border:`1px solid ${C.border}`, borderRadius:8, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+              style={{ padding:'9px 12px', background:'var(--bg-sunken)', border:`1px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:13, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>
               Cancel
             </button>
           </div>
@@ -159,7 +167,7 @@ function OrderDetail({ order, onClose, onRefresh }) {
       )}
 
       {order.notes && (
-        <div style={{ background:'#fef9f0', borderRadius:8, padding:'8px 12px', fontSize:12, color:'#92400e' }}>
+        <div style={{ background:'#fef9f0', borderRadius:'var(--r-sm)', padding:'8px 12px', fontSize:12, color:'#92400e' }}>
           📝 {order.notes}
         </div>
       )}
@@ -171,7 +179,7 @@ function SaleDetail({ sale }) {
   let items = [];
   try { items = typeof sale.items === 'string' ? JSON.parse(sale.items) : sale.items || []; } catch(e) {}
   return (
-    <div style={{ background:C.cream, borderRadius:12, padding:'16px', marginTop:8 }}>
+    <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-lg)', padding:'16px', marginTop:8 }}>
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:12, fontSize:13 }}>
         {[
           { l:'Sale No',     v:sale.sale_number },
@@ -179,33 +187,33 @@ function SaleDetail({ sale }) {
           { l:'Payment',     v:sale.payment_method||'cash' },
           { l:'Discount',    v:parseFloat(sale.discount||0)>0?fmt(sale.discount):'—' },
         ].map(row=>(
-          <div key={row.l} style={{ background:'white', borderRadius:8, padding:'8px 10px' }}>
-            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>{row.l}</div>
-            <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{row.v}</div>
+          <div key={row.l} style={{ background:'var(--bg-surface)', borderRadius:'var(--r-sm)', padding:'8px 10px' }}>
+            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', marginBottom:2 }}>{row.l}</div>
+            <div style={{ fontSize:13, fontWeight:600, color:'var(--navy)' }}>{row.v}</div>
           </div>
         ))}
       </div>
       {/* Items */}
-      <div style={{ background:'white', borderRadius:10, overflow:'hidden', marginBottom:8 }}>
+      <div style={{ background:'var(--bg-surface)', borderRadius:'var(--r-md)', overflow:'hidden', marginBottom:8 }}>
         <div style={{ padding:'8px 12px', background:'#e0f2fe', fontSize:11, fontWeight:700, textTransform:'uppercase', color:'#0369a1' }}>
           Items Sold
         </div>
         {items.map((item,i)=>(
-          <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'9px 12px', borderBottom:`1px solid ${C.cream}`, fontSize:13 }}>
+          <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'9px 12px', borderBottom:`1px solid var(--bg-sunken)`, fontSize:13 }}>
             <div>
-              <span style={{ fontWeight:600, color:C.navy }}>{item.name}</span>
-              <span style={{ color:C.muted, marginLeft:8 }}>×{item.qty||1}</span>
+              <span style={{ fontWeight:600, color:'var(--navy)' }}>{item.name}</span>
+              <span style={{ color:'var(--text-muted)', marginLeft:8 }}>×{item.qty||1}</span>
             </div>
             <span style={{ fontWeight:700, color:'#0891b2' }}>{fmt((item.unit_price||item.price||0)*(item.qty||1))}</span>
           </div>
         ))}
         <div style={{ display:'flex', justifyContent:'space-between', padding:'10px 12px', fontSize:14, fontWeight:700 }}>
-          <span style={{ color:C.navy }}>Total</span>
+          <span style={{ color:'var(--navy)' }}>Total</span>
           <span style={{ color:'#0891b2' }}>{fmt(sale.total)}</span>
         </div>
       </div>
       {sale.notes && (
-        <div style={{ background:'#fef9f0', borderRadius:8, padding:'8px 12px', fontSize:12, color:'#92400e' }}>
+        <div style={{ background:'#fef9f0', borderRadius:'var(--r-sm)', padding:'8px 12px', fontSize:12, color:'#92400e' }}>
           📝 {sale.notes}
         </div>
       )}
@@ -224,20 +232,20 @@ function RepairDetail({ repair, onRefresh }) {
     window.open(`https://wa.me/94${ph}?text=${encodeURIComponent(msg)}`, '_blank');
   };
   return (
-    <div style={{ background:C.cream, borderRadius:12, padding:'16px', marginTop:8 }}>
+    <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-lg)', padding:'16px', marginTop:8 }}>
       {/* Status buttons */}
       <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14 }}>
         {['pending','done','collected'].map(s=>(
           <button key={s} onClick={()=>updateStatus(s)}
-            style={{ padding:'6px 12px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer',
-              fontFamily:'inherit', border:`1.5px solid ${repair.status===s?C.navy:C.border}`,
-              background:repair.status===s?C.navy:'white', color:repair.status===s?'white':C.muted }}>
+            style={{ padding:'6px 12px', borderRadius:'var(--r-full)', fontSize:12, fontWeight:600, cursor:'pointer',
+              fontFamily:'inherit', border:`1.5px solid ${repair.status===s?'var(--navy)':'var(--border)'}`,
+              background:repair.status===s?'var(--navy)':'white', color:repair.status===s?'white':'var(--text-muted)' }}>
             {s==='pending'?'⏳ Pending':s==='done'?'✅ Done':'📦 Collected'}
           </button>
         ))}
         {repair.phone && (
           <button onClick={()=>whatsapp(`Hello ${repair.customer_name||'customer'}, your repair ${repair.repair_number} is ready for collection. Please visit Wickramakalutota Opticals. Thank you!`)}
-            style={{ padding:'6px 12px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', background:'#25D366', color:'white', border:'none', marginLeft:'auto' }}>
+            style={{ padding:'6px 12px', borderRadius:'var(--r-full)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', background:'#25D366', color:'white', border:'none', marginLeft:'auto' }}>
             💬 WhatsApp
           </button>
         )}
@@ -252,23 +260,23 @@ function RepairDetail({ repair, onRefresh }) {
           { l:'Phone',       v:repair.phone||'—' },
           { l:'Payment',     v:repair.payment_method||'cash' },
         ].map(row=>(
-          <div key={row.l} style={{ background:'white', borderRadius:8, padding:'8px 10px' }}>
-            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:2 }}>{row.l}</div>
-            <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{row.v}</div>
+          <div key={row.l} style={{ background:'var(--bg-surface)', borderRadius:'var(--r-sm)', padding:'8px 10px' }}>
+            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', marginBottom:2 }}>{row.l}</div>
+            <div style={{ fontSize:13, fontWeight:600, color:'var(--navy)' }}>{row.v}</div>
           </div>
         ))}
       </div>
 
       {(repair.description||repair.frame_description) && (
-        <div style={{ background:'white', borderRadius:8, padding:'10px 12px', marginBottom:8, fontSize:13 }}>
-          <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:4 }}>Description</div>
-          <div style={{ color:C.navy }}>{repair.frame_description||repair.description}</div>
+        <div style={{ background:'var(--bg-surface)', borderRadius:'var(--r-sm)', padding:'10px 12px', marginBottom:8, fontSize:13 }}>
+          <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', marginBottom:4 }}>Description</div>
+          <div style={{ color:'var(--navy)' }}>{repair.frame_description||repair.description}</div>
         </div>
       )}
 
-      <div style={{ background:'white', borderRadius:10, padding:'12px 14px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <span style={{ fontSize:13, color:C.muted }}>Charge</span>
-        <span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:'#7c3aed' }}>
+      <div style={{ background:'var(--bg-surface)', borderRadius:'var(--r-md)', padding:'12px 14px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <span style={{ fontSize:13, color:'var(--text-muted)' }}>Charge</span>
+        <span style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:700, color:'#7c3aed' }}>
           {parseFloat(repair.charge)>0?fmt(repair.charge):'Free'}
         </span>
       </div>
@@ -367,13 +375,13 @@ export default function ActivityView() {
   const Row = ({ children, type, id, accent }) => {
     const isOpen = expanded?.type===type && expanded?.id===id;
     return (
-      <div style={{ background:'white', border:`1.5px solid ${isOpen?accent||C.gold:C.border}`,
-        borderRadius:12, marginBottom:8, overflow:'hidden', transition:'border-color .15s' }}>
+      <div style={{ background:'var(--bg-surface)', border:`1.5px solid ${isOpen?accent||'var(--gold)':'var(--border)'}`,
+        borderRadius:'var(--r-lg)', marginBottom:8, overflow:'hidden', transition:'border-color .15s' }}>
         <div onClick={()=>toggle(type, id)} style={{ cursor:'pointer', padding:'12px 16px' }}>
           {children}
         </div>
         {isOpen && (
-          <div style={{ borderTop:`1px solid ${C.border}` }}>
+          <div style={{ borderTop:`1px solid var(--border)` }}>
             {type==='order'  && <OrderDetail  order={orders.find(o=>o.id===id)}   onClose={()=>setExpanded(null)} onRefresh={load}/>}
             {type==='sale'   && <SaleDetail   sale={sales.find(s=>s.id===id)}/>}
             {type==='repair' && <RepairDetail repair={repairs.find(r=>r.id===id)} onRefresh={load}/>}
@@ -384,30 +392,30 @@ export default function ActivityView() {
   };
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:"var(--font-body)" }}>
 
       {/* Header */}
       <div style={{ marginBottom:16 }}>
         <button onClick={()=>navigate('/dashboard')}
-          style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, fontSize:13, fontFamily:'inherit', padding:'0 0 6px', display:'block' }}>
+          style={{ background:'none', border:'none', cursor:'pointer', color:'var(--text-muted)', fontSize:13, fontFamily:'inherit', padding:'0 0 6px', display:'block' }}>
           ← Dashboard
         </button>
-        <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, margin:0 }}>
+        <h1 style={{ fontFamily:"var(--font-display)", fontSize:22, color:'var(--navy)', margin:0 }}>
           {TITLE_MAP[viewMode]}
         </h1>
       </div>
 
       {/* Summary */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:10, marginBottom:16 }}>
-        <div style={{ background:C.navy, borderRadius:12, padding:'12px 14px' }}>
-          <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.gold, marginBottom:4 }}>Grand Total</div>
-          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:'white' }}>{fmt(grandTotal)}</div>
+        <div style={{ background:'var(--navy)', borderRadius:'var(--r-lg)', padding:'12px 14px' }}>
+          <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--gold)', marginBottom:4 }}>Grand Total</div>
+          <div style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:700, color:'white' }}>{fmt(grandTotal)}</div>
           <div style={{ fontSize:11, color:'#ede9e0', marginTop:2 }}>{fo.length} orders · {fs.length} sales · {fr.length} repairs</div>
         </div>
         {balanceDue > 0 && (
-          <div style={{ background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:12, padding:'12px 14px' }}>
-            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.danger, marginBottom:4 }}>Balance Due</div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:C.danger }}>{fmt(balanceDue)}</div>
+          <div style={{ background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:'var(--r-lg)', padding:'12px 14px' }}>
+            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--danger)', marginBottom:4 }}>Balance Due</div>
+            <div style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:700, color:'var(--danger)' }}>{fmt(balanceDue)}</div>
           </div>
         )}
       </div>
@@ -415,7 +423,7 @@ export default function ActivityView() {
       {/* Search */}
       {/* Month / period filter */}
       <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', marginBottom:12 }}>
-        <span style={{ fontSize:12, color:C.muted, fontWeight:600 }}>Period:</span>
+        <span style={{ fontSize:12, color:'var(--text-muted)', fontWeight:600 }}>Period:</span>
         {[
           { l:'This Month', v: new Date().toISOString().slice(0,7) },
           { l:'Last Month', v: (() => { const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); })() },
@@ -423,41 +431,41 @@ export default function ActivityView() {
         ].map(p => (
           <button key={p.v}
             onClick={()=>{ const url=new URL(window.location); url.searchParams.set('month',p.v); window.history.replaceState({},'',url); window.location.reload(); }}
-            style={{ padding:'5px 12px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer',
-              fontFamily:'inherit', border:`1.5px solid ${month===p.v?C.navy:C.border}`,
-              background:month===p.v?C.navy:'white', color:month===p.v?'white':C.muted }}>
+            style={{ padding:'5px 12px', borderRadius:'var(--r-full)', fontSize:12, fontWeight:600, cursor:'pointer',
+              fontFamily:'inherit', border:`1.5px solid ${month===p.v?'var(--navy)':'var(--border)'}`,
+              background:month===p.v?'var(--navy)':'white', color:month===p.v?'white':'var(--text-muted)' }}>
             {p.l}
           </button>
         ))}
         <input type="month" value={month}
           onChange={e=>{ const url=new URL(window.location); url.searchParams.set('month',e.target.value); window.history.replaceState({},'',url); window.location.reload(); }}
-          style={{ padding:'5px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:12,
-            fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy, cursor:'pointer' }}/>
+          style={{ padding:'5px 10px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:12,
+            fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)', color:'var(--navy)', cursor:'pointer' }}/>
       </div>
 
       <input value={search} onChange={e=>setSearch(e.target.value)}
         placeholder="🔍 Search name, number, frame..."
-        style={{ padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13,
-          fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy, width:'100%',
+        style={{ padding:'10px 14px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:13,
+          fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)', color:'var(--navy)', width:'100%',
           marginBottom:14, boxSizing:'border-box' }}/>
 
       {/* Tabs */}
-      <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, marginBottom:16,
-        background:'white', borderRadius:'12px 12px 0 0', overflowX:'auto' }}>
+      <div style={{ display:'flex', borderBottom:`1px solid var(--border)`, marginBottom:16,
+        background:'var(--bg-surface)', borderRadius:'12px 12px 0 0', overflowX:'auto' }}>
         {TABS.map(t=>(
           <button key={t.key} onClick={()=>setTab(t.key)}
             style={{ padding:'11px 16px', fontSize:13, fontWeight:600, cursor:'pointer',
               background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap',
-              color:tab===t.key?C.navy:C.muted,
-              borderBottom:`2.5px solid ${tab===t.key?C.gold:'transparent'}`, marginBottom:-1 }}>
+              color:tab===t.key?'var(--navy)':'var(--text-muted)',
+              borderBottom:`2.5px solid ${tab===t.key?'var(--gold)':'transparent'}`, marginBottom:-1 }}>
             {t.label}
-            {' '}<span style={{ background:tab===t.key?C.navy:C.cream, color:tab===t.key?'white':C.muted,
+            {' '}<span style={{ background:tab===t.key?'var(--navy)':'var(--bg-sunken)', color:tab===t.key?'white':'var(--text-muted)',
               fontSize:10, fontWeight:700, padding:'1px 7px', borderRadius:20 }}>{t.count}</span>
           </button>
         ))}
       </div>
 
-      {loading && <div style={{ textAlign:'center', padding:40, color:C.muted }}>Loading...</div>}
+      {loading && <div style={{ textAlign:'center', padding:40, color:'var(--text-muted)' }}>Loading...</div>}
 
       {!loading && (
         <div>
@@ -465,30 +473,30 @@ export default function ActivityView() {
           {/* ORDERS */}
           {(tab==='all'||tab==='orders') && fo.length > 0 && (
             <div style={{ marginBottom:16 }}>
-              {tab==='all' && <div style={{ fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:10 }}>
+              {tab==='all' && <div style={{ fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', marginBottom:10 }}>
                 📋 Orders — {fo.length} · {fmt(viewMode==='collected' ? fo.reduce((s,o)=>s+parseFloat(o.advance_amount||0),0) : fo.reduce((s,o)=>s+parseFloat(o.total_amount||0),0))}
               </div>}
               {fo.map(o=>(
-                <Row key={o.id} type="order" id={o.id} accent={C.navy}>
+                <Row key={o.id} type="order" id={o.id} accent={'var(--navy)'}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap', marginBottom:3 }}>
-                        <span style={{ fontSize:11, fontWeight:700, color:C.muted }}>{o.order_number}</span>
+                        <span style={{ fontSize:11, fontWeight:700, color:'var(--text-muted)' }}>{o.order_number}</span>
                         <span style={{ ...sc(o.status), fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>{o.status}</span>
-                        {parseFloat(o.balance_amount)>0 && <span style={{ background:'#fee2e2', color:C.danger, fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>⚠ {fmt(o.balance_amount)} due</span>}
+                        {parseFloat(o.balance_amount)>0 && <span style={{ background:'#fee2e2', color:'var(--danger)', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>⚠ {fmt(o.balance_amount)} due</span>}
                       </div>
-                      <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{o.customer_name}</div>
-                      <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>
+                      <div style={{ fontSize:14, fontWeight:700, color:'var(--navy)' }}>{o.customer_name}</div>
+                      <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:2 }}>
                         {o.frame && <span>{o.frame} · </span>}
                         {fmtD(o.created_at)}
-                        <span style={{ marginLeft:8, fontSize:11, color:C.muted }}>tap to expand ↕</span>
+                        <span style={{ marginLeft:8, fontSize:11, color:'var(--text-muted)' }}>tap to expand ↕</span>
                       </div>
                     </div>
                     <div style={{ textAlign:'right', flexShrink:0, marginLeft:12 }}>
-                      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:C.navy }}>
+                      <div style={{ fontFamily:"var(--font-display)", fontSize:17, fontWeight:700, color:'var(--navy)' }}>
                         {viewMode==='collected' ? fmt(o.advance_amount) : fmt(o.total_amount)}
                       </div>
-                      {viewMode!=='collected' && <div style={{ fontSize:11, color:C.success }}>paid {fmt(o.advance_amount)}</div>}
+                      {viewMode!=='collected' && <div style={{ fontSize:11, color:'var(--success)' }}>paid {fmt(o.advance_amount)}</div>}
                     </div>
                   </div>
                 </Row>
@@ -499,7 +507,7 @@ export default function ActivityView() {
           {/* QUICK SALES */}
           {(tab==='all'||tab==='sales') && fs.length > 0 && (
             <div style={{ marginBottom:16 }}>
-              {tab==='all' && <div style={{ fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:10 }}>
+              {tab==='all' && <div style={{ fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', marginBottom:10 }}>
                 ⚡ Quick Sales — {fs.length} · {fmt(fs.reduce((s,x)=>s+parseFloat(x.total||0),0))}
               </div>}
               {fs.map(s=>{
@@ -510,17 +518,17 @@ export default function ActivityView() {
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                       <div style={{ flex:1 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
-                          <span style={{ fontSize:11, fontWeight:700, color:C.muted }}>{s.sale_number}</span>
+                          <span style={{ fontSize:11, fontWeight:700, color:'var(--text-muted)' }}>{s.sale_number}</span>
                           <span style={{ background:'#e0f2fe', color:'#0369a1', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>{s.payment_method||'cash'}</span>
                         </div>
-                        <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{s.customer_name||'Walk-in'}</div>
-                        <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>
+                        <div style={{ fontSize:14, fontWeight:700, color:'var(--navy)' }}>{s.customer_name||'Walk-in'}</div>
+                        <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:2 }}>
                           {items.slice(0,2).map(i=>i.name).join(', ')}{items.length>2?` +${items.length-2} more`:''}
                           {' · '}{fmtD(s.created_at)}
                           <span style={{ marginLeft:8, fontSize:11 }}>tap ↕</span>
                         </div>
                       </div>
-                      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:'#0891b2', marginLeft:12 }}>{fmt(s.total)}</div>
+                      <div style={{ fontFamily:"var(--font-display)", fontSize:17, fontWeight:700, color:'#0891b2', marginLeft:12 }}>{fmt(s.total)}</div>
                     </div>
                   </Row>
                 );
@@ -531,7 +539,7 @@ export default function ActivityView() {
           {/* REPAIRS */}
           {(tab==='all'||tab==='repairs') && fr.length > 0 && (
             <div style={{ marginBottom:16 }}>
-              {tab==='all' && <div style={{ fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:10 }}>
+              {tab==='all' && <div style={{ fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', marginBottom:10 }}>
                 🔧 Repairs — {fr.length} · {fmt(fr.reduce((s,r)=>s+parseFloat(r.charge||0),0))}
               </div>}
               {fr.map(r=>(
@@ -539,16 +547,16 @@ export default function ActivityView() {
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                     <div style={{ flex:1 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap', marginBottom:3 }}>
-                        <span style={{ fontSize:11, fontWeight:700, color:C.muted }}>{r.repair_number}</span>
+                        <span style={{ fontSize:11, fontWeight:700, color:'var(--text-muted)' }}>{r.repair_number}</span>
                         <span style={{ ...sc(r.status), fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>{r.status}</span>
                       </div>
-                      <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{r.customer_name||'Walk-in'}</div>
-                      <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>
+                      <div style={{ fontSize:14, fontWeight:700, color:'var(--navy)' }}>{r.customer_name||'Walk-in'}</div>
+                      <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:2 }}>
                         {r.repair_type}{' · '}{fmtD(r.created_at)}
                         <span style={{ marginLeft:8, fontSize:11 }}>tap ↕</span>
                       </div>
                     </div>
-                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:'#7c3aed', marginLeft:12 }}>
+                    <div style={{ fontFamily:"var(--font-display)", fontSize:17, fontWeight:700, color:'#7c3aed', marginLeft:12 }}>
                       {parseFloat(r.charge)>0?fmt(r.charge):'Free'}
                     </div>
                   </div>
@@ -558,9 +566,9 @@ export default function ActivityView() {
           )}
 
           {fo.length===0 && fs.length===0 && fr.length===0 && (
-            <div style={{ textAlign:'center', padding:60, color:C.muted }}>
+            <div style={{ textAlign:'center', padding:60, color:'var(--text-muted)' }}>
               <div style={{ fontSize:48, marginBottom:12 }}>📭</div>
-              <div style={{ fontSize:15, fontWeight:600, color:C.navy }}>No records found</div>
+              <div style={{ fontSize:15, fontWeight:600, color:'var(--navy)' }}>No records found</div>
             </div>
           )}
         </div>

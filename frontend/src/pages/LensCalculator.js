@@ -2,7 +2,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b' };
+const C = {
+  navy:    'var(--navy)',
+  gold:    'var(--gold)',
+  cream:   'var(--bg-sunken)',
+  surface: 'var(--bg-surface)',
+  border:  'var(--border)',
+  muted:   'var(--text-muted)',
+  success: 'var(--success)',
+  danger:  'var(--danger)',
+  warning: 'var(--warning)',
+  info:    'var(--info)',
+};
 const fmt  = n => 'Rs. ' + Math.round(parseFloat(n)||0).toLocaleString('en-LK');
 
 function apiGet(path) {
@@ -23,11 +34,11 @@ function RxInput({ label, sph, setSph, cyl, setCyl, add, setAdd, onCopyToOther }
   const handleCylChange = e => { const r=e.target.value.replace(/[^0-9.]/g,''); setCyl(r?cylSign+r:''); };
   const handleAddChange = e => { const r=e.target.value.replace(/[^0-9.]/g,''); if(setAdd) setAdd(r?'+'+r:''); };
   return (
-    <div style={{ background:C.cream, borderRadius:12, padding:'12px 14px' }}>
+    <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-lg)', padding:'12px 14px' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-        <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>{label}</div>
+        <div style={{ fontSize:12, fontWeight:700, color:'var(--navy)' }}>{label}</div>
         {onCopyToOther && (
-          <button onClick={onCopyToOther} style={{ fontSize:10, fontWeight:700, background:C.navy, color:C.gold, border:'none', borderRadius:6, padding:'3px 8px', cursor:'pointer', fontFamily:'inherit' }}>
+          <button onClick={onCopyToOther} style={{ fontSize:10, fontWeight:700, background:'var(--navy)', color:'var(--gold)', border:'none', borderRadius:6, padding:'3px 8px', cursor:'pointer', fontFamily:'inherit' }}>
             Copy →
           </button>
         )}
@@ -35,29 +46,29 @@ function RxInput({ label, sph, setSph, cyl, setCyl, add, setAdd, onCopyToOther }
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
         {[['SPH',sph,setSph,sphSign,setSphSign,handleSphChange],['CYL',cyl,setCyl,cylSign,setCylSign,handleCylChange]].map(([lbl,val,set,sign,setSign,handler])=>(
           <div key={lbl}>
-            <label style={{ fontSize:10, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>{lbl}</label>
+            <label style={{ fontSize:10, color:'var(--text-muted)', fontWeight:600, display:'block', marginBottom:4 }}>{lbl}</label>
             <div style={{ display:'flex', gap:4 }}>
-              <div style={{ display:'flex', border:`1.5px solid ${C.border}`, borderRadius:8, overflow:'hidden' }}>
+              <div style={{ display:'flex', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', overflow:'hidden' }}>
                 {['+','-'].map(s=>(
                   <button key={s} onClick={()=>{ setSign(s); if(val) set(s+val.replace(/[^0-9.]/g,'')); }}
-                    style={{ padding:'8px 10px', border:'none', background:sign===s?C.navy:'white', color:sign===s?'white':C.muted, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>{s}</button>
+                    style={{ padding:'8px 10px', border:'none', background:sign===s?'var(--navy)':'white', color:sign===s?'white':'var(--text-muted)', fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>{s}</button>
                 ))}
               </div>
               <input value={val.replace(/[^0-9.]/g,'')} onChange={handler} placeholder="0.00"
-                style={{ flex:1, padding:'8px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
+                style={{ flex:1, padding:'8px 10px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:14, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'var(--navy)' }}/>
             </div>
           </div>
         ))}
       </div>
       {/* ADD — full width row below SPH/CYL */}
       <div style={{ marginTop:10 }}>
-        <label style={{ fontSize:10, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>ADD (Near Addition)</label>
+        <label style={{ fontSize:10, color:'var(--text-muted)', fontWeight:600, display:'block', marginBottom:4 }}>ADD (Near Addition)</label>
         <div style={{ display:'flex', gap:4, maxWidth:'50%' }}>
-          <div style={{ display:'flex', border:`1.5px solid ${C.border}`, borderRadius:8, overflow:'hidden' }}>
-            <button style={{ padding:'8px 10px', border:'none', background:C.navy, color:'white', fontWeight:700, fontSize:14, cursor:'default', fontFamily:'inherit' }}>+</button>
+          <div style={{ display:'flex', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', overflow:'hidden' }}>
+            <button style={{ padding:'8px 10px', border:'none', background:'var(--navy)', color:'white', fontWeight:700, fontSize:14, cursor:'default', fontFamily:'inherit' }}>+</button>
           </div>
           <input value={(add||'').replace(/[^0-9.]/g,'')} onChange={handleAddChange} placeholder="0.00"
-            style={{ flex:1, padding:'8px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
+            style={{ flex:1, padding:'8px 10px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:14, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'var(--navy)' }}/>
         </div>
       </div>
     </div>
@@ -175,20 +186,20 @@ export default function LensCalculator() {
       <div style={{ minHeight:'100vh', background:'linear-gradient(135deg,#0f1f3d 0%,#1a3260 100%)',
         fontFamily:"'Inter','Inter','DM Sans',sans-serif", padding:20, display:'flex', flexDirection:'column', alignItems:'center' }}>
         <div style={{ textAlign:'center', marginBottom:14, marginTop:10 }}>
-          <div style={{ fontSize:11, color:C.gold, letterSpacing:'2px', textTransform:'uppercase', marginBottom:6 }}>Wickramakalutota Opticals</div>
-          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:'white', fontWeight:700 }}>Lens Price Guide</div>
+          <div style={{ fontSize:11, color:'var(--gold)', letterSpacing:'2px', textTransform:'uppercase', marginBottom:6 }}>Wickramakalutota Opticals</div>
+          <div style={{ fontFamily:"var(--font-display)", fontSize:22, color:'white', fontWeight:700 }}>Lens Price Guide</div>
           {rec && <div style={{ fontSize:12, color:'#ede9e0', marginTop:4 }}>Recommendation: {rec}</div>}
         </div>
         <div style={{ width:'100%', maxWidth:420 }}>
 
           {/* Staff-only: filter chips + edit sell price — shown before customer sees */}
-          <div style={{ background:'rgba(255,255,255,.08)', borderRadius:12, padding:'10px 12px', marginBottom:14, border:'1px solid rgba(255,255,255,.15)' }}>
-            <div style={{ fontSize:10, color:C.gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:8 }}>Staff: Filter & Set Price</div>
+          <div style={{ background:'rgba(255,255,255,.08)', borderRadius:'var(--r-lg)', padding:'10px 12px', marginBottom:14, border:'1px solid rgba(255,255,255,.15)' }}>
+            <div style={{ fontSize:10, color:'var(--gold)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:8 }}>Staff: Filter & Set Price</div>
             <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
               {CUST_TYPE_FILTERS.map(t=>(
                 <button key={t} onClick={()=>{ setCustFilterType(t); setSelectedLens(null); setEditSellPrice(''); }}
-                  style={{ padding:'4px 10px', borderRadius:20, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:'none',
-                    background:custFilterType===t?C.gold:'rgba(255,255,255,.15)', color:custFilterType===t?C.navy:'white' }}>
+                  style={{ padding:'4px 10px', borderRadius:'var(--r-full)', fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:'none',
+                    background:custFilterType===t?'var(--gold)':'rgba(255,255,255,.15)', color:custFilterType===t?'var(--navy)':'white' }}>
                   {t==='all'?'All Types':t}
                 </button>
               ))}
@@ -196,8 +207,8 @@ export default function LensCalculator() {
             <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:selectedLens?10:0 }}>
               {CUST_COAT_FILTERS.map(c=>(
                 <button key={c} onClick={()=>{ setCustFilterCoat(c); setSelectedLens(null); setEditSellPrice(''); }}
-                  style={{ padding:'4px 10px', borderRadius:20, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:'none',
-                    background:custFilterCoat===c?C.gold:'rgba(255,255,255,.15)', color:custFilterCoat===c?C.navy:'white' }}>
+                  style={{ padding:'4px 10px', borderRadius:'var(--r-full)', fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:'none',
+                    background:custFilterCoat===c?'var(--gold)':'rgba(255,255,255,.15)', color:custFilterCoat===c?'var(--navy)':'white' }}>
                   {c==='all'?'All Coatings':c}
                 </button>
               ))}
@@ -211,7 +222,7 @@ export default function LensCalculator() {
                   <span style={{ color:'rgba(255,255,255,.7)', fontSize:13 }}>Rs.</span>
                   <input type="number" value={editSellPrice} onChange={e=>setEditSellPrice(e.target.value)}
                     placeholder={String(Math.round(selectedLens.sell_price))}
-                    style={{ flex:1, padding:'8px 10px', border:'1.5px solid rgba(201,168,76,.6)', borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'rgba(255,255,255,.1)', color:'white' }}/>
+                    style={{ flex:1, padding:'8px 10px', border:'1.5px solid rgba(201,168,76,.6)', borderRadius:'var(--r-sm)', fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'rgba(255,255,255,.1)', color:'white' }}/>
                   {editSellPrice && <button onClick={()=>setEditSellPrice('')}
                     style={{ background:'rgba(255,255,255,.15)', border:'none', borderRadius:7, padding:'7px 10px', cursor:'pointer', color:'white', fontSize:12, fontFamily:'inherit' }}>Reset</button>}
                 </div>
@@ -228,55 +239,55 @@ export default function LensCalculator() {
             return (
               <button key={i} onClick={()=>{ setSelectedLens(isSel?null:p); if(!isSel) setEditSellPrice(''); }}
                 style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center',
-                  padding:'12px 16px', marginBottom:8, borderRadius:14, cursor:'pointer', fontFamily:'inherit',
-                  border:`2px solid ${isSel?C.gold:'rgba(255,255,255,.2)'}`,
-                  background:isSel?C.gold:'rgba(255,255,255,.08)', color:isSel?C.navy:'white', transition:'all .15s' }}>
+                  padding:'12px 16px', marginBottom:8, borderRadius:'var(--r-lg)', cursor:'pointer', fontFamily:'inherit',
+                  border:`2px solid ${isSel?'var(--gold)':'rgba(255,255,255,.2)'}`,
+                  background:isSel?'var(--gold)':'rgba(255,255,255,.08)', color:isSel?'var(--navy)':'white', transition:'all .15s' }}>
                 <div>
                   <div style={{ fontSize:14, fontWeight:700 }}>{p.lens_type}</div>
                   <div style={{ fontSize:11, opacity:.75 }}>{p.coating}{p.lens_index?` · ${p.lens_index}`:''}{p.brand?` · ${p.brand}`:''}</div>
                 </div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700 }}>{fmt(displayPrice)}</div>
+                <div style={{ fontFamily:"var(--font-display)", fontSize:18, fontWeight:700 }}>{fmt(displayPrice)}</div>
               </button>
             );
           })}
           {selectedLens && (
-            <div style={{ background:'white', borderRadius:18, padding:20, marginBottom:16 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:14, textAlign:'center' }}>
+            <div style={{ background:'var(--bg-surface)', borderRadius:18, padding:20, marginBottom:16 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:'var(--navy)', marginBottom:14, textAlign:'center' }}>
                 {selectedLens.lens_type} — {selectedLens.coating}
               </div>
-              <div style={{ display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:`1px solid ${C.border}`, fontSize:14 }}>
-                <span style={{ color:C.muted }}>Lens (pair)</span>
-                <span style={{ fontWeight:700, color:C.navy }}>{fmt(lensPrice)}</span>
+              <div style={{ display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:`1px solid var(--border)`, fontSize:14 }}>
+                <span style={{ color:'var(--text-muted)' }}>Lens (pair)</span>
+                <span style={{ fontWeight:700, color:'var(--navy)' }}>{fmt(lensPrice)}</span>
               </div>
-              <div style={{ padding:'12px 0', borderBottom:`1px solid ${C.border}` }}>
-                <div style={{ fontSize:12, color:C.muted, marginBottom:6, fontWeight:600 }}>Add Frame Price (Rs.)</div>
+              <div style={{ padding:'12px 0', borderBottom:`1px solid var(--border)` }}>
+                <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:6, fontWeight:600 }}>Add Frame Price (Rs.)</div>
                 <input type="number" value={framePrice} onChange={e=>setFramePrice(e.target.value)} placeholder="0"
-                  style={{ width:'100%', padding:'10px 12px', border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:16, fontFamily:'inherit', outline:'none', color:C.navy, fontWeight:700 }}/>
+                  style={{ width:'100%', padding:'10px 12px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-md)', fontSize:16, fontFamily:'inherit', outline:'none', color:'var(--navy)', fontWeight:700 }}/>
               </div>
-              <div style={{ padding:'12px 0', borderBottom:`1px solid ${C.border}` }}>
-                <div style={{ fontSize:12, color:C.muted, marginBottom:8, fontWeight:600 }}>Discount</div>
+              <div style={{ padding:'12px 0', borderBottom:`1px solid var(--border)` }}>
+                <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:8, fontWeight:600 }}>Discount</div>
                 <div style={{ display:'flex', gap:6, marginBottom:8 }}>
                   {[['pct','% Percent'],['amt','Rs. Amount']].map(([v,l])=>(
-                    <button key={v} onClick={()=>setDiscType(v)} style={{ flex:1, padding:'8px', borderRadius:8, border:`1.5px solid ${discType===v?C.navy:C.border}`, background:discType===v?C.navy:'white', color:discType===v?'white':C.muted, fontWeight:700, cursor:'pointer', fontFamily:'inherit', fontSize:13 }}>{l}</button>
+                    <button key={v} onClick={()=>setDiscType(v)} style={{ flex:1, padding:'8px', borderRadius:'var(--r-sm)', border:`1.5px solid ${discType===v?'var(--navy)':'var(--border)'}`, background:discType===v?'var(--navy)':'white', color:discType===v?'white':'var(--text-muted)', fontWeight:700, cursor:'pointer', fontFamily:'inherit', fontSize:13 }}>{l}</button>
                   ))}
                 </div>
                 <input type="number" value={discVal} onChange={e=>setDiscVal(e.target.value)} placeholder="0"
-                  style={{ width:'100%', padding:'10px 12px', border:`1.5px solid ${discAmt>0?C.danger:C.border}`, borderRadius:10, fontSize:16, fontFamily:'inherit', outline:'none', color:C.danger, fontWeight:700 }}/>
+                  style={{ width:'100%', padding:'10px 12px', border:`1.5px solid ${discAmt>0?'var(--danger)':'var(--border)'}`, borderRadius:'var(--r-md)', fontSize:16, fontFamily:'inherit', outline:'none', color:'var(--danger)', fontWeight:700 }}/>
               </div>
               {(framePriceN>0||discAmt>0) && (
-                <div style={{ padding:'8px 0', borderBottom:`1px solid ${C.border}` }}>
-                  {framePriceN>0 && <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4 }}><span style={{ color:C.muted }}>Frame + Lens</span><span style={{ color:C.navy, fontWeight:600 }}>{fmt(subTotal)}</span></div>}
-                  {discAmt>0 && <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:C.danger }}><span>Discount</span><span>- {fmt(discAmt)}</span></div>}
+                <div style={{ padding:'8px 0', borderBottom:`1px solid var(--border)` }}>
+                  {framePriceN>0 && <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4 }}><span style={{ color:'var(--text-muted)' }}>Frame + Lens</span><span style={{ color:'var(--navy)', fontWeight:600 }}>{fmt(subTotal)}</span></div>}
+                  {discAmt>0 && <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--danger)' }}><span>Discount</span><span>- {fmt(discAmt)}</span></div>}
                 </div>
               )}
-              <div style={{ background:C.navy, borderRadius:12, padding:'16px', marginTop:12, textAlign:'center' }}>
-                <div style={{ fontSize:11, color:C.gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:6 }}>{framePriceN>0?'Total Price':'Lens Price'}</div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:36, fontWeight:700, color:'white' }}>{fmt(totalPrice)}</div>
+              <div style={{ background:'var(--navy)', borderRadius:'var(--r-lg)', padding:'16px', marginTop:12, textAlign:'center' }}>
+                <div style={{ fontSize:11, color:'var(--gold)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:6 }}>{framePriceN>0?'Total Price':'Lens Price'}</div>
+                <div style={{ fontFamily:"var(--font-display)", fontSize:36, fontWeight:700, color:'white' }}>{fmt(totalPrice)}</div>
               </div>
             </div>
           )}
         </div>
-        <button onClick={()=>setCustomerMode(false)} style={{ padding:'11px 28px', background:'rgba(255,255,255,.15)', border:'1.5px solid rgba(255,255,255,.3)', color:'white', borderRadius:10, fontSize:13, cursor:'pointer', fontFamily:'inherit', marginBottom:20 }}>← Back</button>
+        <button onClick={()=>setCustomerMode(false)} style={{ padding:'11px 28px', background:'rgba(255,255,255,.15)', border:'1.5px solid rgba(255,255,255,.3)', color:'white', borderRadius:'var(--r-md)', fontSize:13, cursor:'pointer', fontFamily:'inherit', marginBottom:20 }}>← Back</button>
       </div>
     );
   }
@@ -286,105 +297,105 @@ export default function LensCalculator() {
     <div style={{ fontFamily:"'Inter','Inter','DM Sans',sans-serif", maxWidth:620, margin:'0 auto' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
         <div>
-          <button onClick={()=>navigate('/dashboard')} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, fontSize:13, fontFamily:'inherit', padding:0, display:'block', marginBottom:4 }}>← Dashboard</button>
-          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, margin:0 }}>Lens Calculator</h1>
+          <button onClick={()=>navigate('/dashboard')} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--text-muted)', fontSize:13, fontFamily:'inherit', padding:0, display:'block', marginBottom:4 }}>← Dashboard</button>
+          <h1 style={{ fontFamily:"var(--font-display)", fontSize:22, color:'var(--navy)', margin:0 }}>Lens Calculator</h1>
         </div>
         <div style={{ display:'flex', gap:8 }}>
-          <button onClick={()=>setShowAdd(s=>!s)} style={{ padding:'8px 14px', background:showAdd?'#fee2e2':C.cream, border:`1px solid ${showAdd?'#fca5a5':C.border}`, color:showAdd?C.danger:C.navy, borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+          <button onClick={()=>setShowAdd(s=>!s)} style={{ padding:'8px 14px', background:showAdd?'#fee2e2':'var(--bg-sunken)', border:`1px solid ${showAdd?'#fca5a5':'var(--border)'}`, color:showAdd?'var(--danger)':'var(--navy)', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
             {showAdd?'✕ Cancel':'+ Add Price'}
           </button>
-          <button onClick={()=>setCustomerMode(true)} style={{ padding:'8px 14px', background:C.navy, color:C.gold, border:'none', borderRadius:9, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+          <button onClick={()=>setCustomerMode(true)} style={{ padding:'8px 14px', background:'var(--navy)', color:'var(--gold)', border:'none', borderRadius:9, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
             Show Customer
           </button>
         </div>
       </div>
 
       {/* Rx */}
-      <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'16px 18px', marginBottom:12 }}>
-        <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:12 }}>Patient Rx</div>
+      <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:'16px 18px', marginBottom:12 }}>
+        <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)', marginBottom:12 }}>Patient Rx</div>
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           <RxInput label="Right Eye (OD)" sph={rSph} setSph={setRSph} cyl={rCyl} setCyl={setRCyl} add={rAdd} setAdd={setRAdd} onCopyToOther={()=>{setLSph(rSph);setLCyl(rCyl);setLAdd(rAdd);}}/>
           <RxInput label="Left Eye (OS)"  sph={lSph} setSph={setLSph} cyl={lCyl} setCyl={setLCyl} add={lAdd} setAdd={setLAdd} onCopyToOther={()=>{setRSph(lSph);setRCyl(lCyl);setRAdd(lAdd);}}/>
         </div>
-        {rec    && <div style={{ marginTop:10, background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:8, padding:'8px 12px', fontSize:12, color:'#1e40af' }}>Recommendation: {rec}</div>}
-        {addRec && <div style={{ marginTop:6, background:'#f0fdf4', border:'1px solid #86efac', borderRadius:8, padding:'7px 12px', fontSize:12, color:'#166534', fontWeight:600 }}>{addRec}</div>}
-        {cylWarn && <div style={{ marginTop:6, background:'#fef9c3', border:'1px solid #fde68a', borderRadius:8, padding:'7px 12px', fontSize:12, color:'#92400e' }}>High CYL: {cylWarn}</div>}
+        {rec    && <div style={{ marginTop:10, background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:'var(--r-sm)', padding:'8px 12px', fontSize:12, color:'#1e40af' }}>Recommendation: {rec}</div>}
+        {addRec && <div style={{ marginTop:6, background:'#f0fdf4', border:'1px solid #86efac', borderRadius:'var(--r-sm)', padding:'7px 12px', fontSize:12, color:'#166534', fontWeight:600 }}>{addRec}</div>}
+        {cylWarn && <div style={{ marginTop:6, background:'#fef9c3', border:'1px solid #fde68a', borderRadius:'var(--r-sm)', padding:'7px 12px', fontSize:12, color:'#92400e' }}>High CYL: {cylWarn}</div>}
       </div>
 
       {/* Add price form */}
       {showAdd && (
-        <div style={{ background:'#f0fdf4', border:'1px solid #86efac', borderRadius:14, padding:'16px 18px', marginBottom:12 }}>
+        <div style={{ background:'#f0fdf4', border:'1px solid #86efac', borderRadius:'var(--r-lg)', padding:'16px 18px', marginBottom:12 }}>
           <div style={{ fontSize:13, fontWeight:700, color:'#166534', marginBottom:12 }}>Add New Lens Price to List</div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
             <div>
-              <label style={{ fontSize:11, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>Lens Type</label>
+              <label style={{ fontSize:11, color:'var(--text-muted)', fontWeight:600, display:'block', marginBottom:4 }}>Lens Type</label>
               <select value={addForm.lens_type} onChange={e=>setAddForm(f=>({...f,lens_type:e.target.value}))}
-                style={{ width:'100%', padding:'9px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:'white' }}>
+                style={{ width:'100%', padding:'9px 10px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)' }}>
                 {['Bifocal','Single Vision','Progressive','Office Lens','Reading (ready)'].map(t=><option key={t}>{t}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ fontSize:11, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>Coating</label>
+              <label style={{ fontSize:11, color:'var(--text-muted)', fontWeight:600, display:'block', marginBottom:4 }}>Coating</label>
               <select value={addForm.coating} onChange={e=>setAddForm(f=>({...f,coating:e.target.value}))}
-                style={{ width:'100%', padding:'9px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:'white' }}>
+                style={{ width:'100%', padding:'9px 10px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)' }}>
                 {COATINGS.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ fontSize:11, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>Index</label>
+              <label style={{ fontSize:11, color:'var(--text-muted)', fontWeight:600, display:'block', marginBottom:4 }}>Index</label>
               <select value={addForm.lens_index} onChange={e=>setAddForm(f=>({...f,lens_index:e.target.value}))}
-                style={{ width:'100%', padding:'9px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:'white' }}>
+                style={{ width:'100%', padding:'9px 10px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)' }}>
                 {['CR39','1.49','1.56','1.59','1.6','1.61','1.67','1.74','Poly'].map(x=><option key={x}>{x}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ fontSize:11, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>Supplier</label>
+              <label style={{ fontSize:11, color:'var(--text-muted)', fontWeight:600, display:'block', marginBottom:4 }}>Supplier</label>
               <select value={addForm.brand} onChange={e=>setAddForm(f=>({...f,brand:e.target.value}))}
-                style={{ width:'100%', padding:'9px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:'white' }}>
+                style={{ width:'100%', padding:'9px 10px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)' }}>
                 {SUPPLIERS.map(s=><option key={s}>{s}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ fontSize:11, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>Buy Price (Rs.) — what you pay</label>
+              <label style={{ fontSize:11, color:'var(--text-muted)', fontWeight:600, display:'block', marginBottom:4 }}>Buy Price (Rs.) — what you pay</label>
               <input type="number" value={addForm.buy_price} onChange={e=>setAddForm(f=>({...f,buy_price:e.target.value}))} placeholder="e.g. 1200"
-                style={{ width:'100%', padding:'9px 10px', border:`1.5px solid #86efac`, borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
+                style={{ width:'100%', padding:'9px 10px', border:`1.5px solid #86efac`, borderRadius:'var(--r-sm)', fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'var(--navy)' }}/>
             </div>
             <div>
-              <label style={{ fontSize:11, color:C.muted, fontWeight:600, display:'block', marginBottom:4 }}>Sell Price (Rs.) — charge to customer</label>
+              <label style={{ fontSize:11, color:'var(--text-muted)', fontWeight:600, display:'block', marginBottom:4 }}>Sell Price (Rs.) — charge to customer</label>
               <input type="number" value={addForm.sell_price} onChange={e=>setAddForm(f=>({...f,sell_price:e.target.value}))} placeholder="e.g. 2500"
-                style={{ width:'100%', padding:'9px 10px', border:`1.5px solid #93c5fd`, borderRadius:8, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}/>
+                style={{ width:'100%', padding:'9px 10px', border:`1.5px solid #93c5fd`, borderRadius:'var(--r-sm)', fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'var(--navy)' }}/>
             </div>
           </div>
           {addForm.buy_price && addForm.sell_price && (
-            <div style={{ background:'white', borderRadius:8, padding:'8px 12px', marginBottom:10, fontSize:12 }}>
-              Margin: <b style={{ color:parseFloat(addForm.sell_price)-parseFloat(addForm.buy_price)>0?C.success:C.danger }}>
+            <div style={{ background:'var(--bg-surface)', borderRadius:'var(--r-sm)', padding:'8px 12px', marginBottom:10, fontSize:12 }}>
+              Margin: <b style={{ color:parseFloat(addForm.sell_price)-parseFloat(addForm.buy_price)>0?'var(--success)':'var(--danger)' }}>
                 Rs. {(parseFloat(addForm.sell_price||0)-parseFloat(addForm.buy_price||0)).toLocaleString()} ({Math.round((parseFloat(addForm.sell_price||0)-parseFloat(addForm.buy_price||0))/parseFloat(addForm.sell_price||1)*100)}%)
               </b>
             </div>
           )}
-          {addMsg && <div style={{ fontSize:12, color:addMsg==='Saved!'?C.success:C.danger, marginBottom:8, fontWeight:700 }}>{addMsg}</div>}
+          {addMsg && <div style={{ fontSize:12, color:addMsg==='Saved!'?'var(--success)':'var(--danger)', marginBottom:8, fontWeight:700 }}>{addMsg}</div>}
           <button onClick={handleAddPrice} disabled={addSaving}
-            style={{ padding:'10px 24px', background:addSaving?C.muted:C.success, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:addSaving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+            style={{ padding:'10px 24px', background:addSaving?'var(--text-muted)':'var(--success)', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:addSaving?'not-allowed':'pointer', fontFamily:'inherit' }}>
             {addSaving?'Saving...':'Save to Price List'}
           </button>
         </div>
       )}
 
       {/* Lens price list from DB */}
-      <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'16px 18px', marginBottom:12 }}>
+      <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:'16px 18px', marginBottom:12 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-          <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted }}>
-            Lens Price List {filtered.length>0&&<span style={{ color:C.navy, fontWeight:800 }}>({filtered.length})</span>}
+          <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'var(--text-muted)' }}>
+            Lens Price List {filtered.length>0&&<span style={{ color:'var(--navy)', fontWeight:800 }}>({filtered.length})</span>}
           </div>
-          <button onClick={loadPrices} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, fontSize:12, fontFamily:'inherit' }}>↻ Refresh</button>
+          <button onClick={loadPrices} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--text-muted)', fontSize:12, fontFamily:'inherit' }}>↻ Refresh</button>
         </div>
 
         {/* Search + filter */}
         <div style={{ display:'flex', gap:8, marginBottom:8, flexWrap:'wrap' }}>
           <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Search..."
-            style={{ flex:1, minWidth:120, padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream }}/>
+            style={{ flex:1, minWidth:120, padding:'8px 12px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)' }}/>
           <select value={filterType} onChange={e=>setFilterType(e.target.value)}
-            style={{ padding:'8px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream }}>
+            style={{ padding:'8px 10px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)' }}>
             {LENS_TYPES.map(t=><option key={t} value={t}>{t==='all'?'All Types':t}</option>)}
           </select>
         </div>
@@ -392,42 +403,42 @@ export default function LensCalculator() {
         <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:12 }}>
           {COATING_FILTERS.map(c=>(
             <button key={c} onClick={()=>setFilterCoating(c)}
-              style={{ padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-                border:`1.5px solid ${filterCoating===c?C.navy:C.border}`,
-                background:filterCoating===c?C.navy:'white', color:filterCoating===c?'white':C.muted }}>
+              style={{ padding:'4px 12px', borderRadius:'var(--r-full)', fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                border:`1.5px solid ${filterCoating===c?'var(--navy)':'var(--border)'}`,
+                background:filterCoating===c?'var(--navy)':'white', color:filterCoating===c?'white':'var(--text-muted)' }}>
               {c==='all'?'All Coatings':c}
             </button>
           ))}
         </div>
 
         {loadingDB ? (
-          <div style={{ textAlign:'center', padding:'20px 0', color:C.muted, fontSize:13 }}>Loading prices...</div>
+          <div style={{ textAlign:'center', padding:'20px 0', color:'var(--text-muted)', fontSize:13 }}>Loading prices...</div>
         ) : filtered.length===0 ? (
-          <div style={{ textAlign:'center', padding:'20px 0', color:C.muted, fontSize:13 }}>
+          <div style={{ textAlign:'center', padding:'20px 0', color:'var(--text-muted)', fontSize:13 }}>
             No prices yet. Add prices above or they'll be auto-saved when you update order costs.
           </div>
         ) : (
           <div>
             {/* Table header */}
-            <div style={{ display:'grid', gridTemplateColumns:'2fr 1.5fr 0.8fr 0.8fr 1fr 1fr', gap:6, padding:'6px 8px', background:C.cream, borderRadius:8, marginBottom:4 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'2fr 1.5fr 0.8fr 0.8fr 1fr 1fr', gap:6, padding:'6px 8px', background:'var(--bg-sunken)', borderRadius:'var(--r-sm)', marginBottom:4 }}>
               {['Lens Type','Coating','Index','Supplier','Buy Price','Sell Price'].map(h=>(
-                <div key={h} style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, letterSpacing:'0.5px' }}>{h}</div>
+                <div key={h} style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', letterSpacing:'0.5px' }}>{h}</div>
               ))}
             </div>
             {filtered.map((p,i)=>{
               const margin = p.buy_price>0 ? Math.round((p.sell_price-p.buy_price)/p.sell_price*100) : null;
               return (
                 <div key={p.id||i} style={{ display:'grid', gridTemplateColumns:'2fr 1.5fr 0.8fr 0.8fr 1fr 1fr', gap:6,
-                  padding:'9px 8px', borderBottom:`1px solid ${C.cream}`, alignItems:'center',
+                  padding:'9px 8px', borderBottom:`1px solid var(--bg-sunken)`, alignItems:'center',
                   background:i%2===0?'white':'#fafaf9' }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{p.lens_type}</div>
-                  <div style={{ fontSize:12, color:C.muted }}>{p.coating||'—'}</div>
-                  <div style={{ fontSize:12, color:C.muted }}>{p.lens_index||'—'}</div>
-                  <div style={{ fontSize:12, color:C.muted }}>{p.brand||'—'}</div>
-                  <div style={{ fontSize:13, fontWeight:700, color:C.success }}>Rs. {Math.round(p.buy_price||0).toLocaleString()}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:'var(--navy)' }}>{p.lens_type}</div>
+                  <div style={{ fontSize:12, color:'var(--text-muted)' }}>{p.coating||'—'}</div>
+                  <div style={{ fontSize:12, color:'var(--text-muted)' }}>{p.lens_index||'—'}</div>
+                  <div style={{ fontSize:12, color:'var(--text-muted)' }}>{p.brand||'—'}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:'var(--success)' }}>Rs. {Math.round(p.buy_price||0).toLocaleString()}</div>
                   <div>
-                    <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Rs. {Math.round(p.sell_price||0).toLocaleString()}</div>
-                    {margin!==null && <div style={{ fontSize:10, color:margin>=30?C.success:margin>=15?'#b45309':C.danger, fontWeight:600 }}>{margin}% margin</div>}
+                    <div style={{ fontSize:13, fontWeight:700, color:'var(--navy)' }}>Rs. {Math.round(p.sell_price||0).toLocaleString()}</div>
+                    {margin!==null && <div style={{ fontSize:10, color:margin>=30?'var(--success)':margin>=15?'#b45309':'var(--danger)', fontWeight:600 }}>{margin}% margin</div>}
                   </div>
                 </div>
               );
@@ -437,7 +448,7 @@ export default function LensCalculator() {
       </div>
 
       <button onClick={()=>setCustomerMode(true)}
-        style={{ width:'100%', padding:'14px', background:C.gold, color:C.navy, border:'none', borderRadius:12, fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+        style={{ width:'100%', padding:'14px', background:'var(--gold)', color:'var(--navy)', border:'none', borderRadius:'var(--r-lg)', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
         Show Price to Customer
       </button>
     </div>
