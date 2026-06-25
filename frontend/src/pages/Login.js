@@ -1,141 +1,200 @@
 /* eslint-disable */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const { login }   = useAuth();
-  const navigate    = useNavigate();
-  const [form,      setForm]    = useState({ username:'', password:'' });
-  const [error,     setError]   = useState('');
-  const [loading,   setLoading] = useState(false);
-  const [showPass,  setShowPass] = useState(false);
+  const { login }        = useAuth();
+  const navigate          = useNavigate();
+  const [username,setUser]= useState('');
+  const [password,setPass]= useState('');
+  const [error,   setErr] = useState('');
+  const [loading, setLoad]= useState(false);
+  const [showPass,setShow]= useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async e => {
     e.preventDefault();
-    setError(''); setLoading(true);
+    if (!username || !password) return setErr('Please enter username and password');
+    setLoad(true); setErr('');
     try {
-      await login(form.username, form.password);
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.response?.data?.error || 'Incorrect username or password.');
-    } finally { setLoading(false); }
+      await login(username.trim(), password);
+      navigate('/dashboard', { replace:true });
+    } catch(err) {
+      setErr(err.message || 'Invalid credentials');
+    } finally { setLoad(false); }
   };
 
   return (
-    <div style={{ minHeight:'100vh', display:'flex', fontFamily:"'Inter','DM Sans',sans-serif" }}>
-
+    <div style={{
+      minHeight:'100vh', display:'flex',
+      background:'var(--bg-base)',
+      fontFamily:'var(--font-body)',
+    }}>
       {/* Left panel — branding */}
-      <div style={{ flex:1, background:'linear-gradient(160deg,#0b1829 0%,#0f1f3d 50%,#162d52 100%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:48, position:'relative', overflow:'hidden' }}>
+      <div style={{
+        flex:1, display:'none',
+        background:'linear-gradient(145deg,var(--navy) 0%,#1a3060 60%,#0d2245 100%)',
+        padding:48, flexDirection:'column', justifyContent:'space-between',
+        position:'relative', overflow:'hidden',
+      }} className="login-left">
         {/* Decorative circles */}
-        <div style={{ position:'absolute', top:-80, right:-80, width:320, height:320, borderRadius:'50%', background:'rgba(201,168,76,.06)', pointerEvents:'none' }}/>
-        <div style={{ position:'absolute', bottom:-60, left:-60, width:240, height:240, borderRadius:'50%', background:'rgba(201,168,76,.04)', pointerEvents:'none' }}/>
+        {[
+          { size:300, top:-80,  right:-60,  opacity:.05 },
+          { size:200, bottom:60,left:-40,   opacity:.06 },
+          { size:150, top:'40%',right:'10%',opacity:.04 },
+        ].map((c,i)=>(
+          <div key={i} style={{
+            position:'absolute', width:c.size, height:c.size,
+            borderRadius:'50%', border:'2px solid var(--gold)',
+            top:c.top, bottom:c.bottom, left:c.left, right:c.right,
+            opacity:c.opacity,
+          }}/>
+        ))}
 
-        <div style={{ position:'relative', textAlign:'center', maxWidth:360 }}>
-          {/* Logo mark */}
-          <div style={{ width:72, height:72, borderRadius:20, background:'rgba(201,168,76,.12)', border:'1px solid rgba(201,168,76,.3)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 28px' }}>
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M20.188 10.934C18.74 7.427 15.55 5 12 5s-6.74 2.427-8.188 5.934a1 1 0 000 .132C5.26 14.573 8.45 17 12 17s6.74-2.427 8.188-5.934a1 1 0 000-.132z"/>
-            </svg>
-          </div>
-
-          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:'white', margin:'0 0 8px', lineHeight:1.2 }}>
-            Kuruwita Optical
-          </h1>
-          <p style={{ fontSize:12, color:'#c9a84c', letterSpacing:'2.5px', textTransform:'uppercase', margin:'0 0 40px', fontWeight:600 }}>
-            Management System
-          </p>
-
-          {/* Feature dots */}
-          {['Orders & Inventory', 'Repairs & Quick Sales', 'Finance & Reports'].map((f,i) => (
-            <div key={i} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14, textAlign:'left' }}>
-              <div style={{ width:6, height:6, borderRadius:'50%', background:'#c9a84c', flexShrink:0 }}/>
-              <span style={{ fontSize:14, color:'rgba(237,233,224,.7)' }}>{f}</span>
+        <div>
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:60 }}>
+            <div style={{ width:44, height:44, borderRadius:12, background:'linear-gradient(135deg,var(--gold),#E8C96A)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 16px rgba(201,168,76,.4)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0A1628" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/>
+                <line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/>
+              </svg>
             </div>
-          ))}
+            <div>
+              <div style={{ fontFamily:'var(--font-display)', fontSize:18, color:'#fff', fontWeight:600 }}>Kuruwita Optical</div>
+              <div style={{ fontSize:11, color:'rgba(201,168,76,.7)', letterSpacing:'.06em' }}>MANAGEMENT SYSTEM</div>
+            </div>
+          </div>
+          <div style={{ fontFamily:'var(--font-display)', fontSize:32, color:'#fff', lineHeight:1.3, marginBottom:16, fontWeight:600 }}>
+            Your optical shop,<br/>perfectly managed.
+          </div>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,.5)', lineHeight:1.7 }}>
+            Orders · Inventory · Lab receivings ·<br/>Balance tracking · End of day reports
+          </p>
         </div>
 
-        <div style={{ position:'absolute', bottom:24, fontSize:11, color:'rgba(255,255,255,.25)', letterSpacing:'1px' }}>
-          Wickramakalutota Opticals · Chilaw
+        <div style={{ fontSize:12, color:'rgba(255,255,255,.25)' }}>
+          Wickramakalutota Opticals, Kuruwita
         </div>
       </div>
 
-      {/* Right panel — form */}
-      <div style={{ width:440, display:'flex', alignItems:'center', justifyContent:'center', background:'#f9f9fb', padding:'40px 48px' }}>
-        <div style={{ width:'100%', maxWidth:340 }}>
-          <div style={{ marginBottom:32 }}>
-            <h2 style={{ fontSize:22, fontWeight:700, color:'#111827', margin:'0 0 6px', fontFamily:"'Playfair Display',serif" }}>
+      {/* Right panel — login form */}
+      <div style={{
+        width:'100%', maxWidth:460, margin:'0 auto',
+        display:'flex', alignItems:'center', justifyContent:'center',
+        padding:'32px 24px',
+      }}>
+        <div style={{ width:'100%', maxWidth:380 }}>
+
+          {/* Logo (mobile) */}
+          <div style={{ textAlign:'center', marginBottom:40 }}>
+            <div style={{ width:56, height:56, borderRadius:16, background:'linear-gradient(135deg,var(--navy),#1a3060)', display:'inline-flex', alignItems:'center', justifyContent:'center', marginBottom:16, boxShadow:'var(--shadow-lg)' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/>
+                <line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/>
+              </svg>
+            </div>
+            <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:600, color:'var(--text-primary)', marginBottom:4 }}>
               Welcome back
-            </h2>
-            <p style={{ fontSize:14, color:'#6b7280', margin:0 }}>Sign in to your account to continue</p>
+            </div>
+            <p style={{ fontSize:13, color:'var(--text-muted)', margin:0 }}>
+              Sign in to Kuruwita Optical
+            </p>
           </div>
 
-          {error && (
-            <div style={{ background:'#fef2f2', border:'1px solid #fecaca', color:'#dc2626', borderRadius:10, padding:'10px 14px', fontSize:13, marginBottom:20, display:'flex', alignItems:'center', gap:8 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              {error}
-            </div>
-          )}
+          {/* Form */}
+          <form onSubmit={handleLogin}>
 
-          <form onSubmit={handleSubmit}>
+            {error && (
+              <div style={{
+                background:'var(--danger-bg)', color:'var(--danger)',
+                border:'1px solid var(--danger-border)',
+                borderRadius:'var(--r-md)', padding:'11px 16px',
+                fontSize:13, fontWeight:500, marginBottom:20,
+                display:'flex', alignItems:'center', gap:8,
+              }}>
+                ⚠️ {error}
+              </div>
+            )}
+
             <div style={{ marginBottom:16 }}>
-              <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#374151', marginBottom:6, letterSpacing:'.3px' }}>Username</label>
+              <label style={{ fontSize:12, fontWeight:600, color:'var(--text-secondary)', display:'block', marginBottom:6 }}>
+                Username
+              </label>
               <input
-                type="text" value={form.username} autoComplete="username"
-                onChange={e => setForm(f=>({...f, username:e.target.value}))}
+                type="text" value={username} onChange={e=>setUser(e.target.value)}
                 placeholder="Enter your username"
-                style={{ width:'100%', padding:'11px 14px', border:'1.5px solid #e5e5ea', borderRadius:10, fontSize:14, fontFamily:'inherit', outline:'none', background:'white', color:'#111827', transition:'border-color .15s' }}
-                onFocus={e => e.target.style.borderColor='#0f1f3d'}
-                onBlur={e => e.target.style.borderColor='#e5e5ea'}
+                autoComplete="username" autoFocus
+                style={{
+                  width:'100%', padding:'12px 14px',
+                  background:'var(--bg-surface)',
+                  border:'1.5px solid var(--border)',
+                  borderRadius:'var(--r-md)',
+                  fontSize:14, fontFamily:'var(--font-body)',
+                  color:'var(--text-primary)', outline:'none',
+                  transition:'border-color var(--t-fast), box-shadow var(--t-fast)',
+                }}
+                onFocus={e=>{ e.target.style.borderColor='var(--gold)'; e.target.style.boxShadow='0 0 0 3px rgba(201,168,76,.12)'; }}
+                onBlur={e=>{ e.target.style.borderColor='var(--border)'; e.target.style.boxShadow='none'; }}
               />
             </div>
 
             <div style={{ marginBottom:24 }}>
-              <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#374151', marginBottom:6, letterSpacing:'.3px' }}>Password</label>
+              <label style={{ fontSize:12, fontWeight:600, color:'var(--text-secondary)', display:'block', marginBottom:6 }}>
+                Password
+              </label>
               <div style={{ position:'relative' }}>
                 <input
-                  type={showPass?'text':'password'} value={form.password} autoComplete="current-password"
-                  onChange={e => setForm(f=>({...f, password:e.target.value}))}
+                  type={showPass?'text':'password'} value={password}
+                  onChange={e=>setPass(e.target.value)}
                   placeholder="Enter your password"
-                  style={{ width:'100%', padding:'11px 44px 11px 14px', border:'1.5px solid #e5e5ea', borderRadius:10, fontSize:14, fontFamily:'inherit', outline:'none', background:'white', color:'#111827', transition:'border-color .15s' }}
-                  onFocus={e => e.target.style.borderColor='#0f1f3d'}
-                  onBlur={e => e.target.style.borderColor='#e5e5ea'}
+                  autoComplete="current-password"
+                  style={{
+                    width:'100%', padding:'12px 44px 12px 14px',
+                    background:'var(--bg-surface)',
+                    border:'1.5px solid var(--border)',
+                    borderRadius:'var(--r-md)',
+                    fontSize:14, fontFamily:'var(--font-body)',
+                    color:'var(--text-primary)', outline:'none',
+                    transition:'border-color var(--t-fast), box-shadow var(--t-fast)',
+                  }}
+                  onFocus={e=>{ e.target.style.borderColor='var(--gold)'; e.target.style.boxShadow='0 0 0 3px rgba(201,168,76,.12)'; }}
+                  onBlur={e=>{ e.target.style.borderColor='var(--border)'; e.target.style.boxShadow='none'; }}
                 />
-                <button type="button" onClick={() => setShowPass(s=>!s)}
-                  style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#9ca3af', padding:4, display:'flex' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    {showPass ? <><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></> : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
-                  </svg>
+                <button type="button" onClick={()=>setShow(s=>!s)}
+                  style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'var(--text-muted)', fontSize:16, padding:4 }}>
+                  {showPass ? '🙈' : '👁️'}
                 </button>
               </div>
             </div>
 
             <button type="submit" disabled={loading}
-              style={{ width:'100%', padding:'12px', background: loading ? '#9ca3af' : '#0f1f3d', color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:8, transition:'background .15s' }}>
+              style={{
+                width:'100%', padding:'13px',
+                background: loading ? 'var(--text-muted)' : 'var(--navy)',
+                color:'#fff', border:'none',
+                borderRadius:'var(--r-md)',
+                fontSize:14, fontWeight:700,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontFamily:'var(--font-body)',
+                transition:'all var(--t-fast)',
+                boxShadow: loading ? 'none' : 'var(--shadow-md)',
+                display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+              }}>
               {loading ? (
-                <>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" style={{animation:'spin 1s linear infinite'}}/></svg>
-                  Signing in...
-                </>
+                <><div style={{width:16,height:16,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}/> Signing in…</>
               ) : 'Sign In →'}
             </button>
           </form>
 
-          <p style={{ textAlign:'center', marginTop:20, fontSize:12, color:'#9ca3af' }}>
-            Default login: <b style={{ color:'#374151' }}>admin</b> / <b style={{ color:'#374151' }}>password</b>
-          </p>
+          <div style={{ textAlign:'center', marginTop:28, fontSize:11, color:'var(--text-muted)' }}>
+            Kuruwita (Wickramakalutota) Opticals
+          </div>
         </div>
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&display=swap');
-        * { box-sizing:border-box; }
-        @keyframes spin { to { transform:rotate(360deg); } }
-        @media(max-width:768px){
-          div[style*="flex:1"] { display:none !important; }
-          div[style*="width:440px"] { width:100% !important; }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (min-width: 768px) { .login-left { display: flex !important; } }
       `}</style>
     </div>
   );

@@ -1,420 +1,463 @@
 /* eslint-disable */
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRScanner } from '../components/QRStickers';
+import { fmt } from '../styles/pageStyles';
 
-const navy=  '#0f1f3d', gold='#c9a84c', cream='var(--cream)',
-      border='var(--border)', muted='var(--muted)', success='#16a34a', danger='#dc2626';
+const BASE = () => process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const tok  = () => localStorage.getItem('ko_token');
 
-const fmt   = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0,maximumFractionDigits:0});
-const today = () => new Date().toISOString().split('T')[0];
+// ── Tiny SVG icon helper ─────────────────────────────────────
+const Ic = ({ d, s=18, c='currentColor', fill='none' }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill={fill} stroke={c} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+);
 
+// ── Stat card ────────────────────────────────────────────────
+function StatCard({ label, value, sub, accent, dark, onClick, icon }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={()=>setHov(true)}
+      onMouseLeave={()=>setHov(false)}
+      style={{
+        background: dark
+          ? 'linear-gradient(135deg,var(--navy) 0%,#162240 100%)'
+          : 'var(--bg-surface)',
+        border: `1px solid ${dark ? 'transparent' : 'var(--border)'}`,
+        borderRadius: 'var(--r-lg)',
+        padding: '18px 20px',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all var(--t-fast)',
+        boxShadow: hov && onClick
+          ? 'var(--shadow-lg)'
+          : dark ? '0 4px 20px rgba(10,22,40,.4)' : 'var(--shadow-sm)',
+        transform: hov && onClick ? 'translateY(-3px)' : 'none',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+      {dark && <div style={{ position:'absolute', top:-20, right:-20, width:80, height:80, borderRadius:'50%', background:'rgba(201,168,76,.08)' }}/>}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+        <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color: dark ? 'var(--gold)' : 'var(--text-muted)' }}>
+          {label}
+        </div>
+        {icon && <div style={{ opacity:.6 }}>{icon}</div>}
+      </div>
+      <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color: dark ? '#fff' : (accent||'var(--text-primary)'), lineHeight:1.1, marginBottom:6 }}>
+        {value}
+      </div>
+      {sub && <div style={{ fontSize:11.5, color: dark ? 'rgba(255,255,255,.5)' : 'var(--text-muted)', lineHeight:1.4 }}>{sub}</div>}
+      {onClick && <div style={{ fontSize:10, color: dark ? 'var(--gold)' : 'var(--info)', marginTop:8, opacity: hov?1:.5, transition:'opacity var(--t-fast)' }}>View details →</div>}
+    </div>
+  );
+}
+
+// ── Quick action button ──────────────────────────────────────
+function QuickBtn({ label, sub, bg, color='white', icon, onClick }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button onClick={onClick}
+      onMouseEnter={()=>setHov(true)}
+      onMouseLeave={()=>setHov(false)}
+      style={{
+        padding: '14px 10px',
+        background: bg,
+        color,
+        border: 'none',
+        borderRadius: 'var(--r-lg)',
+        cursor: 'pointer',
+        fontFamily: 'var(--font-body)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 7,
+        textAlign: 'center',
+        transition: 'all var(--t-fast)',
+        transform: hov ? 'translateY(-3px)' : 'none',
+        boxShadow: hov ? '0 8px 20px rgba(0,0,0,.2)' : '0 2px 6px rgba(0,0,0,.1)',
+        minHeight: 80,
+      }}>
+      <div style={{ fontSize: 22, lineHeight:1 }}>{icon}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, lineHeight:1.25 }}>{label}</div>
+      {sub && <div style={{ fontSize:10, opacity:.7, lineHeight:1.2 }}>{sub}</div>}
+    </button>
+  );
+}
+
+// ── Main Dashboard ───────────────────────────────────────────
 export default function Dashboard() {
-  const { user }  = useAuth();
+  const { user }   = useAuth();
   const navigate   = useNavigate();
   const [data,     setData]    = useState(null);
-  const [cash,     setCash]    = useState({
-    cashInHand:0, allTimeCash:0, bankToday:0,
-    orderCash:0, orderBank:0, orderIncome:0,
-    qsIncome:0, repairIncome:0, totalIncome:0,
-    totalExp:0, totalDep:0, orderCount:0,
-    qsCount:0, repairCount:0, expCount:0, depCount:0
-  });
-  const [cashTab,  setCashTab]  = useState('today'); // today | overall | deposits
+  const [cash,     setCash]    = useState({});
+  const [cashTab,  setCashTab] = useState('today');
   const [loading,  setLoading] = useState(true);
-  const [mob,      setMob]     = useState(window.innerWidth < 640);
   const [showScan, setShowScan]= useState(false);
   const [scanItem, setScanItem]= useState(null);
 
-  useEffect(()=>{
-    const fn = () => setMob(window.innerWidth < 640);
-    window.addEventListener('resize', fn);
-    return () => window.removeEventListener('resize', fn);
-  },[]);
-
-  const handleScan = async (rawId) => {
-    setShowScan(false);
-    const id = parseInt(rawId);
-    if (!id) return;
-    try {
-      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-      const token = localStorage.getItem('ko_token');
-      const res   = await fetch(`${BASE}/inventory/${id}`, { headers:{ Authorization:`Bearer ${token}` } });
-      const item  = await res.json();
-      if (item?.id) setScanItem(item);
-      else alert('Item not found');
-    } catch(e) { alert('Scan failed'); }
-  };
-
   const hour     = new Date().getHours();
-  const greeting = hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+  const greeting = hour<12 ? 'Good morning' : hour<17 ? 'Good afternoon' : 'Good evening';
   const dateStr  = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const todayStr = today();
 
   useEffect(()=>{
-    const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-    const token = localStorage.getItem('ko_token');
-    const h     = { Authorization:`Bearer ${token}` };
-    // Single request — replaces 6 separate API calls
-    fetch(`${BASE}/dashboard-today`,{headers:h})
+    fetch(`${BASE()}/dashboard-today`,{headers:{Authorization:`Bearer ${tok()}`}})
       .then(r=>r.json())
-      .then(result=>{
-        setData(result);
-        setCash(result.daily_cash);
-      })
+      .then(d=>{ setData(d); setCash(d.daily_cash||{}); })
       .catch(console.error)
       .finally(()=>setLoading(false));
   },[]);
 
+  const handleScan = async rawId => {
+    setShowScan(false);
+    const id = parseInt(rawId);
+    if (!id) return;
+    try {
+      const res  = await fetch(`${BASE()}/inventory/${id}`,{headers:{Authorization:`Bearer ${tok()}`}});
+      const item = await res.json();
+      if (item?.id) setScanItem(item);
+    } catch(e) {}
+  };
+
   if (loading) return (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',padding:60,color:muted,flexDirection:'column',gap:12}}>
-      <div style={{fontSize:32}}>👁️</div><div style={{fontSize:14}}>Loading...</div>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'60vh',flexDirection:'column',gap:14}}>
+      <div style={{width:48,height:48,border:'3px solid var(--border)',borderTopColor:'var(--gold)',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>
+      <div style={{fontSize:13,color:'var(--text-muted)',fontWeight:500}}>Loading dashboard…</div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
-  const mr = data?.month_revenue||{};
+  const mr = data?.month_revenue || {};
 
-  const KPI = ({label,value,sub,dark,color,onClick}) => (
-    <div onClick={onClick}
-      style={{background:dark?navy:'white',border:`1px solid ${dark?navy:border}`,borderRadius:12,padding:'12px 14px',
-        cursor:onClick?'pointer':'default',transition:'transform .1s, box-shadow .1s',
-        boxShadow:onClick?'0 1px 3px rgba(0,0,0,.08)':'none'}}
-      onMouseEnter={e=>{ if(onClick){ e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.15)'; }}}
-      onMouseLeave={e=>{ e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow=onClick?'0 1px 3px rgba(0,0,0,.08)':'none'; }}>
-      <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.8px',color:dark?gold:muted,marginBottom:4,display:'flex',alignItems:'center',gap:4}}>
-        {label}
-        {onClick&&<span style={{fontSize:9,opacity:.5}}>↗</span>}
-      </div>
-      <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?17:22,fontWeight:700,color:dark?'white':(color||navy),lineHeight:1}}>{value}</div>
-      {sub&&<div style={{fontSize:11,color:dark?'#ede9e0':muted,marginTop:3}}>{sub}</div>}
-    </div>
-  );
+  const CASH_TABS = [
+    { k:'today',    l:'Today'    },
+    { k:'overall',  l:'In Hand'  },
+    { k:'deposits', l:'Deposits' },
+  ];
+
+  const QUICK_ACTIONS = [
+    { label:'New Order',   sub:'With Rx',    bg:'var(--gold)',    color:'var(--navy)', icon:'📋', path:'/orders/new'   },
+    { label:'Quick Sale',  sub:'Cash sale',  bg:'#059669',        color:'#fff',        icon:'⚡', path:'/quick-sale'   },
+    { label:'Repair',      sub:'Ticket',     bg:'#0891b2',        color:'#fff',        icon:'🔧', path:'/repairs'      },
+    { label:'All Orders',  sub:'View list',  bg:'var(--navy)',    color:'#fff',        icon:'📝', path:'/orders'       },
+    { label:'Inventory',   sub:'Stock',      bg:'var(--bg-elevated)', color:'var(--text-primary)', border:'var(--border)', icon:'📦', path:'/inventory' },
+    { label:'Expense',     sub:'Add',        bg:'#7c3aed',        color:'#fff',        icon:'💸', path:'/expenses'     },
+    { label:'Deposit',     sub:'To bank',    bg:'#2563eb',        color:'#fff',        icon:'🏦', path:'/expenses'     },
+    { label:'Calculator',  sub:'Lens calc',  bg:'#0f766e',        color:'#fff',        icon:'🧮', path:'/calculator'   },
+    { label:'Lens Prices', sub:'Price list', bg:'#b45309',        color:'#fff',        icon:'🔍', path:'/lens-prices'  },
+    { label:'Customers',   sub:'Database',   bg:'#be185d',        color:'#fff',        icon:'👥', path:'/customers'    },
+  ];
 
   return (
-    <div style={{fontFamily:"'DM Sans',sans-serif"}}>
-      <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:mob?19:24,color:navy,margin:0}}>
-        <span style={{fontSize:10,background:'#dcfce7',color:'#166534',padding:'2px 8px',borderRadius:20,fontFamily:"'DM Sans',sans-serif",fontWeight:700,marginRight:8}}>BUILD v2.7</span>
-        {greeting}, {user?.name?.split(' ')[0]}! 👋
-      </h1>
-      <p style={{fontSize:12,color:muted,margin:'3px 0 14px'}}>{dateStr}</p>
+    <div style={{fontFamily:'var(--font-body)',maxWidth:900,margin:'0 auto'}}>
 
-      {/* Daily cash summary */}
-      {cash && (
-        <div style={{background:'white',border:`1px solid ${border}`,borderRadius:14,overflow:'hidden',marginBottom:14}}>
-          <div style={{background:navy,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+      {/* ── Greeting ──────────────────────────────────────── */}
+      <div style={{marginBottom:24}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:6,flexWrap:'wrap'}}>
+          <span style={{
+            fontSize:10,fontWeight:700,background:'var(--success-bg)',
+            color:'var(--success)',padding:'3px 10px',borderRadius:'var(--r-full)',
+            border:'1px solid var(--success-border)',letterSpacing:'.06em',textTransform:'uppercase',
+          }}>
+            BUILD v2.7
+          </span>
+        </div>
+        <h1 style={{fontFamily:'var(--font-display)',fontSize:26,color:'var(--text-primary)',margin:'0 0 4px',fontWeight:600}}>
+          {greeting}, {user?.full_name?.split(' ')[0] || user?.name?.split(' ')[0] || 'there'}! 👋
+        </h1>
+        <p style={{fontSize:13,color:'var(--text-muted)',margin:0}}>{dateStr}</p>
+      </div>
+
+      {/* ── Cash summary card ─────────────────────────────── */}
+      <div style={{
+        background:'linear-gradient(135deg,var(--navy) 0%,#162240 100%)',
+        borderRadius:'var(--r-xl)',
+        overflow:'hidden',
+        marginBottom:20,
+        boxShadow:'0 8px 32px rgba(10,22,40,.35)',
+      }}>
+        {/* Header */}
+        <div style={{padding:'18px 22px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
+          <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
             <div>
-              <div style={{fontSize:13,fontWeight:700,color:'white'}}>📅 Today's Cash
-                <div style={{display:'flex',gap:4,marginLeft:'auto'}}>
-                  {[['today','Today'],['overall','In Hand'],['deposits','Deposits']].map(([k,l])=>(
-                    <button key={k} onClick={e=>{e.stopPropagation();setCashTab(k);}}
-                      style={{padding:'2px 7px',borderRadius:10,fontSize:9,fontWeight:700,cursor:'pointer',fontFamily:'inherit',
-                        border:`1px solid ${cashTab===k?gold:'rgba(255,255,255,.2)'}`,
-                        background:cashTab===k?gold:'rgba(255,255,255,.1)',
-                        color:cashTab===k?navy:'rgba(255,255,255,.8)'}}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
+              <div style={{fontSize:11,fontWeight:700,color:'var(--gold)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:2}}>
+                Today's Cash
               </div>
-              <div style={{fontSize:11,color:'#ede9e0',marginTop:1}}>
+              <div style={{fontSize:12,color:'rgba(255,255,255,.45)'}}>
                 {new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
               </div>
             </div>
-            <div style={{textAlign:'right'}}>
-              {cashTab==='today' && (
-                <div style={{display:'flex',gap:16,alignItems:'flex-start',flexWrap:'wrap'}}>
-                  <div>
-                    <div style={{fontSize:9,color:gold,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Today's Cash</div>
-                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:cash.cashInHand>=0?'#86efac':'#fca5a5'}}>
-                      {fmt(cash.cashInHand)}
-                    </div>
-                  </div>
-                  {(cash.bankToday||0)>0 && (
-                    <div>
-                      <div style={{fontSize:9,color:'#93c5fd',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Bank Today</div>
-                      <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#93c5fd'}}>
-                        {fmt(cash.bankToday)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              {cashTab==='overall' && (
-                <div>
-                  <div style={{fontSize:9,color:'#fde68a',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Total Cash in Drawer</div>
-                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#fde68a'}}>
-                    {fmt((cash._raw_allTimeCashRes?.total_cash_in_hand) || cash.allTimeCash || 0)}
-                  </div>
-                  <div style={{fontSize:11,color:'#ede9e0',marginTop:3}}>All time cash − all expenses − all deposits</div>
-                </div>
-              )}
-              {cashTab==='deposits' && (
-                <div>
-                  <div style={{fontSize:9,color:'#86efac',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:1}}>Total Deposited (All Time)</div>
-                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:24,fontWeight:700,color:'#86efac'}}>
-                    {fmt(cash.allTimeDeposits||0)}
-                  </div>
-                  <div style={{fontSize:11,color:'#ede9e0',marginTop:3}}>
-                    Today: {fmt(cash.totalDep||0)} · {cash.depCount||0} deposit{(cash.depCount||0)!==1?'s':''}
-                  </div>
-                </div>
-              )}
+            {/* Tab switcher */}
+            <div style={{display:'flex',gap:4,background:'rgba(255,255,255,.08)',borderRadius:'var(--r-md)',padding:3}}>
+              {CASH_TABS.map(({k,l})=>(
+                <button key={k} onClick={()=>setCashTab(k)}
+                  style={{
+                    padding:'4px 12px',borderRadius:'var(--r-sm)',fontSize:11,fontWeight:600,
+                    cursor:'pointer',fontFamily:'var(--font-body)',border:'none',
+                    background: cashTab===k ? 'var(--gold)' : 'transparent',
+                    color:      cashTab===k ? 'var(--navy)' : 'rgba(255,255,255,.6)',
+                    transition:'all var(--t-fast)',
+                  }}>
+                  {l}
+                </button>
+              ))}
             </div>
           </div>
-          {/* Formula */}
-          {cashTab==='today' && <div style={{background:cream,padding:'8px 14px',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',fontSize:11,borderBottom:`1px solid ${border}`}}>
-            <span style={{color:success,fontWeight:700}}>{fmt(cash.orderCash||cash.orderIncome)}</span>
-            <span style={{color:muted,fontSize:10}}>cash orders</span>
-            {(cash.orderBank||0)>0 && <>
-              <span style={{color:'#2563eb',fontWeight:700}}>+{fmt(cash.orderBank)}</span>
-              <span style={{color:muted,fontSize:10}}>bank</span>
-            </>}
-            <span style={{color:muted}}>+</span>
-            <span style={{color:success,fontWeight:700}}>{fmt((cash.qsIncome||0)+(cash.repairIncome||0))}</span>
-            <span style={{color:muted,fontSize:10}}>sales+repairs</span>
-            <span style={{color:muted}}>−</span>
-            <span style={{color:danger,fontWeight:700}}>{fmt(cash.totalExp)}</span>
-            <span style={{color:muted}}>−</span>
-            <span style={{color:'#2563eb',fontWeight:700}}>{fmt(cash.totalDep)}</span>
-            <span style={{color:muted}}>deposited =</span>
-            <span style={{fontWeight:700,color:cash.cashInHand>=0?success:danger}}>{fmt(cash.cashInHand)} today</span>
-            {(cash.allTimeCash||0)!==(cash.cashInHand||0) && <>
-              <span style={{color:muted}}>·</span>
-              <span style={{fontWeight:700,color:'#fde68a'}}>{fmt(cash.allTimeCash||0)} total in drawer</span>
-            </>}
-          </div>}
-          {cashTab!=='today' && <div style={{height:8,borderBottom:`1px solid ${border}`}}/>}
-          {/* 2×2 on mobile, 4-col on desktop */}
-          <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(4,1fr)'}}>
-            {[
-              {icon:'📋',label:'Orders',    val:fmt(cash.orderIncome),
-                sub:(cash.orderBank||0)>0
-                  ? `${fmt(cash.orderCash||0)} cash · ${fmt(cash.orderBank)} bank`
-                  : `${cash.orderCount} advance${cash.orderCount!==1?'s':''}`,
-                color:success},
-              {icon:'🛍️',label:'Sales + Repairs',val:fmt((cash.qsIncome||0)+(cash.repairIncome||0)),   sub:`${cash.qsCount||0} sales · ${cash.repairCount||0} repairs`,         color:success},
-              {icon:'💸',label:'Expenses',  val:fmt(cash.totalExp),   sub:`${cash.expCount} item${cash.expCount!==1?'s':''}`,         color:cash.totalExp>0?danger:muted},
-              {icon:'🏦',label:'Deposited', val:fmt(cash.totalDep),   sub:`${cash.depCount} deposit${cash.depCount!==1?'s':''}`,      color:'#2563eb'},
-            ].map((b,i)=>(
-              <div key={i} style={{padding:'12px 14px',borderRight:i<3?`1px solid ${border}`:'none',borderTop:mob&&i>=2?`1px solid ${border}`:'none'}}>
-                <div style={{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.7px',color:muted,marginBottom:5}}>{b.icon} {b.label}</div>
-                <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?15:19,fontWeight:700,color:b.color,marginBottom:2}}>{b.val}</div>
-                <div style={{fontSize:10,color:muted}}>{b.sub}</div>
-              </div>
-            ))}
-          </div>
-          {cash.cashInHand>0&&cash.totalDep===0&&(
-            <div style={{padding:'9px 14px',background:'#fef9c3',borderTop:`1px solid #fde68a`,fontSize:12,color:'#854d0e',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <span>💡 {fmt(cash.cashInHand)} cash ready to deposit{(cash.bankToday||0)>0?` · ${fmt(cash.bankToday)} received via bank`:''}</span>
-              <button onClick={()=>navigate('/expenses')} style={{color:'#854d0e',fontWeight:700,fontSize:12,background:'none',border:'none',cursor:'pointer',fontFamily:"'DM Sans',sans-serif",textDecoration:'underline'}}>Record →</button>
-            </div>
-          )}
-          {cash.cashInHand<0&&(
-            <div style={{padding:'9px 14px',background:'#fef2f2',borderTop:`1px solid #fca5a5`,fontSize:12,color:danger}}>
-              ⚠️ Cash in hand is negative — check entries
-            </div>
-          )}
-          {cash.cashInHand===0&&cash.totalIncome>0&&(
-            <div style={{padding:'9px 14px',background:'#dcfce7',borderTop:`1px solid #86efac`,fontSize:12,color:success,fontWeight:600}}>
-              ✅ All cash accounted for
-            </div>
-          )}
-        </div>
-      )}
 
-      {/* QR SCAN — big prominent button */}
-      <button onClick={()=>setShowScan(true)} style={{
-        width:'100%', padding: mob?'18px':'14px',
-        background:'linear-gradient(135deg,#0f1f3d,#1e3a5f)',
-        color:'white', border:'2px solid #c9a84c', borderRadius:12,
-        fontSize: mob?17:15, fontWeight:700, cursor:'pointer',
-        fontFamily:"'DM Sans',sans-serif",
-        display:'flex', alignItems:'center', justifyContent:'center', gap:10,
-        marginBottom:10, boxShadow:'0 4px 16px rgba(15,31,61,.3)',
-      }}>
-        <span style={{fontSize: mob?28:22}}>📷</span>
-        <div style={{textAlign:'left'}}>
-          <div>Scan Frame QR</div>
-          <div style={{fontSize:12,fontWeight:400,opacity:.7}}>Scan sticker → New Order or Quick Sale</div>
+          {/* Big amount */}
+          <div style={{textAlign:'right'}}>
+            {cashTab==='today' && (<>
+              <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,
+                color:(cash.cashInHand||0)>=0?'#86efac':'#fca5a5',lineHeight:1}}>
+                {fmt(cash.cashInHand||0)}
+              </div>
+              {(cash.bankToday||0)>0 && (
+                <div style={{fontSize:12,color:'#93c5fd',marginTop:4}}>
+                  + {fmt(cash.bankToday)} bank
+                </div>
+              )}
+            </>)}
+            {cashTab==='overall' && (
+              <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,color:'#fde68a',lineHeight:1}}>
+                {fmt(cash.allTimeCash||0)}
+              </div>
+            )}
+            {cashTab==='deposits' && (
+              <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,color:'#86efac',lineHeight:1}}>
+                {fmt(cash.allTimeDeposits||0)}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Formula bar */}
+        {cashTab==='today' && (
+          <div style={{
+            background:'rgba(255,255,255,.05)',
+            borderTop:'1px solid rgba(255,255,255,.08)',
+            padding:'8px 22px',
+            display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',fontSize:11,
+          }}>
+            <span style={{color:'#86efac',fontWeight:700}}>{fmt(cash.orderCash||cash.orderIncome||0)}</span>
+            <span style={{color:'rgba(255,255,255,.35)'}}>cash orders</span>
+            <span style={{color:'rgba(255,255,255,.35)'}}>+</span>
+            <span style={{color:'#86efac',fontWeight:700}}>{fmt((cash.qsIncome||0)+(cash.repairIncome||0))}</span>
+            <span style={{color:'rgba(255,255,255,.35)'}}>sales+repairs</span>
+            <span style={{color:'rgba(255,255,255,.35)'}}>−</span>
+            <span style={{color:'#fca5a5',fontWeight:700}}>{fmt(cash.totalExp||0)}</span>
+            <span style={{color:'rgba(255,255,255,.35)'}}>−</span>
+            <span style={{color:'#93c5fd',fontWeight:700}}>{fmt(cash.totalDep||0)}</span>
+            <span style={{color:'rgba(255,255,255,.35)'}}>deposited</span>
+          </div>
+        )}
+
+        {/* 4 metric tiles */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',borderTop:'1px solid rgba(255,255,255,.08)'}}>
+          {[
+            { label:'Orders',       val:fmt(cash.orderIncome||0), sub:`${cash.orderCount||0} advance${(cash.orderCount||0)!==1?'s':''}`, color:'#86efac' },
+            { label:'Sales+Repairs',val:fmt((cash.qsIncome||0)+(cash.repairIncome||0)), sub:`${cash.qsCount||0} sales · ${cash.repairCount||0} repairs`, color:'#86efac' },
+            { label:'Expenses',     val:fmt(cash.totalExp||0),  sub:`${cash.expCount||0} item${(cash.expCount||0)!==1?'s':''}`,  color:(cash.totalExp||0)>0?'#fca5a5':'rgba(255,255,255,.4)' },
+            { label:'Deposited',    val:fmt(cash.totalDep||0),  sub:`${cash.depCount||0} deposit${(cash.depCount||0)!==1?'s':''}`, color:'#93c5fd' },
+          ].map((b,i)=>(
+            <div key={i} style={{
+              padding:'14px 18px',
+              borderRight: i<3 ? '1px solid rgba(255,255,255,.07)' : 'none',
+            }}>
+              <div style={{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'rgba(255,255,255,.35)',marginBottom:6}}>{b.label}</div>
+              <div style={{fontFamily:'var(--font-display)',fontSize:17,fontWeight:700,color:b.color,marginBottom:3}}>{b.val}</div>
+              <div style={{fontSize:10,color:'rgba(255,255,255,.35)'}}>{b.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Status strip */}
+        {(cash.cashInHand||0) > 0 && (cash.totalDep||0) === 0 && (
+          <div style={{background:'rgba(253,230,138,.12)',borderTop:'1px solid rgba(253,230,138,.2)',padding:'10px 22px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style={{fontSize:12,color:'#fde68a'}}>💡 {fmt(cash.cashInHand)} ready to deposit</span>
+            <button onClick={()=>navigate('/expenses')}
+              style={{color:'#fde68a',fontWeight:700,fontSize:12,background:'none',border:'none',cursor:'pointer',fontFamily:'var(--font-body)'}}>
+              Record →
+            </button>
+          </div>
+        )}
+        {(cash.cashInHand||0) < 0 && (
+          <div style={{background:'rgba(239,68,68,.1)',borderTop:'1px solid rgba(239,68,68,.2)',padding:'10px 22px',fontSize:12,color:'#fca5a5'}}>
+            ⚠️ Cash in hand is negative — check entries
+          </div>
+        )}
+      </div>
+
+      {/* ── QR scan button ─────────────────────────────────── */}
+      <button onClick={()=>setShowScan(true)} style={{
+        width:'100%',padding:'14px 20px',marginBottom:20,
+        background:'var(--bg-surface)',
+        border:'1.5px solid var(--border)',
+        borderRadius:'var(--r-lg)',
+        display:'flex',alignItems:'center',gap:14,cursor:'pointer',
+        fontFamily:'var(--font-body)',
+        boxShadow:'var(--shadow-sm)',
+        transition:'all var(--t-fast)',
+      }}
+        onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--gold)';e.currentTarget.style.boxShadow='0 0 0 3px rgba(201,168,76,.12)';}}
+        onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.boxShadow='var(--shadow-sm)';}}>
+        <div style={{width:42,height:42,borderRadius:'var(--r-md)',background:'linear-gradient(135deg,var(--navy),#1e3a5f)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+          <span style={{fontSize:22}}>📷</span>
+        </div>
+        <div style={{textAlign:'left',flex:1}}>
+          <div style={{fontSize:14,fontWeight:700,color:'var(--text-primary)'}}>Scan Frame QR</div>
+          <div style={{fontSize:12,color:'var(--text-muted)'}}>Scan sticker → New Order or Quick Sale</div>
+        </div>
+        <div style={{color:'var(--text-muted)',fontSize:12}}>→</div>
       </button>
 
-      {/* Quick actions with icons */}
-      <div style={{display:'grid',gridTemplateColumns:mob?'repeat(3,1fr)':'repeat(5,1fr)',gap:8,marginBottom:16}}>
-        {[
-          {label:'New Order',    path:'/orders/new',  color:'#0f1f3d', bg:'#c9a84c',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>},
-          {label:'Quick Sale',   path:'/quick-sale',  color:'white',   bg:'#16a34a',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>},
-          {label:'Repair',       path:'/repairs',     color:'white',   bg:'#0891b2',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>},
-          {label:'All Orders',   path:'/orders',      color:'white',   bg:'#0f1f3d',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>},
-          {label:'Inventory',    path:'/inventory',   color:'#374151', bg:'var(--surface)', bord:'var(--border)', icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 001 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>},
-          {label:'Add Expense',  path:'/expenses',    color:'white',   bg:'#7c3aed',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>},
-          {label:'Deposit Cash', path:'/expenses',    color:'white',   bg:'#2563eb',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>},
-          {label:'Calculator',   path:'/calculator',  color:'white',   bg:'#0f766e',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="8" y1="21" x2="8" y2="3"/><line x1="2" y1="9" x2="20" y2="9"/><line x1="2" y1="15" x2="8" y2="15"/></svg>},
-          {label:'Lens Prices',  path:'/lens-prices', color:'white',   bg:'#b45309',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>},
-          {label:'Customers',    path:'/customers',   color:'white',   bg:'#be185d',        icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>},
-        ].map(a=>(
-          <button key={a.label} onClick={()=>navigate(a.path)}
-            style={{padding:mob?'14px 8px':'12px 8px',background:a.bg,color:a.color,border:a.bord?`1.5px solid ${a.bord}`:'none',borderRadius:12,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:"'Inter','DM Sans',sans-serif",display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,textAlign:'center',transition:'all .15s',lineHeight:1.3,minHeight:70}}
-            onMouseEnter={e=>{e.currentTarget.style.filter='brightness(1.08)';e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 6px 16px rgba(0,0,0,.18)';}}
-            onMouseLeave={e=>{e.currentTarget.style.filter='';e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='';}}>
-            {a.icon}
-            {a.label}
-          </button>
-        ))}
+      {/* ── Quick actions ───────────────────────────────────── */}
+      <div style={{marginBottom:24}}>
+        <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text-muted)',marginBottom:12}}>Quick Actions</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10}}>
+          {QUICK_ACTIONS.map(a=>(
+            <QuickBtn key={a.label} {...a} onClick={()=>navigate(a.path)}/>
+          ))}
+        </div>
       </div>
 
-      {/* KPIs — 2 cols on mobile — all clickable */}
-      <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(auto-fit,minmax(140px,1fr))',gap:10,marginBottom:14}}>
-        <KPI label="This Month"
-          value={fmt(mr.grand_total||mr.total)}
+      {/* ── KPI row ─────────────────────────────────────────── */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:24}}>
+        <StatCard dark label="This Month" icon={<span style={{fontSize:16}}>📅</span>}
+          value={fmt(mr.grand_total||mr.total||0)}
           sub={`${mr.order_count||0} orders · ${mr.qs_count||0} sales · ${mr.repair_count||0} repairs`}
-          dark
           onClick={()=>navigate('/activity?view=month&month='+new Date().toISOString().slice(0,7))}/>
-        <KPI label="Collected"
-          value={fmt(parseFloat(mr.collected||0)+parseFloat(mr.qs_total||0)+parseFloat(mr.repair_total||0))}
+        <StatCard label="Collected" icon={<span style={{fontSize:16}}>✅</span>}
+          accent="var(--success)"
+          value={fmt((parseFloat(mr.collected||0))+(parseFloat(mr.qs_total||0))+(parseFloat(mr.repair_total||0)))}
           sub="Orders + Sales + Repairs"
-          color={success}
-          onClick={()=>navigate('/activity?view=collected&month='+new Date().toISOString().slice(0,7))}/>
-        <KPI label="Balance Due"
-          value={fmt(data?.total_balance)}
+          onClick={()=>navigate('/activity?view=collected')}/>
+        <StatCard label="Balance Due" icon={<span style={{fontSize:16}}>⏳</span>}
+          accent="var(--danger)"
+          value={fmt(data?.total_balance||0)}
           sub="Outstanding"
-          color={danger}
-          onClick={()=>navigate('/activity?view=balance')}/>
-        <KPI label="Active Orders"
+          onClick={()=>navigate('/balance')}/>
+        <StatCard label="Active Orders" icon={<span style={{fontSize:16}}>📋</span>}
+          accent="var(--info)"
           value={data?.active_orders||0}
           sub="In progress"
-          color='#2563eb'
-          onClick={()=>navigate('/activity?view=active')}/>
+          onClick={()=>navigate('/orders')}/>
       </div>
 
-      {/* Reminders */}
-      <div style={{background:'white',border:`1px solid ${border}`,borderRadius:12,overflow:'hidden',marginBottom:14}}>
-        <div style={{padding:'12px 16px',borderBottom:`1px solid ${border}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <span style={{fontSize:14,fontWeight:700,color:navy}}>🔔 Reminders</span>
-          {data?.reminders?.length>0&&<span style={{background:'#fee2e2',color:danger,fontSize:11,fontWeight:700,padding:'2px 10px',borderRadius:20}}>{data.reminders.length} urgent</span>}
+      {/* ── Reminders ───────────────────────────────────────── */}
+      <div style={{background:'var(--bg-surface)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',overflow:'hidden',marginBottom:20,boxShadow:'var(--shadow-sm)'}}>
+        <div style={{padding:'14px 20px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div style={{fontSize:14,fontWeight:600,color:'var(--text-primary)',fontFamily:'var(--font-display)'}}>🔔 Reminders</div>
+          {(data?.reminders?.length||0)>0 && (
+            <span style={{background:'var(--danger-bg)',color:'var(--danger)',fontSize:11,fontWeight:700,padding:'3px 10px',borderRadius:'var(--r-full)',border:'1px solid var(--danger-border)'}}>
+              {data.reminders.length} urgent
+            </span>
+          )}
         </div>
-        <div style={{padding:'4px 16px'}}>
+        <div>
           {!data?.reminders?.length
-            ?<p style={{padding:'12px 0',color:muted,fontSize:13}}>✅ No urgent reminders</p>
-            :data.reminders.map(r=>(
-              <div key={r.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderBottom:`1px solid ${cream}`}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:600,color:navy,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.customer_name}</div>
-                  <div style={{fontSize:11,color:muted}}>{r.order_number} · {fmt(r.balance_amount)}</div>
-                </div>
-                <a href={`https://wa.me/94${r.phone?.replace(/^0/,'')}?text=${encodeURIComponent(`Hello ${r.customer_name}, your order ${r.order_number} is ready. Please visit Wickramakalutota Opticals. Thank you!`)}`}
-                  target="_blank" rel="noreferrer"
-                  style={{background:'#25D366',color:'white',padding:'8px 12px',borderRadius:7,fontSize:12,fontWeight:700,textDecoration:'none',whiteSpace:'nowrap',flexShrink:0}}>
-                  💬 WA
-                </a>
+            ? <div style={{padding:'20px 20px',color:'var(--text-muted)',fontSize:13,display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontSize:16}}>✅</span> No urgent reminders today
               </div>
-            ))
+            : data.reminders.map((r,i)=>(
+                <div key={r.id} style={{
+                  display:'flex',alignItems:'center',gap:12,padding:'14px 20px',
+                  borderBottom: i<data.reminders.length-1 ? '1px solid var(--border)' : 'none',
+                  transition:'background var(--t-fast)',
+                }}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--bg-base)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  <div style={{width:36,height:36,borderRadius:'var(--r-md)',background:'var(--danger-bg)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <span style={{fontSize:16}}>⏰</span>
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600,color:'var(--text-primary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                      {r.customer_name}
+                    </div>
+                    <div style={{fontSize:11,color:'var(--text-muted)',marginTop:1}}>
+                      {r.order_number} · <span style={{color:'var(--danger)',fontWeight:600}}>{fmt(r.balance_amount)}</span> due
+                    </div>
+                  </div>
+                  <a href={`https://wa.me/94${r.phone?.replace(/^0/,'')}?text=${encodeURIComponent(`Hello ${r.customer_name}, your order ${r.order_number} is ready. Please visit Wickramakalutota Opticals. Thank you!`)}`}
+                    target="_blank" rel="noreferrer"
+                    style={{
+                      background:'#25D366',color:'white',
+                      padding:'7px 14px',borderRadius:'var(--r-md)',
+                      fontSize:12,fontWeight:700,textDecoration:'none',
+                      display:'flex',alignItems:'center',gap:5,flexShrink:0,
+                    }}>
+                    💬 WA
+                  </a>
+                </div>
+              ))
           }
         </div>
       </div>
 
-      {/* Month summary */}
-      <div style={{background:'white',border:`1px solid ${border}`,borderRadius:12,overflow:'hidden'}}>
-        <div style={{padding:'12px 16px',borderBottom:`1px solid ${border}`}}>
-          <span style={{fontSize:14,fontWeight:700,color:navy}}>📊 This month</span>
+      {/* ── Month summary ───────────────────────────────────── */}
+      <div style={{background:'var(--bg-surface)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',overflow:'hidden',boxShadow:'var(--shadow-sm)'}}>
+        <div style={{padding:'14px 20px',borderBottom:'1px solid var(--border)'}}>
+          <div style={{fontSize:14,fontWeight:600,color:'var(--text-primary)',fontFamily:'var(--font-display)'}}>📊 This month</div>
         </div>
-        <div style={{padding:12,display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:1,background:'var(--border)'}}>
           {[
-            {l:'Total billed',  v:fmt(mr.grand_total||mr.total),                                                                               c:navy   },
-            {l:'Collected',     v:fmt(parseFloat(mr.collected||0)+parseFloat(mr.qs_total||0)+parseFloat(mr.repair_total||0)),                  c:success},
-            {l:'Still owed',    v:fmt(mr.owed),                                                                                                c:danger },
-            {l:'Orders',        v:`${mr.order_count||0} / ${mr.qs_count||0} QS / ${mr.repair_count||0} rep`,                                  c:'#2563eb'},
+            { l:'Total billed',  v:fmt(mr.grand_total||mr.total||0),                                                                              c:'var(--text-primary)' },
+            { l:'Collected',     v:fmt((parseFloat(mr.collected||0))+(parseFloat(mr.qs_total||0))+(parseFloat(mr.repair_total||0))),               c:'var(--success)'      },
+            { l:'Still owed',    v:fmt(mr.owed||0),                                                                                               c:'var(--danger)'       },
+            { l:'Activity',      v:`${mr.order_count||0} ord · ${mr.qs_count||0} QS · ${mr.repair_count||0} rep`,                                c:'var(--info)'         },
           ].map(item=>(
-            <div key={item.l} style={{background:cream,borderRadius:10,padding:'12px 12px',textAlign:'center'}}>
-              <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.8px',color:muted,marginBottom:4}}>{item.l}</div>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:mob?16:19,fontWeight:700,color:item.c}}>{item.v}</div>
+            <div key={item.l} style={{background:'var(--bg-surface)',padding:'18px 20px'}}>
+              <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text-muted)',marginBottom:6}}>{item.l}</div>
+              <div style={{fontFamily:'var(--font-display)',fontSize:18,fontWeight:700,color:item.c}}>{item.v}</div>
             </div>
           ))}
         </div>
       </div>
-      {/* QR Scanner */}
-      {showScan && (
-        <QRScanner
-          title="Scan Frame Sticker"
-          onScan={handleScan}
-          onClose={()=>setShowScan(false)}
-        />
-      )}
 
-      {/* Scanned item action popup */}
+      {/* Modals */}
+      {showScan && <QRScanner title="Scan Frame Sticker" onScan={handleScan} onClose={()=>setShowScan(false)}/>}
+
       {scanItem && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.75)', zIndex:9000,
-          display:'flex', alignItems:'flex-end', justifyContent:'center', padding:'0 0 20px' }}
+        <div style={{position:'fixed',inset:0,background:'var(--bg-overlay)',zIndex:9000,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 20px'}}
           onClick={()=>setScanItem(null)}>
-          <div style={{ background:'white', borderRadius:'20px 20px 16px 16px', width:'100%', maxWidth:480,
-            padding:24, boxShadow:'0 -8px 40px rgba(0,0,0,.3)', fontFamily:"'DM Sans',sans-serif" }}
+          <div style={{background:'var(--bg-surface)',borderRadius:'var(--r-xl) var(--r-xl) var(--r-lg) var(--r-lg)',width:'100%',maxWidth:480,padding:24,boxShadow:'var(--shadow-xl)'}}
             onClick={e=>e.stopPropagation()}>
-            <div style={{ width:40, height:4, background:'#e0ddd6', borderRadius:2, margin:'0 auto 16px' }}/>
-            <div style={{ display:'flex', gap:14, marginBottom:18, alignItems:'center' }}>
-              <div style={{ width:52, height:52, borderRadius:12, background:'#f8f5ef',
-                display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, flexShrink:0 }}>
-                🕶️
-              </div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontWeight:700, fontSize:16, color:'#0f1f3d', marginBottom:2,
-                  overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-                  {scanItem.name}
-                </div>
-                <div style={{ fontSize:13, color:'#6b7280' }}>
-                  {scanItem.category} · {scanItem.frame_color||''}
-                </div>
-                <div style={{ display:'flex', gap:16, marginTop:4 }}>
-                  <span style={{ fontSize:16, fontWeight:700, color:'#0f1f3d' }}>
-                    Rs.{parseFloat(scanItem.sell_price||0).toLocaleString()}
-                  </span>
-                  <span style={{ fontSize:13, color: scanItem.quantity>0?'#2d7a4f':'#c0392b', fontWeight:600 }}>
-                    {scanItem.quantity>0 ? `${scanItem.quantity} in stock` : 'Out of stock'}
+            <div style={{width:40,height:4,background:'var(--border)',borderRadius:2,margin:'0 auto 20px'}}/>
+            <div style={{display:'flex',gap:14,marginBottom:20,alignItems:'center'}}>
+              <div style={{width:52,height:52,borderRadius:'var(--r-lg)',background:'var(--bg-sunken)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,flexShrink:0}}>🕶️</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:16,color:'var(--text-primary)',marginBottom:2,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}}>{scanItem.name}</div>
+                <div style={{fontSize:13,color:'var(--text-secondary)'}}>{scanItem.category} · {scanItem.frame_color||''}</div>
+                <div style={{display:'flex',gap:14,marginTop:4}}>
+                  <span style={{fontSize:16,fontWeight:700,color:'var(--text-primary)'}}>Rs.{parseFloat(scanItem.sell_price||0).toLocaleString()}</span>
+                  <span style={{fontSize:13,color:scanItem.quantity>0?'var(--success)':'var(--danger)',fontWeight:600}}>
+                    {scanItem.quantity>0?`${scanItem.quantity} in stock`:'Out of stock'}
                   </span>
                 </div>
               </div>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
-              <button onClick={async ()=>{
-                  // Post to scan-session so PC picks it up too
-                  const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-                  const token = localStorage.getItem('ko_token');
-                  try { await fetch(`${BASE}/scan-session`,{ method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`}, body:JSON.stringify({inventory_id:scanItem.id,action:'new_order'}) }); } catch(e){}
-                  navigate(`/orders/new?frame_id=${scanItem.id}&frame_name=${encodeURIComponent(scanItem.name)}&frame_color=${encodeURIComponent(scanItem.frame_color||'')}&frame_type=${encodeURIComponent(scanItem.frame_type||'')}&frame_price=${scanItem.sell_price}`);
-                  setScanItem(null);
-                }}
-                style={{ padding:'14px 8px', background:'#0f1f3d', color:'white', border:'none',
-                  borderRadius:12, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-                  display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-                <span style={{fontSize:24}}>📋</span>
-                <span>New Order</span>
-                <span style={{fontSize:10,fontWeight:400,opacity:.7}}>With Rx + customer</span>
-              </button>
-              <button onClick={async ()=>{
-                  const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-                  const token = localStorage.getItem('ko_token');
-                  try { await fetch(`${BASE}/scan-session`,{ method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`}, body:JSON.stringify({inventory_id:scanItem.id,action:'quick_sale'}) }); } catch(e){}
-                  navigate(`/quick-sale?item_id=${scanItem.id}&item_name=${encodeURIComponent(scanItem.name)}&price=${scanItem.sell_price}`);
-                  setScanItem(null);
-                }}
-                style={{ padding:'14px 8px', background:'#166534', color:'white', border:'none',
-                  borderRadius:12, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-                  display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-                <span style={{fontSize:24}}>⚡</span>
-                <span>Quick Sale</span>
-                <span style={{fontSize:10,fontWeight:400,opacity:.7}}>Fast cash sale</span>
-              </button>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+              {[
+                { label:'New Order', sub:'With Rx + customer', icon:'📋', bg:'var(--navy)', color:'#fff',
+                  fn:()=>{ navigate(`/orders/new?frame_id=${scanItem.id}&frame_name=${encodeURIComponent(scanItem.name)}&frame_price=${scanItem.sell_price}`); setScanItem(null); } },
+                { label:'Quick Sale', sub:'Fast cash sale', icon:'⚡', bg:'var(--success)', color:'#fff',
+                  fn:()=>{ navigate(`/quick-sale?item_id=${scanItem.id}&item_name=${encodeURIComponent(scanItem.name)}&price=${scanItem.sell_price}`); setScanItem(null); } },
+              ].map(a=>(
+                <button key={a.label} onClick={a.fn}
+                  style={{padding:'14px 10px',background:a.bg,color:a.color,border:'none',borderRadius:'var(--r-lg)',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'var(--font-body)',display:'flex',flexDirection:'column',alignItems:'center',gap:5}}>
+                  <span style={{fontSize:24}}>{a.icon}</span>
+                  <span>{a.label}</span>
+                  <span style={{fontSize:10,fontWeight:400,opacity:.7}}>{a.sub}</span>
+                </button>
+              ))}
             </div>
             <button onClick={()=>setScanItem(null)}
-              style={{ width:'100%', padding:'11px', background:'#f8f5ef', color:'#6b7280',
-                border:'none', borderRadius:10, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+              style={{width:'100%',padding:'11px',background:'var(--bg-sunken)',color:'var(--text-muted)',border:'none',borderRadius:'var(--r-md)',fontSize:13,cursor:'pointer',fontFamily:'var(--font-body)'}}>
               Cancel
             </button>
           </div>
         </div>
       )}
     </div>
-  ); 
-
-  
+  );
 }
