@@ -57,7 +57,7 @@ router.get('/', auth, async (req, res) => {
               ${imageCol}, display_number, stock_number, location,
               notes, created_at, updated_at
        FROM inventory${where}
-       ORDER BY category ASC, name ASC
+       ORDER BY id ASC
        LIMIT $${dataParams.length}`,
       dataParams
     );
