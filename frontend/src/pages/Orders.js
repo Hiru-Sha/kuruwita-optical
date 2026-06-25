@@ -57,14 +57,25 @@ function PaymentModal({ order, onClose, onSave }) {
     if (amt > balance + 0.01) return setError(`Cannot pay more than balance due (${fmtMoney(balance)})`);
     setSaving(true);
     try {
-      await updateOrder(order.id, {
-        advance_amount:  parseFloat(order.advance_amount || 0) + amt,
-        balance_amount:  Math.max(0, balance - amt),
-        last_payment_date: payDate,
-        last_payment_method: method,
+      // FIXED: Call POST /payment instead of PATCH order directly.
+      // This records to payment_logs so the payment appears in today's income.
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/orders/${order.id}/payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          amount:       amt,
+          payment_method: method,
+          payment_type: amt >= balance - 0.01 ? 'balance' : 'partial',
+          payment_date: payDate,
+          notes: `${amt >= balance - 0.01 ? 'Full balance' : 'Partial payment'} collected`,
+        }),
       });
-      onSave(`Payment of ${fmtMoney(amt)} recorded on ${new Date(payDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}. New balance: ${fmtMoney(Math.max(0,balance-amt))}`);
-    } catch(e) { setError('Failed to record payment.'); }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      onSave(`Payment of ${fmtMoney(amt)} recorded on ${new Date(payDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}. New balance: ${fmtMoney(data.new_balance)}`);
+    } catch(e) { setError(e.message || 'Failed to record payment.'); }
     finally { setSaving(false); }
   };
 

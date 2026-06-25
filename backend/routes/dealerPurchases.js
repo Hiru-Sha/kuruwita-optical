@@ -125,17 +125,10 @@ router.post('/', auth, async (req, res) => {
        cheque_no||null, cheque_date||null, cheque_bank||null,
        bill_image||null, req.user.id]
     );
-    // Auto-record Pan Asia Bank deposit for bank payments
-    if ((payment_method||'cash') === 'bank') {
-      await client.query(`
-        INSERT INTO cash_deposits (date, amount, bank_name, account_no, payment_type, reference, notes, added_by)
-        VALUES ($1, $2, 'Pan Asia Bank', '', 'bank', $3, 'Auto: dealer payment', $4)`,
-        [purchase_date||new Date().toISOString().split('T')[0],
-         total_cost,
-         `Payment to ${dealer_name}${invoice_no?' inv:'+invoice_no:''}`,
-         req.user.id]
-      );
-    }
+    // NOTE: Dealer bank payments are NOT recorded as cash_deposits.
+    // A cash_deposit means "cash moved from till to bank".
+    // Paying a dealer by bank transfer is an expense, not a cash movement.
+    // Record it in the expenses table manually if needed.
     await client.query('COMMIT');
     res.status(201).json(result.rows[0]);
   } catch (err) {
