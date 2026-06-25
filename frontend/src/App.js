@@ -1,5 +1,4 @@
 /* eslint-disable */
-// ── DO NOT add any imports above this line ──
 // ── Modern React 17+ does not need "import React" for JSX ──
 import { Suspense, lazy } from 'react';
 import './styles/global.css';
