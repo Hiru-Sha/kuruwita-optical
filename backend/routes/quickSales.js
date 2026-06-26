@@ -116,15 +116,47 @@ router.post('/', auth, async (req, res) => {
       ? items
       : (typeof items === 'string' ? JSON.parse(items) : []);
 
+    // ── ACCOUNTING FIX: snapshot cost_price for each item at time of sale ──
+    // This allows accurate COGS calculation in Reports without double-counting
+    const enrichedItems = [];
     for (const item of itemsArr) {
       const invId = item.inventory_id || item.inventoryId || item.id;
       const qty   = parseInt(item.qty) || parseInt(item.quantity) || 1;
+
+      let cost_price = parseFloat(item.cost_price || 0);
+
       if (invId) {
+        // Deduct stock
         await client.query(
           'UPDATE inventory SET quantity = GREATEST(0, quantity - $1), updated_at = NOW() WHERE id = $2',
           [qty, invId]
         );
+
+        // Snapshot cost_price from inventory if not already provided
+        if (!cost_price) {
+          try {
+            const costRes = await client.query(
+              'SELECT cost_price FROM inventory WHERE id = $1', [invId]
+            );
+            cost_price = parseFloat(costRes.rows[0]?.cost_price || 0);
+          } catch (e) { /* non-critical */ }
+        }
       }
+
+      enrichedItems.push({
+        ...item,
+        inventory_id: invId || item.inventory_id,
+        qty,
+        cost_price,  // snapshotted at time of sale — used for COGS in Reports
+      });
+    }
+
+    // Save enriched items (with cost_price) back to the sale record
+    if (enrichedItems.length) {
+      await client.query(
+        'UPDATE quick_sales SET items = $1 WHERE sale_number = $2',
+        [JSON.stringify(enrichedItems), saleNum]
+      );
     }
 
     // Auto-create bank receipt if paid by bank/card

@@ -1,346 +1,460 @@
+/* eslint-disable */
 // ============================================================
-//  Reports Routes — /api/reports  (safe version)
+//  Reports.js — Corrected profit calculation (v2)
+//
+//  PROFIT FORMULA:
+//  Revenue - Frame COGS - Lens COGS - QS COGS - Gift COGS - Operating Expenses
+//
+//  NOT subtracted from profit:
+//  ✗ Dealer purchases (inventory addition, not expense)
+//  ✗ lens_buy_price on orders (use Lab Receivings instead)
 // ============================================================
-const router = require('express').Router();
-const pool   = require('../db/pool');
-const auth   = require('../middleware/auth');
+import React, { useEffect, useState } from 'react';
 
-// Helper — safely query, return default on error
-async function safeQuery(sql, params = [], defaultVal = { rows: [] }) {
-  try {
-    return await pool.query(sql, params);
-  } catch(e) {
-    console.warn('Report query skipped:', e.message.slice(0, 80));
-    return defaultVal;
-  }
+const C = {
+  navy:    'var(--navy)',
+  gold:    'var(--gold)',
+  cream:   'var(--bg-sunken)',
+  surface: 'var(--bg-surface)',
+  border:  'var(--border)',
+  muted:   'var(--text-muted)',
+  success: 'var(--success)',
+  danger:  'var(--danger)',
+  warning: 'var(--warning)',
+  info:    'var(--info)',
+};
+
+const BASE  = () => process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const tok   = () => localStorage.getItem('ko_token');
+const fmt   = n  => 'Rs. ' + Math.round(parseFloat(n||0)).toLocaleString();
+const pct   = (a,b) => b > 0 ? Math.round(parseFloat(a)/parseFloat(b)*100) : 0;
+const today = () => new Date().toISOString().split('T')[0];
+const monthStart = () => new Date().toISOString().slice(0,7) + '-01';
+
+// ── Small KPI tile ───────────────────────────────────────────
+function KPI({ label, value, sub, dark, accent, border: bdr }) {
+  return (
+    <div style={{
+      background: dark ? 'linear-gradient(135deg, var(--navy) 0%, #162240 100%)' : 'var(--bg-surface)',
+      border: `1px solid ${bdr || (dark ? 'transparent' : 'var(--border)')}`,
+      borderRadius: 'var(--r-lg)', padding: '16px 18px',
+      boxShadow: dark ? '0 4px 20px rgba(10,22,40,.3)' : 'var(--shadow-sm)',
+    }}>
+      <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.09em', color: dark ? 'var(--gold)' : 'var(--text-muted)', marginBottom:6 }}>{label}</div>
+      <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color: dark ? '#fff' : (accent || 'var(--text-primary)'), lineHeight:1.1 }}>{value}</div>
+      {sub && <div style={{ fontSize:11, color: dark ? 'rgba(255,255,255,.5)' : 'var(--text-muted)', marginTop:4 }}>{sub}</div>}
+    </div>
+  );
 }
 
-// ── Revenue ───────────────────────────────────────────────────
-router.get('/revenue', auth, async (req, res) => {
-  const month = req.query.month || new Date().toISOString().slice(0, 7);
-  try {
-    // Orders — always exists
-    const orders = await pool.query(`
-      SELECT
-        COALESCE(SUM(total_amount),   0) AS total,
-        COALESCE(SUM(advance_amount), 0) AS collected,
-        COALESCE(SUM(balance_amount), 0) AS owed,
-        COUNT(*)                          AS order_count
-      FROM orders
-      WHERE TO_CHAR(created_at,'YYYY-MM') = $1
-    `, [month]);
+// ── Profit waterfall row ─────────────────────────────────────
+function WaterfallRow({ label, amount, isRevenue, isTotal, sub, positive, indent }) {
+  const color = isRevenue ? 'var(--success)' : isTotal
+    ? (parseFloat(amount) >= 0 ? 'var(--success)' : 'var(--danger)')
+    : 'var(--danger)';
+  return (
+    <div style={{
+      display:'flex', justifyContent:'space-between', alignItems:'center',
+      padding: isTotal ? '14px 18px' : '10px 18px',
+      background: isTotal ? (parseFloat(amount) >= 0 ? 'var(--success-bg)' : 'var(--danger-bg)') : 'transparent',
+      borderTop: isTotal ? `2px solid ${parseFloat(amount) >= 0 ? 'var(--success-border)' : 'var(--danger-border)'}` : `1px solid var(--border)`,
+      paddingLeft: indent ? 36 : 18,
+    }}>
+      <div>
+        <div style={{ fontSize: isTotal ? 14 : 13, fontWeight: isTotal ? 700 : 500, color: isTotal ? color : 'var(--text-primary)' }}>
+          {!isRevenue && !isTotal && <span style={{ color:'var(--danger)', marginRight:4 }}>−</span>}
+          {isRevenue && <span style={{ color:'var(--success)', marginRight:4 }}>+</span>}
+          {label}
+        </div>
+        {sub && <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:2 }}>{sub}</div>}
+      </div>
+      <div style={{ fontFamily:'var(--font-display)', fontSize: isTotal ? 18 : 15, fontWeight:700, color }}>
+        {fmt(amount)}
+      </div>
+    </div>
+  );
+}
 
-    // Quick sales — may not exist
-    const quickSales = await safeQuery(`
-      SELECT COALESCE(SUM(total),0) AS total, COUNT(*) AS count
-      FROM quick_sales
-      WHERE TO_CHAR(created_at,'YYYY-MM') = $1
-    `, [month], { rows: [{ total: 0, count: 0 }] });
+// ── Main Reports ─────────────────────────────────────────────
+export default function Reports() {
+  const [data,    setData]   = useState(null);
+  const [loading, setLoad]   = useState(false);
+  const [error,   setError]  = useState('');
+  const [from,    setFrom]   = useState(monthStart());
+  const [to,      setTo]     = useState(today());
+  const [tab,     setTab]    = useState('profit');
 
-    // Repairs — may not exist
-    const repairs = await safeQuery(`
-      SELECT COALESCE(SUM(charge),0) AS total, COUNT(*) AS count
-      FROM repairs
-      WHERE TO_CHAR(created_at,'YYYY-MM') = $1
-      AND status IN ('done','collected','completed')
-    `, [month], { rows: [{ total: 0, count: 0 }] });
+  const load = async () => {
+    setLoad(true); setError('');
+    try {
+      const res = await fetch(`${BASE()}/full-report?from=${from}&to=${to}`, {
+        headers: { Authorization: `Bearer ${tok()}` },
+      });
+      if (!res.ok) throw new Error('Failed to load report');
+      setData(await res.json());
+    } catch(e) { setError(e.message); }
+    finally { setLoad(false); }
+  };
 
-    // 6-month trend using only orders (always safe)
-    const trend = await pool.query(`
-      WITH months AS (
-        SELECT generate_series(
-          DATE_TRUNC('month', NOW() - INTERVAL '5 months'),
-          DATE_TRUNC('month', NOW()),
-          '1 month'::interval
-        ) AS m
-      )
-      SELECT
-        TO_CHAR(months.m, 'Mon YY')  AS month,
-        TO_CHAR(months.m, 'YYYY-MM') AS month_key,
-        COALESCE(o.rev, 0) AS total,
-        COALESCE(o.rev, 0) AS order_revenue,
-        0                  AS qs_revenue,
-        0                  AS repair_revenue,
-        COALESCE(o.cnt, 0) AS order_count,
-        0 AS qs_count, 0 AS repair_count
-      FROM months
-      LEFT JOIN (
-        SELECT DATE_TRUNC('month', created_at) AS m,
-          SUM(total_amount) AS rev, COUNT(*) AS cnt
-        FROM orders GROUP BY 1
-      ) o ON o.m = months.m
-      ORDER BY months.m
-    `);
+  useEffect(() => { load(); }, [from, to]);
 
-    // Try to add QS to trend
-    const qsTrend = await safeQuery(`
-      SELECT DATE_TRUNC('month', created_at) AS m,
-        SUM(total) AS rev, COUNT(*) AS cnt
-      FROM quick_sales
-      WHERE created_at >= NOW() - INTERVAL '6 months'
-      GROUP BY 1
-    `, [], { rows: [] });
+  const TABS = [
+    { k:'profit',    l:'📊 Profit & Loss' },
+    { k:'inventory', l:'📦 Inventory'     },
+    { k:'cashflow',  l:'💵 Cash Flow'     },
+    { k:'orders',    l:'📋 Orders'        },
+    { k:'expenses',  l:'💸 Expenses'      },
+  ];
 
-    const repairTrend = await safeQuery(`
-      SELECT DATE_TRUNC('month', created_at) AS m,
-        SUM(charge) AS rev, COUNT(*) AS cnt
-      FROM repairs
-      WHERE created_at >= NOW() - INTERVAL '6 months'
-      AND status IN ('done','collected','completed')
-      GROUP BY 1
-    `, [], { rows: [] });
+  const s = data?.summary;
 
-    // Merge QS and repairs into trend
-    const qsMap = {};
-    qsTrend.rows.forEach(r => { qsMap[r.m?.toISOString()?.slice(0,7)] = parseFloat(r.rev||0); });
-    const repMap = {};
-    repairTrend.rows.forEach(r => { repMap[r.m?.toISOString()?.slice(0,7)] = parseFloat(r.rev||0); });
+  return (
+    <div style={{ fontFamily:'var(--font-body)', maxWidth:1000, margin:'0 auto' }}>
 
-    const mergedTrend = trend.rows.map(row => {
-      const qsRev  = qsMap[row.month_key]  || 0;
-      const repRev = repMap[row.month_key] || 0;
-      return {
-        ...row,
-        qs_revenue:     qsRev,
-        repair_revenue: repRev,
-        total:          parseFloat(row.order_revenue||0) + qsRev + repRev,
-      };
-    });
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20, flexWrap:'wrap', gap:12 }}>
+        <div>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:26, color:'var(--text-primary)', margin:0 }}>Reports</h1>
+          <p style={{ fontSize:13, color:'var(--text-muted)', margin:'4px 0 0' }}>Accurate profit with correct COGS calculation</p>
+        </div>
+        <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+          <input type="date" value={from} onChange={e=>setFrom(e.target.value)}
+            style={{ padding:'8px 12px', border:'1.5px solid var(--border)', borderRadius:'var(--r-md)', fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'var(--text-primary)' }}/>
+          <span style={{ color:'var(--text-muted)', fontSize:13 }}>to</span>
+          <input type="date" value={to} onChange={e=>setTo(e.target.value)}
+            style={{ padding:'8px 12px', border:'1.5px solid var(--border)', borderRadius:'var(--r-md)', fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)', color:'var(--text-primary)' }}/>
+          <button onClick={load} disabled={loading}
+            style={{ padding:'9px 18px', background:'var(--navy)', color:'#fff', border:'none', borderRadius:'var(--r-md)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            {loading ? '⏳' : '🔄 Load'}
+          </button>
+        </div>
+      </div>
 
-    // Order list for month
-    const orderList = await pool.query(`
-      SELECT o.*, c.name AS customer_name
-      FROM orders o JOIN customers c ON o.customer_id = c.id
-      WHERE TO_CHAR(o.created_at,'YYYY-MM') = $1
-      ORDER BY o.created_at DESC
-    `, [month]);
+      {error && (
+        <div style={{ background:'var(--danger-bg)', color:'var(--danger)', border:'1px solid var(--danger-border)', borderRadius:'var(--r-md)', padding:'12px 16px', marginBottom:16, fontSize:13 }}>
+          ⚠️ {error}
+        </div>
+      )}
 
-    const o  = orders.rows[0];
-    const qs = quickSales.rows[0];
-    const rp = repairs.rows[0];
+      {loading && (
+        <div style={{ textAlign:'center', padding:60, color:'var(--text-muted)' }}>
+          <div style={{ fontSize:36, marginBottom:12 }}>⏳</div>
+          <div style={{ fontSize:14 }}>Loading report…</div>
+        </div>
+      )}
 
-    res.json({
-      summary: {
-        total:        parseFloat(o.total||0) + parseFloat(qs.total||0) + parseFloat(rp.total||0),
-        order_total:  parseFloat(o.total||0),
-        qs_total:     parseFloat(qs.total||0),
-        repair_total: parseFloat(rp.total||0),
-        collected:    parseFloat(o.collected||0),
-        owed:         parseFloat(o.owed||0),
-        order_count:  parseInt(o.order_count||0),
-        qs_count:     parseInt(qs.count||0),
-        repair_count: parseInt(rp.count||0),
-      },
-      trend:  mergedTrend,
-      orders: orderList.rows,
-    });
-  } catch (err) {
-    console.error('Revenue error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+      {!loading && data && (<>
 
-// ── Profit ────────────────────────────────────────────────────
-router.get('/profit', auth, async (req, res) => {
-  try {
-    // Orders per month — always works
-    const monthly = await pool.query(`
-      SELECT
-        TO_CHAR(DATE_TRUNC('month', created_at), 'Mon YY')  AS month,
-        TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month_key,
-        COALESCE(SUM(total_amount), 0) AS revenue,
-        COALESCE(SUM(
-          COALESCE(frame_buy_price,0) + COALESCE(lens_buy_price,0)
-        ), 0) AS cost_of_goods,
-        COALESCE(SUM(advance_amount), 0) AS collected,
-        COALESCE(SUM(balance_amount), 0) AS owed,
-        COUNT(*) AS order_count
-      FROM orders
-      WHERE created_at >= NOW() - INTERVAL '6 months'
-      GROUP BY DATE_TRUNC('month', created_at)
-      ORDER BY DATE_TRUNC('month', created_at)
-    `);
+        {/* Summary KPIs */}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))', gap:12, marginBottom:20 }}>
+          <KPI dark label="Net Profit" value={fmt(s.netProfit)}
+            sub={`${s.profitMargin}% margin`}/>
+          <KPI label="Total Revenue" value={fmt(s.totalRevenue)} accent="var(--success)"
+            sub={`${data.orders?.total_orders} orders`}/>
+          <KPI label="Total COGS" value={fmt(s.totalCOGS)} accent="var(--danger)"
+            sub="Cost of goods sold"/>
+          <KPI label="Operating Exp" value={fmt(s.operatingExpenses)} accent="var(--warning)"
+            sub="Rent, electricity etc."/>
+          <KPI label="Inventory Value" value={fmt(s.inventoryValue)} accent="#2563eb"
+            sub="Stock on shelf (asset)"/>
+        </div>
 
-    // QS per month — safe
-    const qsSales = await safeQuery(`
-      SELECT
-        TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month_key,
-        COALESCE(SUM(total), 0) AS qs_revenue,
-        COUNT(*) AS qs_count
-      FROM quick_sales
-      WHERE created_at >= NOW() - INTERVAL '6 months'
-      GROUP BY DATE_TRUNC('month', created_at)
-    `);
+        {/* Tabs */}
+        <div style={{ display:'flex', gap:0, borderBottom:'1px solid var(--border)', marginBottom:20, overflowX:'auto' }}>
+          {TABS.map(t=>(
+            <button key={t.k} onClick={()=>setTab(t.k)}
+              style={{ padding:'11px 18px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:tab===t.k?'var(--navy)':'var(--text-muted)', borderBottom:`2.5px solid ${tab===t.k?'var(--gold)':'transparent'}`, marginBottom:-1, transition:'all 150ms' }}>
+              {t.l}
+            </button>
+          ))}
+        </div>
 
-    // Repairs per month — safe
-    const repairsQ = await safeQuery(`
-      SELECT
-        TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month_key,
-        COALESCE(SUM(charge), 0) AS repair_revenue,
-        COUNT(*) AS repair_count
-      FROM repairs
-      WHERE created_at >= NOW() - INTERVAL '6 months'
-      AND status IN ('done','collected','completed')
-      GROUP BY DATE_TRUNC('month', created_at)
-    `);
+        {/* ═══════════════════════════════════════════════
+            PROFIT & LOSS TAB
+        ═══════════════════════════════════════════════ */}
+        {tab === 'profit' && (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
 
-    // Expenses per month — safe
-    const expByMonth = await safeQuery(`
-      SELECT
-        TO_CHAR(date, 'YYYY-MM') AS month_key,
-        COALESCE(SUM(amount), 0) AS total_expenses
-      FROM expenses
-      WHERE date >= CURRENT_DATE - INTERVAL '6 months'
-      GROUP BY TO_CHAR(date, 'YYYY-MM')
-    `);
+            {/* Waterfall chart */}
+            <div style={{ gridColumn:'1/-1', background:'var(--bg-surface)', border:'1px solid var(--border)', borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+              <div style={{ padding:'14px 18px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div style={{ fontSize:15, fontWeight:600, color:'var(--text-primary)', fontFamily:'var(--font-display)' }}>Profit & Loss Statement</div>
+                <div style={{ fontSize:11, color:'var(--text-muted)' }}>{from} → {to}</div>
+              </div>
 
-    // Top margin frames — safe
-    const topMargin = await safeQuery(`
-      SELECT
-        frame,
-        COALESCE(AVG(
-          NULLIF(total_amount,0)
-          - COALESCE(NULLIF(frame_buy_price,0),0)
-          - COALESCE(NULLIF(lens_buy_price,0),0)
-        ), 0) AS avg_total_profit,
-        COUNT(*) AS orders
-      FROM orders
-      WHERE frame IS NOT NULL AND frame != ''
-        AND created_at >= NOW() - INTERVAL '3 months'
-        AND (frame_buy_price > 0 OR lens_buy_price > 0)
-      GROUP BY frame
-      ORDER BY avg_total_profit DESC
-      LIMIT 8
-    `);
+              {/* Revenue */}
+              <WaterfallRow label="Order Revenue" amount={s.orderRevenue} isRevenue
+                sub={`${data.orders?.total_orders} orders billed`}/>
+              <WaterfallRow label="Quick Sale Revenue" amount={s.qsRevenue} isRevenue
+                sub={`${data.quickSales?.total_sales} sales`}/>
+              <WaterfallRow label="Repair Revenue" amount={s.repairRevenue} isRevenue
+                sub={`${data.repairs?.total_repairs} repairs`}/>
+              <WaterfallRow label="TOTAL REVENUE" amount={s.totalRevenue} isTotal isRevenue/>
 
-    // Build lookup maps
-    const qsMap  = {};
-    qsSales.rows.forEach(r => { qsMap[r.month_key]  = parseFloat(r.qs_revenue||0); });
-    const repMap = {};
-    repairsQ.rows.forEach(r => { repMap[r.month_key] = parseFloat(r.repair_revenue||0); });
-    const expMap = {};
-    expByMonth.rows.forEach(r => { expMap[r.month_key] = parseFloat(r.total_expenses||0); });
+              {/* COGS */}
+              <div style={{ padding:'8px 18px 4px', background:'var(--bg-sunken)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--text-muted)' }}>
+                Cost of Goods Sold (COGS)
+              </div>
+              <WaterfallRow label="Frame cost (per order sold)" amount={s.cogs_breakdown.frame} indent
+                sub="frame_buy_price on orders — cost when each frame sold"/>
+              <WaterfallRow label="Lens cost (Lab Receivings)" amount={s.cogs_breakdown.lens} indent
+                sub="Negombo Optical, Solex — from Lab Receivings payments"/>
+              <WaterfallRow label="Quick sale item cost" amount={s.cogs_breakdown.quickSale} indent
+                sub="cost_price × qty for sunglasses, reading glasses etc."/>
+              <WaterfallRow label="Free gifts given with orders" amount={s.cogs_breakdown.gifts} indent
+                sub="Boxes, bags, lens cleaners, pouches — snapshotted cost"/>
+              <WaterfallRow label="Repair materials cost" amount={s.cogs_breakdown.repairs} indent
+                sub="Actual parts used in repairs"/>
+              <WaterfallRow label="TOTAL COGS" amount={s.totalCOGS} isTotal/>
 
-    const merged = monthly.rows.map(m => {
-      const orderRev     = parseFloat(m.revenue||0);
-      const qsRev        = qsMap[m.month_key]  || 0;
-      const repRev       = repMap[m.month_key] || 0;
-      const totalRevenue = orderRev + qsRev + repRev;
-      const costOfGoods  = parseFloat(m.cost_of_goods||0);
-      const grossProfit  = totalRevenue - costOfGoods;
-      const expenses     = expMap[m.month_key] || 0;
-      const netProfit    = grossProfit - expenses;
-      const netMargin    = totalRevenue > 0 ? Math.round(netProfit / totalRevenue * 100) : 0;
-      return {
-        month:          m.month,
-        month_key:      m.month_key,
-        order_count:    parseInt(m.order_count||0),
-        revenue:        totalRevenue,
-        order_revenue:  orderRev,
-        qs_revenue:     qsRev,
-        repair_revenue: repRev,
-        cost_of_goods:  costOfGoods,
-        gross_profit:   grossProfit,
-        expenses,
-        net_profit:     netProfit,
-        net_margin:     netMargin,
-        collected:      parseFloat(m.collected||0),
-        owed:           parseFloat(m.owed||0),
-        cogs_entered:   costOfGoods > 0,
-      };
-    });
+              {/* Gross Profit */}
+              <WaterfallRow label="GROSS PROFIT" amount={s.grossProfit} isTotal
+                sub={`${pct(s.grossProfit,s.totalRevenue)}% gross margin`}/>
 
-    const totals = merged.reduce((acc, m) => ({
-      revenue:       acc.revenue       + m.revenue,
-      cost_of_goods: acc.cost_of_goods + m.cost_of_goods,
-      gross_profit:  acc.gross_profit  + m.gross_profit,
-      expenses:      acc.expenses      + m.expenses,
-      net_profit:    acc.net_profit    + m.net_profit,
-    }), { revenue:0, cost_of_goods:0, gross_profit:0, expenses:0, net_profit:0 });
+              {/* Operating expenses */}
+              <div style={{ padding:'8px 18px 4px', background:'var(--bg-sunken)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--text-muted)' }}>
+                Operating Expenses (rent, electricity, staff, etc.)
+              </div>
+              {data.expenses?.byCategory?.map(cat=>(
+                <WaterfallRow key={cat.category} label={cat.category} amount={cat.total} indent
+                  sub={`${cat.count} entries`}/>
+              ))}
+              <WaterfallRow label="TOTAL OPERATING EXPENSES" amount={s.operatingExpenses} isTotal/>
 
-    res.json({
-      monthly:           merged,
-      totals,
-      top_margin_frames: topMargin.rows,
-    });
-  } catch (err) {
-    console.error('Profit error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+              {/* Net Profit */}
+              <WaterfallRow label="NET PROFIT" amount={s.netProfit} isTotal
+                sub={`${s.profitMargin}% net margin on revenue`}/>
+            </div>
 
-// ── Lens jobs ─────────────────────────────────────────────────
-router.get('/lensjobs', auth, async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT o.*, c.name AS customer_name, c.phone
-      FROM orders o JOIN customers c ON o.customer_id = c.id
-      WHERE o.lens_company IS NOT NULL
-        AND o.lens_step IS NOT NULL
-        AND o.lens_step < 3
-      ORDER BY o.deliver_date ASC NULLS LAST
-      LIMIT 50
-    `);
-    res.json(result.rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
+            {/* COGS breakdown chart */}
+            <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border)', borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+              <div style={{ padding:'14px 18px', borderBottom:'1px solid var(--border)', fontSize:14, fontWeight:600, color:'var(--text-primary)', fontFamily:'var(--font-display)' }}>
+                COGS Breakdown
+              </div>
+              {[
+                { label:'Frame costs',    val:s.cogs_breakdown.frame,     color:'#2563eb', icon:'🕶️' },
+                { label:'Lens costs',     val:s.cogs_breakdown.lens,      color:'#7c3aed', icon:'🔬' },
+                { label:'Quick sale items',val:s.cogs_breakdown.quickSale,color:'#0891b2', icon:'⚡' },
+                { label:'Free gifts',     val:s.cogs_breakdown.gifts,     color:'#059669', icon:'🎁' },
+                { label:'Repair parts',   val:s.cogs_breakdown.repairs,   color:'#b45309', icon:'🔧' },
+              ].map(item=>(
+                <div key={item.label} style={{ padding:'12px 18px', borderBottom:'1px solid var(--bg-sunken)' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                    <span style={{ fontSize:13, color:'var(--text-primary)', fontWeight:500 }}>{item.icon} {item.label}</span>
+                    <span style={{ fontSize:13, fontWeight:700, color:item.color }}>{fmt(item.val)}</span>
+                  </div>
+                  <div style={{ height:5, background:'var(--bg-sunken)', borderRadius:3, overflow:'hidden' }}>
+                    <div style={{ height:'100%', width:`${pct(item.val, s.totalCOGS)}%`, background:item.color, borderRadius:3 }}/>
+                  </div>
+                  <div style={{ fontSize:10, color:'var(--text-muted)', marginTop:3 }}>{pct(item.val,s.totalCOGS)}% of COGS · {pct(item.val,s.totalRevenue)}% of revenue</div>
+                </div>
+              ))}
+            </div>
 
-// ── Top sellers ───────────────────────────────────────────────
-router.get('/topsellers', auth, async (req, res) => {
-  try {
-    const frames = await pool.query(`
-      SELECT frame, COUNT(*) AS units,
-        COALESCE(SUM(frame_sell_price),0) AS revenue,
-        COALESCE(AVG(NULLIF(frame_sell_price,0)),0) AS avg_price
-      FROM orders
-      WHERE frame IS NOT NULL AND frame != ''
-        AND created_at >= NOW() - INTERVAL '3 months'
-      GROUP BY frame ORDER BY units DESC LIMIT 10
-    `);
+            {/* Revenue breakdown */}
+            <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border)', borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+              <div style={{ padding:'14px 18px', borderBottom:'1px solid var(--border)', fontSize:14, fontWeight:600, color:'var(--text-primary)', fontFamily:'var(--font-display)' }}>
+                Revenue Sources
+              </div>
+              {[
+                { label:'Orders',      val:s.orderRevenue,   color:'var(--success)', icon:'📋', sub:`${data.orders?.total_orders} orders` },
+                { label:'Quick Sales', val:s.qsRevenue,      color:'#2563eb',        icon:'⚡', sub:`${data.quickSales?.total_sales} sales` },
+                { label:'Repairs',     val:s.repairRevenue,  color:'#0891b2',        icon:'🔧', sub:`${data.repairs?.total_repairs} jobs` },
+              ].map(item=>(
+                <div key={item.label} style={{ padding:'12px 18px', borderBottom:'1px solid var(--bg-sunken)' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                    <span style={{ fontSize:13, color:'var(--text-primary)', fontWeight:500 }}>{item.icon} {item.label}</span>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:item.color }}>{fmt(item.val)}</div>
+                      <div style={{ fontSize:10, color:'var(--text-muted)' }}>{item.sub}</div>
+                    </div>
+                  </div>
+                  <div style={{ height:5, background:'var(--bg-sunken)', borderRadius:3, overflow:'hidden' }}>
+                    <div style={{ height:'100%', width:`${pct(item.val,s.totalRevenue)}%`, background:item.color, borderRadius:3 }}/>
+                  </div>
+                  <div style={{ fontSize:10, color:'var(--text-muted)', marginTop:3 }}>{pct(item.val,s.totalRevenue)}% of total revenue</div>
+                </div>
+              ))}
+            </div>
 
-    const lenses = await pool.query(`
-      SELECT lens_type, COUNT(*) AS units,
-        COALESCE(SUM(lens_sell_price),0) AS revenue
-      FROM orders
-      WHERE lens_type IS NOT NULL
-        AND created_at >= NOW() - INTERVAL '3 months'
-      GROUP BY lens_type ORDER BY units DESC
-    `);
+            {/* Dealer purchases note */}
+            <div style={{ gridColumn:'1/-1', background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:'var(--r-lg)', padding:'14px 18px', display:'flex', gap:14, alignItems:'flex-start' }}>
+              <div style={{ fontSize:24, flexShrink:0 }}>📦</div>
+              <div>
+                <div style={{ fontSize:13, fontWeight:700, color:'#1e40af', marginBottom:4 }}>
+                  Dealer Purchases: {fmt(s.dealerPurchases)} — shown for info only, NOT subtracted from profit
+                </div>
+                <div style={{ fontSize:12, color:'#3b82f6', lineHeight:1.6 }}>
+                  When you buy frames/sunglasses from a dealer, that money becomes <b>inventory (an asset)</b> — not an expense yet.
+                  The cost is recorded when each item is SOLD via <b>frame_buy_price on orders</b> or <b>cost_price on quick sales</b>.
+                  This prevents double-counting. Your inventory value is currently <b>{fmt(s.inventoryValue)}</b>.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-    const coatings = await pool.query(`
-      SELECT lens_coating, COUNT(*) AS units
-      FROM orders
-      WHERE lens_coating IS NOT NULL
-        AND created_at >= NOW() - INTERVAL '3 months'
-      GROUP BY lens_coating ORDER BY units DESC LIMIT 8
-    `);
+        {/* ═══════════════════════════════════════════════
+            INVENTORY TAB
+        ═══════════════════════════════════════════════ */}
+        {tab === 'inventory' && (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:16 }}>
+            <KPI dark label="Inventory Value (Cost)" value={fmt(s.inventoryValue)}
+              sub="What you paid for unsold stock"/>
+            <KPI label="Inventory Value (Retail)" value={fmt(s.inventoryRetailValue)}
+              accent="var(--success)" sub="What unsold stock would sell for"/>
+            <KPI label="Potential Profit in Stock" value={fmt(s.inventoryRetailValue - s.inventoryValue)}
+              accent="#7c3aed" sub="If all stock was sold today"/>
+            <KPI label="Low Stock Items" value={s.lowStockItems} accent="var(--warning)"
+              sub="Below minimum quantity"/>
+            <KPI label="Out of Stock" value={s.outOfStockItems} accent="var(--danger)"
+              sub="Zero quantity"/>
 
-    const companies = await pool.query(`
-      SELECT lens_company, COUNT(*) AS units,
-        COALESCE(SUM(lens_sell_price),0) AS revenue
-      FROM orders
-      WHERE lens_company IS NOT NULL
-        AND created_at >= NOW() - INTERVAL '3 months'
-      GROUP BY lens_company ORDER BY units DESC LIMIT 8
-    `);
+            <div style={{ gridColumn:'1/-1', background:'var(--bg-surface)', border:'1px solid var(--border)', borderRadius:'var(--r-lg)', padding:'18px 20px' }}>
+              <div style={{ fontSize:15, fontWeight:600, fontFamily:'var(--font-display)', color:'var(--text-primary)', marginBottom:14 }}>
+                Dealer Purchases this period — Stock Added
+              </div>
+              {!data.dealerPurchases?.length
+                ? <div style={{ color:'var(--text-muted)', fontSize:13 }}>No purchases in this period</div>
+                : data.dealerPurchases.map(d=>(
+                  <div key={d.dealer_name} style={{ display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid var(--border)' }}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:600, color:'var(--text-primary)' }}>🏪 {d.dealer_name}</div>
+                      <div style={{ fontSize:11, color:'var(--text-muted)' }}>{d.purchases} purchases · {d.items} items added to stock</div>
+                    </div>
+                    <div style={{ fontFamily:'var(--font-display)', fontSize:17, fontWeight:700, color:'var(--navy)' }}>{fmt(d.total)}</div>
+                  </div>
+                ))
+              }
+              <div style={{ marginTop:14, padding:'12px 14px', background:'#eff6ff', borderRadius:'var(--r-md)', fontSize:12, color:'#1e40af' }}>
+                💡 These purchases add to your inventory asset value. They become COGS when each item is sold.
+              </div>
+            </div>
+          </div>
+        )}
 
-    const quickItems = await safeQuery(`
-      SELECT si.name AS item_name, SUM(si.quantity) AS units,
-        COALESCE(SUM(si.quantity * si.unit_price),0) AS revenue
-      FROM quick_sales qs
-      JOIN quick_sale_items si ON si.sale_id = qs.id
-      WHERE qs.created_at >= NOW() - INTERVAL '3 months'
-      GROUP BY si.name ORDER BY units DESC LIMIT 8
-    `);
+        {/* ═══════════════════════════════════════════════
+            CASH FLOW TAB
+        ═══════════════════════════════════════════════ */}
+        {tab === 'cashflow' && (
+          <div style={{ display:'grid', gap:16 }}>
+            <div style={{ background:'var(--navy)', borderRadius:'var(--r-xl)', padding:'22px 24px', color:'white' }}>
+              <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--gold)', marginBottom:4 }}>
+                Why cash in hand ≠ profit
+              </div>
+              <p style={{ fontSize:13, color:'rgba(255,255,255,.7)', lineHeight:1.7, margin:'8px 0 0' }}>
+                When you buy Rs. {fmt(s.dealerPurchases).replace('Rs. ','')} of stock from dealers, that cash leaves your hands immediately.
+                But only Rs. {fmt(s.cogs_breakdown.frame + s.cogs_breakdown.quickSale)} of that stock was sold this period — recorded as COGS.
+                The remaining stock (Rs. {fmt(s.inventoryValue)}) is sitting on your shelf as an asset — still YOUR money, just in product form.
+              </p>
+            </div>
 
-    res.json({
-      frames:     frames.rows,
-      lenses:     lenses.rows,
-      coatings:   coatings.rows,
-      companies:  companies.rows,
-      quickItems: quickItems.rows,
-    });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border)', borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+                <div style={{ padding:'12px 18px', background:'var(--success-bg)', fontSize:13, fontWeight:700, color:'var(--success)' }}>💚 Cash Coming In</div>
+                {[
+                  { l:'Order advances collected', v: data.orders?.collected },
+                  { l:'Quick sale revenue',       v: s.qsRevenue            },
+                  { l:'Repair charges',           v: s.repairRevenue        },
+                ].map(row=>(
+                  <div key={row.l} style={{ display:'flex', justifyContent:'space-between', padding:'10px 18px', borderBottom:'1px solid var(--border)', fontSize:13 }}>
+                    <span style={{ color:'var(--text-primary)' }}>{row.l}</span>
+                    <span style={{ fontWeight:700, color:'var(--success)' }}>{fmt(row.v)}</span>
+                  </div>
+                ))}
+              </div>
 
-module.exports = router;
+              <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border)', borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+                <div style={{ padding:'12px 18px', background:'var(--danger-bg)', fontSize:13, fontWeight:700, color:'var(--danger)' }}>❤️ Cash Going Out</div>
+                {[
+                  { l:'Stock purchases (dealer)',  v: s.dealerPurchases        },
+                  { l:'Lab payments (lenses)',     v: s.cogs_breakdown.lens    },
+                  { l:'Operating expenses',        v: s.operatingExpenses      },
+                  { l:'Deposited to bank',         v: s.totalDeposited         },
+                ].map(row=>(
+                  <div key={row.l} style={{ display:'flex', justifyContent:'space-between', padding:'10px 18px', borderBottom:'1px solid var(--border)', fontSize:13 }}>
+                    <span style={{ color:'var(--text-primary)' }}>{row.l}</span>
+                    <span style={{ fontWeight:700, color:'var(--danger)' }}>{fmt(row.v)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════
+            ORDERS TAB
+        ═══════════════════════════════════════════════ */}
+        {tab === 'orders' && (
+          <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border)', borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'100px 130px 1fr 100px 100px 90px 90px 90px', padding:'9px 14px', background:'var(--bg-sunken)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.07em', color:'var(--text-muted)', borderBottom:'1px solid var(--border)' }}>
+              <span>Order</span><span>Customer</span><span>Frame / Lens</span>
+              <span>Revenue</span><span>Frame Cost</span><span>Lens Cost</span><span>Gift Cost</span><span>Profit</span>
+            </div>
+            {data.orders?.list?.map(o=>(
+              <div key={o.order_number} style={{ display:'grid', gridTemplateColumns:'100px 130px 1fr 100px 100px 90px 90px 90px', padding:'10px 14px', borderBottom:'1px solid var(--bg-sunken)', alignItems:'center', fontSize:12 }}>
+                <span style={{ fontWeight:700, color:'var(--navy)' }}>{o.order_number}</span>
+                <span style={{ color:'var(--text-secondary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.customer_name}</span>
+                <span style={{ color:'var(--text-muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.frame} · {o.lens_type}</span>
+                <span style={{ fontWeight:700, color:'var(--success)' }}>{fmt(o.total_amount)}</span>
+                <span style={{ color:'var(--danger)' }}>{o.customer_own_frame ? '— own' : fmt(o.frame_buy_price)}</span>
+                <span style={{ color:'var(--danger)' }}>{fmt(o.lab_bill_amount)}</span>
+                <span style={{ color:parseFloat(o.gift_cost)>0?'#7c3aed':'var(--text-muted)' }}>
+                  {parseFloat(o.gift_cost)>0 ? fmt(o.gift_cost) : '—'}
+                </span>
+                <span style={{ fontWeight:700, color:parseFloat(o.order_profit)>=0?'var(--success)':'var(--danger)' }}>
+                  {fmt(o.order_profit)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════
+            EXPENSES TAB
+        ═══════════════════════════════════════════════ */}
+        {tab === 'expenses' && (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+            <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border)', borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+              <div style={{ padding:'14px 18px', borderBottom:'1px solid var(--border)', fontSize:14, fontWeight:600, fontFamily:'var(--font-display)', color:'var(--text-primary)' }}>
+                Operating Expenses by Category
+              </div>
+              {!data.expenses?.byCategory?.length
+                ? <div style={{ padding:24, color:'var(--text-muted)', fontSize:13 }}>No operating expenses</div>
+                : data.expenses.byCategory.map(cat=>(
+                  <div key={cat.category} style={{ padding:'11px 18px', borderBottom:'1px solid var(--bg-sunken)', display:'flex', justifyContent:'space-between' }}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:600, color:'var(--text-primary)' }}>{cat.category}</div>
+                      <div style={{ fontSize:11, color:'var(--text-muted)' }}>{cat.count} entries</div>
+                    </div>
+                    <div style={{ fontWeight:700, color:'var(--danger)' }}>{fmt(cat.total)}</div>
+                  </div>
+                ))
+              }
+            </div>
+
+            <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border)', borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+              <div style={{ padding:'14px 18px', borderBottom:'1px solid var(--border)', fontSize:14, fontWeight:600, fontFamily:'var(--font-display)', color:'var(--text-primary)' }}>
+                Lab Payments (Lens COGS)
+              </div>
+              {data.lensJobs?.map(lab=>(
+                <div key={lab.lens_company} style={{ padding:'11px 18px', borderBottom:'1px solid var(--bg-sunken)' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                    <span style={{ fontSize:13, fontWeight:600, color:'var(--text-primary)' }}>🔬 {lab.lens_company}</span>
+                    <span style={{ fontWeight:700, color:'var(--danger)' }}>{fmt(lab.lab_total)}</span>
+                  </div>
+                  <div style={{ fontSize:11, color:'var(--text-muted)' }}>
+                    Paid: {fmt(lab.total_paid)} · Unpaid: <span style={{ color:'var(--warning)', fontWeight:600 }}>{fmt(lab.total_unpaid)}</span> · {lab.orders_with_bill} orders
+                  </div>
+                </div>
+              ))}
+              <div style={{ padding:'11px 18px', background:'var(--bg-sunken)', fontSize:12, color:'var(--text-muted)' }}>
+                These appear under COGS (lens cost), not operating expenses
+              </div>
+            </div>
+          </div>
+        )}
+      </>)}
+    </div>
+  );
+}
