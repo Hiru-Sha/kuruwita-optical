@@ -394,6 +394,7 @@ router.get('/', auth, async (req, res) => {
       },
       deposits:         dep,
       dealerPurchases:  stockPurchases.rows,
+      stockPurchases:   stockPurchases.rows,  // backward compat alias
       lensJobs:         lensJobStats.rows,
       kalutota:         kalutotaStats.rows[0] || {},
       topFrames:        topFrames.rows,

@@ -106,7 +106,19 @@ export default function Reports() {
     { k:'expenses',  l:'💸 Expenses'      },
   ];
 
-  const s = data?.summary;
+  const s = {
+    netProfit: 0, profitMargin: 0, totalRevenue: 0, grossProfit: 0,
+    orderRevenue: 0, qsRevenue: 0, repairRevenue: 0,
+    totalCOGS: 0, operatingExpenses: 0, totalDeposited: 0,
+    dealerPurchases: 0, inventoryValue: 0, inventoryRetailValue: 0,
+    lowStockItems: 0, outOfStockItems: 0,
+    cogs_breakdown: { frame:0, lens:0, quickSale:0, gifts:0, repairs:0 },
+    ...(data?.summary || {}),
+    cogs_breakdown: {
+      frame: 0, lens: 0, quickSale: 0, gifts: 0, repairs: 0,
+      ...(data?.summary?.cogs_breakdown || {}),
+    },
+  };
 
   return (
     <div style={{ fontFamily:'var(--font-body)', maxWidth:1000, margin:'0 auto' }}>
@@ -150,7 +162,7 @@ export default function Reports() {
           <KPI dark label="Net Profit" value={fmt(s.netProfit)}
             sub={`${s.profitMargin}% margin`}/>
           <KPI label="Total Revenue" value={fmt(s.totalRevenue)} accent="var(--success)"
-            sub={`${data.orders?.total_orders} orders`}/>
+            sub={`${data?.orders?.total_orders || 0} orders`}/>
           <KPI label="Total COGS" value={fmt(s.totalCOGS)} accent="var(--danger)"
             sub="Cost of goods sold"/>
           <KPI label="Operating Exp" value={fmt(s.operatingExpenses)} accent="var(--warning)"
@@ -184,11 +196,11 @@ export default function Reports() {
 
               {/* Revenue */}
               <WaterfallRow label="Order Revenue" amount={s.orderRevenue} isRevenue
-                sub={`${data.orders?.total_orders} orders billed`}/>
+                sub={`${data?.orders?.total_orders || 0} orders billed`}/>
               <WaterfallRow label="Quick Sale Revenue" amount={s.qsRevenue} isRevenue
-                sub={`${data.quickSales?.total_sales} sales`}/>
+                sub={`${data?.quickSales?.total_sales || 0} sales`}/>
               <WaterfallRow label="Repair Revenue" amount={s.repairRevenue} isRevenue
-                sub={`${data.repairs?.total_repairs} repairs`}/>
+                sub={`${data?.repairs?.total_repairs || 0} repairs`}/>
               <WaterfallRow label="TOTAL REVENUE" amount={s.totalRevenue} isTotal isRevenue/>
 
               {/* COGS */}
@@ -215,7 +227,7 @@ export default function Reports() {
               <div style={{ padding:'8px 18px 4px', background:'var(--bg-sunken)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--text-muted)' }}>
                 Operating Expenses (rent, electricity, staff, etc.)
               </div>
-              {data.expenses?.byCategory?.map(cat=>(
+              {(data?.expenses?.byCategory || []).map(cat=>(
                 <WaterfallRow key={cat.category} label={cat.category} amount={cat.total} indent
                   sub={`${cat.count} entries`}/>
               ))}
@@ -391,7 +403,7 @@ export default function Reports() {
               <span>Order</span><span>Customer</span><span>Frame / Lens</span>
               <span>Revenue</span><span>Frame Cost</span><span>Lens Cost</span><span>Gift Cost</span><span>Profit</span>
             </div>
-            {data.orders?.list?.map(o=>(
+            {(data?.orders?.list || []).map(o=>(
               <div key={o.order_number} style={{ display:'grid', gridTemplateColumns:'100px 130px 1fr 100px 100px 90px 90px 90px', padding:'10px 14px', borderBottom:'1px solid var(--bg-sunken)', alignItems:'center', fontSize:12 }}>
                 <span style={{ fontWeight:700, color:'var(--navy)' }}>{o.order_number}</span>
                 <span style={{ color:'var(--text-secondary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.customer_name}</span>
@@ -437,7 +449,7 @@ export default function Reports() {
               <div style={{ padding:'14px 18px', borderBottom:'1px solid var(--border)', fontSize:14, fontWeight:600, fontFamily:'var(--font-display)', color:'var(--text-primary)' }}>
                 Lab Payments (Lens COGS)
               </div>
-              {data.lensJobs?.map(lab=>(
+              {(data?.lensJobs || []).map(lab=>(
                 <div key={lab.lens_company} style={{ padding:'11px 18px', borderBottom:'1px solid var(--bg-sunken)' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
                     <span style={{ fontSize:13, fontWeight:600, color:'var(--text-primary)' }}>🔬 {lab.lens_company}</span>
