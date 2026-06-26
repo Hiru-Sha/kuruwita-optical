@@ -7,8 +7,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
 
 const C = {
-  navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
-  border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
+  navy:    'var(--navy)',
+  gold:    'var(--gold)',
+  cream:   'var(--bg-sunken)',
+  surface: 'var(--bg-surface)',
+  border:  'var(--border)',
+  muted:   'var(--text-muted)',
+  success: 'var(--success)',
+  danger:  'var(--danger)',
+  warning: 'var(--warning)',
+  info:    'var(--info)',
 };
 
 const fmt     = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
@@ -57,7 +65,7 @@ function RxCard({ order, onReturn }) {
   const phone = order.phone?.replace(/^0/,'94')?.replace(/\D/g,'');
 
   return (
-    <div style={{ background:'white', border:`1.5px solid ${info.urgent?info.color:C.border}`, borderRadius:14, overflow:'hidden', marginBottom:10 }}>
+    <div style={{ background:C.surface, border:`1.5px solid ${info.urgent?info.color:C.border}`, borderRadius:14, overflow:'hidden', marginBottom:10 }}>
       {/* Urgency stripe */}
       {info.urgent && (
         <div style={{ height:3, background:info.color }}/>
@@ -132,7 +140,7 @@ function RxCard({ order, onReturn }) {
 function ReturnedCard({ order }) {
   const initials = (order.customer_name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   return (
-    <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px', marginBottom:8, display:'flex', gap:12, alignItems:'center', opacity:.8 }}>
+    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px', marginBottom:8, display:'flex', gap:12, alignItems:'center', opacity:.8 }}>
       <div style={{ width:36, height:36, borderRadius:'50%', background:'#dcfce7', display:'flex', alignItems:'center', justifyContent:'center', color:C.success, fontSize:14, fontWeight:700, flexShrink:0 }}>
         {initials}
       </div>
@@ -218,7 +226,7 @@ export default function RxTracker() {
   const hospitals = [...new Set(pending.map(o=>o.rx_hospital).filter(Boolean))];
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:'var(--font-body)' }}>
 
       {/* Toast */}
       {toast && (
@@ -230,11 +238,11 @@ export default function RxTracker() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:0 }}>📄 Prescription Tracker</h1>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:24, color:C.navy, margin:0 }}>📄 Prescription Tracker</h1>
           <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Track hospital prescriptions held at the shop — return to customers when ready</p>
         </div>
         <button onClick={load}
-          style={{ padding:'9px 14px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+          style={{ padding:'9px 14px', background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
           🔄 Refresh
         </button>
       </div>
@@ -250,14 +258,14 @@ export default function RxTracker() {
         ].map(s=>(
           <div key={s.l} style={{ background:s.dark?C.navy:'white', border:`1px solid ${s.dark?C.navy:C.border}`, borderRadius:12, padding:'13px 15px', textAlign:'center' }}>
             <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?C.gold:C.muted, marginBottom:4 }}>{s.l}</div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
+            <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
           </div>
         ))}
       </div>
 
       {/* Hospital breakdown */}
       {hospitals.length > 0 && (
-        <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px', marginBottom:16 }}>
+        <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px', marginBottom:16 }}>
           <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>Prescriptions by hospital</div>
           <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
             {hospitals.map(h=>{
@@ -276,7 +284,7 @@ export default function RxTracker() {
       <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="🔍 Search by name, phone, hospital, order number..."
-          style={{ flex:1, minWidth:200, padding:'9px 14px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'white' }}/>
+          style={{ flex:1, minWidth:200, padding:'9px 14px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.surface }}/>
         <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
           style={{ padding:'9px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy, cursor:'pointer' }}>
           <option value="oldest">Oldest first</option>
@@ -306,7 +314,7 @@ export default function RxTracker() {
             <div style={{ fontSize:32, marginBottom:12 }}>⏳</div>Loading...
           </div>
         : filtered.length === 0
-          ? <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'40px 20px', textAlign:'center' }}>
+          ? <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'40px 20px', textAlign:'center' }}>
               <div style={{ fontSize:40, marginBottom:12 }}>
                 {pending.length === 0 ? '🎉' : '🔍'}
               </div>

@@ -6,13 +6,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getCustomers, getCustomer, addCommLog, updateOrder, updateCustomer } from '../api';
 
-const navy  = 'var(--navy)';
-const gold  = 'var(--gold)';
-const cream = 'var(--bg-sunken)';
-const border= 'var(--border)';
-const muted = 'var(--text-muted)';
-const success='var(--success)';
-const danger ='var(--danger)';
+const navy  = '#0f1f3d';
+const gold  = '#c9a84c';
+const cream = '#f8f5ef';
+const border= '#e0ddd6';
+const muted = '#6b7280';
+const success='#2d7a4f';
+const danger ='#c0392b';
 
 const STATUS_STYLE = {
   created:   { bg:'#dbeafe', color:'#1e40af' },
@@ -50,7 +50,7 @@ function RxCard({ rx, prevRx, orderInfo, isLatest }) {
   const [expanded, setExpanded] = useState(isLatest);
 
   return (
-    <div style={{ border:`1.5px solid ${isLatest?navy:border}`, borderRadius:'var(--r-lg)', overflow:'hidden', marginBottom:12 }}>
+    <div style={{ border:`1.5px solid ${isLatest?navy:border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
       {/* Card header — always visible */}
       <div
         onClick={()=>setExpanded(e=>!e)}
@@ -81,7 +81,7 @@ function RxCard({ rx, prevRx, orderInfo, isLatest }) {
 
       {/* Expanded prescription table */}
       {expanded && (
-        <div style={{ padding:14, background:'var(--bg-surface)' }}>
+        <div style={{ padding:14, background:C.surface }}>
           <div style={{ overflowX:'auto', marginBottom:prevRx?12:0 }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
               <thead>
@@ -101,7 +101,7 @@ function RxCard({ rx, prevRx, orderInfo, isLatest }) {
                   <tr key={row.eye}>
                     <td style={{ background:cream, padding:'8px 9px', fontWeight:700, fontSize:12, border:`1px solid ${border}`, color:navy, whiteSpace:'nowrap' }}>{row.eye}</td>
                     {[row.sph, row.cyl, row.axis, row.add, row.va, row.pd].map((v,i)=>(
-                      <td key={i} style={{ padding:'8px 9px', textAlign:'center', border:`1px solid ${border}`, fontSize:13, fontWeight:600, color:'#1a1a2e', background:'var(--bg-surface)' }}>
+                      <td key={i} style={{ padding:'8px 9px', textAlign:'center', border:`1px solid ${border}`, fontSize:13, fontWeight:600, color:'#1a1a2e', background:C.surface }}>
                         {v||'—'}
                       </td>
                     ))}
@@ -113,7 +113,7 @@ function RxCard({ rx, prevRx, orderInfo, isLatest }) {
 
           {/* Change vs previous */}
           {prevRx && (
-            <div style={{ background:'#f0f9ff', borderRadius:'var(--r-sm)', padding:'10px 12px', marginBottom:8 }}>
+            <div style={{ background:'#f0f9ff', borderRadius:8, padding:'10px 12px', marginBottom:8 }}>
               <div style={{ fontSize:11, fontWeight:700, color:'#0369a1', marginBottom:6, textTransform:'uppercase', letterSpacing:'.7px' }}>
                 Change vs previous
               </div>
@@ -138,7 +138,7 @@ function RxCard({ rx, prevRx, orderInfo, isLatest }) {
 
           {/* Clinical notes */}
           {rx.notes && (
-            <div style={{ background:'#fef9f0', borderRadius:'var(--r-sm)', padding:'8px 12px', fontSize:12, color:'#92400e', fontStyle:'italic' }}>
+            <div style={{ background:'#fef9f0', borderRadius:8, padding:'8px 12px', fontSize:12, color:'#92400e', fontStyle:'italic' }}>
               💬 {rx.notes}
             </div>
           )}
@@ -168,7 +168,7 @@ function PowerTrendChart({ refractions }) {
   const linePath = (vals) => vals.map((v,i)=>`${i===0?'M':'L'}${toX(i)},${toY(v)}`).join(' ');
 
   return (
-    <div style={{ background:cream, borderRadius:'var(--r-md)', padding:'12px 14px', marginBottom:16 }}>
+    <div style={{ background:cream, borderRadius:10, padding:'12px 14px', marginBottom:16 }}>
       <div style={{ fontSize:12, fontWeight:700, color:navy, marginBottom:8 }}>📈 SPH Power trend</div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', height:H }}>
         {/* Zero line */}
@@ -222,15 +222,15 @@ function OrderCard({ o, customerId, onRefresh }) {
     finally { setSaving(false); }
   };
 
-  const INP_S = { padding:'7px 10px', border:`1.5px solid ${border}`, borderRadius:7, fontSize:13, fontFamily:"var(--font-body)", outline:'none', background:cream, color:navy, width:'100%' };
+  const INP_S = { padding:'7px 10px', border:`1.5px solid ${border}`, borderRadius:7, fontSize:13, fontFamily:'var(--font-body)', outline:'none', background:cream, color:navy, width:'100%' };
 
   return (
-    <div style={{ background:cream, borderRadius:'var(--r-md)', padding:'12px 14px', marginBottom:10 }}>
+    <div style={{ background:cream, borderRadius:10, padding:'12px 14px', marginBottom:10 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ fontSize:12, fontWeight:700, color:muted }}>{o.order_number}</span>
           <a href={`/orders?search=${o.order_number}`} onClick={e=>e.stopPropagation()}
-            style={{ fontSize:10, color:'#1e40af', fontWeight:600, textDecoration:'none', background:'#eff6ff', padding:'2px 7px', borderRadius:'var(--r-md)', border:'1px solid #bae6fd' }}>
+            style={{ fontSize:10, color:'#1e40af', fontWeight:600, textDecoration:'none', background:'#eff6ff', padding:'2px 7px', borderRadius:10, border:'1px solid #bae6fd' }}>
             Open →
           </a>
         </div>
@@ -248,12 +248,12 @@ function OrderCard({ o, customerId, onRefresh }) {
       {/* PD & Seg height summary */}
       <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:6 }}>
         {(o.r_pd||o.l_pd) && (
-          <span style={{ background:'#e0f2fe', color:'#0369a1', fontSize:11, padding:'2px 8px', borderRadius:'var(--r-full)', fontWeight:600 }}>
+          <span style={{ background:'#e0f2fe', color:'#0369a1', fontSize:11, padding:'2px 8px', borderRadius:20, fontWeight:600 }}>
             PD R:{o.r_pd||'—'} L:{o.l_pd||'—'}
           </span>
         )}
         {(o.seg_height_r||o.seg_height_l) && (
-          <span style={{ background:'#f0fdf4', color:success, fontSize:11, padding:'2px 8px', borderRadius:'var(--r-full)', fontWeight:600 }}>
+          <span style={{ background:'#f0fdf4', color:success, fontSize:11, padding:'2px 8px', borderRadius:20, fontWeight:600 }}>
             Seg R:{o.seg_height_r||'—'} L:{o.seg_height_l||'—'}
           </span>
         )}
@@ -266,7 +266,7 @@ function OrderCard({ o, customerId, onRefresh }) {
       </button>
 
       {showMeas && (
-        <div style={{ marginTop:10, background:'var(--bg-surface)', borderRadius:9, padding:'12px 14px', border:`1px solid #93c5fd` }}>
+        <div style={{ marginTop:10, background:C.surface, borderRadius:9, padding:'12px 14px', border:`1px solid #93c5fd` }}>
           <div style={{ fontSize:12, fontWeight:700, color:'#1e40af', marginBottom:10 }}>📐 PD & Segment Height</div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
             <div>
@@ -287,7 +287,7 @@ function OrderCard({ o, customerId, onRefresh }) {
             </div>
           </div>
           <button onClick={saveMeasurements} disabled={saving}
-            style={{ padding:'8px 18px', background:saving?muted:'#1e40af', color:'white', border:'none', borderRadius:'var(--r-sm)', fontSize:13, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+            style={{ padding:'8px 18px', background:saving?muted:'#1e40af', color:'white', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
             {saving?'Saving...':'💾 Save'}
           </button>
         </div>
@@ -388,18 +388,18 @@ export default function Customers() {
   };
 
   return (
-    <div style={{ fontFamily:"var(--font-body)", maxWidth:1100 }}>
-      <h1 style={{ fontFamily:"var(--font-display)", fontSize:24, color:navy, margin:'0 0 4px' }}>👥 Customers</h1>
+    <div style={{ fontFamily:'var(--font-body)', maxWidth:1100 }}>
+      <h1 style={{ fontFamily:'var(--font-display)', fontSize:24, color:navy, margin:'0 0 4px' }}>👥 Customers</h1>
       <p style={{ fontSize:13, color:muted, marginBottom:20 }}>Full profiles, order history and refraction records</p>
 
       <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="🔍  Search by name or phone..."
-          style={{ flex:1, minWidth:180, padding:'9px 14px', border:`1.5px solid ${border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)' }}
+          style={{ flex:1, minWidth:180, padding:'9px 14px', border:`1.5px solid ${border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.surface }}
         />
         {[['all','All'],['balance','💰 Balance Due'],['rx','📄 Rx Held']].map(([f,l]) => (
           <button key={f} onClick={()=>setFilter(f)}
-            style={{ padding:'8px 14px', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', border:`1.5px solid ${filter===f?navy:border}`, fontFamily:'inherit', background:filter===f?navy:'white', color:filter===f?'white':muted }}>
+            style={{ padding:'8px 14px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', border:`1.5px solid ${filter===f?navy:border}`, fontFamily:'inherit', background:filter===f?navy:'white', color:filter===f?'white':muted }}>
             {l}
           </button>
         ))}
@@ -412,9 +412,9 @@ export default function Customers() {
           { l:'Rx Held',         v: customers.filter(c=>c.rx_held).length,                    c:'#0369a1'},
           { l:'Total Spent',     v:`Rs.${Math.round(customers.reduce((s,c)=>s+parseFloat(c.total_spent||0),0)/1000)}K`, c:success},
         ].map(s=>(
-          <div key={s.l} style={{ background:s.dark?navy:'white', border:`1px solid ${border}`, borderRadius:'var(--r-md)', padding:'12px 14px', textAlign:'center' }}>
+          <div key={s.l} style={{ background:s.dark?navy:'white', border:`1px solid ${border}`, borderRadius:10, padding:'12px 14px', textAlign:'center' }}>
             <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?gold:muted, marginBottom:4 }}>{s.l}</div>
-            <div style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:700, color:s.dark?'white':s.c||navy }}>{s.v}</div>
+            <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color:s.dark?'white':s.c||navy }}>{s.v}</div>
           </div>
         ))}
       </div>
@@ -427,7 +427,7 @@ export default function Customers() {
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
             {filtered.map(c => (
               <div key={c.id} onClick={()=>openCustomer(c.id)}
-                style={{ background:'var(--bg-surface)', border:`1.5px solid ${c.rx_held?'#fde68a':border}`, borderRadius:'var(--r-lg)', padding:18, cursor:'pointer', transition:'all .15s' }}
+                style={{ background:C.surface, border:`1.5px solid ${c.rx_held?'#fde68a':border}`, borderRadius:14, padding:18, cursor:'pointer', transition:'all .15s' }}
                 onMouseEnter={e=>e.currentTarget.style.borderColor=gold}
                 onMouseLeave={e=>e.currentTarget.style.borderColor=c.rx_held?'#fde68a':border}>
 
@@ -476,11 +476,11 @@ export default function Customers() {
       {selected && (
         <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.45)', zIndex:200, display:'flex', alignItems:'flex-start', justifyContent:'flex-end' }}
           onClick={e=>{ if(e.target===e.currentTarget) setSelected(null); }}>
-          <div style={{ background:'var(--bg-surface)', width:'100%', maxWidth:540, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
+          <div style={{ background:C.surface, width:'100%', maxWidth:540, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
 
             {/* Panel header */}
             <div style={{ background:navy, padding:'22px 22px 18px', position:'relative' }}>
-              <button onClick={()=>setSelected(null)} style={{ position:'absolute', top:14, right:14, background:'rgba(255,255,255,.15)', border:'none', borderRadius:'var(--r-sm)', padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', fontWeight:600, color:'white' }}>✕</button>
+              <button onClick={()=>setSelected(null)} style={{ position:'absolute', top:14, right:14, background:'rgba(255,255,255,.15)', border:'none', borderRadius:8, padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', fontWeight:600, color:'white' }}>✕</button>
 
               {loadingCust
                 ? <div style={{ color:'white', fontSize:14, padding:'20px 0' }}>Loading profile...</div>
@@ -488,18 +488,18 @@ export default function Customers() {
                     <div style={{ width:48, height:48, borderRadius:'50%', background:gold, display:'flex', alignItems:'center', justifyContent:'center', color:navy, fontSize:20, fontWeight:700, marginBottom:10 }}>
                       {initials(selected.name)}
                     </div>
-                    <div style={{ fontFamily:"var(--font-display)", fontSize:22, color:'white', marginBottom:3 }}>{selected.name}</div>
+                    <div style={{ fontFamily:'var(--font-display)', fontSize:22, color:'white', marginBottom:3 }}>{selected.name}</div>
                     <div style={{ fontSize:13, color:'#ede9e0', marginBottom:14 }}>
                       Age {selected.age||'—'} · 📞 {selected.phone}
                     </div>
                     <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                       <a href={`https://wa.me/94${selected.phone?.replace(/^0/,'')}?text=${encodeURIComponent(`Hello ${selected.name}, this is Kuruwita Optical. `)}`}
                         target="_blank" rel="noreferrer"
-                        style={{ padding:'8px 14px', background:'#25D366', color:'white', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:700, textDecoration:'none' }}>
+                        style={{ padding:'8px 14px', background:'#25D366', color:'white', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none' }}>
                         💬 WhatsApp
                       </a>
                       <a href={`tel:${selected.phone}`}
-                        style={{ padding:'8px 14px', background:'rgba(255,255,255,.15)', color:'white', border:'1px solid rgba(255,255,255,.3)', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:700, textDecoration:'none' }}>
+                        style={{ padding:'8px 14px', background:'rgba(255,255,255,.15)', color:'white', border:'1px solid rgba(255,255,255,.3)', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none' }}>
                         📞 Call
                       </a>
                     </div>
@@ -562,14 +562,14 @@ export default function Customers() {
                       ) : (
                         <>
                           {/* Summary banner */}
-                          <div style={{ background:navy, borderRadius:'var(--r-lg)', padding:'14px 16px', marginBottom:16, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, textAlign:'center' }}>
+                          <div style={{ background:navy, borderRadius:12, padding:'14px 16px', marginBottom:16, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, textAlign:'center' }}>
                             <div>
                               <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Total Records</div>
-                              <div style={{ fontFamily:"var(--font-display)", fontSize:22, color:'white', fontWeight:700 }}>{selected.refractions?.length||0}</div>
+                              <div style={{ fontFamily:'var(--font-display)', fontSize:22, color:'white', fontWeight:700 }}>{selected.refractions?.length||0}</div>
                             </div>
                             <div>
                               <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Latest Right</div>
-                              <div style={{ fontFamily:"var(--font-display)", fontSize:20, color:'white', fontWeight:700 }}>
+                              <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'white', fontWeight:700 }}>
                                 {selected.refractions?.[0]?.r_sph||'Plano'}
                               </div>
                               <div style={{ fontSize:10, color:'#ede9e0', marginTop:2 }}>
@@ -578,7 +578,7 @@ export default function Customers() {
                             </div>
                             <div>
                               <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Latest Left</div>
-                              <div style={{ fontFamily:"var(--font-display)", fontSize:20, color:'white', fontWeight:700 }}>
+                              <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'white', fontWeight:700 }}>
                                 {selected.refractions?.[0]?.l_sph||'Plano'}
                               </div>
                               <div style={{ fontSize:10, color:'#ede9e0', marginTop:2 }}>
@@ -589,7 +589,7 @@ export default function Customers() {
 
                           {/* Use Rx for New Order */}
                           {selected.refractions?.length||0 > 0 && (
-                            <div style={{ background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:'var(--r-md)', padding:'11px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                            <div style={{ background:'#eff6ff', border:'1px solid #bae6fd', borderRadius:10, padding:'11px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                               <div>
                                 <div style={{ fontSize:13, fontWeight:700, color:'#1e40af' }}>📋 Latest Rx on file</div>
                                 <div style={{ fontSize:11, color:'#2563eb', marginTop:2 }}>
@@ -643,7 +643,7 @@ export default function Customers() {
                           ? <p style={{ fontSize:13, color:muted }}>No communication logged yet</p>
                           : selected.comm_logs.map((c,i) => (
                             <div key={i} style={{ display:'flex', gap:10, padding:'8px 0', borderBottom:`1px solid ${cream}` }}>
-                              <div style={{ width:30, height:30, borderRadius:'50%', background:c.type==='wa'?'#dcfce7':c.type==='call'?'#dbeafe':'var(--bg-sunken)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>
+                              <div style={{ width:30, height:30, borderRadius:'50%', background:c.type==='wa'?'#dcfce7':c.type==='call'?'#dbeafe':'#f8f5ef', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>
                                 {c.type==='wa'?'💬':c.type==='call'?'📞':'📝'}
                               </div>
                               <div>
@@ -656,16 +656,16 @@ export default function Customers() {
                       </div>
                       <div style={{ display:'flex', gap:8 }}>
                         <select value={commType} onChange={e=>setCommType(e.target.value)}
-                          style={{ padding:'8px 10px', border:`1.5px solid ${border}`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:'inherit', background:cream, outline:'none' }}>
+                          style={{ padding:'8px 10px', border:`1.5px solid ${border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', background:cream, outline:'none' }}>
                           <option value="call">📞 Call</option>
                           <option value="wa">💬 WhatsApp</option>
                           <option value="note">📝 Note</option>
                         </select>
                         <input value={commNote} onChange={e=>setCommNote(e.target.value)}
                           placeholder="Add a note..." onKeyDown={e=>e.key==='Enter'&&handleAddComm()}
-                          style={{ flex:1, padding:'8px 12px', border:`1.5px solid ${border}`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:'inherit', background:cream, outline:'none' }}/>
+                          style={{ flex:1, padding:'8px 12px', border:`1.5px solid ${border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', background:cream, outline:'none' }}/>
                         <button onClick={handleAddComm} disabled={addingComm}
-                          style={{ padding:'8px 14px', background:navy, color:'white', border:'none', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                          style={{ padding:'8px 14px', background:navy, color:'white', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                           {addingComm?'…':'Add'}
                         </button>
                       </div>
@@ -679,7 +679,7 @@ export default function Customers() {
                       <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:12 }}>
                         {!editMode
                           ? <button onClick={()=>{ setEditForm({ name:selected.name||'', phone:selected.phone||'', age:selected.age||'', address:selected.address||'', email:selected.email||'' }); setEditMode(true); }}
-                              style={{ padding:'7px 16px', background:navy, color:'white', border:'none', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                              style={{ padding:'7px 16px', background:navy, color:'white', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                               ✏️ Edit Details
                             </button>
                           : <div style={{ display:'flex', gap:8 }}>
@@ -700,11 +700,11 @@ export default function Customers() {
                                 } catch(e){ alert('Failed to save'); }
                                 finally { setSavingEdit(false); }
                               }} disabled={savingEdit}
-                                style={{ padding:'7px 16px', background:savingEdit?muted:'var(--success)', color:'white', border:'none', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                                style={{ padding:'7px 16px', background:savingEdit?muted:'#2d7a4f', color:'white', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                                 {savingEdit?'⏳ Saving...':'💾 Save'}
                               </button>
                               <button onClick={()=>setEditMode(false)}
-                                style={{ padding:'7px 14px', background:cream, border:`1.5px solid ${border}`, borderRadius:'var(--r-sm)', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:muted }}>
+                                style={{ padding:'7px 14px', background:cream, border:`1.5px solid ${border}`, borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:'inherit', color:muted }}>
                                 Cancel
                               </button>
                             </div>
@@ -725,7 +725,7 @@ export default function Customers() {
                               <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:muted, display:'block', marginBottom:4 }}>{f.l}</label>
                               <input type={f.type} value={editForm[f.k]||''} onChange={e=>setEditForm(ef=>({...ef,[f.k]:e.target.value}))}
                                 placeholder={f.ph}
-                                style={{ width:'100%', padding:'9px 12px', border:`1.5px solid ${border}`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:'inherit', outline:'none', background:cream, color:navy, boxSizing:'border-box' }}/>
+                                style={{ width:'100%', padding:'9px 12px', border:`1.5px solid ${border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:cream, color:navy, boxSizing:'border-box' }}/>
                             </div>
                           ))}
                         </div>
@@ -742,7 +742,7 @@ export default function Customers() {
                             { l:'Balance due',  v:`Rs. ${selected.orders?.reduce((s,o)=>s+parseFloat(o.balance_amount||0),0).toLocaleString()||0}` },
                             { l:'Rx records',   v: selected.refractions?.length||0||0 },
                           ].map(item=>(
-                            <div key={item.l} style={{ background:cream, borderRadius:'var(--r-sm)', padding:'10px 12px' }}>
+                            <div key={item.l} style={{ background:cream, borderRadius:8, padding:'10px 12px' }}>
                               <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:muted, marginBottom:3 }}>{item.l}</div>
                               <div style={{ fontSize:13, fontWeight:600, color:'#1a1a2e' }}>{item.v}</div>
                             </div>
@@ -751,12 +751,12 @@ export default function Customers() {
                       )}
 
                       {selected.orders?.some(o=>o.has_rx&&!o.rx_returned) && (
-                        <div style={{ background:'#e0f2fe', borderRadius:'var(--r-md)', padding:'12px 14px' }}>
+                        <div style={{ background:'#e0f2fe', borderRadius:10, padding:'12px 14px' }}>
                           <div style={{ fontSize:13, color:'#0369a1', fontWeight:700, marginBottom:6 }}>
                             📄 Prescription held from {selected.orders.find(o=>o.has_rx&&!o.rx_returned)?.rx_hospital||'hospital'}
                           </div>
                           <button onClick={markRxReturned}
-                            style={{ background:'#0369a1', color:'white', border:'none', borderRadius:'var(--r-sm)', padding:'6px 14px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                            style={{ background:'#0369a1', color:'white', border:'none', borderRadius:8, padding:'6px 14px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                             Mark as Returned to Customer
                           </button>
                         </div>

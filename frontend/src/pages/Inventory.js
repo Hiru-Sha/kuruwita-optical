@@ -23,7 +23,7 @@ function AutoInput({ value, onChange, placeholder, style, suggestions=[] }) {
         onBlur={()=>setTimeout(()=>setOpen(false), 200)}
         placeholder={placeholder} style={style}/>
       {open && filtered.length > 0 && (
-        <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white',
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, background:C.surface,
           border:'1.5px solid #c9a84c', borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,.15)',
           zIndex:200, overflow:'hidden', marginTop:2, maxHeight:220, overflowY:'auto' }}>
           {filtered.map((s,i)=>(
@@ -44,7 +44,21 @@ function AutoInput({ value, onChange, placeholder, style, suggestions=[] }) {
 
 import { StickerModal, QRScanner, PriceUpdateModal } from '../components/QRStickers';
 
-const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b' };
+const C = {
+  navy:    'var(--navy)',
+  gold:    'var(--gold)',
+  cream:   'var(--bg-sunken)',
+  surface: 'var(--bg-surface)',
+  border:  'var(--border)',
+  muted:   'var(--text-muted)',
+  success: 'var(--success)',
+  danger:  'var(--danger)',
+  warning: 'var(--warning)',
+  info:    'var(--info)',
+  white:   'var(--bg-surface)',
+  blue:    '#2563eb',
+  purple:  '#7c3aed',
+};
 const fmtMoney = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 // Compress image to max 500px wide, 70% quality JPEG — keeps size under 50KB
 const compressImage = (file, maxWidth=500, quality=0.7) => new Promise((resolve, reject) => {
@@ -86,7 +100,7 @@ const REASONS = [
   'Wrong count correction','Expired / spoiled','Given as sample','Other',
 ];
 
-const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%' };
+const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:C.cream, color:C.navy, width:'100%' };
 const SEL = { ...INP, cursor:'pointer' };
 const LBL = { fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, marginBottom:5, display:'block' };
 
@@ -134,43 +148,24 @@ const buildName = (form) => {
 
 function CategoryFields({ form, set, suggestions }) {
   const inp = (key, placeholder) => <input value={form[key]||''} onChange={e=>set(f=>({...f,[key]:e.target.value}))} placeholder={placeholder} style={INP}/>;
-  const sel = (key, options) => {
-    const baseOpts  = options.includes('Other') ? options : [...options, 'Other'];
-    const showOther = !options.filter(o => o !== 'Other').includes(form[key] || '');
-    const PLACEHOLDERS = {
-      frame_shape:    'e.g. Pentagon, Heart, Rimless round...',
-      frame_type:     'e.g. Semi-rimless...',
-      frame_material: 'e.g. Wood, Carbon fibre, Rubber...',
-      frame_color:    'e.g. Rose Gold, Marble, Matte...',
-      frame_size:     'e.g. 53mm, X-Large...',
-      sg_type:        'e.g. Mirrored, UV400 polarised...',
-      rg_lens_type:   'e.g. Trifocal...',
-      rg_material:    'e.g. Titanium...',
-      rg_power:       'e.g. +4.50, +5.00...',
-    };
-    return (
-      <>
-        <select
-          value={showOther ? 'Other' : (form[key] || '')}
-          onChange={e => {
-            if (e.target.value === 'Other') set(f => ({ ...f, [key]: '' }));
-            else set(f => ({ ...f, [key]: e.target.value }));
-          }}
-          style={SEL}>
-          {baseOpts.map(o => <option key={o}>{o}</option>)}
-        </select>
-        {showOther && (
-          <input
-            value={form[key] || ''}
-            onChange={e => set(f => ({ ...f, [key]: e.target.value }))}
-            placeholder={PLACEHOLDERS[key] || 'Type custom value...'}
-            style={{ ...INP, marginTop: 4, border: '1.5px solid #f59e0b', background: '#fffbeb' }}
-            autoFocus
-          />
-        )}
-      </>
-    );
-  };
+  const sel = (key, options) => (
+    <>
+      <select value={options.includes(form[key]||'') ? (form[key]||'') : 'Other'}
+        onChange={e => {
+          if (e.target.value === 'Other') set(f=>({...f,[key]:''}));
+          else set(f=>({...f,[key]:e.target.value}));
+        }} style={SEL}>
+        {options.map(o=><option key={o}>{o}</option>)}
+      </select>
+      {/* Show text input when Other selected or value not in list */}
+      {(!options.includes(form[key]||'') || form[key] === '') && key === 'frame_color' && (
+        <input value={form[key]||''} onChange={e=>set(f=>({...f,[key]:e.target.value}))}
+          placeholder="Type custom color..."
+          style={{ ...INP, marginTop:4, border:'1.5px solid #f59e0b', background:'#fffbeb' }}
+          autoFocus/>
+      )}
+    </>
+  );
   const auto = (key, placeholder, sugg) =>
     <AutoInput value={form[key]||''} onChange={v=>set(f=>({...f,[key]:v}))} placeholder={placeholder} style={INP} suggestions={sugg||[]}/>;
   const common = (sugg) => <>
@@ -243,7 +238,7 @@ function ItemCard({ item, onClick, onSticker }) {
   else if (item.category==='Reading Glasses')sub=[item.rg_power,item.rg_lens_type].filter(Boolean).join(' · ');
   else sub=item.brand||'';
   return (
-    <div ref={cardRef} style={{ background:'white', border:`1.5px solid ${isOut?'#d1d5db':isLow?'#fca5a5':C.border}`, borderRadius:14, cursor:'pointer', overflow:'hidden', position:'relative', transition:'all .15s', borderLeft:isLow&&!isOut?`4px solid ${C.danger}`:undefined }}
+    <div ref={cardRef} style={{ background:C.surface, border:`1.5px solid ${isOut?'#d1d5db':isLow?'#fca5a5':C.border}`, borderRadius:14, cursor:'pointer', overflow:'hidden', position:'relative', transition:'all .15s', borderLeft:isLow&&!isOut?`4px solid ${C.danger}`:undefined }}
       onMouseEnter={e=>e.currentTarget.style.borderColor=C.gold}
       onMouseLeave={e=>e.currentTarget.style.borderColor=isOut?'#d1d5db':isLow?'#fca5a5':C.border}>
       <div onClick={onClick} style={{ height:110, background:C.cream, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative' }}>
@@ -363,12 +358,12 @@ function AdjustmentPanel({ item, onDone }) {
       <div style={{ background:C.navy, borderRadius:12, padding:'14px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <div>
           <div style={{ fontSize:10, color:C.gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:3 }}>Current Stock</div>
-          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:32, fontWeight:700, color:'white' }}>{currentQty}</div>
+          <div style={{ fontFamily:'var(--font-display)', fontSize:32, fontWeight:700, color:'white' }}>{currentQty}</div>
         </div>
         {previewQty !== null && (
           <div style={{ textAlign:'right' }}>
             <div style={{ fontSize:10, color:'#ede9e0', marginBottom:3 }}>After adjustment</div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color: adjType==='add'?'#86efac':'#fca5a5' }}>
+            <div style={{ fontFamily:'var(--font-display)', fontSize:28, fontWeight:700, color: adjType==='add'?'#86efac':'#fca5a5' }}>
               {previewQty}
             </div>
           </div>
@@ -590,7 +585,7 @@ function AddVariantPanel({ item, items, onDone }) {
           </div>
           <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
             {existing.map(e=>(
-              <span key={e.id} style={{ background:'white', border:'1px solid #bae6fd', borderRadius:20,
+              <span key={e.id} style={{ background:C.surface, border:'1px solid #bae6fd', borderRadius:20,
                 padding:'3px 10px', fontSize:12, color:'#1e40af', fontWeight:600 }}>
                 {e.frame_color} ({e.quantity} in stock)
               </span>
@@ -605,7 +600,7 @@ function AddVariantPanel({ item, items, onDone }) {
       </div>
 
       {variants.map((v, i) => (
-        <div key={i} style={{ background:'white', border:`1.5px solid ${C.border}`, borderRadius:12,
+        <div key={i} style={{ background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:12,
           padding:'14px', marginBottom:10 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
             <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Variant {i+1}</div>
@@ -822,10 +817,6 @@ export default function Inventory() {
   const [activeCat,    setActiveCat]   = useState('All');
   const [stockFilter,  setStockFilter]  = useState('all'); // 'all' | 'low' | 'out'
   const [subFilter,    setSubFilter]   = useState('');
-  const [totalCount,       setTotalCount]       = useState(null);
-  const [frameMatFilter,   setFrameMatFilter]   = useState('');
-  const [frameColFilter,   setFrameColFilter]   = useState('');
-  const [frameShapeFilter, setFrameShapeFilter] = useState('');
   const [search,       setSearch]      = useState('');
   const [selected,     setSelected]    = useState(null);
   const [panelTab,     setPanelTab]    = useState('details');
@@ -866,7 +857,7 @@ export default function Inventory() {
     setLoading(true);
     const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
     const token = localStorage.getItem('ko_token');
-    const params = new URLSearchParams({ limit:'3000', no_images:'1' });
+    const params = new URLSearchParams({ limit:'500', no_images:'1' });
     if (search)                   params.set('search', search);
     if (activeCat !== 'All')      params.set('category', activeCat);
     fetch(`${BASE}/inventory?${params}`, { headers:{ Authorization:`Bearer ${token}` } })
@@ -874,7 +865,6 @@ export default function Inventory() {
       .then(r=>{
         const arr = Array.isArray(r) ? r : Array.isArray(r.data) ? r.data : [];
         setItems(arr);
-        if (r && typeof r.total === 'number') setTotalCount(r.total);
         // Build autocomplete suggestions from existing data
         const uniq = (fn) => [...new Set(arr.map(fn).filter(Boolean))].sort();
         setSuggestions({
@@ -1308,12 +1298,12 @@ export default function Inventory() {
   const val = items.reduce((s,i)=>s+(parseFloat(i.cost_price||0)*i.quantity),0);
 
   return (
-    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:'var(--font-body)' }}>
       {/* ── Page header ── */}
       <div style={{ marginBottom:20 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12, marginBottom:14 }}>
           <div>
-            <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, color:C.navy, margin:0 }}>Inventory</h1>
+            <h1 style={{ fontFamily:'var(--font-display)', fontSize:28, color:C.navy, margin:0 }}>Inventory</h1>
             <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Frames, sunglasses, accessories and supplies</p>
           </div>
           {/* Primary action */}
@@ -1361,7 +1351,7 @@ export default function Inventory() {
             </div>
           </div>
           <button onClick={()=>{ setPcPolling(false); setPcSessionId(null); clearInterval(pollIntervalRef.current); }}
-            style={{ padding:'6px 14px', background:'white', border:'1px solid #93c5fd', borderRadius:8,
+            style={{ padding:'6px 14px', background:C.surface, border:'1px solid #93c5fd', borderRadius:8,
               fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#1e40af', flexShrink:0 }}>
             Cancel
           </button>
@@ -1409,7 +1399,7 @@ export default function Inventory() {
             {/* Top row — summary cards */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:12 }}>
               {[
-                { l:'Total Items',  v:totalCount !== null ? totalCount : allItems.length, icon:'📦', dark:true, sf:'all', sub:'all items' },
+                { l:'Total Items',  v:allItems.length,              icon:'📦', dark:true,   sf:'all',  sub:'all items' },
                 { l:'Low Stock',    v:low,   c:C.danger,             icon:'⚠️', sf:'low',  sub:'need reorder' },
                 { l:'Out of Stock', v:out,   c:'#6b7280',            icon:'❌', sf:'out',  sub:'unavailable' },
                 { l:'Stock Value',  v:`Rs.${Math.round(val/1000)}K`, icon:'💰', c:C.success, sf:null, sub:'cost price' },
@@ -1424,7 +1414,7 @@ export default function Inventory() {
                     <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:s.dark?'rgba(201,168,76,.8)':C.muted }}>{s.l}</div>
                     <span style={{ fontSize:18 }}>{s.icon}</span>
                   </div>
-                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26, fontWeight:700, color:s.dark?'white':(s.c||C.navy), lineHeight:1 }}>{s.v}</div>
+                  <div style={{ fontFamily:'var(--font-display)', fontSize:26, fontWeight:700, color:s.dark?'white':(s.c||C.navy), lineHeight:1 }}>{s.v}</div>
                   <div style={{ fontSize:11, color:s.dark?'rgba(255,255,255,.5)':C.muted, marginTop:4 }}>{s.sub}</div>
                   {s.sf && s.sf!=='all' && stockFilter!==s.sf && <div style={{ fontSize:9, color:C.gold, marginTop:4, fontWeight:600 }}>↑ click to filter</div>}
                 </div>
@@ -1436,7 +1426,7 @@ export default function Inventory() {
                   {stockFilter==='low' ? '⚠️ Showing low stock items only' : '❌ Showing out of stock items only'}
                 </span>
                 <button onClick={()=>setStockFilter('all')}
-                  style={{ fontSize:12, fontWeight:600, background:'white', border:`1px solid ${C.danger}`, borderRadius:7, padding:'3px 10px', cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
+                  style={{ fontSize:12, fontWeight:600, background:C.surface, border:`1px solid ${C.danger}`, borderRadius:7, padding:'3px 10px', cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
                   ✕ Clear filter
                 </button>
               </div>
@@ -1460,8 +1450,8 @@ export default function Inventory() {
                     <button key={i} onClick={()=>{
                       if (cat.dark) { setActiveCat('All'); setSubFilter(''); }
                       else if (cat.sub==='accs') { setActiveCat('Boxes'); setSubFilter(''); }
-                      else if (cat.indent) { setActiveCat(cat.cat); setSubFilter(cat.sub); setFrameMatFilter(''); setFrameColFilter(''); setFrameShapeFilter(''); }
-                      else { setActiveCat(cat.cat||'All'); setSubFilter(''); setFrameMatFilter(''); setFrameColFilter(''); setFrameShapeFilter(''); }
+                      else if (cat.indent) { setActiveCat(cat.cat); setSubFilter(cat.sub); }
+                      else { setActiveCat(cat.cat||'All'); setSubFilter(''); }
                     }} style={{
                       padding: cat.indent ? '4px 10px 4px 18px' : '5px 12px',
                       borderRadius:20,
@@ -1485,80 +1475,17 @@ export default function Inventory() {
                 })}
               </div>
             </div>
-
-            {/* Frame sub-filters — material / color / shape */}
-            {activeCat === 'Frames' && (() => {
-            const allFrames  = items.filter(i => i.category === 'Frames');
-            const liveMats   = [...new Set(allFrames.map(i=>i.frame_material).filter(Boolean))].sort();
-            const liveCols   = [...new Set(allFrames.map(i=>i.frame_color).filter(Boolean))].sort();
-            const liveShapes = [...new Set(allFrames.map(i=>i.frame_shape).filter(Boolean))].sort();
-            const DOT = {
-              Black:'#111', Gold:'#c9a84c', Silver:'#9ca3af', Brown:'#92400e',
-              Gunmetal:'#374151', Blue:'#1d4ed8', Red:'#dc2626', Pink:'#ec4899',
-              Tortoise:'#78350f', Crystal:'#e0e7ef',
-            };
-            const chip = (active) => ({
-              padding:'4px 11px', borderRadius:20, cursor:'pointer', fontFamily:'inherit',
-              fontSize:11, fontWeight: active ? 700 : 500, border:'none', transition:'all .12s',
-              background: active ? C.navy : C.cream, color: active ? 'white' : C.muted,
-            });
-            return (
-              <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 14px', marginTop:10 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1.5px', marginBottom:10 }}>
-                  Frame filters
-                </div>
-
-                {/* Material row */}
-                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8, flexWrap:'wrap' }}>
-                  <span style={{ fontSize:11, color:C.muted, fontWeight:600, minWidth:52, flexShrink:0 }}>Material</span>
-                  <button style={chip(!frameMatFilter)} onClick={()=>setFrameMatFilter('')}>All</button>
-                  {[...new Set(['Plastic','Metal','TR90','Titanium','Acetate','Mixed',...liveMats])].map(m=>(
-                    <button key={m} style={chip(frameMatFilter===m)} onClick={()=>setFrameMatFilter(p=>p===m?'':m)}>{m}</button>
-                  ))}
-                </div>
-
-                {/* Color row */}
-                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8, flexWrap:'wrap' }}>
-                  <span style={{ fontSize:11, color:C.muted, fontWeight:600, minWidth:52, flexShrink:0 }}>Color</span>
-                  <button style={chip(!frameColFilter)} onClick={()=>setFrameColFilter('')}>All</button>
-                  {[...new Set(['Black','Gold','Silver','Brown','Gunmetal','Blue','Red','Pink','Tortoise','Crystal',...liveCols])].map(col=>(
-                    <button key={col} style={{ ...chip(frameColFilter===col), display:'flex', alignItems:'center', gap:4 }}
-                      onClick={()=>setFrameColFilter(p=>p===col?'':col)}>
-                      <span style={{ width:9, height:9, borderRadius:'50%', flexShrink:0, background: DOT[col]||'#888', border: col==='Crystal'||col==='Silver'?'1px solid #ccc':'none' }}/>
-                      {col}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Shape row */}
-                <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
-                  <span style={{ fontSize:11, color:C.muted, fontWeight:600, minWidth:52, flexShrink:0 }}>Shape</span>
-                  <button style={chip(!frameShapeFilter)} onClick={()=>setFrameShapeFilter('')}>All</button>
-                  {[...new Set(['Round','Oval','Rectangle','Square','Cat-eye','Aviator','Wayfarer',...liveShapes])].map(sh=>(
-                    <button key={sh} style={chip(frameShapeFilter===sh)} onClick={()=>setFrameShapeFilter(p=>p===sh?'':sh)}>{sh}</button>
-                  ))}
-                </div>
-
-                {(frameMatFilter||frameColFilter||frameShapeFilter) && (
-                  <button onClick={()=>{setFrameMatFilter('');setFrameColFilter('');setFrameShapeFilter('');}}
-                    style={{ marginTop:8, fontSize:11, fontWeight:600, color:C.danger, background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', padding:0 }}>
-                    ✕ Clear frame filters
-                  </button>
-                )}
-              </div>
-            );
-            })()}
           </div>
         );
       })()}
 
       {/* ── ADD ITEM WIZARD ─────────────────────────────────── */}
       {showAdd && (
-        <div style={{ background:'white', border:`2px solid ${C.gold}`, borderRadius:14, marginBottom:16, overflow:'hidden' }}>
+        <div style={{ background:C.surface, border:`2px solid ${C.gold}`, borderRadius:14, marginBottom:16, overflow:'hidden' }}>
 
           {/* Wizard header */}
           <div style={{ background:C.navy, padding:'12px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, color:'white' }}>
+            <div style={{ fontFamily:'var(--font-display)', fontSize:16, color:'white' }}>
               {addStep==='category' ? '➕ Add New Item — Choose Category' : `➕ Add ${addCat}`}
             </div>
             <button onClick={()=>{ setShowAdd(false); setImgData(null); setAddCat(''); setAddStep('category'); setForm(defaults('Frames')); setColorVariants([{color:'Black',qty:'1',image:null}]); }}
@@ -1621,7 +1548,7 @@ export default function Inventory() {
                     setAddStep('form');
                   }}
                     style={{ padding:'14px 10px', borderRadius:12, border:`2px solid ${C.border}`,
-                      background:'white', cursor:'pointer', fontFamily:'inherit',
+                      background:C.surface, cursor:'pointer', fontFamily:'inherit',
                       display:'flex', flexDirection:'column', alignItems:'center', gap:6,
                       transition:'all .15s' }}
                     onMouseEnter={e=>{ e.currentTarget.style.border=`2px solid ${color}`; e.currentTarget.style.background='#f8f5ef'; }}
@@ -1649,7 +1576,7 @@ export default function Inventory() {
                   </div>
                 </div>
                 <button onClick={()=>{ setAddStep('category'); }}
-                  style={{ padding:'5px 12px', background:'white', border:`1px solid ${C.border}`, borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted, flexShrink:0 }}>
+                  style={{ padding:'5px 12px', background:C.surface, border:`1px solid ${C.border}`, borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted, flexShrink:0 }}>
                   ← Change
                 </button>
                 {!imgData && (
@@ -1732,7 +1659,7 @@ export default function Inventory() {
                       </button>
                     </div>
                     {(form.sizeVariants||[]).map((sv,si)=>(
-                      <div key={si} style={{ background:'white', border:'1px solid #fde68a', borderRadius:10, padding:'10px 12px', marginBottom:10 }}>
+                      <div key={si} style={{ background:C.surface, border:'1px solid #fde68a', borderRadius:10, padding:'10px 12px', marginBottom:10 }}>
                         {/* Size header */}
                         <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:8 }}>
                           <select value={['XS','S','M','L','XL','XXL','Small','Medium','Large','Extra Large','One Size','36','38','40','42','44','46','48','50','52','54','56','58','60'].includes(sv.size)?sv.size:'Custom'}
@@ -1810,7 +1737,7 @@ export default function Inventory() {
 
 
       {/* Category tabs */}
-      <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, marginBottom:16, overflowX:'auto', background:'white', borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
+      <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, marginBottom:16, overflowX:'auto', background:C.surface, borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
         {CATS.map(c=>(
           <button key={c} onClick={()=>setActiveCat(c)}
             style={{ padding:'11px 16px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:activeCat===c?C.navy:C.muted, borderBottom:`3px solid ${activeCat===c?C.gold:'transparent'}`, marginBottom:-1, transition:'all .15s', display:'flex', alignItems:'center', gap:6 }}>
@@ -1866,13 +1793,7 @@ export default function Inventory() {
                   if (subFilter==='RayBan') return (item.brand||'').toLowerCase().includes('rayban');
                   return item.sg_type===subFilter;
                 }
-                if (activeCat==='Frames') {
-                  if (frameMatFilter   && item.frame_material !== frameMatFilter)  return false;
-                  if (frameColFilter   && item.frame_color    !== frameColFilter)   return false;
-                  if (frameShapeFilter && item.frame_shape    !== frameShapeFilter) return false;
-                  if (subFilter        && item.frame_type     !== subFilter)        return false;
-                  return true;
-                }
+                if (activeCat==='Frames') return item.frame_type===subFilter;
                 if (activeCat==='Reading Glasses') {
                   if (!subFilter) return true;
                   return (item.rg_lens_type||'').toLowerCase().includes(subFilter.toLowerCase());
@@ -1891,7 +1812,7 @@ export default function Inventory() {
       {selected && (
         <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.45)', zIndex:200, display:'flex', alignItems:'flex-start', justifyContent:'flex-end' }}
           onClick={e=>{ if(e.target===e.currentTarget) setSelected(null); }}>
-          <div style={{ background:'white', width:'100%', maxWidth:480, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
+          <div style={{ background:C.surface, width:'100%', maxWidth:480, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
 
             {/* Photo */}
             <div style={{ height:selected.image_url?'auto':'160px', maxHeight:320, background:C.cream, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative' }}>
@@ -1910,7 +1831,7 @@ export default function Inventory() {
 
             {/* Name + tabs */}
             <div style={{ padding:'16px 22px 0' }}>
-              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:17, color:C.navy, marginBottom:2 }}>{selected.name}</div>
+              <div style={{ fontFamily:'var(--font-display)', fontSize:17, color:C.navy, marginBottom:2 }}>{selected.name}</div>
               <div style={{ fontSize:12, color:C.muted, marginBottom:12 }}>{selected.category}</div>
 
               {/* Stock qty badge */}
@@ -2086,7 +2007,7 @@ export default function Inventory() {
                   {/* ── Actions ── */}
                   <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                     <button onClick={()=>handleSavePanel(selected)} style={{ padding:'10px 18px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>💾 Save All</button>
-                    <button onClick={()=>{ setStickerItems([selected]); setShowStickers(true); }} style={{ padding:'10px 16px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>🏷️ Sticker</button>
+                    <button onClick={()=>{ setStickerItems([selected]); setShowStickers(true); }} style={{ padding:'10px 16px', background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>🏷️ Sticker</button>
                     <button onClick={()=>{ setPriceUpdateItems([selected]); setShowPriceUpdate(true); }} style={{ padding:'10px 16px', background:'#fef9c3', border:`1.5px solid #fde68a`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#92400e' }}>💰 Price Label</button>
                     <button onClick={()=>setPanelTab('adjust')} style={{ padding:'10px 16px', background:'#eff6ff', border:`1.5px solid #bae6fd`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#0369a1' }}>📦 Adjust Stock</button>
                     <button onClick={()=>handleDelete(selected.id)} style={{ padding:'10px 14px', background:'#fee2e2', color:C.danger, border:`1.5px solid #fca5a5`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>🗑️</button>
@@ -2125,7 +2046,7 @@ export default function Inventory() {
             style={{ maxWidth:'90vw', maxHeight:'75vh', objectFit:'contain', borderRadius:12,
               boxShadow:'0 8px 40px rgba(0,0,0,.6)' }}/>
           <div style={{ marginTop:20, textAlign:'center' }}>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'white', marginBottom:6 }}>
+            <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'white', marginBottom:6 }}>
               {selected.name}
             </div>
             <div style={{ fontSize:13, color:'rgba(255,255,255,.6)', marginBottom:4 }}>
@@ -2152,8 +2073,8 @@ export default function Inventory() {
       {showAIScan && (
         <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.7)', zIndex:500,
           display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div style={{ background:'white', borderRadius:16, width:'100%', maxWidth:500,
-            boxShadow:'0 24px 60px rgba(0,0,0,.3)', fontFamily:"'DM Sans',sans-serif", overflow:'hidden' }}>
+          <div style={{ background:C.surface, borderRadius:16, width:'100%', maxWidth:500,
+            boxShadow:'0 24px 60px rgba(0,0,0,.3)', fontFamily:'var(--font-body)', overflow:'hidden' }}>
 
             {/* Header */}
             <div style={{ background:'#7c3aed', padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>

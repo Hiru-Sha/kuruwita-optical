@@ -10,6 +10,8 @@ const CATS = ['Frames','Sunglasses','Reading Glasses','Boxes','Sunglass Pouches'
 const C = {
   navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
   border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
+
+  surface: 'var(--surface)',
 };
 
 const fmt     = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0,maximumFractionDigits:0});
@@ -18,7 +20,7 @@ const fmtDate = (d) => { if(!d) return '—'; return new Date(d+'T00:00:00').toL
 const thisMonth = () => new Date().toISOString().slice(0,7);
 const today     = () => new Date().toISOString().split('T')[0];
 
-const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
+const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
 const SEL = { ...INP, cursor:'pointer' };
 const LBL = { fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, marginBottom:5, display:'block' };
 
@@ -281,7 +283,7 @@ export default function DealerPurchases() {
   ];
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:'var(--font-body)' }}>
 
       {/* Toast */}
       {toast && (
@@ -293,7 +295,7 @@ export default function DealerPurchases() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:0 }}>🏪 Dealer Purchases</h1>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:24, color:C.navy, margin:0 }}>🏪 Dealer Purchases</h1>
           <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Track stock purchases from Negombo Optical, Solex and other dealers</p>
         </div>
         <button onClick={()=>setShowAdd(s=>!s)}
@@ -313,14 +315,14 @@ export default function DealerPurchases() {
         ].map(s=>(
           <div key={s.l} style={{ background:s.dark?C.navy:'white', border:`1px solid ${s.dark?C.navy:C.border}`, borderRadius:12, padding:'14px 16px', textAlign:'center' }}>
             <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?C.gold:C.muted, marginBottom:5 }}>{s.l}</div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
+            <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
           </div>
         ))}
       </div>
 
       {/* Add purchase form */}
       {showAdd && (
-        <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:22, marginBottom:20 }}>
+        <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:22, marginBottom:20 }}>
           <div style={{ fontSize:15, fontWeight:700, color:C.navy, marginBottom:16 }}>➕ Record New Purchase</div>
 
           {error && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:9, padding:'10px 14px', fontSize:13, marginBottom:14 }}>⚠️ {error}</div>}
@@ -400,7 +402,7 @@ export default function DealerPurchases() {
               <span style={{ fontSize:13, color:C.muted }}>
                 {form.quantity} × {fmt(form.unit_cost||0)} =
               </span>
-              <span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:C.navy }}>
+              <span style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:700, color:C.navy }}>
                 {fmt(totalCost)}
               </span>
             </div>
@@ -518,7 +520,7 @@ export default function DealerPurchases() {
       )}
 
       {/* Tabs */}
-      <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, marginBottom:20, background:'white', borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
+      <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, marginBottom:20, background:C.surface, borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
         {TABS.map(t=>(
           <button key={t.key} onClick={()=>setActiveTab(t.key)}
             style={{ padding:'12px 20px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:activeTab===t.key?C.navy:C.muted, borderBottom:`2.5px solid ${activeTab===t.key?C.gold:'transparent'}`, marginBottom:-1 }}>
@@ -554,7 +556,7 @@ export default function DealerPurchases() {
             </div>
           </div>
 
-          <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
+          <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
             <div style={{ padding:'12px 18px', borderBottom:`1px solid ${C.border}`, display:'grid', gridTemplateColumns:'1fr 1fr 80px 100px 80px 60px', gap:8, fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', color:C.muted }}>
               <span>Item</span><span>Dealer</span><span>Qty</span><span>Total</span><span>Status</span><span></span>
             </div>
@@ -623,7 +625,7 @@ export default function DealerPurchases() {
       {activeTab==='dealers' && (
         <div>
           {!summary?.by_dealer?.length
-            ? <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:40, textAlign:'center', color:C.muted }}>
+            ? <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:40, textAlign:'center', color:C.muted }}>
                 <div style={{ fontSize:36, marginBottom:12 }}>🏪</div>No purchase data yet
               </div>
             : summary.by_dealer.map((d,i)=>{
@@ -632,7 +634,7 @@ export default function DealerPurchases() {
                 const months = summary.by_month?.filter(m=>m.dealer_name===d.dealer_name) || [];
                 const maxM   = Math.max(...months.map(m=>parseFloat(m.total)||0),1);
                 return (
-                  <div key={d.dealer_name} style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'18px 20px', marginBottom:12 }}>
+                  <div key={d.dealer_name} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'18px 20px', marginBottom:12 }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                         <div style={{ width:44, height:44, borderRadius:10, background:color+'20', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>🏪</div>
@@ -642,7 +644,7 @@ export default function DealerPurchases() {
                         </div>
                       </div>
                       <div style={{ textAlign:'right' }}>
-                        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:C.navy }}>{fmt(d.total_spent)}</div>
+                        <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color:C.navy }}>{fmt(d.total_spent)}</div>
                         <div style={{ fontSize:12, color:C.muted }}>{pct.toFixed(1)}% of total spend</div>
                       </div>
                     </div>
@@ -685,13 +687,13 @@ export default function DealerPurchases() {
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
 
           {/* Spend chart */}
-          <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:'18px 20px', gridColumn:'1/-1' }}>
+          <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'18px 20px', gridColumn:'1/-1' }}>
             <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:14 }}>Monthly Spend — Last 6 Months</div>
             <SpendChart byMonth={summary?.by_month||[]} dealers={summary?.by_dealer||[]}/>
           </div>
 
           {/* By category */}
-          <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
+          <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
             <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, fontSize:14, fontWeight:700, color:C.navy }}>By Category</div>
             {!summary?.by_category?.length
               ? <div style={{ padding:24, textAlign:'center', color:C.muted, fontSize:13 }}>No data</div>
@@ -714,7 +716,7 @@ export default function DealerPurchases() {
           </div>
 
           {/* Pending payments */}
-          <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
+          <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
             <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, fontSize:14, fontWeight:700, color:C.navy }}>
               ⏳ Pending Payments
             </div>

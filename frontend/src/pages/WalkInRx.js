@@ -16,9 +16,9 @@ const C = {
   warning: 'var(--warning)',
   info:    'var(--info)',
 };
-const INP = { padding:'9px 12px', border:`1.5px solid var(--border)`, borderRadius:'var(--r-sm)', fontSize:13, fontFamily:"var(--font-body)", outline:'none', background:'var(--bg-sunken)', color:'var(--navy)', width:'100%', boxSizing:'border-box' };
+const INP = { padding:'9px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'var(--font-body)', outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
 const SEL = { ...INP, cursor:'pointer' };
-const LBL = { fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:'var(--text-muted)', marginBottom:4, display:'block' };
+const LBL = { fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:4, display:'block' };
 const fmt = (n) => n ? 'Rs. '+parseFloat(n).toLocaleString('en-LK',{minimumFractionDigits:0}) : '—';
 const fmtDate = (d) => new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
 
@@ -115,10 +115,10 @@ export default function WalkInRx() {
   }));
 
   return (
-    <div style={{ fontFamily:"var(--font-body)" }}>
+    <div style={{ fontFamily:'var(--font-body)' }}>
 
       {toast && (
-        <div style={{ position:'fixed', bottom:24, right:24, background:'var(--navy)', color:'white', padding:'12px 20px', borderRadius:'var(--r-lg)', fontSize:14, fontWeight:600, borderLeft:`4px solid var(--gold)`, zIndex:500 }}>
+        <div style={{ position:'fixed', bottom:24, right:24, background:C.navy, color:'white', padding:'12px 20px', borderRadius:12, fontSize:14, fontWeight:600, borderLeft:`4px solid ${C.gold}`, zIndex:500 }}>
           {toast}
         </div>
       )}
@@ -126,11 +126,11 @@ export default function WalkInRx() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h1 style={{ fontFamily:"var(--font-display)", fontSize:24, color:'var(--navy)', margin:0 }}>👁️ Walk-in Refraction</h1>
-          <p style={{ fontSize:13, color:'var(--text-muted)', margin:'4px 0 0' }}>Rx records with no order — for customers who just did refraction</p>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:24, color:C.navy, margin:0 }}>👁️ Walk-in Refraction</h1>
+          <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Rx records with no order — for customers who just did refraction</p>
         </div>
         <button onClick={()=>{ setShowAdd(s=>!s); setError(''); }}
-          style={{ padding:'9px 20px', background:showAdd?'var(--bg-sunken)':'var(--navy)', color:showAdd?'var(--text-muted)':'white', border:showAdd?`1.5px solid var(--border)`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+          style={{ padding:'9px 20px', background:showAdd?C.cream:C.navy, color:showAdd?C.muted:'white', border:showAdd?`1.5px solid ${C.border}`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
           {showAdd ? '✕ Cancel' : '+ New Rx Record'}
         </button>
       </div>
@@ -139,23 +139,23 @@ export default function WalkInRx() {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:10, marginBottom:16 }}>
         {[
           { l:'Total Records',   v:records.length,                                                           dark:true },
-          { l:'Need Follow-up',  v:records.filter(r=>r.follow_up&&!r.followed_up).length,                   c:'var(--danger)' },
+          { l:'Need Follow-up',  v:records.filter(r=>r.follow_up&&!r.followed_up).length,                   c:C.danger },
           { l:'With Quote',      v:records.filter(r=>r.quoted_price).length,                                 c:'#2563eb' },
-          { l:'This Month',      v:records.filter(r=>r.created_at?.slice(0,7)===new Date().toISOString().slice(0,7)).length, c:'var(--success)' },
+          { l:'This Month',      v:records.filter(r=>r.created_at?.slice(0,7)===new Date().toISOString().slice(0,7)).length, c:C.success },
         ].map(s=>(
-          <div key={s.l} style={{ background:s.dark?'var(--navy)':'white', border:`1px solid ${s.dark?'var(--navy)':'var(--border)'}`, borderRadius:'var(--r-md)', padding:'12px 14px', textAlign:'center' }}>
-            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?'var(--gold)':'var(--text-muted)', marginBottom:4 }}>{s.l}</div>
-            <div style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:700, color:s.dark?'white':s.c||'var(--navy)' }}>{s.v}</div>
+          <div key={s.l} style={{ background:s.dark?C.navy:'white', border:`1px solid ${s.dark?C.navy:C.border}`, borderRadius:10, padding:'12px 14px', textAlign:'center' }}>
+            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?C.gold:C.muted, marginBottom:4 }}>{s.l}</div>
+            <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color:s.dark?'white':s.c||C.navy }}>{s.v}</div>
           </div>
         ))}
       </div>
 
       {/* Add form */}
       {showAdd && (
-        <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:22, marginBottom:20 }}>
-          <div style={{ fontSize:15, fontWeight:700, color:'var(--navy)', marginBottom:16 }}>New Walk-in Rx Record</div>
+        <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:22, marginBottom:20 }}>
+          <div style={{ fontSize:15, fontWeight:700, color:C.navy, marginBottom:16 }}>New Walk-in Rx Record</div>
 
-          {error && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:'var(--danger)', borderRadius:'var(--r-sm)', padding:'10px 13px', fontSize:13, marginBottom:14 }}>{error}</div>}
+          {error && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:8, padding:'10px 13px', fontSize:13, marginBottom:14 }}>{error}</div>}
 
           {/* Customer info */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 80px', gap:10, marginBottom:16 }}>
@@ -178,8 +178,8 @@ export default function WalkInRx() {
 
           {/* Rx tables */}
           {[{label:'Right Eye (R)', p:'r'}, {label:'Left Eye (L)', p:'l'}].map(eye=>(
-            <div key={eye.p} style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-md)', padding:14, marginBottom:10 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:'var(--navy)', marginBottom:10 }}>{eye.label}</div>
+            <div key={eye.p} style={{ background:C.cream, borderRadius:10, padding:14, marginBottom:10 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:10 }}>{eye.label}</div>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
 
                 {/* SPH */}
@@ -250,7 +250,7 @@ export default function WalkInRx() {
           ))}
 
           <button onClick={copyEye}
-            style={{ background:'var(--bg-sunken)', border:`1px solid var(--border)`, borderRadius:7, padding:'5px 14px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)', marginBottom:14 }}>
+            style={{ background:C.cream, border:`1px solid ${C.border}`, borderRadius:7, padding:'5px 14px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted, marginBottom:14 }}>
             ↓ Copy Right Eye to Left
           </button>
 
@@ -263,7 +263,7 @@ export default function WalkInRx() {
           </div>
 
           {/* Quote section */}
-          <div style={{ background:'#f0f9ff', border:`1px solid #bae6fd`, borderRadius:'var(--r-lg)', padding:'14px 16px', marginBottom:16 }}>
+          <div style={{ background:'#f0f9ff', border:`1px solid #bae6fd`, borderRadius:12, padding:'14px 16px', marginBottom:16 }}>
             <div style={{ fontSize:13, fontWeight:700, color:'#0369a1', marginBottom:12 }}>
               💰 Price Quote (optional)
             </div>
@@ -289,16 +289,16 @@ export default function WalkInRx() {
           {/* Follow up toggle */}
           <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', marginBottom:18 }}>
             <div onClick={()=>setForm(f=>({...f,follow_up:!f.follow_up}))}
-              style={{ width:44, height:24, borderRadius:'var(--r-lg)', background:form.follow_up?'var(--navy)':'var(--border)', position:'relative', cursor:'pointer', transition:'background .2s', flexShrink:0 }}>
-              <div style={{ position:'absolute', top:3, left:form.follow_up?23:3, width:18, height:18, borderRadius:'50%', background:'var(--bg-surface)', transition:'left .2s' }}/>
+              style={{ width:44, height:24, borderRadius:12, background:form.follow_up?C.navy:C.border, position:'relative', cursor:'pointer', transition:'background .2s', flexShrink:0 }}>
+              <div style={{ position:'absolute', top:3, left:form.follow_up?23:3, width:18, height:18, borderRadius:'50%', background:C.surface, transition:'left .2s' }}/>
             </div>
-            <span style={{ fontSize:14, color:'var(--navy)', fontWeight:500 }}>
+            <span style={{ fontSize:14, color:C.navy, fontWeight:500 }}>
               Mark for follow-up call
             </span>
           </label>
 
           <button onClick={handleSave} disabled={saving}
-            style={{ padding:'11px 28px', background:saving?'var(--text-muted)':'var(--navy)', color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+            style={{ padding:'11px 28px', background:saving?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
             {saving ? 'Saving...' : '💾 Save Rx Record'}
           </button>
         </div>
@@ -311,30 +311,30 @@ export default function WalkInRx() {
           style={{ ...INP, flex:1, minWidth:200 }}/>
         <button onClick={()=>setFilterFU(s=>!s)}
           style={{ padding:'9px 14px', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-            border:`1.5px solid ${filterFU?'var(--danger)':'var(--border)'}`,
+            border:`1.5px solid ${filterFU?C.danger:C.border}`,
             background:filterFU?'#fee2e2':'white',
-            color:filterFU?'var(--danger)':'var(--text-muted)' }}>
+            color:filterFU?C.danger:C.muted }}>
           {filterFU ? '🔔 Follow-ups only ✓' : '🔔 Follow-ups'}
         </button>
       </div>
 
       {/* Records list */}
       {loading
-        ? <div style={{ textAlign:'center', padding:40, color:'var(--text-muted)' }}>Loading...</div>
+        ? <div style={{ textAlign:'center', padding:40, color:C.muted }}>Loading...</div>
         : !records.length
-          ? <div style={{ textAlign:'center', padding:60, color:'var(--text-muted)' }}>
+          ? <div style={{ textAlign:'center', padding:60, color:C.muted }}>
               <div style={{ fontSize:48, marginBottom:12 }}>👁️</div>
-              <div style={{ fontSize:15, fontWeight:600, color:'var(--navy)', marginBottom:6 }}>No records yet</div>
+              <div style={{ fontSize:15, fontWeight:600, color:C.navy, marginBottom:6 }}>No records yet</div>
               <div style={{ fontSize:13 }}>Click "+ New Rx Record" to save the first walk-in refraction</div>
             </div>
           : records.map(rx=>(
             <div key={rx.id} onClick={()=>setSelected(selected?.id===rx.id?null:rx)}
-              style={{ background:'var(--bg-surface)', border:`1.5px solid ${selected?.id===rx.id?'var(--gold)':rx.follow_up&&!rx.followed_up?'#fca5a5':'var(--border)'}`, borderRadius:'var(--r-lg)', padding:'14px 18px', marginBottom:10, cursor:'pointer', transition:'border-color .15s' }}>
+              style={{ background:C.surface, border:`1.5px solid ${selected?.id===rx.id?C.gold:rx.follow_up&&!rx.followed_up?'#fca5a5':C.border}`, borderRadius:14, padding:'14px 18px', marginBottom:10, cursor:'pointer', transition:'border-color .15s' }}>
 
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
                 <div>
-                  <div style={{ fontSize:15, fontWeight:700, color:'var(--navy)', marginBottom:2 }}>{rx.customer_name}</div>
-                  <div style={{ fontSize:12, color:'var(--text-muted)' }}>
+                  <div style={{ fontSize:15, fontWeight:700, color:C.navy, marginBottom:2 }}>{rx.customer_name}</div>
+                  <div style={{ fontSize:12, color:C.muted }}>
                     {rx.phone && `📞 ${rx.phone}`}
                     {rx.age && ` · Age ${rx.age}`}
                     {' · '}{fmtDate(rx.created_at)}
@@ -347,12 +347,12 @@ export default function WalkInRx() {
                     </span>
                   )}
                   {rx.follow_up && !rx.followed_up && (
-                    <span style={{ background:'#fee2e2', color:'var(--danger)', fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20 }}>
+                    <span style={{ background:'#fee2e2', color:C.danger, fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20 }}>
                       🔔 Follow-up needed
                     </span>
                   )}
                   {rx.followed_up && (
-                    <span style={{ background:'#dcfce7', color:'var(--success)', fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20 }}>
+                    <span style={{ background:'#dcfce7', color:C.success, fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20 }}>
                       ✅ Followed up
                     </span>
                   )}
@@ -360,23 +360,23 @@ export default function WalkInRx() {
               </div>
 
               {/* Rx summary */}
-              <div style={{ display:'flex', gap:12, fontSize:12, color:'var(--text-muted)', flexWrap:'wrap' }}>
-                {rx.r_sph && <span>R: <b style={{color:'var(--navy)'}}>{rx.r_sph}</b>{rx.r_cyl&&rx.r_cyl!=='0.00'?` / ${rx.r_cyl} × ${rx.r_axis}`:''}</span>}
-                {rx.l_sph && <span>L: <b style={{color:'var(--navy)'}}>{rx.l_sph}</b>{rx.l_cyl&&rx.l_cyl!=='0.00'?` / ${rx.l_cyl} × ${rx.l_axis}`:''}</span>}
-                {rx.r_add && <span>ADD: <b style={{color:'var(--navy)'}}>{rx.r_add}</b></span>}
+              <div style={{ display:'flex', gap:12, fontSize:12, color:C.muted, flexWrap:'wrap' }}>
+                {rx.r_sph && <span>R: <b style={{color:C.navy}}>{rx.r_sph}</b>{rx.r_cyl&&rx.r_cyl!=='0.00'?` / ${rx.r_cyl} × ${rx.r_axis}`:''}</span>}
+                {rx.l_sph && <span>L: <b style={{color:C.navy}}>{rx.l_sph}</b>{rx.l_cyl&&rx.l_cyl!=='0.00'?` / ${rx.l_cyl} × ${rx.l_axis}`:''}</span>}
+                {rx.r_add && <span>ADD: <b style={{color:C.navy}}>{rx.r_add}</b></span>}
                 {rx.notes && <span style={{ fontStyle:'italic' }}>💬 {rx.notes.slice(0,60)}{rx.notes.length>60?'...':''}</span>}
               </div>
 
               {/* Expanded detail */}
               {selected?.id===rx.id && (
-                <div style={{ marginTop:14, paddingTop:14, borderTop:`1px solid var(--border)` }}>
+                <div style={{ marginTop:14, paddingTop:14, borderTop:`1px solid ${C.border}` }}>
 
                   {/* Full Rx table */}
                   <div style={{ overflowX:'auto', marginBottom:14 }}>
                     <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
                       <thead>
                         <tr>{['Eye','SPH','CYL','AXIS','ADD','V/A','PD'].map(h=>(
-                          <th key={h} style={{ background:'var(--bg-sunken)', padding:'6px 9px', textAlign:'center', fontSize:10, fontWeight:700, textTransform:'uppercase', color:'var(--text-muted)', border:`1px solid var(--border)` }}>{h}</th>
+                          <th key={h} style={{ background:C.cream, padding:'6px 9px', textAlign:'center', fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, border:`1px solid ${C.border}` }}>{h}</th>
                         ))}</tr>
                       </thead>
                       <tbody>
@@ -385,9 +385,9 @@ export default function WalkInRx() {
                           { eye:'Left (L)',  sph:rx.l_sph, cyl:rx.l_cyl, axis:rx.l_axis, add:rx.l_add, va:rx.l_va, pd:rx.l_pd },
                         ].map(row=>(
                           <tr key={row.eye}>
-                            <td style={{ background:'var(--bg-sunken)', padding:'7px 9px', fontWeight:700, fontSize:12, border:`1px solid var(--border)`, color:'var(--navy)' }}>{row.eye}</td>
+                            <td style={{ background:C.cream, padding:'7px 9px', fontWeight:700, fontSize:12, border:`1px solid ${C.border}`, color:C.navy }}>{row.eye}</td>
                             {[row.sph, row.cyl, row.axis, row.add, row.va, row.pd].map((v,i)=>(
-                              <td key={i} style={{ padding:'7px 9px', textAlign:'center', border:`1px solid var(--border)`, fontSize:13, fontWeight:600, color:'var(--navy)', background:'var(--bg-surface)' }}>{v||'—'}</td>
+                              <td key={i} style={{ padding:'7px 9px', textAlign:'center', border:`1px solid ${C.border}`, fontSize:13, fontWeight:600, color:C.navy, background:C.surface }}>{v||'—'}</td>
                             ))}
                           </tr>
                         ))}
@@ -399,14 +399,14 @@ export default function WalkInRx() {
                   {(rx.quoted_frame||rx.quoted_lens||rx.quoted_price) && (
                     <div style={{ background:'#eff6ff', border:`1px solid #bae6fd`, borderRadius:9, padding:'10px 14px', marginBottom:12, fontSize:13 }}>
                       <div style={{ fontWeight:700, color:'#1e40af', marginBottom:5 }}>Price Quote</div>
-                      {rx.quoted_frame && <div style={{ color:'var(--navy)' }}>Frame: {rx.quoted_frame}</div>}
-                      {rx.quoted_lens  && <div style={{ color:'var(--navy)' }}>Lens: {rx.quoted_lens}</div>}
+                      {rx.quoted_frame && <div style={{ color:C.navy }}>Frame: {rx.quoted_frame}</div>}
+                      {rx.quoted_lens  && <div style={{ color:C.navy }}>Lens: {rx.quoted_lens}</div>}
                       {rx.quoted_price && <div style={{ color:'#1e40af', fontWeight:700, fontSize:15, marginTop:4 }}>Total: {fmt(rx.quoted_price)}</div>}
                     </div>
                   )}
 
                   {rx.notes && (
-                    <div style={{ background:'#fef9f0', borderRadius:'var(--r-sm)', padding:'8px 12px', fontSize:12, color:'#92400e', marginBottom:12 }}>
+                    <div style={{ background:'#fef9f0', borderRadius:8, padding:'8px 12px', fontSize:12, color:'#92400e', marginBottom:12 }}>
                       💬 {rx.notes}
                     </div>
                   )}
@@ -423,7 +423,7 @@ export default function WalkInRx() {
                       });
                       window.location.href = '/orders/new?' + params.toString();
                     }}
-                      style={{ padding:'9px 18px', background:'var(--navy)', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                      style={{ padding:'9px 18px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                       ➕ Convert to Order
                     </button>
 
@@ -439,14 +439,14 @@ export default function WalkInRx() {
                     {/* Mark followed up */}
                     {rx.follow_up && !rx.followed_up && (
                       <button onClick={async(e)=>{e.stopPropagation(); await api(`/walkin-rx/${rx.id}`,'PATCH',{followed_up:true}); showToast('Marked as followed up'); load();}}
-                        style={{ padding:'9px 16px', background:'#dcfce7', color:'var(--success)', border:`1px solid #86efac`, borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                        style={{ padding:'9px 16px', background:'#dcfce7', color:C.success, border:`1px solid #86efac`, borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                         ✅ Mark Followed Up
                       </button>
                     )}
 
                     {/* Delete */}
                     <button onClick={async(e)=>{e.stopPropagation(); if(!window.confirm('Delete this record?'))return; await api(`/walkin-rx/${rx.id}`,'DELETE'); setSelected(null); showToast('Deleted'); load();}}
-                      style={{ padding:'9px 14px', background:'#fee2e2', color:'var(--danger)', border:`1px solid #fca5a5`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>
+                      style={{ padding:'9px 14px', background:'#fee2e2', color:C.danger, border:`1px solid #fca5a5`, borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>
                       🗑️ Delete
                     </button>
                   </div>

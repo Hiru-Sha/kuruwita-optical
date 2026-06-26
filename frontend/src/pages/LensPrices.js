@@ -6,10 +6,19 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 
 const C = {
-  navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
-  border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f',
-  danger:'#c0392b', white:'#ffffff', blue:'#2563eb',
-  purple:'#7c3aed', teal:'#0d9488', orange:'#c2410c',
+  navy:    'var(--navy)',
+  gold:    'var(--gold)',
+  cream:   'var(--bg-sunken)',
+  surface: 'var(--bg-surface)',
+  border:  'var(--border)',
+  muted:   'var(--text-muted)',
+  success: 'var(--success)',
+  danger:  'var(--danger)',
+  warning: 'var(--warning)',
+  info:    'var(--info)',
+
+  blue: '#2563eb',
+  purple: '#7c3aed',
 };
 
 const fmtMoney = (n) => n != null && n !== '' ? 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0}) : '—';
@@ -23,7 +32,7 @@ const POWER_RANGES= ['Below -12.00','Below -17.00','Up to -19.00','Over -19.00',
 
 const INP = {
   padding:'9px 12px', border:`1.5px solid ${C.border}`, borderRadius:8,
-  fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:'none',
+  fontSize:13, fontFamily:'var(--font-body)', outline:'none',
   background:C.cream, color:C.navy, width:'100%',
 };
 const SEL = { ...INP, cursor:'pointer' };
@@ -449,22 +458,22 @@ export default function LensPrices() {
   }), [refFiltered]);
 
   // ── Shared style helpers ──
-  const INP_S = { padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy };
+  const INP_S = { padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'var(--font-body)', outline:'none', background:C.cream, color:C.navy };
 
   // ═══════════════════════════════════════════════════════════════════════════
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:'var(--font-body)' }}>
 
       {/* ── Top header ── */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, flexWrap:'wrap', gap:8 }}>
         <div>
-          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:0 }}>🔬 Lens Price List</h1>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:24, color:C.navy, margin:0 }}>🔬 Lens Price List</h1>
           <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Negombo Optical · Murano & Generic + Supplier Reference</p>
         </div>
       </div>
 
       {/* ── Main tab switcher ── */}
-      <div style={{ display:'flex', gap:0, background:'white', borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden', marginBottom:18, width:'fit-content' }}>
+      <div style={{ display:'flex', gap:0, background:C.surface, borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden', marginBottom:18, width:'fit-content' }}>
         {[
           { key:'my-prices',    label:'My Prices',          sub:'Murano & Generic'    },
           { key:'learned',      label:'Learned from Orders', sub:'Auto-saved from your orders' },
@@ -522,7 +531,7 @@ export default function LensPrices() {
               </div>
             );
             return (
-              <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
+              <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
                 {/* Header row */}
                 <div style={{ display:'grid', gridTemplateColumns:'1.8fr 1.5fr 0.7fr 1fr 1fr 1fr 0.5fr', gap:0, padding:'9px 14px', background:C.cream }}>
                   {['Lens Type','Coating','Index','Supplier','Buy Price','Sell Price',''].map(h=>(
@@ -585,14 +594,14 @@ export default function LensPrices() {
             ].map(s=>(
               <div key={s.l} style={{ background:s.dark?C.navy:'white', border:`1px solid ${C.border}`, borderRadius:10, padding:'12px 14px', textAlign:'center' }}>
                 <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?C.gold:C.muted, marginBottom:4 }}>{s.l}</div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
+                <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
               </div>
             ))}
           </div>
 
           {/* Add/Edit form */}
           {showAdd && (
-            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:22, marginBottom:20 }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:22, marginBottom:20 }}>
               <h3 style={{ fontSize:15, fontWeight:700, color:C.navy, marginBottom:18 }}>
                 {editing ? '✏️ Edit Lens Price' : '➕ Add New Lens Price'}
               </h3>
@@ -667,7 +676,7 @@ export default function LensPrices() {
           )}
 
           {/* Lens type tabs */}
-          <div style={{ display:'flex', gap:0, borderBottom:`1px solid ${C.border}`, marginBottom:16, overflowX:'auto', background:'white', borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
+          <div style={{ display:'flex', gap:0, borderBottom:`1px solid ${C.border}`, marginBottom:16, overflowX:'auto', background:C.surface, borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
             {['Single Vision','Progressive','Bifocal','Office Lens','Reading (ready)','All'].map(t=>(
               <button key={t} onClick={()=>setActiveTab(t==='All'?'':t)}
                 style={{ padding:'11px 16px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:(activeTab===t||(t==='All'&&!activeTab))?C.navy:C.muted, borderBottom:`2.5px solid ${(activeTab===t||(t==='All'&&!activeTab))?C.gold:'transparent'}`, marginBottom:-1, transition:'all .15s' }}>
@@ -702,7 +711,7 @@ export default function LensPrices() {
           {loading ? <div style={{ textAlign:'center', padding:40, color:C.muted }}>Loading prices...</div>
            : !prices.length ? <Empty msg="No lens prices found for this filter" />
            : (
-            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 80px 100px 120px 120px 110px 110px 80px 90px', gap:0, background:C.cream, padding:'9px 14px', borderBottom:`1px solid ${C.border}` }}>
                 {['Lens Details','Index','Color','Coating / UV','Series','Buy Price','Sell Price','Fitting','Actions'].map(h=>(
                   <div key={h} style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', color:C.muted }}>{h}</div>
@@ -770,7 +779,7 @@ export default function LensPrices() {
             ].map(s=>(
               <div key={s.l} style={{ background:s.dark?C.navy:'white', border:`1px solid ${C.border}`, borderRadius:10, padding:'12px 14px', textAlign:'center' }}>
                 <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?C.gold:C.muted, marginBottom:4 }}>{s.l}</div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
+                <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
               </div>
             ))}
           </div>
@@ -816,7 +825,7 @@ export default function LensPrices() {
 
           {/* Reference table */}
           {!refFiltered.length ? <Empty msg="No supplier prices match your filters" /> : (
-            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
               <div style={{ display:'grid', gridTemplateColumns:'140px 1fr 65px 100px 140px 110px 1fr', gap:0, background:C.cream, padding:'9px 14px', borderBottom:`1px solid ${C.border}` }}>
                 {['Supplier','Brand / Series','Index','Color','Coating','Sell Price','Power Range / Notes'].map(h=>(
                   <div key={h} style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', color:C.muted }}>{h}</div>

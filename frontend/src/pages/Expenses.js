@@ -27,9 +27,9 @@ const toDate  = (d) => new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekd
 const today   = () => new Date().toISOString().split('T')[0];
 const thisMonth=() => new Date().toISOString().slice(0,7);
 
-const INP = { padding:'10px 13px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:14, fontFamily:"var(--font-body)", outline:'none', background:'var(--bg-sunken)', color:'var(--navy)', width:'100%' };
+const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:C.cream, color:C.navy, width:'100%' };
 const SEL = { ...INP, cursor:'pointer' };
-const LBL = { fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:'var(--text-muted)', marginBottom:5, display:'block' };
+const LBL = { fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, marginBottom:5, display:'block' };
 
 const EXPENSE_CATS = [
   { key:'Rent',            icon:'🏠', color:'#7c3aed' },
@@ -38,12 +38,12 @@ const EXPENSE_CATS = [
   { key:'Salary',          icon:'👤', color:'#059669' },
   { key:'Lens Purchase',   icon:'🔬', color:'#0891b2' },
   { key:'Frame Purchase',  icon:'🕶️', color:'#6d28d9' },
-  { key:'Transport',       icon:'🚗', color:'var(--danger)' },
+  { key:'Transport',       icon:'🚗', color:'#dc2626' },
   { key:'Maintenance',     icon:'🔧', color:'#b45309' },
   { key:'Stationary',      icon:'📝', color:'#0f766e' },
   { key:'Food & Tea',      icon:'☕', color:'#92400e' },
   { key:'Phone & Internet',icon:'📱', color:'#1d4ed8' },
-  { key:'Other',           icon:'📦', color:'var(--text-muted)' },
+  { key:'Other',           icon:'📦', color:'#6b7280' },
 ];
 const BANKS = ['Pan Asia Bank','People\'s Bank','Bank of Ceylon (BOC)','Commercial Bank','HNB','Sampath Bank','NSB','Seylan Bank','Other'];
 const _getCat = (key) => EXPENSE_CATS.find(c=>c.key===key) || EXPENSE_CATS[EXPENSE_CATS.length-1];
@@ -65,12 +65,12 @@ function apiDel(path) {
 }
 
 // ── Small stat box ────────────────────────────────────────────
-function StatBox({ label, value, color='var(--navy)', dark=false, sub }) {
+function StatBox({ label, value, color=C.navy, dark=false, sub }) {
   return (
-    <div style={{ background:dark?'var(--navy)':'white', border:`1px solid ${dark?'var(--navy)':'var(--border)'}`, borderRadius:'var(--r-lg)', padding:'14px 16px', textAlign:'center' }}>
-      <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:dark?'var(--gold)':'var(--text-muted)', marginBottom:5 }}>{label}</div>
-      <div style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:700, color:dark?'white':color }}>{value}</div>
-      {sub && <div style={{ fontSize:11, color:dark?'#ede9e0':'var(--text-muted)', marginTop:3 }}>{sub}</div>}
+    <div style={{ background:dark?C.navy:'white', border:`1px solid ${dark?C.navy:C.border}`, borderRadius:12, padding:'14px 16px', textAlign:'center' }}>
+      <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:dark?C.gold:C.muted, marginBottom:5 }}>{label}</div>
+      <div style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:700, color:dark?'white':color }}>{value}</div>
+      {sub && <div style={{ fontSize:11, color:dark?'#ede9e0':C.muted, marginTop:3 }}>{sub}</div>}
     </div>
   );
 }
@@ -395,11 +395,11 @@ export default function Expenses() {
   ];
 
   return (
-    <div style={{ fontFamily:"var(--font-body)", maxWidth:1100 }}>
+    <div style={{ fontFamily:'var(--font-body)', maxWidth:1100 }}>
 
       {/* Toast */}
       {toast && (
-        <div style={{ position:'fixed', bottom:24, right:24, background:'var(--navy)', color:'white', padding:'12px 20px', borderRadius:'var(--r-lg)', fontSize:14, fontWeight:600, borderLeft:`4px solid var(--gold)`, zIndex:500, boxShadow:'0 4px 20px rgba(0,0,0,.2)' }}>
+        <div style={{ position:'fixed', bottom:24, right:24, background:C.navy, color:'white', padding:'12px 20px', borderRadius:12, fontSize:14, fontWeight:600, borderLeft:`4px solid ${C.gold}`, zIndex:500, boxShadow:'0 4px 20px rgba(0,0,0,.2)' }}>
           {toast}
         </div>
       )}
@@ -407,32 +407,32 @@ export default function Expenses() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h1 style={{ fontFamily:"var(--font-display)", fontSize:24, color:'var(--navy)', margin:0 }}>💸 Expenses & Cash</h1>
-          <p style={{ fontSize:13, color:'var(--text-muted)', margin:'4px 0 0' }}>Daily cash flow, expenses, and bank deposits</p>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:24, color:C.navy, margin:0 }}>💸 Expenses & Cash</h1>
+          <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Daily cash flow, expenses, and bank deposits</p>
         </div>
         <div style={{ display:'flex', gap:8 }}>
           {activeTab==='daily' && (
             <>
               <input type="date" value={viewDate} onChange={e=>setViewDate(e.target.value)}
-                style={{ padding:'8px 12px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)', color:'var(--navy)' }}/>
+                style={{ padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy }}/>
               <button onClick={()=>setViewDate(today())}
-                style={{ padding:'8px 14px', background:'var(--bg-sunken)', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>
+                style={{ padding:'8px 14px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
                 Today
               </button>
             </>
           )}
           {(activeTab==='expenses'||activeTab==='deposits') && (
             <input type="month" value={month} onChange={e=>setMonth(e.target.value)}
-              style={{ padding:'8px 12px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)', color:'var(--navy)' }}/>
+              style={{ padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy }}/>
           )}
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display:'flex', borderBottom:`1px solid var(--border)`, marginBottom:20, background:'var(--bg-surface)', borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
+      <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, marginBottom:20, background:C.surface, borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
         {TABS.map(t=>(
           <button key={t.key} onClick={()=>setActiveTab(t.key)}
-            style={{ padding:'12px 20px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:activeTab===t.key?'var(--navy)':'var(--text-muted)', borderBottom:`2.5px solid ${activeTab===t.key?'var(--gold)':'transparent'}`, marginBottom:-1 }}>
+            style={{ padding:'12px 20px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:activeTab===t.key?C.navy:C.muted, borderBottom:`2.5px solid ${activeTab===t.key?C.gold:'transparent'}`, marginBottom:-1 }}>
             {t.label}
           </button>
         ))}
@@ -441,31 +441,31 @@ export default function Expenses() {
       {/* ══════════════ DAILY CASH FLOW ══════════════════════ */}
       {activeTab==='daily' && (
         <div>
-          <div style={{ fontFamily:"var(--font-display)", fontSize:16, color:'var(--navy)', marginBottom:16 }}>
+          <div style={{ fontFamily:'var(--font-display)', fontSize:16, color:C.navy, marginBottom:16 }}>
             {toDate(viewDate)}
-            {viewDate===today() && <span style={{ marginLeft:10, background:'var(--gold)', color:'var(--navy)', fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:'var(--r-full)', fontFamily:"var(--font-body)" }}>Today</span>}
+            {viewDate===today() && <span style={{ marginLeft:10, background:C.gold, color:C.navy, fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:20, fontFamily:'var(--font-body)' }}>Today</span>}
           </div>
 
           {/* Summary row */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
-            <StatBox label="Cash In"      value={fmt(dailyIncome)}        color={'var(--success)'}  sub="Orders + Quick sales" />
-            <StatBox label="Expenses Out" value={fmt(totalDailyExp)}      color={'var(--danger)'}   sub={`${dailyExpenses.length} expense${dailyExpenses.length!==1?'s':''}`} />
+            <StatBox label="Cash In"      value={fmt(dailyIncome)}        color={C.success}  sub="Orders + Quick sales" />
+            <StatBox label="Expenses Out" value={fmt(totalDailyExp)}      color={C.danger}   sub={`${dailyExpenses.length} expense${dailyExpenses.length!==1?'s':''}`} />
             <StatBox label="Deposited"    value={fmt(totalDailyDeposit)}  color='#2563eb'    sub={`${dailyDeposits.length} deposit${dailyDeposits.length!==1?'s':''}`} />
             <StatBox label="Cash in Hand" value={fmt(cashInHand)}
-              color={cashInHand>=0?'var(--success)':'var(--danger)'}
+              color={cashInHand>=0?C.success:C.danger}
               dark={cashInHand>=0}
               sub={cashInHand<0?'⚠️ Check entries':'Ready to deposit'} />
           </div>
 
           {/* Cash flow formula */}
-          <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-lg)', padding:'12px 18px', marginBottom:20, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', fontSize:14 }}>
-            <span style={{ color:'var(--success)', fontWeight:700 }}>{fmt(dailyIncome)} cash in</span>
-            <span style={{ color:'var(--text-muted)' }}>−</span>
-            <span style={{ color:'var(--danger)', fontWeight:700 }}>{fmt(totalDailyExp)} expenses</span>
-            <span style={{ color:'var(--text-muted)' }}>−</span>
+          <div style={{ background:C.cream, borderRadius:12, padding:'12px 18px', marginBottom:20, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', fontSize:14 }}>
+            <span style={{ color:C.success, fontWeight:700 }}>{fmt(dailyIncome)} cash in</span>
+            <span style={{ color:C.muted }}>−</span>
+            <span style={{ color:C.danger, fontWeight:700 }}>{fmt(totalDailyExp)} expenses</span>
+            <span style={{ color:C.muted }}>−</span>
             <span style={{ color:'#2563eb', fontWeight:700 }}>{fmt(totalDailyDeposit)} deposited</span>
-            <span style={{ color:'var(--text-muted)' }}>=</span>
-            <span style={{ color:cashInHand>=0?'var(--success)':'var(--danger)', fontWeight:700, fontSize:16 }}>{fmt(cashInHand)} in hand</span>
+            <span style={{ color:C.muted }}>=</span>
+            <span style={{ color:cashInHand>=0?C.success:C.danger, fontWeight:700, fontSize:16 }}>{fmt(cashInHand)} in hand</span>
           </div>
 
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
@@ -473,17 +473,17 @@ export default function Expenses() {
             {/* LEFT: Today's expenses */}
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                <div style={{ fontSize:15, fontWeight:700, color:'var(--navy)' }}>💸 Expenses</div>
+                <div style={{ fontSize:15, fontWeight:700, color:C.navy }}>💸 Expenses</div>
                 <button onClick={()=>{ setExpForm(f=>({...f,date:viewDate})); setShowAddExp(s=>!s); setShowAddDep(false); }}
-                  style={{ padding:'7px 14px', background:showAddExp?'var(--bg-sunken)':'var(--gold)', color:showAddExp?'var(--text-muted)':'var(--navy)', border:showAddExp?`1.5px solid var(--border)`:'none', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  style={{ padding:'7px 14px', background:showAddExp?C.cream:C.gold, color:showAddExp?C.muted:C.navy, border:showAddExp?`1.5px solid ${C.border}`:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                   {showAddExp?'✕ Cancel':'+ Add'}
                 </button>
               </div>
 
               {/* Add expense form */}
               {showAddExp && (
-                <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:16, marginBottom:14 }}>
-                  {expError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:'var(--danger)', borderRadius:'var(--r-sm)', padding:'8px 12px', fontSize:12, marginBottom:10 }}>⚠️ {expError}</div>}
+                <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:16, marginBottom:14 }}>
+                  {expError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:8, padding:'8px 12px', fontSize:12, marginBottom:10 }}>⚠️ {expError}</div>}
 
                   {/* Category quick-pick */}
                   <div style={{ marginBottom:10 }}>
@@ -491,7 +491,7 @@ export default function Expenses() {
                     <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                       {allCats.map(cat=>(
                         <button key={cat.key} onClick={()=>setExpForm(f=>({...f,category:cat.key}))}
-                          style={{ padding:'5px 10px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${expForm.category===cat.key?cat.color:'var(--border)'}`, background:expForm.category===cat.key?cat.color+'18':'white', color:expForm.category===cat.key?cat.color:'var(--text-muted)' }}>
+                          style={{ padding:'5px 10px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${expForm.category===cat.key?cat.color:C.border}`, background:expForm.category===cat.key?cat.color+'18':'white', color:expForm.category===cat.key?cat.color:C.muted }}>
                           {cat.icon} {cat.key}
                         </button>
                       ))}
@@ -518,7 +518,7 @@ export default function Expenses() {
                       <label style={{ ...LBL, color:'#92400e' }}>📝 Expense Name *</label>
                       <input value={customCat} onChange={e=>setCustomCat(e.target.value)}
                         placeholder="e.g. Printing, Donations, Parking, Cleaning..."
-                        style={{ ...INP, border:'1.5px solid #f59e0b', background:'var(--bg-surface)' }}
+                        style={{ ...INP, border:'1.5px solid #f59e0b', background:C.surface }}
                         autoFocus/>
                     </div>
                   )}
@@ -531,35 +531,35 @@ export default function Expenses() {
                   </div>
 
                   <button onClick={handleAddExpense} disabled={savingExp}
-                    style={{ width:'100%', padding:'10px', background:savingExp?'var(--text-muted)':'var(--navy)', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:savingExp?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                    style={{ width:'100%', padding:'10px', background:savingExp?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:savingExp?'not-allowed':'pointer', fontFamily:'inherit' }}>
                     {savingExp?'Saving...':'💾 Save Expense'}
                   </button>
                 </div>
               )}
 
               {/* Expense list */}
-              <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+              <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
                 {!dailyExpenses.length
-                  ? <div style={{ padding:24, textAlign:'center', color:'var(--text-muted)', fontSize:13 }}>
+                  ? <div style={{ padding:24, textAlign:'center', color:C.muted, fontSize:13 }}>
                       <div style={{ fontSize:28, marginBottom:8 }}>✅</div>
                       No expenses recorded for this day
                     </div>
                   : dailyExpenses.map(exp=>{
                       const cat = getCatAll(exp.category);
                       return (
-                        <div key={exp.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderBottom:`1px solid var(--bg-sunken)` }}>
+                        <div key={exp.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderBottom:`1px solid ${C.cream}` }}>
                           <div style={{ width:36, height:36, borderRadius:9, background:cat.color+'15', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
                             {cat.icon}
                           </div>
                           <div style={{ flex:1, minWidth:0 }}>
-                            <div style={{ fontSize:13, fontWeight:600, color:'var(--navy)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{exp.description}</div>
-                            <div style={{ fontSize:11, color:'var(--text-muted)' }}>
-                              <span style={{ background:cat.color+'15', color:cat.color, padding:'1px 7px', borderRadius:'var(--r-full)', fontWeight:600, fontSize:10 }}>{exp.category}</span>
+                            <div style={{ fontSize:13, fontWeight:600, color:C.navy, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{exp.description}</div>
+                            <div style={{ fontSize:11, color:C.muted }}>
+                              <span style={{ background:cat.color+'15', color:cat.color, padding:'1px 7px', borderRadius:20, fontWeight:600, fontSize:10 }}>{exp.category}</span>
                               <span style={{ marginLeft:6 }}>{exp.payment_method==='bank'?'🏦':'💵'}</span>
                             </div>
                           </div>
                           <div style={{ textAlign:'right', flexShrink:0 }}>
-                            <div style={{ fontSize:14, fontWeight:700, color:'var(--danger)' }}>− {fmt(exp.amount)}</div>
+                            <div style={{ fontSize:14, fontWeight:700, color:C.danger }}>− {fmt(exp.amount)}</div>
                             <button onClick={()=>handleDeleteExp(exp.id)} style={{ background:'none', border:'none', color:'#d1d5db', cursor:'pointer', fontSize:11, padding:0, fontFamily:'inherit' }}>🗑️</button>
                           </div>
                         </div>
@@ -567,9 +567,9 @@ export default function Expenses() {
                     })
                 }
                 {dailyExpenses.length>0 && (
-                  <div style={{ padding:'10px 14px', background:'var(--bg-sunken)', display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700 }}>
-                    <span style={{ color:'var(--text-muted)' }}>Total Expenses</span>
-                    <span style={{ color:'var(--danger)' }}>{fmt(totalDailyExp)}</span>
+                  <div style={{ padding:'10px 14px', background:C.cream, display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700 }}>
+                    <span style={{ color:C.muted }}>Total Expenses</span>
+                    <span style={{ color:C.danger }}>{fmt(totalDailyExp)}</span>
                   </div>
                 )}
               </div>
@@ -578,17 +578,17 @@ export default function Expenses() {
             {/* RIGHT: Bank deposits */}
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                <div style={{ fontSize:15, fontWeight:700, color:'var(--navy)' }}>🏦 Bank Deposits</div>
+                <div style={{ fontSize:15, fontWeight:700, color:C.navy }}>🏦 Bank Deposits</div>
                 <button onClick={()=>{ setDepForm(f=>({...f,date:viewDate})); setShowAddDep(s=>!s); setShowAddExp(false); }}
-                  style={{ padding:'7px 14px', background:showAddDep?'var(--bg-sunken)':'#2563eb', color:showAddDep?'var(--text-muted)':'white', border:showAddDep?`1.5px solid var(--border)`:'none', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  style={{ padding:'7px 14px', background:showAddDep?C.cream:'#2563eb', color:showAddDep?C.muted:'white', border:showAddDep?`1.5px solid ${C.border}`:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                   {showAddDep?'✕ Cancel':'🏦 Record Deposit'}
                 </button>
               </div>
 
               {/* Add deposit form */}
               {showAddDep && (
-                <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:16, marginBottom:14 }}>
-                  {depError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:'var(--danger)', borderRadius:'var(--r-sm)', padding:'8px 12px', fontSize:12, marginBottom:10 }}>⚠️ {depError}</div>}
+                <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:16, marginBottom:14 }}>
+                  {depError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:8, padding:'8px 12px', fontSize:12, marginBottom:10 }}>⚠️ {depError}</div>}
 
                   <div style={{ marginBottom:10 }}>
                     <label style={LBL}>Amount Deposited (Rs.) *</label>
@@ -597,7 +597,7 @@ export default function Expenses() {
                     {/* Quick fill from cash in hand */}
                     {cashInHand > 0 && (
                       <button onClick={()=>setDepForm(f=>({...f,amount:String(Math.round(cashInHand))}))}
-                        style={{ marginTop:6, padding:'5px 12px', background:'var(--bg-sunken)', border:`1px solid var(--border)`, borderRadius:7, fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>
+                        style={{ marginTop:6, padding:'5px 12px', background:C.cream, border:`1px solid ${C.border}`, borderRadius:7, fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
                         Fill: {fmt(cashInHand)} (cash in hand)
                       </button>
                     )}
@@ -609,7 +609,7 @@ export default function Expenses() {
                     <div style={{ display:'flex', gap:6 }}>
                       {[['cash','💵 Cash deposit'],['online','📱 Online / Transfer'],['cheque','📋 Cheque from customer']].map(([v,l])=>(
                         <button key={v} onClick={()=>setDepForm(f=>({...f,payment_type:v}))}
-                          style={{ flex:1, padding:'8px 6px', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${depForm.payment_type===v?'#2563eb':'var(--border)'}`, background:depForm.payment_type===v?'#eff6ff':'white', color:depForm.payment_type===v?'#1e40af':'var(--text-muted)', textAlign:'center' }}>
+                          style={{ flex:1, padding:'8px 6px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${depForm.payment_type===v?'#2563eb':C.border}`, background:depForm.payment_type===v?'#eff6ff':'white', color:depForm.payment_type===v?'#1e40af':C.muted, textAlign:'center' }}>
                           {l}
                         </button>
                       ))}
@@ -632,7 +632,7 @@ export default function Expenses() {
 
                   {/* Cheque fields */}
                   {depForm.payment_type === 'cheque' && (
-                    <div style={{ background:'#fffbeb', border:`1px solid #fde68a`, borderRadius:'var(--r-md)', padding:'12px 14px', marginBottom:10 }}>
+                    <div style={{ background:'#fffbeb', border:`1px solid #fde68a`, borderRadius:10, padding:'12px 14px', marginBottom:10 }}>
                       <div style={{ fontSize:12, fontWeight:700, color:'#92400e', marginBottom:10 }}>📋 Cheque Details</div>
                       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                         <div>
@@ -672,32 +672,32 @@ export default function Expenses() {
                   )}
 
                   <button onClick={handleAddDeposit} disabled={savingDep}
-                    style={{ width:'100%', padding:'10px', background:savingDep?'var(--text-muted)':'#2563eb', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:savingDep?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                    style={{ width:'100%', padding:'10px', background:savingDep?C.muted:'#2563eb', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:savingDep?'not-allowed':'pointer', fontFamily:'inherit' }}>
                     {savingDep?'Saving...':'🏦 Save Deposit'}
                   </button>
                 </div>
               )}
 
               {/* Deposit list */}
-              <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+              <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
                 {!dailyDeposits.length
-                  ? <div style={{ padding:24, textAlign:'center', color:'var(--text-muted)', fontSize:13 }}>
+                  ? <div style={{ padding:24, textAlign:'center', color:C.muted, fontSize:13 }}>
                       <div style={{ fontSize:28, marginBottom:8 }}>🏦</div>
                       No deposits recorded for this day
                     </div>
                   : dailyDeposits.map(dep=>(
-                      <div key={dep.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderBottom:`1px solid var(--bg-sunken)` }}>
+                      <div key={dep.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderBottom:`1px solid ${C.cream}` }}>
                         <div style={{ width:36, height:36, borderRadius:9, background:'#dbeafe', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
                           🏦
                         </div>
                         <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontSize:13, fontWeight:600, color:'var(--navy)' }}>
+                          <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>
                             {dep.bank_name||'Bank Deposit'}
-                            {dep.account_no && <span style={{ fontSize:11, color:'var(--text-muted)', marginLeft:8 }}>A/C: {dep.account_no}</span>}
+                            {dep.account_no && <span style={{ fontSize:11, color:C.muted, marginLeft:8 }}>A/C: {dep.account_no}</span>}
                           </div>
-                          <div style={{ fontSize:11, color:'var(--text-muted)', display:'flex', gap:6, flexWrap:'wrap', marginTop:2 }}>
+                          <div style={{ fontSize:11, color:C.muted, display:'flex', gap:6, flexWrap:'wrap', marginTop:2 }}>
                             {dep.payment_type && dep.payment_type!=='cash' && (
-                              <span style={{ background:dep.payment_type==='cheque'?'#fffbeb':'#eff6ff', color:dep.payment_type==='cheque'?'#92400e':'#1e40af', padding:'1px 7px', borderRadius:'var(--r-full)', fontWeight:600, fontSize:10 }}>
+                              <span style={{ background:dep.payment_type==='cheque'?'#fffbeb':'#eff6ff', color:dep.payment_type==='cheque'?'#92400e':'#1e40af', padding:'1px 7px', borderRadius:20, fontWeight:600, fontSize:10 }}>
                                 {dep.payment_type==='cheque'?'📋 Cheque':'📱 Online'}
                               </span>
                             )}
@@ -715,7 +715,7 @@ export default function Expenses() {
                 }
                 {dailyDeposits.length>0 && (
                   <div style={{ padding:'10px 14px', background:'#eff6ff', display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700 }}>
-                    <span style={{ color:'var(--text-muted)' }}>Total Deposited</span>
+                    <span style={{ color:C.muted }}>Total Deposited</span>
                     <span style={{ color:'#2563eb' }}>{fmt(totalDailyDeposit)}</span>
                   </div>
                 )}
@@ -731,7 +731,7 @@ export default function Expenses() {
           {/* Stats */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12, marginBottom:20 }}>
             <StatBox label="Month Total"   value={fmt(summary?.totals?.month_total||0)} dark />
-            <StatBox label="Today"         value={fmt(summary?.totals?.today_total||0)} color={'var(--danger)'} />
+            <StatBox label="Today"         value={fmt(summary?.totals?.today_total||0)} color={C.danger} />
             <StatBox label="Transactions"  value={summary?.totals?.count||0}            color='#2563eb' />
             <StatBox label="Categories"    value={summary?.by_category?.length||0}      color='#7c3aed' />
           </div>
@@ -739,11 +739,11 @@ export default function Expenses() {
           {/* Add button */}
           <div style={{ marginBottom:14, display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
             <button onClick={()=>{ setExpForm(f=>({...f,date:today()})); setShowAddExp(s=>!s); }}
-              style={{ padding:'9px 20px', background:showAddExp?'var(--bg-sunken)':'var(--gold)', color:showAddExp?'var(--text-muted)':'var(--navy)', border:showAddExp?`1.5px solid var(--border)`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              style={{ padding:'9px 20px', background:showAddExp?C.cream:C.gold, color:showAddExp?C.muted:C.navy, border:showAddExp?`1.5px solid ${C.border}`:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               {showAddExp?'✕ Cancel':'+ Add Expense'}
             </button>
             <button onClick={()=>setShowManageCats(s=>!s)}
-              style={{ padding:'9px 16px', background:showManageCats?'var(--bg-sunken)':'#7c3aed', color:showManageCats?'var(--text-muted)':'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              style={{ padding:'9px 16px', background:showManageCats?C.cream:'#7c3aed', color:showManageCats?C.muted:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               {showManageCats?'✕ Close':'⚙️ Manage Categories'}
             </button>
             <div style={{ display:'flex', gap:6 }}>
@@ -753,7 +753,7 @@ export default function Expenses() {
                 { label:'Full Year',  fn:()=>generatePDF('year',  month.slice(0,4)) },
               ].map(btn=>(
                 <button key={btn.label} onClick={btn.fn}
-                  style={{ padding:'9px 14px', background:'var(--bg-surface)', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'var(--navy)' }}>
+                  style={{ padding:'9px 14px', background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>
                   🖨️ {btn.label}
                 </button>
               ))}
@@ -762,7 +762,7 @@ export default function Expenses() {
 
           {/* Manage Categories panel */}
           {showManageCats && (
-            <div style={{ background:'var(--bg-surface)', border:`1.5px solid #7c3aed`, borderRadius:'var(--r-lg)', padding:20, marginBottom:16 }}>
+            <div style={{ background:C.surface, border:`1.5px solid #7c3aed`, borderRadius:14, padding:20, marginBottom:16 }}>
               <div style={{ fontSize:14, fontWeight:700, color:'#7c3aed', marginBottom:14 }}>⚙️ Manage Custom Categories</div>
               {/* Add new category */}
               <div style={{ display:'flex', gap:8, marginBottom:14, alignItems:'flex-end' }}>
@@ -786,30 +786,30 @@ export default function Expenses() {
               </div>
               {/* Custom categories list */}
               {customCats.length===0
-                ? <div style={{ fontSize:13, color:'var(--text-muted)', textAlign:'center', padding:'10px 0' }}>No custom categories yet — add one above</div>
+                ? <div style={{ fontSize:13, color:C.muted, textAlign:'center', padding:'10px 0' }}>No custom categories yet — add one above</div>
                 : <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
                     {customCats.map(cat=>(
-                      <div key={cat.key} style={{ display:'flex', alignItems:'center', gap:6, background:cat.color+'15', border:`1px solid ${cat.color}`, borderRadius:'var(--r-full)', padding:'5px 12px', fontSize:13 }}>
+                      <div key={cat.key} style={{ display:'flex', alignItems:'center', gap:6, background:cat.color+'15', border:`1px solid ${cat.color}`, borderRadius:20, padding:'5px 12px', fontSize:13 }}>
                         <span>{cat.icon}</span>
                         <span style={{ fontWeight:600, color:cat.color }}>{cat.key}</span>
                         <button onClick={()=>deleteCustomCategory(cat.key)}
-                          style={{ background:'none', border:'none', cursor:'pointer', color:'var(--text-muted)', fontSize:12, padding:'0 0 0 4px' }}>✕</button>
+                          style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, fontSize:12, padding:'0 0 0 4px' }}>✕</button>
                       </div>
                     ))}
                   </div>
               }
-              <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:10 }}>Custom categories are saved locally on this device</div>
+              <div style={{ fontSize:11, color:C.muted, marginTop:10 }}>Custom categories are saved locally on this device</div>
             </div>
           )}
 
           {/* Add form */}
           {showAddExp && (
-            <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:20, marginBottom:20 }}>
-              {expError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:'var(--danger)', borderRadius:'var(--r-sm)', padding:'10px 12px', fontSize:13, marginBottom:12 }}>⚠️ {expError}</div>}
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:20 }}>
+              {expError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:8, padding:'10px 12px', fontSize:13, marginBottom:12 }}>⚠️ {expError}</div>}
               <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginBottom:14 }}>
                 {allCats.map(cat=>(
                   <button key={cat.key} onClick={()=>setExpForm(f=>({...f,category:cat.key}))}
-                    style={{ padding:'6px 12px', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${expForm.category===cat.key?cat.color:'var(--border)'}`, background:expForm.category===cat.key?cat.color+'15':'white', color:expForm.category===cat.key?cat.color:'var(--text-muted)' }}>
+                    style={{ padding:'6px 12px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${expForm.category===cat.key?cat.color:C.border}`, background:expForm.category===cat.key?cat.color+'15':'white', color:expForm.category===cat.key?cat.color:C.muted }}>
                     {cat.icon} {cat.key}
                   </button>
                 ))}
@@ -825,7 +825,7 @@ export default function Expenses() {
                   <label style={{ ...LBL, color:'#92400e' }}>📝 Expense Name *</label>
                   <input value={customCat} onChange={e=>setCustomCat(e.target.value)}
                     placeholder="e.g. Printing, Donations, Parking, Cleaning..."
-                    style={{ ...INP, border:'1.5px solid #f59e0b', background:'var(--bg-surface)' }} autoFocus/>
+                    style={{ ...INP, border:'1.5px solid #f59e0b', background:C.surface }} autoFocus/>
                 </div>
               )}
               <div style={{ marginBottom:12 }}>
@@ -834,7 +834,7 @@ export default function Expenses() {
                   placeholder={expForm.category === 'Other' ? 'Any extra details...' : 'Description...'}
                   style={INP}/>
               </div>
-              <button onClick={handleAddExpense} disabled={savingExp} style={{ padding:'10px 22px', background:savingExp?'var(--text-muted)':'var(--navy)', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+              <button onClick={handleAddExpense} disabled={savingExp} style={{ padding:'10px 22px', background:savingExp?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                 {savingExp?'Saving...':'💾 Save Expense'}
               </button>
             </div>
@@ -842,56 +842,56 @@ export default function Expenses() {
 
           <div style={{ display:'grid', gridTemplateColumns:'280px 1fr', gap:16 }}>
             {/* Category breakdown */}
-            <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden' }}>
-              <div style={{ padding:'12px 16px', borderBottom:`1px solid var(--border)`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontSize:13, fontWeight:700, color:'var(--navy)' }}>By Category</span>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
+              <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>By Category</span>
                 <button onClick={()=>setShowBudgets(s=>!s)}
-                  style={{ fontSize:11, fontWeight:600, padding:'4px 10px', background:showBudgets?'#fee2e2':'var(--bg-sunken)', color:showBudgets?'var(--danger)':'var(--text-muted)', border:`1px solid var(--border)`, borderRadius:7, cursor:'pointer', fontFamily:'inherit' }}>
+                  style={{ fontSize:11, fontWeight:600, padding:'4px 10px', background:showBudgets?'#fee2e2':C.cream, color:showBudgets?C.danger:C.muted, border:`1px solid ${C.border}`, borderRadius:7, cursor:'pointer', fontFamily:'inherit' }}>
                   {showBudgets ? '✕ Close' : '🎯 Set Budgets'}
                 </button>
               </div>
               {showBudgets && (
-                <div style={{ padding:'12px 14px', background:'#fffbeb', borderBottom:`1px solid var(--border)` }}>
+                <div style={{ padding:'12px 14px', background:'#fffbeb', borderBottom:`1px solid ${C.border}` }}>
                   <div style={{ fontSize:11, color:'#92400e', marginBottom:10, fontWeight:600 }}>Set monthly budget limits per category — you'll get a warning at 80%</div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                     {summary?.by_category?.map(cat => (
                       <div key={cat.category} style={{ display:'flex', alignItems:'center', gap:6 }}>
-                        <span style={{ fontSize:12, minWidth:80, color:'var(--navy)', fontWeight:600 }}>{cat.category}</span>
+                        <span style={{ fontSize:12, minWidth:80, color:C.navy, fontWeight:600 }}>{cat.category}</span>
                         <input type="number" placeholder="No limit"
                           value={budgets[cat.category]||''}
                           onChange={e=>saveBudgets({...budgets,[cat.category]:e.target.value?parseFloat(e.target.value):undefined})}
-                          style={{ width:'100%', padding:'5px 8px', border:`1.5px solid var(--border)`, borderRadius:7, fontSize:12, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)' }}/>
+                          style={{ width:'100%', padding:'5px 8px', border:`1.5px solid ${C.border}`, borderRadius:7, fontSize:12, fontFamily:'inherit', outline:'none', background:C.surface }}/>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
               {!summary?.by_category?.length
-                ? <div style={{ padding:20, textAlign:'center', color:'var(--text-muted)', fontSize:13 }}>No expenses</div>
+                ? <div style={{ padding:20, textAlign:'center', color:C.muted, fontSize:13 }}>No expenses</div>
                 : summary.by_category.map(cat=>{
                     const info = getCatAll(cat.category);
                     const max  = parseFloat(summary.by_category[0]?.total)||1;
                     return (
                       <div key={cat.category} onClick={()=>setCatFilter(catFilter===cat.category?'all':cat.category)}
-                        style={{ padding:'10px 14px', borderBottom:`1px solid var(--bg-sunken)`, cursor:'pointer', background:catFilter===cat.category?info.color+'10':'white' }}>
+                        style={{ padding:'10px 14px', borderBottom:`1px solid ${C.cream}`, cursor:'pointer', background:catFilter===cat.category?info.color+'10':'white' }}>
                         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
                           <div style={{ display:'flex', alignItems:'center', gap:7 }}>
                             <span>{info.icon}</span>
                             <div>
-                              <div style={{ fontSize:12, fontWeight:600, color:'var(--navy)' }}>{cat.category}</div>
-                              <div style={{ fontSize:10, color:'var(--text-muted)' }}>{cat.count} entries</div>
+                              <div style={{ fontSize:12, fontWeight:600, color:C.navy }}>{cat.category}</div>
+                              <div style={{ fontSize:10, color:C.muted }}>{cat.count} entries</div>
                             </div>
                           </div>
                           <span style={{ fontSize:12, fontWeight:700, color:info.color }}>{fmt(cat.total)}</span>
                         </div>
-                        <div style={{ height:5, background:'var(--bg-sunken)', borderRadius:3, overflow:'hidden' }}>
+                        <div style={{ height:5, background:C.cream, borderRadius:3, overflow:'hidden' }}>
                           <div style={{ height:'100%', width:`${parseFloat(cat.total)/max*100}%`, background:info.color, borderRadius:3 }}/>
                         </div>
                         {budgets[cat.category] && parseFloat(cat.total) > parseFloat(budgets[cat.category]) * 0.8 && (
                           <div style={{ marginTop:4, fontSize:10, fontWeight:700,
-                            color: parseFloat(cat.total) >= parseFloat(budgets[cat.category]) ? 'var(--danger)' : '#b45309',
+                            color: parseFloat(cat.total) >= parseFloat(budgets[cat.category]) ? C.danger : '#b45309',
                             background: parseFloat(cat.total) >= parseFloat(budgets[cat.category]) ? '#fee2e2' : '#fef9c3',
-                            padding:'2px 8px', borderRadius:'var(--r-md)', display:'inline-block' }}>
+                            padding:'2px 8px', borderRadius:10, display:'inline-block' }}>
                             {parseFloat(cat.total) >= parseFloat(budgets[cat.category])
                               ? `Over budget! (limit: ${fmt(budgets[cat.category])})`
                               : `${Math.round(parseFloat(cat.total)/parseFloat(budgets[cat.category])*100)}% of Rs. ${parseFloat(budgets[cat.category]).toLocaleString()} budget`}
@@ -902,20 +902,20 @@ export default function Expenses() {
                   })
               }
               {summary?.totals?.month_total>0 && (
-                <div style={{ padding:'10px 14px', background:'var(--bg-sunken)', display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700 }}>
-                  <span>Total</span><span style={{ color:'var(--danger)' }}>{fmt(summary.totals.month_total)}</span>
+                <div style={{ padding:'10px 14px', background:C.cream, display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700 }}>
+                  <span>Total</span><span style={{ color:C.danger }}>{fmt(summary.totals.month_total)}</span>
                 </div>
               )}
             </div>
 
             {/* Expense list */}
-            <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden' }}>
-              <div style={{ padding:'12px 16px', borderBottom:`1px solid var(--border)`, display:'flex', justifyContent:'space-between' }}>
-                <span style={{ fontSize:13, fontWeight:700, color:'var(--navy)' }}>{catFilter==='all'?'All Expenses':`${getCatAll(catFilter).icon} ${catFilter}`}</span>
-                <span style={{ fontSize:12, color:'var(--text-muted)' }}>{allExpenses.length} records</span>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
+              <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, display:'flex', justifyContent:'space-between' }}>
+                <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{catFilter==='all'?'All Expenses':`${getCatAll(catFilter).icon} ${catFilter}`}</span>
+                <span style={{ fontSize:12, color:C.muted }}>{allExpenses.length} records</span>
               </div>
               {!allExpenses.length
-                ? <div style={{ padding:40, textAlign:'center', color:'var(--text-muted)' }}><div style={{ fontSize:32, marginBottom:8 }}>💸</div>No expenses</div>
+                ? <div style={{ padding:40, textAlign:'center', color:C.muted }}><div style={{ fontSize:32, marginBottom:8 }}>💸</div>No expenses</div>
                 : allExpenses.map((exp,idx)=>{
                     const cat = getCatAll(exp.category);
                     const prev = allExpenses[idx-1];
@@ -923,23 +923,23 @@ export default function Expenses() {
                     return (
                       <React.Fragment key={exp.id}>
                         {showD && (
-                          <div style={{ padding:'7px 16px', background:'var(--bg-sunken)', fontSize:11, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'1px' }}>
+                          <div style={{ padding:'7px 16px', background:C.cream, fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px' }}>
                             {fmtDate(exp.date?.slice(0,10))}
-                            {exp.date?.slice(0,10)===today() && <span style={{ marginLeft:8, background:'var(--gold)', color:'var(--navy)', fontSize:9, padding:'1px 7px', borderRadius:20 }}>Today</span>}
+                            {exp.date?.slice(0,10)===today() && <span style={{ marginLeft:8, background:C.gold, color:C.navy, fontSize:9, padding:'1px 7px', borderRadius:20 }}>Today</span>}
                           </div>
                         )}
-                        <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', borderBottom:`1px solid var(--bg-sunken)` }}>
-                          <div style={{ width:34, height:34, borderRadius:'var(--r-sm)', background:cat.color+'15', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>{cat.icon}</div>
+                        <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', borderBottom:`1px solid ${C.cream}` }}>
+                          <div style={{ width:34, height:34, borderRadius:8, background:cat.color+'15', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>{cat.icon}</div>
                           <div style={{ flex:1 }}>
-                            <div style={{ fontSize:13, fontWeight:600, color:'var(--navy)' }}>{exp.description}</div>
-                            <div style={{ fontSize:11, color:'var(--text-muted)' }}>
-                              <span style={{ background:cat.color+'15', color:cat.color, padding:'1px 7px', borderRadius:'var(--r-full)', fontWeight:600, fontSize:10 }}>{exp.category}</span>
+                            <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{exp.description}</div>
+                            <div style={{ fontSize:11, color:C.muted }}>
+                              <span style={{ background:cat.color+'15', color:cat.color, padding:'1px 7px', borderRadius:20, fontWeight:600, fontSize:10 }}>{exp.category}</span>
                               <span style={{ marginLeft:6 }}>{exp.payment_method==='bank'?'🏦 Bank':'💵 Cash'}</span>
                               {exp.notes && <span style={{ marginLeft:6 }}>· {exp.notes}</span>}
                             </div>
                           </div>
                           <div style={{ textAlign:'right', flexShrink:0 }}>
-                            <div style={{ fontSize:14, fontWeight:700, color:'var(--danger)' }}>− {fmt(exp.amount)}</div>
+                            <div style={{ fontSize:14, fontWeight:700, color:C.danger }}>− {fmt(exp.amount)}</div>
                             <button onClick={()=>handleDeleteExp(exp.id)} style={{ background:'none', border:'none', color:'#d1d5db', cursor:'pointer', fontSize:11, padding:0, fontFamily:'inherit' }}>🗑️</button>
                           </div>
                         </div>
@@ -970,15 +970,15 @@ export default function Expenses() {
           {/* Add button */}
           <div style={{ marginBottom:14 }}>
             <button onClick={()=>{ setDepForm(f=>({...f,date:today()})); setShowAddDep(s=>!s); }}
-              style={{ padding:'9px 20px', background:showAddDep?'var(--bg-sunken)':'#2563eb', color:showAddDep?'var(--text-muted)':'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              style={{ padding:'9px 20px', background:showAddDep?C.cream:'#2563eb', color:showAddDep?C.muted:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               {showAddDep?'✕ Cancel':'🏦 Record Bank Deposit'}
             </button>
           </div>
 
           {/* Add deposit form */}
           {showAddDep && (
-            <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:20, marginBottom:20 }}>
-              {depError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:'var(--danger)', borderRadius:'var(--r-sm)', padding:'10px 12px', fontSize:13, marginBottom:12 }}>⚠️ {depError}</div>}
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:20 }}>
+              {depError && <div style={{ background:'#fef2f2', border:`1px solid #fca5a5`, color:C.danger, borderRadius:8, padding:'10px 12px', fontSize:13, marginBottom:12 }}>⚠️ {depError}</div>}
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
                 <div><label style={LBL}>Date</label><input type="date" value={depForm.date} onChange={e=>setDepForm(f=>({...f,date:e.target.value}))} style={INP}/></div>
                 <div><label style={LBL}>Amount (Rs.)</label><input type="number" value={depForm.amount} onChange={e=>setDepForm(f=>({...f,amount:e.target.value}))} placeholder="e.g. 25000" style={{ ...INP, fontWeight:700 }}/></div>
@@ -989,7 +989,7 @@ export default function Expenses() {
                   <div style={{ display:'flex', gap:6 }}>
                     {[['cash','💵 Cash'],['online','📱 Online'],['cheque','📋 Cheque']].map(([v,l])=>(
                       <button key={v} onClick={()=>setDepForm(f=>({...f,payment_type:v}))}
-                        style={{ flex:1, padding:'8px 4px', borderRadius:'var(--r-sm)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${depForm.payment_type===v?'#2563eb':'var(--border)'}`, background:depForm.payment_type===v?'#eff6ff':'white', color:depForm.payment_type===v?'#1e40af':'var(--text-muted)' }}>
+                        style={{ flex:1, padding:'8px 4px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${depForm.payment_type===v?'#2563eb':C.border}`, background:depForm.payment_type===v?'#eff6ff':'white', color:depForm.payment_type===v?'#1e40af':C.muted }}>
                         {l}
                       </button>
                     ))}
@@ -1006,41 +1006,41 @@ export default function Expenses() {
                 }
               </div>
               <div style={{ marginBottom:12 }}><label style={LBL}>Notes</label><input value={depForm.notes} onChange={e=>setDepForm(f=>({...f,notes:e.target.value}))} placeholder="Optional notes" style={INP}/></div>
-              <button onClick={handleAddDeposit} disabled={savingDep} style={{ padding:'10px 22px', background:savingDep?'var(--text-muted)':'#2563eb', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+              <button onClick={handleAddDeposit} disabled={savingDep} style={{ padding:'10px 22px', background:savingDep?C.muted:'#2563eb', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                 {savingDep?'Saving...':'🏦 Save Deposit'}
               </button>
             </div>
           )}
 
           {/* Deposit list */}
-          <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden' }}>
-            <div style={{ padding:'12px 18px', borderBottom:`1px solid var(--border)`, display:'flex', justifyContent:'space-between' }}>
-              <span style={{ fontSize:14, fontWeight:700, color:'var(--navy)' }}>All Deposits</span>
-              <span style={{ fontSize:13, color:'var(--text-muted)' }}>{allDeposits.length} records</span>
+          <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
+            <div style={{ padding:'12px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', justifyContent:'space-between' }}>
+              <span style={{ fontSize:14, fontWeight:700, color:C.navy }}>All Deposits</span>
+              <span style={{ fontSize:13, color:C.muted }}>{allDeposits.length} records</span>
             </div>
             {!allDeposits.length
-              ? <div style={{ padding:40, textAlign:'center', color:'var(--text-muted)' }}><div style={{ fontSize:32, marginBottom:8 }}>🏦</div>No deposits this month</div>
+              ? <div style={{ padding:40, textAlign:'center', color:C.muted }}><div style={{ fontSize:32, marginBottom:8 }}>🏦</div>No deposits this month</div>
               : allDeposits.map((dep,idx)=>{
                   const prev  = allDeposits[idx-1];
                   const showD = !prev || prev.date?.slice(0,10) !== dep.date?.slice(0,10);
                   return (
                     <React.Fragment key={dep.id}>
                       {showD && (
-                        <div style={{ padding:'7px 18px', background:'var(--bg-sunken)', fontSize:11, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'1px' }}>
+                        <div style={{ padding:'7px 18px', background:C.cream, fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px' }}>
                           {fmtDate(dep.date?.slice(0,10))}
                           {dep.date?.slice(0,10)===today() && <span style={{ marginLeft:8, background:'#dbeafe', color:'#1d4ed8', fontSize:9, padding:'1px 7px', borderRadius:20 }}>Today</span>}
                         </div>
                       )}
-                      <div style={{ display:'flex', alignItems:'center', gap:14, padding:'12px 18px', borderBottom:`1px solid var(--bg-sunken)` }}>
-                        <div style={{ width:40, height:40, borderRadius:'var(--r-md)', background:'#dbeafe', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>🏦</div>
+                      <div style={{ display:'flex', alignItems:'center', gap:14, padding:'12px 18px', borderBottom:`1px solid ${C.cream}` }}>
+                        <div style={{ width:40, height:40, borderRadius:10, background:'#dbeafe', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>🏦</div>
                         <div style={{ flex:1 }}>
-                          <div style={{ fontSize:14, fontWeight:600, color:'var(--navy)' }}>
+                          <div style={{ fontSize:14, fontWeight:600, color:C.navy }}>
                             {dep.bank_name||'Bank Deposit'}
-                            {dep.account_no && <span style={{ fontSize:12, color:'var(--text-muted)', marginLeft:8 }}>A/C: {dep.account_no}</span>}
+                            {dep.account_no && <span style={{ fontSize:12, color:C.muted, marginLeft:8 }}>A/C: {dep.account_no}</span>}
                           </div>
-                          <div style={{ fontSize:12, color:'var(--text-muted)', display:'flex', gap:8, flexWrap:'wrap', marginTop:2 }}>
+                          <div style={{ fontSize:12, color:C.muted, display:'flex', gap:8, flexWrap:'wrap', marginTop:2 }}>
                             {dep.payment_type && dep.payment_type!=='cash' && (
-                              <span style={{ background:dep.payment_type==='cheque'?'#fffbeb':'#eff6ff', color:dep.payment_type==='cheque'?'#92400e':'#1e40af', padding:'2px 9px', borderRadius:'var(--r-full)', fontWeight:700, fontSize:11 }}>
+                              <span style={{ background:dep.payment_type==='cheque'?'#fffbeb':'#eff6ff', color:dep.payment_type==='cheque'?'#92400e':'#1e40af', padding:'2px 9px', borderRadius:20, fontWeight:700, fontSize:11 }}>
                                 {dep.payment_type==='cheque'?'📋 Cheque':'📱 Online Transfer'}
                               </span>
                             )}
@@ -1052,7 +1052,7 @@ export default function Expenses() {
                           </div>
                         </div>
                         <div style={{ textAlign:'right', flexShrink:0 }}>
-                          <div style={{ fontFamily:"var(--font-display)", fontSize:17, fontWeight:700, color:'#2563eb' }}>{fmt(dep.amount)}</div>
+                          <div style={{ fontFamily:'var(--font-display)', fontSize:17, fontWeight:700, color:'#2563eb' }}>{fmt(dep.amount)}</div>
                           <button onClick={()=>handleDeleteDep(dep.id)} style={{ background:'none', border:'none', color:'#d1d5db', cursor:'pointer', fontSize:11, padding:0, fontFamily:'inherit' }}>🗑️ delete</button>
                         </div>
                       </div>
@@ -1062,7 +1062,7 @@ export default function Expenses() {
             }
             {allDeposits.length>0 && (
               <div style={{ padding:'12px 18px', background:'#eff6ff', display:'flex', justifyContent:'space-between', fontSize:14, fontWeight:700 }}>
-                <span style={{ color:'var(--text-muted)' }}>Total Deposited</span>
+                <span style={{ color:C.muted }}>Total Deposited</span>
                 <span style={{ color:'#2563eb' }}>{fmt(allDeposits.reduce((s,d)=>s+parseFloat(d.amount||0),0))}</span>
               </div>
             )}

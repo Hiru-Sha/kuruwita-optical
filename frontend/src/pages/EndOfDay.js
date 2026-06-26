@@ -163,7 +163,7 @@ export default function EndOfDay() {
 ${drawerOpen ? `<div class="row"><span>Opening Balance</span><span>${fmt(parseFloat(drawerOpen))}</span></div>` : ''}
 <div class="row bold big">
   <span>${drawerOpen ? 'Closing Balance' : 'Cash in Drawer'}</span>
-  <span style="color:${(parseFloat(drawerOpen||0)+s.cashInHand)>=0?'var(--success)':'var(--danger)'}">${fmt(parseFloat(drawerOpen||0)+s.cashInHand)}</span>
+  <span style="color:${(parseFloat(drawerOpen||0)+s.cashInHand)>=0?'#2d7a4f':'#c0392b'}">${fmt(parseFloat(drawerOpen||0)+s.cashInHand)}</span>
 </div>
 ${s.toDeposit > 0 ? `
 <div class="line"></div>
@@ -186,56 +186,56 @@ ${data.orders.outstanding > 0 ? `
   };
 
   const Row = ({label, value, color, bold, sub}) => (
-    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 16px', borderBottom:`1px solid var(--bg-sunken)` }}>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 16px', borderBottom:`1px solid ${C.cream}` }}>
       <div>
-        <div style={{ fontSize:13, fontWeight:bold?700:500, color:'var(--navy)' }}>{label}</div>
-        {sub && <div style={{ fontSize:11, color:'var(--text-muted)' }}>{sub}</div>}
+        <div style={{ fontSize:13, fontWeight:bold?700:500, color:C.navy }}>{label}</div>
+        {sub && <div style={{ fontSize:11, color:C.muted }}>{sub}</div>}
       </div>
-      <div style={{ fontSize:14, fontWeight:700, color:color||'var(--navy)' }}>{value}</div>
+      <div style={{ fontSize:14, fontWeight:700, color:color||C.navy }}>{value}</div>
     </div>
   );
 
   return (
-    <div style={{ fontFamily:"var(--font-body)", maxWidth:680, margin:'0 auto' }}>
+    <div style={{ fontFamily:'var(--font-body)', maxWidth:680, margin:'0 auto' }}>
 
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h1 style={{ fontFamily:"var(--font-display)", fontSize:24, color:'var(--navy)', margin:0 }}>🏦 End of Day</h1>
-          <p style={{ fontSize:13, color:'var(--text-muted)', margin:'4px 0 0' }}>Daily cash register summary</p>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:24, color:C.navy, margin:0 }}>🏦 End of Day</h1>
+          <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Daily cash register summary</p>
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           <input type="date" value={viewDate} onChange={e=>setViewDate(e.target.value)}
-            style={{ padding:'8px 12px', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)', color:'var(--navy)' }}/>
+            style={{ padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy }}/>
           <button onClick={()=>setViewDate(today())}
-            style={{ padding:'8px 14px', background:'var(--bg-sunken)', border:`1.5px solid var(--border)`, borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'var(--text-muted)' }}>
+            style={{ padding:'8px 14px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
             Today
           </button>
           {data && (
             <button onClick={printSlip}
-              style={{ padding:'9px 20px', background:'var(--navy)', color:'var(--gold)', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              style={{ padding:'9px 20px', background:C.navy, color:C.gold, border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               🖨️ Print Slip
             </button>
           )}
         </div>
       </div>
 
-      {loading && <div style={{ textAlign:'center', padding:48, color:'var(--text-muted)' }}>Loading...</div>}
+      {loading && <div style={{ textAlign:'center', padding:48, color:C.muted }}>Loading...</div>}
 
       {data && (
         <>
-          <div style={{ fontFamily:"var(--font-display)", fontSize:16, color:'var(--navy)', margin:'16px 0 12px' }}>
+          <div style={{ fontFamily:'var(--font-display)', fontSize:16, color:C.navy, margin:'16px 0 12px' }}>
             {fmtDate(data.date)}
-            {data.date===today() && <span style={{ marginLeft:10, background:'var(--gold)', color:'var(--navy)', fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:'var(--r-full)', fontFamily:"var(--font-body)" }}>Today</span>}
+            {data.date===today() && <span style={{ marginLeft:10, background:C.gold, color:C.navy, fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:20, fontFamily:'var(--font-body)' }}>Today</span>}
           </div>
 
           {/* Big cash in drawer card */}
-          <div style={{ background:data.summary.cashInHand>=0?'var(--navy)':'#fee2e2', borderRadius:'var(--r-lg)', padding:'20px 24px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
+          <div style={{ background:data.summary.cashInHand>=0?C.navy:'#fee2e2', borderRadius:14, padding:'20px 24px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
             <div>
-              <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:data.summary.cashInHand>=0?'var(--gold)':'var(--danger)', marginBottom:4 }}>
+              <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:data.summary.cashInHand>=0?C.gold:'#c0392b', marginBottom:4 }}>
                 {drawerOpen ? 'Closing Balance' : 'Cash from Today'}
               </div>
-              <div style={{ fontFamily:"var(--font-display)", fontSize:36, fontWeight:700, color:data.summary.cashInHand>=0?'white':'var(--danger)' }}>
+              <div style={{ fontFamily:'var(--font-display)', fontSize:36, fontWeight:700, color:data.summary.cashInHand>=0?'white':C.danger }}>
                 {fmt(parseFloat(drawerOpen||0) + data.summary.cashInHand)}
               </div>
               {drawerOpen && (
@@ -244,14 +244,14 @@ ${data.orders.outstanding > 0 ? `
                 </div>
               )}
               {(parseFloat(drawerOpen||0)+data.summary.cashInHand) < 0 && (
-                <div style={{ fontSize:12, color:'var(--danger)', marginTop:4 }}>⚠️ Negative — check your entries</div>
+                <div style={{ fontSize:12, color:C.danger, marginTop:4 }}>⚠️ Negative — check your entries</div>
               )}
             </div>
             <div style={{ textAlign:'right' }}>
-              <div style={{ fontSize:12, color:data.summary.cashInHand>=0?'#ede9e0':'var(--text-muted)' }}>Total In</div>
-              <div style={{ fontSize:22, fontWeight:700, color:data.summary.cashInHand>=0?'#86efac':'var(--navy)' }}>{fmt(data.summary.totalIn)}</div>
+              <div style={{ fontSize:12, color:data.summary.cashInHand>=0?'#ede9e0':C.muted }}>Total In</div>
+              <div style={{ fontSize:22, fontWeight:700, color:data.summary.cashInHand>=0?'#86efac':C.navy }}>{fmt(data.summary.totalIn)}</div>
               {data.summary.toDeposit > 0 && (
-                <div style={{ marginTop:8, background:'rgba(255,255,255,.15)', borderRadius:'var(--r-sm)', padding:'6px 12px', fontSize:12, color:data.summary.cashInHand>=0?'white':'var(--navy)', fontWeight:600 }}>
+                <div style={{ marginTop:8, background:'rgba(255,255,255,.15)', borderRadius:8, padding:'6px 12px', fontSize:12, color:data.summary.cashInHand>=0?'white':C.navy, fontWeight:600 }}>
                   Suggest deposit: {fmt(data.summary.toDeposit)}
                 </div>
               )}
@@ -259,37 +259,37 @@ ${data.orders.outstanding > 0 ? `
           </div>
 
           {/* Formula */}
-          <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-md)', padding:'10px 16px', marginBottom:16, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', fontSize:13 }}>
+          <div style={{ background:C.cream, borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', fontSize:13 }}>
             {drawerOpen && <>
-              <span style={{ color:'var(--text-muted)', fontWeight:700 }}>{fmt(drawerOpen)} opening</span>
-              <span style={{ color:'var(--text-muted)' }}>+</span>
+              <span style={{ color:C.muted, fontWeight:700 }}>{fmt(drawerOpen)} opening</span>
+              <span style={{ color:C.muted }}>+</span>
             </>}
-            <span style={{ color:'var(--success)', fontWeight:700 }}>{fmt(data.orders.cash)} orders</span>
-            <span style={{ color:'var(--text-muted)' }}>+</span>
+            <span style={{ color:C.success, fontWeight:700 }}>{fmt(data.orders.cash)} orders</span>
+            <span style={{ color:C.muted }}>+</span>
             <span style={{ color:'#0891b2', fontWeight:700 }}>{fmt(data.quickSales.cash)} sales</span>
-            <span style={{ color:'var(--text-muted)' }}>+</span>
+            <span style={{ color:C.muted }}>+</span>
             <span style={{ color:'#7c3aed', fontWeight:700 }}>{fmt(data.repairs.cash)} repairs</span>
-            <span style={{ color:'var(--text-muted)' }}>−</span>
-            <span style={{ color:'var(--danger)', fontWeight:700 }}>{fmt(data.expenses.cashOut)} expenses</span>
-            <span style={{ color:'var(--text-muted)' }}>−</span>
+            <span style={{ color:C.muted }}>−</span>
+            <span style={{ color:C.danger, fontWeight:700 }}>{fmt(data.expenses.cashOut)} expenses</span>
+            <span style={{ color:C.muted }}>−</span>
             <span style={{ color:'#2563eb', fontWeight:700 }}>{fmt(data.deposits.total)} deposited</span>
-            <span style={{ color:'var(--text-muted)' }}>=</span>
-            <span style={{ fontWeight:700, fontSize:15, color:(parseFloat(drawerOpen||0)+data.summary.cashInHand)>=0?'var(--success)':'var(--danger)' }}>
+            <span style={{ color:C.muted }}>=</span>
+            <span style={{ fontWeight:700, fontSize:15, color:(parseFloat(drawerOpen||0)+data.summary.cashInHand)>=0?C.success:C.danger }}>
               {fmt(parseFloat(drawerOpen||0)+data.summary.cashInHand)} closing
             </span>
           </div>
 
           {/* Drawer opening balance */}
-          <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:'12px 16px', marginBottom:16, display:'flex', gap:10, alignItems:'center' }}>
-            <span style={{ fontSize:13, color:'var(--navy)', fontWeight:600 }}>💵 Opening balance (cash in drawer at start of day):</span>
+          <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px', marginBottom:16, display:'flex', gap:10, alignItems:'center' }}>
+            <span style={{ fontSize:13, color:C.navy, fontWeight:600 }}>💵 Opening balance (cash in drawer at start of day):</span>
             <input type="number" value={drawerOpen} onChange={e=>handleDrawerOpen(e.target.value)}
-              placeholder="0" style={{ padding:'6px 10px', border:`1.5px solid var(--border)`, borderRadius:7, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:'var(--bg-sunken)', width:120 }}/>
+              placeholder="0" style={{ padding:'6px 10px', border:`1.5px solid ${C.border}`, borderRadius:7, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:C.cream, width:120 }}/>
             {drawerOpen
-              ? <span style={{ fontSize:13, fontWeight:700, color:'var(--success)' }}>
+              ? <span style={{ fontSize:13, fontWeight:700, color:C.success }}>
                   Closing total: {fmt(parseFloat(drawerOpen||0)+data.summary.cashInHand)}
-                  <span style={{ fontSize:11, fontWeight:400, color:'var(--text-muted)', marginLeft:6 }}>saved ✓</span>
+                  <span style={{ fontSize:11, fontWeight:400, color:C.muted, marginLeft:6 }}>saved ✓</span>
                 </span>
-              : <span style={{ fontSize:11, color:'var(--text-muted)' }}>Enter to calculate closing balance</span>
+              : <span style={{ fontSize:11, color:C.muted }}>Enter to calculate closing balance</span>
             }
           </div>
 
@@ -298,24 +298,24 @@ ${data.orders.outstanding > 0 ? `
             {[
               { icon:'📋', label:'Orders',
               cash:data.orders.total||data.orders.cash,
-              count:data.orders.count, color:'var(--success)',
+              count:data.orders.count, color:C.success,
               sub:(data.orders.bank||0)>0
                 ? `${fmt(data.orders.cash)} cash · ${fmt(data.orders.bank)} bank · ${fmt(data.orders.outstanding)} owed`
                 : `${fmt(data.orders.outstanding)} outstanding` },
               { icon:'⚡', label:'Quick Sales', cash:data.quickSales.cash,  count:data.quickSales.count,  color:'#0891b2' },
               { icon:'🔧', label:'Repairs',     cash:data.repairs.cash,     count:data.repairs.count,     color:'#7c3aed' },
-              { icon:'💸', label:'Cash Expenses',cash:data.expenses.cashOut,count:data.expenses.list.filter(e=>e.payment_method!=='bank').length, color:'var(--danger)', neg:true },
+              { icon:'💸', label:'Cash Expenses',cash:data.expenses.cashOut,count:data.expenses.list.filter(e=>e.payment_method!=='bank').length, color:C.danger, neg:true },
             ].map(box=>(
-              <div key={box.label} style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', padding:'14px 16px' }}>
+              <div key={box.label} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 16px' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                   <div>
-                    <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:'var(--text-muted)', marginBottom:4 }}>{box.icon} {box.label}</div>
-                    <div style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:700, color:box.color }}>
+                    <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:4 }}>{box.icon} {box.label}</div>
+                    <div style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:700, color:box.color }}>
                       {box.neg?'− ':''}{fmt(box.cash)}
                     </div>
-                    {box.sub && <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:2 }}>{box.sub}</div>}
+                    {box.sub && <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{box.sub}</div>}
                   </div>
-                  <div style={{ background:'var(--bg-sunken)', borderRadius:'var(--r-full)', padding:'3px 10px', fontSize:12, fontWeight:700, color:'var(--text-muted)' }}>{box.count}</div>
+                  <div style={{ background:C.cream, borderRadius:20, padding:'3px 10px', fontSize:12, fontWeight:700, color:C.muted }}>{box.count}</div>
                 </div>
               </div>
             ))}
@@ -323,8 +323,8 @@ ${data.orders.outstanding > 0 ? `
 
           {/* Detail sections */}
           {data.orders.list.length > 0 && (
-            <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden', marginBottom:12 }}>
-              <div style={{ padding:'11px 16px', background:'var(--bg-sunken)', borderBottom:`1px solid var(--border)`, fontSize:13, fontWeight:700, color:'var(--navy)' }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
+              <div style={{ padding:'11px 16px', background:C.cream, borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>
                 📋 Orders ({data.orders.count}) — {fmt(data.orders.cash)} collected
               </div>
               {data.orders.list.map(o=>(
@@ -332,15 +332,15 @@ ${data.orders.outstanding > 0 ? `
                   label={o.customer_name}
                   sub={`${o.order_number} · ${o.frame||'—'}`}
                   value={fmt(o.advance_amount)}
-                  color={'var(--success)'}
+                  color={C.success}
                 />
               ))}
             </div>
           )}
 
           {data.quickSales.list.length > 0 && (
-            <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden', marginBottom:12 }}>
-              <div style={{ padding:'11px 16px', background:'var(--bg-sunken)', borderBottom:`1px solid var(--border)`, fontSize:13, fontWeight:700, color:'var(--navy)' }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
+              <div style={{ padding:'11px 16px', background:C.cream, borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>
                 ⚡ Quick Sales ({data.quickSales.count}) — {fmt(data.quickSales.cash)}
               </div>
               {data.quickSales.list.map(s=>(
@@ -355,8 +355,8 @@ ${data.orders.outstanding > 0 ? `
           )}
 
           {data.repairs.list.length > 0 && (
-            <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden', marginBottom:12 }}>
-              <div style={{ padding:'11px 16px', background:'var(--bg-sunken)', borderBottom:`1px solid var(--border)`, fontSize:13, fontWeight:700, color:'var(--navy)' }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
+              <div style={{ padding:'11px 16px', background:C.cream, borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>
                 🔧 Repairs ({data.repairs.count}) — {fmt(data.repairs.cash)}
               </div>
               {data.repairs.list.map(r=>(
@@ -371,8 +371,8 @@ ${data.orders.outstanding > 0 ? `
           )}
 
           {data.expenses.list.length > 0 && (
-            <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden', marginBottom:12 }}>
-              <div style={{ padding:'11px 16px', background:'var(--bg-sunken)', borderBottom:`1px solid var(--border)`, fontSize:13, fontWeight:700, color:'var(--navy)' }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
+              <div style={{ padding:'11px 16px', background:C.cream, borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>
                 💸 Expenses — {fmt(data.expenses.cashOut)} cash · {fmt(data.expenses.bankOut)} bank
               </div>
               {data.expenses.list.map(e=>(
@@ -380,15 +380,15 @@ ${data.orders.outstanding > 0 ? `
                   label={e.description||e.category}
                   sub={`${e.category} · ${e.payment_method==='bank'?'Bank':'Cash'}`}
                   value={`− ${fmt(e.amount)}`}
-                  color={'var(--danger)'}
+                  color={C.danger}
                 />
               ))}
             </div>
           )}
 
           {data.deposits.list.length > 0 && (
-            <div style={{ background:'var(--bg-surface)', border:`1px solid var(--border)`, borderRadius:'var(--r-lg)', overflow:'hidden', marginBottom:12 }}>
-              <div style={{ padding:'11px 16px', background:'#eff6ff', borderBottom:`1px solid var(--border)`, fontSize:13, fontWeight:700, color:'#1e40af' }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
+              <div style={{ padding:'11px 16px', background:'#eff6ff', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:'#1e40af' }}>
                 🏦 Bank Deposits — {fmt(data.deposits.total)}
               </div>
               {data.deposits.list.map(d=>(
