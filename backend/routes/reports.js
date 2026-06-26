@@ -149,8 +149,9 @@ router.get('/profit', auth, async (req, res) => {
         TO_CHAR(DATE_TRUNC('month', created_at), 'Mon YY')  AS month,
         TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month_key,
         COALESCE(SUM(total_amount), 0) AS revenue,
+        -- Frame COGS only — lens cost comes from Lab Receivings expenses
         COALESCE(SUM(
-          COALESCE(frame_buy_price,0) + COALESCE(lens_buy_price,0)
+          CASE WHEN customer_own_frame THEN 0 ELSE COALESCE(frame_buy_price,0) END
         ), 0) AS cost_of_goods,
         COALESCE(SUM(advance_amount), 0) AS collected,
         COALESCE(SUM(balance_amount), 0) AS owed,
@@ -184,15 +185,25 @@ router.get('/profit', auth, async (req, res) => {
       GROUP BY DATE_TRUNC('month', created_at)
     `);
 
-    // Expenses per month — safe
+    // Operating expenses per month — EXCLUDE Lab Payment (already in COGS via lens cost)
     const expByMonth = await safeQuery(`
       SELECT
         TO_CHAR(date, 'YYYY-MM') AS month_key,
-        COALESCE(SUM(amount), 0) AS total_expenses
+        COALESCE(SUM(CASE WHEN category != 'Lab Payment' THEN amount END), 0) AS total_expenses
       FROM expenses
       WHERE date >= CURRENT_DATE - INTERVAL '6 months'
       GROUP BY TO_CHAR(date, 'YYYY-MM')
     `);
+
+    // Lens COGS per month — Lab Payment expenses = actual lens cost paid
+    const lensByMonth = await safeQuery(\`
+      SELECT
+        TO_CHAR(date, 'YYYY-MM') AS month_key,
+        COALESCE(SUM(CASE WHEN category = 'Lab Payment' THEN amount END), 0) AS lens_cogs
+      FROM expenses
+      WHERE date >= CURRENT_DATE - INTERVAL '6 months'
+      GROUP BY TO_CHAR(date, 'YYYY-MM')
+    \`);
 
     // Top margin frames — safe
     const topMargin = await safeQuery(`
@@ -214,21 +225,25 @@ router.get('/profit', auth, async (req, res) => {
     `);
 
     // Build lookup maps
-    const qsMap  = {};
-    qsSales.rows.forEach(r => { qsMap[r.month_key]  = parseFloat(r.qs_revenue||0); });
-    const repMap = {};
-    repairsQ.rows.forEach(r => { repMap[r.month_key] = parseFloat(r.repair_revenue||0); });
-    const expMap = {};
-    expByMonth.rows.forEach(r => { expMap[r.month_key] = parseFloat(r.total_expenses||0); });
+    const qsMap   = {};
+    qsSales.rows.forEach(r => { qsMap[r.month_key]   = parseFloat(r.qs_revenue||0); });
+    const repMap  = {};
+    repairsQ.rows.forEach(r => { repMap[r.month_key]  = parseFloat(r.repair_revenue||0); });
+    const expMap  = {};
+    expByMonth.rows.forEach(r => { expMap[r.month_key]  = parseFloat(r.total_expenses||0); });
+    const lensMap = {};
+    lensByMonth.rows.forEach(r => { lensMap[r.month_key] = parseFloat(r.lens_cogs||0); });
 
     const merged = monthly.rows.map(m => {
       const orderRev     = parseFloat(m.revenue||0);
-      const qsRev        = qsMap[m.month_key]  || 0;
-      const repRev       = repMap[m.month_key] || 0;
+      const qsRev        = qsMap[m.month_key]   || 0;
+      const repRev       = repMap[m.month_key]  || 0;
       const totalRevenue = orderRev + qsRev + repRev;
-      const costOfGoods  = parseFloat(m.cost_of_goods||0);
+      const frameCOGS    = parseFloat(m.cost_of_goods||0);  // frame_buy_price
+      const lensCOGS     = lensMap[m.month_key] || 0;       // Lab Receivings
+      const costOfGoods  = frameCOGS + lensCOGS;            // correct combined COGS
       const grossProfit  = totalRevenue - costOfGoods;
-      const expenses     = expMap[m.month_key] || 0;
+      const expenses     = expMap[m.month_key]  || 0;       // operating only
       const netProfit    = grossProfit - expenses;
       const netMargin    = totalRevenue > 0 ? Math.round(netProfit / totalRevenue * 100) : 0;
       return {
@@ -239,7 +254,9 @@ router.get('/profit', auth, async (req, res) => {
         order_revenue:  orderRev,
         qs_revenue:     qsRev,
         repair_revenue: repRev,
-        cost_of_goods:  costOfGoods,
+        cost_of_goods:  costOfGoods,   // frame + lens COGS combined
+        frame_cogs:     frameCOGS,
+        lens_cogs:      lensCOGS,
         gross_profit:   grossProfit,
         expenses,
         net_profit:     netProfit,
