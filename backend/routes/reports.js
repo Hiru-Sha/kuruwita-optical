@@ -196,14 +196,14 @@ router.get('/profit', auth, async (req, res) => {
     `);
 
     // Lens COGS per month — Lab Payment expenses = actual lens cost paid
-    const lensByMonth = await safeQuery(\`
+    const lensByMonth = await safeQuery(`
       SELECT
         TO_CHAR(date, 'YYYY-MM') AS month_key,
         COALESCE(SUM(CASE WHEN category = 'Lab Payment' THEN amount END), 0) AS lens_cogs
       FROM expenses
       WHERE date >= CURRENT_DATE - INTERVAL '6 months'
       GROUP BY TO_CHAR(date, 'YYYY-MM')
-    \`);
+    `);
 
     // Top margin frames — safe
     const topMargin = await safeQuery(`
