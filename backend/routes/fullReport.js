@@ -64,19 +64,19 @@ router.get('/', auth, async (req, res) => {
       // ── Orders list ─────────────────────────────────────────
       pool.query(`
         SELECT o.order_number, o.created_at::date AS date,
-               o.customer_name,
+               c.name AS customer_name,
                o.frame, o.lens_type, o.lens_coating, o.lens_company,
                o.total_amount, o.advance_amount, o.balance_amount,
                o.frame_buy_price, o.lens_buy_price, o.lab_bill_amount,
                o.gift_cost, o.status,
                o.customer_own_frame,
-               -- Per-order profit using correct COGS
                (o.total_amount
                 - CASE WHEN o.customer_own_frame THEN 0 ELSE COALESCE(o.frame_buy_price,0) END
                 - COALESCE(o.lab_bill_amount, 0)
                 - COALESCE(o.gift_cost, 0)
                ) AS order_profit
         FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.id
         WHERE o.created_at::date BETWEEN $1 AND $2
           AND o.status != 'cancelled'
         ORDER BY o.created_at DESC
