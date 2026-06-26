@@ -6,13 +6,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getCustomers, getCustomer, addCommLog, updateOrder, updateCustomer } from '../api';
 
-const navy  = '#0f1f3d';
-const gold  = '#c9a84c';
-const cream = '#f8f5ef';
-const border= '#e0ddd6';
-const muted = '#6b7280';
-const success='#2d7a4f';
-const danger ='#c0392b';
+const navy   = 'var(--navy)';
+const gold   = 'var(--gold)';
+const cream  = 'var(--bg-sunken)';
+const border = 'var(--border)';
+const muted  = 'var(--text-muted)';
+const success= 'var(--success)';
+const danger = 'var(--danger)';
 
 const STATUS_STYLE = {
   created:   { bg:'#dbeafe', color:'#1e40af' },
@@ -81,7 +81,7 @@ function RxCard({ rx, prevRx, orderInfo, isLatest }) {
 
       {/* Expanded prescription table */}
       {expanded && (
-        <div style={{ padding:14, background:C.surface }}>
+        <div style={{ padding:14, background:'var(--bg-surface)' }}>
           <div style={{ overflowX:'auto', marginBottom:prevRx?12:0 }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
               <thead>
@@ -101,7 +101,7 @@ function RxCard({ rx, prevRx, orderInfo, isLatest }) {
                   <tr key={row.eye}>
                     <td style={{ background:cream, padding:'8px 9px', fontWeight:700, fontSize:12, border:`1px solid ${border}`, color:navy, whiteSpace:'nowrap' }}>{row.eye}</td>
                     {[row.sph, row.cyl, row.axis, row.add, row.va, row.pd].map((v,i)=>(
-                      <td key={i} style={{ padding:'8px 9px', textAlign:'center', border:`1px solid ${border}`, fontSize:13, fontWeight:600, color:'#1a1a2e', background:C.surface }}>
+                      <td key={i} style={{ padding:'8px 9px', textAlign:'center', border:`1px solid ${border}`, fontSize:13, fontWeight:600, color:'#1a1a2e', background:'var(--bg-surface)' }}>
                         {v||'—'}
                       </td>
                     ))}
@@ -266,7 +266,7 @@ function OrderCard({ o, customerId, onRefresh }) {
       </button>
 
       {showMeas && (
-        <div style={{ marginTop:10, background:C.surface, borderRadius:9, padding:'12px 14px', border:`1px solid #93c5fd` }}>
+        <div style={{ marginTop:10, background:'var(--bg-surface)', borderRadius:9, padding:'12px 14px', border:`1px solid #93c5fd` }}>
           <div style={{ fontSize:12, fontWeight:700, color:'#1e40af', marginBottom:10 }}>📐 PD & Segment Height</div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
             <div>
@@ -395,7 +395,7 @@ export default function Customers() {
       <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="🔍  Search by name or phone..."
-          style={{ flex:1, minWidth:180, padding:'9px 14px', border:`1.5px solid ${border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.surface }}
+          style={{ flex:1, minWidth:180, padding:'9px 14px', border:`1.5px solid ${border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)' }}
         />
         {[['all','All'],['balance','💰 Balance Due'],['rx','📄 Rx Held']].map(([f,l]) => (
           <button key={f} onClick={()=>setFilter(f)}
@@ -427,7 +427,7 @@ export default function Customers() {
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
             {filtered.map(c => (
               <div key={c.id} onClick={()=>openCustomer(c.id)}
-                style={{ background:C.surface, border:`1.5px solid ${c.rx_held?'#fde68a':border}`, borderRadius:14, padding:18, cursor:'pointer', transition:'all .15s' }}
+                style={{ background:'var(--bg-surface)', border:`1.5px solid ${c.rx_held?'#fde68a':border}`, borderRadius:14, padding:18, cursor:'pointer', transition:'all .15s' }}
                 onMouseEnter={e=>e.currentTarget.style.borderColor=gold}
                 onMouseLeave={e=>e.currentTarget.style.borderColor=c.rx_held?'#fde68a':border}>
 
@@ -476,7 +476,7 @@ export default function Customers() {
       {selected && (
         <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.45)', zIndex:200, display:'flex', alignItems:'flex-start', justifyContent:'flex-end' }}
           onClick={e=>{ if(e.target===e.currentTarget) setSelected(null); }}>
-          <div style={{ background:C.surface, width:'100%', maxWidth:540, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
+          <div style={{ background:'var(--bg-surface)', width:'100%', maxWidth:540, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
 
             {/* Panel header */}
             <div style={{ background:navy, padding:'22px 22px 18px', position:'relative' }}>
