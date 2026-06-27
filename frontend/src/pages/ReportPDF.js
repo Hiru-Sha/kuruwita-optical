@@ -136,7 +136,7 @@ function buildReportHTML(data, from, to) {
     <tr>
       <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${or.order_number}</td>
       <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${new Date(or.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</td>
-      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${(or.customer||'').slice(0,20)}</td>
+      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${(or.customer_name||or.customer||'—').slice(0,22)}</td>
       <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${(or.frame||'—').slice(0,18)}</td>
       <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${or.lens_type||'—'}</td>
       <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;text-align:right;">${fmtR(or.total_amount)}</td>
@@ -170,8 +170,9 @@ function buildReportHTML(data, from, to) {
   // Dealer purchases
   const dealerRows = stockData.map(d=>`
     <tr>
-      <td style="padding:5px 10px;border:1px solid #e0ddd6;">${d.dealer_name}</td>
-      <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:center;">${d.count}</td>
+      <td style="padding:5px 10px;border:1px solid #e0ddd6;font-weight:600">${d.dealer_name||'—'}</td>
+      <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:center;">${d.purchases||d.count||0} purchases</td>
+      <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:center;">${d.items||0} items</td>
       <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:right;font-weight:600;color:#c0392b;">${fmtR(d.total)}</td>
     </tr>`).join('');
 
@@ -430,35 +431,52 @@ ${data.expenses.byCategory.length > 0 ? `
 ${stockData.length > 0 ? `
 <h2>Stock Purchases from Dealers</h2>
 <table>
-  <tr><th>Dealer</th><th class="c">Purchases</th><th class="r">Total Spent</th></tr>
+  <tr><th>Dealer</th><th class="c">Purchases</th><th class="c">Items</th><th class="r">Total Spent</th></tr>
   ${dealerRows}
   <tr class="total">
     <td style="padding:6px 10px;border:1px solid #e0ddd6;">TOTAL</td>
-    <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center;">${totalStockCount}</td>
+    <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center;">${stockData.reduce((s,d)=>s+(d.purchases||d.count||0),0)} purchases</td>
+    <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center;">${totalStockCount} items</td>
     <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:#c0392b;">${fmtR(totalStockSpend)}</td>
   </tr>
 </table>` : ''}
 
 <!-- ══ LAB BILLS ════════════════════════════════════════ -->
-${data.labBills && data.labBills.total_billed > 0 ? `
+${(() => {
+  // Use labBills if available, else build from lensJobs
+  const lb = data.labBills || {};
+  const byLab = (lb.by_lab && lb.by_lab.length > 0)
+    ? lb.by_lab
+    : (data.lensJobs || []).map(j => ({
+        lens_company:     j.lens_company || '—',
+        orders_with_bill: j.orders_with_bill || j.total || 0,
+        lab_total:        j.lab_total || 0,
+        total_paid:       j.total_paid || 0,
+        total_unpaid:     j.total_unpaid || 0,
+      }));
+  const totalBilled  = byLab.reduce((s,l)=>s+parseFloat(l.lab_total||0),0);
+  const totalPaid    = byLab.reduce((s,l)=>s+parseFloat(l.total_paid||0),0);
+  const totalUnpaid  = byLab.reduce((s,l)=>s+parseFloat(l.total_unpaid||0),0);
+  if (!byLab.length) return '';
+  return \`
 <h2>Lab Bills — Negombo Optical & Solex</h2>
 <div class="grid3">
-  <div class="kpi dark"><div class="kpi-label">Total Billed by Labs</div><div class="kpi-value">${fmtR(data.labBills.total_billed)}</div></div>
-  <div class="kpi"><div class="kpi-label">Paid to Labs</div><div class="kpi-value" style="color:#2d7a4f">${fmtR(data.labBills.total_paid)}</div></div>
-  <div class="kpi"><div class="kpi-label">Still Owed to Labs</div><div class="kpi-value" style="color:#c0392b">${fmtR(data.labBills.total_unpaid)}</div></div>
+  <div class="kpi dark"><div class="kpi-label">Total Billed by Labs</div><div class="kpi-value">\${fmtR(totalBilled)}</div></div>
+  <div class="kpi"><div class="kpi-label">Paid to Labs</div><div class="kpi-value" style="color:#2d7a4f">\${fmtR(totalPaid)}</div></div>
+  <div class="kpi"><div class="kpi-label">Still Owed to Labs</div><div class="kpi-value" style="color:#c0392b">\${fmtR(totalUnpaid)}</div></div>
 </div>
-${data.labBills.by_lab && data.labBills.by_lab.length > 0 ? `
 <table>
   <tr><th>Lab</th><th class="c">Orders</th><th class="r">Total Billed</th><th class="r">Paid</th><th class="r">Unpaid</th></tr>
-  ${data.labBills.by_lab.map(l=>`
+  \${byLab.map(l=>\`
     <tr>
-      <td style="padding:6px 10px;border:1px solid #e0ddd6;font-weight:600">${l.lens_company}</td>
-      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center">${l.orders_with_bill}</td>
-      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right">${fmtR(l.lab_total)}</td>
-      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:#2d7a4f">${fmtR(l.total_paid)}</td>
-      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:${parseFloat(l.total_unpaid)>0?'#c0392b':'#6b7280'};font-weight:${parseFloat(l.total_unpaid)>0?'700':'400'}">${fmtR(l.total_unpaid)}</td>
-    </tr>`).join('')}
-</table>` : ''}` : ''}
+      <td style="padding:6px 10px;border:1px solid #e0ddd6;font-weight:600">\${l.lens_company||'—'}</td>
+      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center">\${l.orders_with_bill||0}</td>
+      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right">\${fmtR(l.lab_total)}</td>
+      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:#2d7a4f">\${fmtR(l.total_paid)}</td>
+      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:\${parseFloat(l.total_unpaid)>0?'#c0392b':'#6b7280'};font-weight:\${parseFloat(l.total_unpaid)>0?'700':'400'}">\${fmtR(l.total_unpaid)}</td>
+    </tr>\`).join('')}
+</table>\`;
+})()}
 
 <!-- ══ KALUTOTA ACCOUNT ════════════════════════════════════ -->
 ${data.kalutota && data.kalutota.total_transactions > 0 ? `
