@@ -124,7 +124,7 @@ function buildReportHTML(data, from, to) {
     </svg>` : '';
 
   // Expense category rows
-  const expCatRows = data.expenses.byCategory.map(e=>`
+  const expCatRows = expCats.map(e=>`
     <tr>
       <td style="padding:5px 10px;border:1px solid #e0ddd6;">${e.category}</td>
       <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:center;">${e.count}</td>
@@ -176,7 +176,81 @@ function buildReportHTML(data, from, to) {
       <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:right;font-weight:600;color:#c0392b;">${fmtR(d.total)}</td>
     </tr>`).join('');
 
+  // ── Pre-compute Lab Bills HTML (avoids nested template literal issues) ──
+  const labBillsHTML = (() => {
+    const lb = data.labBills || {};
+    const byLab = (lb.by_lab && lb.by_lab.length > 0)
+      ? lb.by_lab
+      : (data.lensJobs || []).map(j => ({
+          lens_company:     j.lens_company || '—',
+          orders_with_bill: j.orders_with_bill || j.total || 0,
+          lab_total:        j.lab_total || 0,
+          total_paid:       j.total_paid || 0,
+          total_unpaid:     j.total_unpaid || 0,
+        }));
+    if (!byLab.length) return '';
+    const totalBilled = byLab.reduce((s,l) => s + parseFloat(l.lab_total||0), 0);
+    const totalPaid   = byLab.reduce((s,l) => s + parseFloat(l.total_paid||0), 0);
+    const totalUnpaid = byLab.reduce((s,l) => s + parseFloat(l.total_unpaid||0), 0);
+    const rowsHtml = byLab.map(l =>
+      '<tr>' +
+      '<td style="padding:6px 10px;border:1px solid #e0ddd6;font-weight:600">' + (l.lens_company||'—') + '</td>' +
+      '<td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center">' + (l.orders_with_bill||0) + '</td>' +
+      '<td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right">' + fmtR(l.lab_total) + '</td>' +
+      '<td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:#2d7a4f">' + fmtR(l.total_paid) + '</td>' +
+      '<td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:' + (parseFloat(l.total_unpaid)>0?'#c0392b':'#6b7280') + ';font-weight:' + (parseFloat(l.total_unpaid)>0?'700':'400') + '">' + fmtR(l.total_unpaid) + '</td>' +
+      '</tr>'
+    ).join('');
+    return (
+      '<h2>Lab Bills — Negombo Optical & Solex</h2>' +
+      '<div class="grid3">' +
+        '<div class="kpi dark"><div class="kpi-label">Total Billed by Labs</div><div class="kpi-value">' + fmtR(totalBilled) + '</div></div>' +
+        '<div class="kpi"><div class="kpi-label">Paid to Labs</div><div class="kpi-value" style="color:#2d7a4f">' + fmtR(totalPaid) + '</div></div>' +
+        '<div class="kpi"><div class="kpi-label">Still Owed to Labs</div><div class="kpi-value" style="color:#c0392b">' + fmtR(totalUnpaid) + '</div></div>' +
+      '</div>' +
+      '<table>' +
+        '<tr><th>Lab</th><th class="c">Orders</th><th class="r">Total Billed</th><th class="r">Paid</th><th class="r">Unpaid</th></tr>' +
+        rowsHtml +
+      '</table>'
+    );
+  })();
+
   const profitColor = parseFloat(s.netProfit) >= 0 ? '#2d7a4f' : '#c0392b';
+
+  // ── Pre-compute lab bills HTML (avoids nested template literal issues) ──
+  const labByRows = (data.labBills?.by_lab?.length > 0)
+    ? data.labBills.by_lab
+    : (data.lensJobs || []).map(j => ({
+        lens_company:     j.lens_company || '—',
+        orders_with_bill: j.orders_with_bill || j.total || 0,
+        lab_total:        j.lab_total || 0,
+        total_paid:       j.total_paid || 0,
+        total_unpaid:     j.total_unpaid || 0,
+      }));
+  const labTotalBilled  = labByRows.reduce((s,l) => s + parseFloat(l.lab_total||0), 0);
+  const labTotalPaid    = labByRows.reduce((s,l) => s + parseFloat(l.total_paid||0), 0);
+  const labTotalUnpaid  = labByRows.reduce((s,l) => s + parseFloat(l.total_unpaid||0), 0);
+  const labRowsHtml     = labByRows.map(l => [
+    '<tr>',
+    '<td style="padding:6px 10px;border:1px solid #e0ddd6;font-weight:600">' + (l.lens_company||'—') + '</td>',
+    '<td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center">' + (l.orders_with_bill||0) + '</td>',
+    '<td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right">' + fmtR(l.lab_total) + '</td>',
+    '<td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:#2d7a4f">' + fmtR(l.total_paid) + '</td>',
+    '<td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:' + (parseFloat(l.total_unpaid)>0?'#c0392b':'#6b7280') + ';font-weight:' + (parseFloat(l.total_unpaid)>0?'700':'400') + '">' + fmtR(l.total_unpaid) + '</td>',
+    '</tr>',
+  ].join('')).join('');
+
+  const labBillsHtml = labByRows.length === 0 ? '' : [
+    '<h2>Lab Bills — Negombo Optical &amp; Solex</h2>',
+    '<div class="grid3">',
+    '<div class="kpi dark"><div class="kpi-label">Total Billed by Labs</div><div class="kpi-value">' + fmtR(labTotalBilled) + '</div></div>',
+    '<div class="kpi"><div class="kpi-label">Paid to Labs</div><div class="kpi-value" style="color:#2d7a4f">' + fmtR(labTotalPaid) + '</div></div>',
+    '<div class="kpi"><div class="kpi-label">Still Owed to Labs</div><div class="kpi-value" style="color:#c0392b">' + fmtR(labTotalUnpaid) + '</div></div>',
+    '</div>',
+    '<table><tr><th>Lab</th><th class="c">Orders</th><th class="r">Total Billed</th><th class="r">Paid</th><th class="r">Unpaid</th></tr>',
+    labRowsHtml,
+    '</table>',
+  ].join('\n');
 
   return `<!DOCTYPE html>
 <html>
@@ -415,7 +489,7 @@ ${rep.types.length > 0 ? `
   <div class="kpi"><div class="kpi-label">Bank Expenses</div><div class="kpi-value" style="color:#c0392b">${fmtR(ex.bank_expenses)}</div></div>
 </div>
 
-${data.expenses.byCategory.length > 0 ? `
+${expCats.length > 0 ? `
 <h3>Expenses by Category</h3>
 <table>
   <tr><th>Category</th><th class="c">Count</th><th class="r">Amount</th></tr>
@@ -442,41 +516,7 @@ ${stockData.length > 0 ? `
 </table>` : ''}
 
 <!-- ══ LAB BILLS ════════════════════════════════════════ -->
-${(() => {
-  // Use labBills if available, else build from lensJobs
-  const lb = data.labBills || {};
-  const byLab = (lb.by_lab && lb.by_lab.length > 0)
-    ? lb.by_lab
-    : (data.lensJobs || []).map(j => ({
-        lens_company:     j.lens_company || '—',
-        orders_with_bill: j.orders_with_bill || j.total || 0,
-        lab_total:        j.lab_total || 0,
-        total_paid:       j.total_paid || 0,
-        total_unpaid:     j.total_unpaid || 0,
-      }));
-  const totalBilled  = byLab.reduce((s,l)=>s+parseFloat(l.lab_total||0),0);
-  const totalPaid    = byLab.reduce((s,l)=>s+parseFloat(l.total_paid||0),0);
-  const totalUnpaid  = byLab.reduce((s,l)=>s+parseFloat(l.total_unpaid||0),0);
-  if (!byLab.length) return '';
-  return \`
-<h2>Lab Bills — Negombo Optical & Solex</h2>
-<div class="grid3">
-  <div class="kpi dark"><div class="kpi-label">Total Billed by Labs</div><div class="kpi-value">\${fmtR(totalBilled)}</div></div>
-  <div class="kpi"><div class="kpi-label">Paid to Labs</div><div class="kpi-value" style="color:#2d7a4f">\${fmtR(totalPaid)}</div></div>
-  <div class="kpi"><div class="kpi-label">Still Owed to Labs</div><div class="kpi-value" style="color:#c0392b">\${fmtR(totalUnpaid)}</div></div>
-</div>
-<table>
-  <tr><th>Lab</th><th class="c">Orders</th><th class="r">Total Billed</th><th class="r">Paid</th><th class="r">Unpaid</th></tr>
-  \${byLab.map(l=>\`
-    <tr>
-      <td style="padding:6px 10px;border:1px solid #e0ddd6;font-weight:600">\${l.lens_company||'—'}</td>
-      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center">\${l.orders_with_bill||0}</td>
-      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right">\${fmtR(l.lab_total)}</td>
-      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:#2d7a4f">\${fmtR(l.total_paid)}</td>
-      <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:\${parseFloat(l.total_unpaid)>0?'#c0392b':'#6b7280'};font-weight:\${parseFloat(l.total_unpaid)>0?'700':'400'}">\${fmtR(l.total_unpaid)}</td>
-    </tr>\`).join('')}
-</table>\`;
-})()}
+${labBillsHtml}
 
 <!-- ══ KALUTOTA ACCOUNT ════════════════════════════════════ -->
 ${data.kalutota && data.kalutota.total_transactions > 0 ? `
@@ -754,11 +794,11 @@ export default function ReportPDF() {
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
 
             {/* Expenses by category */}
-            {data.expenses.byCategory.length > 0 && (
+            {(data.expenses?.byCategory?.length || 0) > 0 && (
               <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
                 <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>💸 Expenses by Category</div>
-                {data.expenses.byCategory.map(e=>{
-                  const maxE = parseFloat(data.expenses.byCategory[0]?.total)||1;
+                {(data.expenses?.byCategory || []).map(e=>{
+                  const maxE = parseFloat((data.expenses?.byCategory||[])[0]?.total)||1;
                   return (
                     <div key={e.category} style={{ padding:'9px 16px', borderBottom:`1px solid ${C.cream}` }}>
                       <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4, fontSize:13 }}>
