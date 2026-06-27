@@ -88,7 +88,13 @@ export default function Dashboard() {
   );
 
   const mr = data?.month_revenue || {};
-  const CASH_TABS = [{ k:'today',l:'Today' },{ k:'overall',l:'In Hand' },{ k:'deposits',l:'Deposits' }];
+  const CASH_TABS = [
+    { k:'today',    l:'Today'   },
+    { k:'overall',  l:'Cash'    },
+    { k:'bank',     l:'Bank'    },
+    { k:'total',    l:'Total'   },
+    { k:'deposits', l:'Deposits'},
+  ];
 
   const QUICK_ACTIONS = [
     { label:'New Order',   sub:'With Rx',   bg:'var(--gold)',    color:'var(--navy)', icon:'📋', path:'/orders/new'  },
@@ -123,7 +129,9 @@ export default function Dashboard() {
         <div style={{padding:'18px 22px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
           <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
             <div>
-              <div style={{fontSize:11,fontWeight:700,color:'var(--gold)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:2}}>Today's Cash</div>
+              <div style={{fontSize:11,fontWeight:700,color:'var(--gold)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:2}}>
+                {cashTab==='today' ? "Today's Cash" : cashTab==='overall' ? 'Cash In Hand' : cashTab==='bank' ? 'Bank Balance' : 'Total Money'}
+              </div>
               <div style={{fontSize:12,color:'rgba(255,255,255,.45)'}}>{new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</div>
             </div>
             <div style={{display:'flex',gap:4,background:'rgba(255,255,255,.08)',borderRadius:'var(--r-md)',padding:3}}>
@@ -141,7 +149,24 @@ export default function Dashboard() {
                 {fmt(cash.cashInHand||0)}
               </div>
             )}
-            {cashTab==='overall' && <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,color:'#fde68a',lineHeight:1}}>{fmt(cash.allTimeCash||0)}</div>}
+            {cashTab==='overall' && (
+              <div>
+                <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,color:'#fde68a',lineHeight:1}}>{fmt(cash.allTimeCash||0)}</div>
+                <div style={{fontSize:11,color:'rgba(255,255,255,.4)',marginTop:4}}>Physical cash in shop</div>
+              </div>
+            )}
+            {cashTab==='bank' && (
+              <div>
+                <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,color:'#93c5fd',lineHeight:1}}>{fmt(cash.bankBalance||0)}</div>
+                <div style={{fontSize:11,color:'rgba(255,255,255,.4)',marginTop:4}}>Deposits − bank expenses − bank stock payments</div>
+              </div>
+            )}
+            {cashTab==='total' && (
+              <div>
+                <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,color:'#86efac',lineHeight:1}}>{fmt(cash.totalMoney||0)}</div>
+                <div style={{fontSize:11,color:'rgba(255,255,255,.4)',marginTop:4}}>Cash + Bank combined</div>
+              </div>
+            )}
             {cashTab==='deposits' && <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,color:'#86efac',lineHeight:1}}>{fmt(cash.allTimeDeposits||0)}</div>}
           </div>
         </div>
@@ -149,24 +174,30 @@ export default function Dashboard() {
         {/* Formula bar */}
         {cashTab==='today' && (
           <div style={{background:'rgba(255,255,255,.05)',borderTop:'1px solid rgba(255,255,255,.08)',padding:'8px 22px',display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',fontSize:11}}>
-            <span style={{color:'#86efac',fontWeight:700}}>{fmt(cash.orderCash||cash.orderIncome||0)}</span>
+            <span style={{color:'#86efac',fontWeight:700}}>{fmt(cash.orderCash||0)}</span>
             <span style={{color:'rgba(255,255,255,.35)'}}>orders +</span>
-            <span style={{color:'#86efac',fontWeight:700}}>{fmt((cash.qsIncome||0)+(cash.repairIncome||0))}</span>
+            <span style={{color:'#86efac',fontWeight:700}}>{fmt((cash.qsCash||0)+(cash.repairCash||0))}</span>
             <span style={{color:'rgba(255,255,255,.35)'}}>sales −</span>
-            <span style={{color:'#fca5a5',fontWeight:700}}>{fmt(cash.totalExp||0)}</span>
+            <span style={{color:'#fca5a5',fontWeight:700}}>{fmt(cash.cashExpenses||cash.totalExp||0)}</span>
             <span style={{color:'rgba(255,255,255,.35)'}}>exp −</span>
             <span style={{color:'#93c5fd',fontWeight:700}}>{fmt(cash.totalDep||0)}</span>
-            <span style={{color:'rgba(255,255,255,.35)'}}>deposited</span>
+            <span style={{color:'rgba(255,255,255,.35)'}}>dep</span>
+            {(cash.dealerCash||0)>0 && <>
+              <span style={{color:'rgba(255,255,255,.35)'}}>−</span>
+              <span style={{color:'#fb923c',fontWeight:700}}>{fmt(cash.dealerCash||0)}</span>
+              <span style={{color:'rgba(255,255,255,.35)'}}>stock paid</span>
+            </>}
           </div>
         )}
 
         {/* 4 metric tiles */}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',borderTop:'1px solid rgba(255,255,255,.08)'}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',borderTop:'1px solid rgba(255,255,255,.08)'}}>
           {[
-            {label:'Orders',        val:fmt(cash.orderIncome||0),                              sub:`${cash.orderCount||0} advances`,         color:'#86efac'},
-            {label:'Sales+Repairs', val:fmt((cash.qsIncome||0)+(cash.repairIncome||0)),        sub:`${cash.qsCount||0} QS · ${cash.repairCount||0} rep`,color:'#86efac'},
-            {label:'Expenses',      val:fmt(cash.totalExp||0),                                 sub:`${cash.expCount||0} items`,              color:(cash.totalExp||0)>0?'#fca5a5':'rgba(255,255,255,.4)'},
-            {label:'Deposited',     val:fmt(cash.totalDep||0),                                 sub:`${cash.depCount||0} deposits`,           color:'#93c5fd'},
+            {label:'Orders (cash)',  val:fmt(cash.orderCash||0),                         sub:`${cash.orderCount||0} advances`,    color:'#86efac'},
+            {label:'Sales+Repairs',  val:fmt((cash.qsCash||0)+(cash.repairCash||0)),     sub:`${cash.qsCount||0}+${cash.repairCount||0}`, color:'#86efac'},
+            {label:'Expenses',       val:fmt(cash.cashExpenses||cash.totalExp||0),       sub:`${cash.expCount||0} items`,         color:'#fca5a5'},
+            {label:'Stock Paid',     val:fmt(cash.dealerCash||0),                        sub:`${cash.dealerCount||0} purchases`,  color:'#fb923c'},
+            {label:'Deposited',      val:fmt(cash.totalDep||0),                          sub:`${cash.depCount||0} deposits`,      color:'#93c5fd'},
           ].map((b,i)=>(
             <div key={i} style={{padding:'14px 18px',borderRight:i<3?'1px solid rgba(255,255,255,.07)':'none'}}>
               <div style={{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'rgba(255,255,255,.35)',marginBottom:6}}>{b.label}</div>
@@ -207,7 +238,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPIs */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:24}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:24}}>
         <StatCard dark label="This Month" icon={<span style={{fontSize:16}}>📅</span>}
           value={fmt(mr.grand_total||mr.total||0)}
           sub={`${mr.order_count||0} orders · ${mr.qs_count||0} sales · ${mr.repair_count||0} repairs`}
@@ -219,6 +250,8 @@ export default function Dashboard() {
           value={fmt(data?.total_balance||0)} sub="Outstanding" onClick={()=>navigate('/balance')}/>
         <StatCard label="Active Orders" accent="var(--info)" icon={<span style={{fontSize:16}}>📋</span>}
           value={data?.active_orders||0} sub="In progress" onClick={()=>navigate('/orders')}/>
+        <StatCard label="Stock Value" accent="#7c3aed" icon={<span style={{fontSize:16}}>📦</span>}
+          value={fmt(cash.inventoryValue||0)} sub="On shelf (cost price)"/>
       </div>
 
       {/* Reminders */}
