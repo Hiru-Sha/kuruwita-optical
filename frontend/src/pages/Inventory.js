@@ -817,6 +817,10 @@ export default function Inventory() {
   const [activeCat,    setActiveCat]   = useState('All');
   const [stockFilter,  setStockFilter]  = useState('all'); // 'all' | 'low' | 'out'
   const [subFilter,    setSubFilter]   = useState('');
+  const [filterColor,  setFilterColor]  = useState('');
+  const [filterBrand,  setFilterBrand]  = useState('');
+  const [filterShape,  setFilterShape]  = useState('');
+  const [filterMat,    setFilterMat]    = useState('');
   const [search,       setSearch]      = useState('');
   const [selected,     setSelected]    = useState(null);
   const [panelTab,     setPanelTab]    = useState('details');
@@ -857,7 +861,7 @@ export default function Inventory() {
     setLoading(true);
     const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
     const token = localStorage.getItem('ko_token');
-    const params = new URLSearchParams({ limit:'500', no_images:'1' });
+    const params = new URLSearchParams({ limit:'5000', no_images:'1' });
     if (search)                   params.set('search', search);
     if (activeCat !== 'All')      params.set('category', activeCat);
     fetch(`${BASE}/inventory?${params}`, { headers:{ Authorization:`Bearer ${token}` } })
@@ -1746,9 +1750,37 @@ export default function Inventory() {
         ))}
       </div>
 
-      {/* Search */}
-      <div style={{ marginBottom:14 }}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Search items..." style={{ ...INP, maxWidth:380 }}/>
+      {/* Search + attribute filters */}
+      <div style={{ marginBottom:14, display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Search items..." style={{ ...INP, maxWidth:320, flex:'1 1 200px' }}/>
+
+        {suggestions.colors.length > 0 && (
+          <select value={filterColor} onChange={e=>setFilterColor(e.target.value)}
+            style={{ padding:'9px 10px', border:`1.5px solid ${filterColor?'var(--navy)':C.border}`, borderRadius:9, fontSize:12, fontFamily:'inherit', outline:'none', background:filterColor?C.navy:C.cream, color:filterColor?'white':C.navy, cursor:'pointer' }}>
+            <option value="">🎨 Color</option>
+            {suggestions.colors.map(c=><option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
+        {suggestions.brands.length > 0 && (
+          <select value={filterBrand} onChange={e=>setFilterBrand(e.target.value)}
+            style={{ padding:'9px 10px', border:`1.5px solid ${filterBrand?'var(--navy)':C.border}`, borderRadius:9, fontSize:12, fontFamily:'inherit', outline:'none', background:filterBrand?C.navy:C.cream, color:filterBrand?'white':C.navy, cursor:'pointer' }}>
+            <option value="">🏷️ Brand</option>
+            {suggestions.brands.map(b=><option key={b} value={b}>{b}</option>)}
+          </select>
+        )}
+        {suggestions.materials.length > 0 && (
+          <select value={filterMat} onChange={e=>setFilterMat(e.target.value)}
+            style={{ padding:'9px 10px', border:`1.5px solid ${filterMat?'var(--navy)':C.border}`, borderRadius:9, fontSize:12, fontFamily:'inherit', outline:'none', background:filterMat?C.navy:C.cream, color:filterMat?'white':C.navy, cursor:'pointer' }}>
+            <option value="">🔩 Material</option>
+            {suggestions.materials.map(m=><option key={m} value={m}>{m}</option>)}
+          </select>
+        )}
+        {(filterColor||filterBrand||filterShape||filterMat) && (
+          <button onClick={()=>{setFilterColor('');setFilterBrand('');setFilterShape('');setFilterMat('');}}
+            style={{ padding:'9px 12px', background:'#fee2e2', color:C.danger, border:`1.5px solid #fca5a5`, borderRadius:9, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            ✕ Clear filters
+          </button>
+        )}
       </div>
 
       {/* Bulk reorder banner — shows when low/out stock items exist */}
@@ -1786,6 +1818,11 @@ export default function Inventory() {
                 // Stock filter
                 if (stockFilter==='low') return item.quantity>0 && item.quantity<=item.min_quantity;
                 if (stockFilter==='out') return item.quantity===0;
+                // Attribute filters
+                if (filterColor && (item.frame_color||'').toLowerCase() !== filterColor.toLowerCase()) return false;
+                if (filterBrand && !(item.brand||'').toLowerCase().includes(filterBrand.toLowerCase())) return false;
+                if (filterShape && (item.frame_shape||'').toLowerCase() !== filterShape.toLowerCase()) return false;
+                if (filterMat   && (item.frame_material||item.rg_material||'').toLowerCase() !== filterMat.toLowerCase()) return false;
                 // Hide Old Stock in All tab — only show when Old Stock tab is active
                 if (activeCat==='All' && item.category==='Old Stock') return false;
                 if (!subFilter) return true;

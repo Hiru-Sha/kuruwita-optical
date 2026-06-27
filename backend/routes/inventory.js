@@ -1,30 +1,35 @@
 // ============================================================
 //  Inventory Routes — /api/inventory
-//  Fixed:
-//    GET / now returns { data: [...], total: N } where total is
-//    the REAL count of ALL matching items in the DB (ignores
-//    the 500 LIMIT), so the frontend can show the true total.
 // ============================================================
-const router = require('express').Router();
+const router    = require('express').Router();
 const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 
 // GET /api/inventory
 router.get('/', auth, async (req, res) => {
-  const { search, category, limit = 500, no_images } = req.query;
+  const { search, category, limit = 5000, no_images, frame_color, brand, frame_shape, frame_material } = req.query;
+
+  // Skip image_url in list for speed — images loaded individually when needed
   const imageCol = no_images === '1' ? 'NULL::text AS image_url' : 'image_url';
 
   try {
-    // ── Build shared WHERE clause ────────────────────────────
-    let where  = ' WHERE 1=1';
+    let sql = `
+      SELECT id, name, category, brand, dealer,
+             frame_type, frame_color, frame_shape, frame_material, frame_size,
+             sg_type, rg_lens_type, rg_material, rg_power, item_name,
+             cost_price, sell_price, quantity, min_quantity,
+             ${imageCol}, display_number, stock_number, location, created_at, updated_at
+      FROM inventory
+      WHERE 1=1
+    `;
     const params = [];
-
     if (search) {
+      // Search across name, brand, frame_name, item_name, rg_power — any word match
       const terms = search.trim().split(/\s+/).filter(Boolean);
       terms.forEach(term => {
         params.push(`%${term}%`);
         const n = params.length;
-        where += ` AND (
+        sql += ` AND (
           name        ILIKE $${n} OR
           brand       ILIKE $${n} OR
           frame_name  ILIKE $${n} OR
@@ -36,33 +41,29 @@ router.get('/', auth, async (req, res) => {
     }
     if (category && category !== 'All') {
       params.push(category);
-      where += ` AND category = $${params.length}`;
+      sql += ` AND category = $${params.length}`;
     }
+    if (frame_color) {
+      params.push(frame_color);
+      sql += ` AND LOWER(frame_color) = LOWER($${params.length})`;
+    }
+    if (brand) {
+      params.push(`%${brand}%`);
+      sql += ` AND brand ILIKE $${params.length}`;
+    }
+    if (frame_shape) {
+      params.push(frame_shape);
+      sql += ` AND LOWER(frame_shape) = LOWER($${params.length})`;
+    }
+    if (frame_material) {
+      params.push(frame_material);
+      sql += ` AND (LOWER(frame_material) = LOWER($${params.length}) OR LOWER(rg_material) = LOWER($${params.length}))`;
+    }
+    params.push(parseInt(limit));
+    sql += ` ORDER BY category ASC, name ASC LIMIT $${params.length}`;
 
-    // ── Count query — same WHERE, no LIMIT ──────────────────
-    // This gives the REAL total so the dashboard KPI is correct.
-    const countResult = await pool.query(
-      `SELECT COUNT(*) AS total FROM inventory${where}`,
-      params
-    );
-    const total = parseInt(countResult.rows[0].total);
-
-    // ── Data query — with LIMIT ──────────────────────────────
-    const dataParams = [...params, parseInt(limit)];
-    const dataResult = await pool.query(
-      `SELECT id, name, category, brand, dealer,
-              frame_type, frame_color, frame_shape, frame_material, frame_size,
-              sg_type, rg_lens_type, rg_material, rg_power, item_name,
-              cost_price, sell_price, quantity, min_quantity,
-              ${imageCol}, display_number, stock_number, location,
-              notes, created_at, updated_at
-       FROM inventory${where}
-       ORDER BY id ASC
-       LIMIT $${dataParams.length}`,
-      dataParams
-    );
-
-    res.json({ data: dataResult.rows, total });
+    const result = await pool.query(sql, params);
+    res.json({ data: result.rows });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed' });
