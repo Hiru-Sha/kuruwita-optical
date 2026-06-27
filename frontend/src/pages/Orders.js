@@ -66,10 +66,11 @@ function PaymentModal({ order, onClose, onSave }) {
     setSaving(true);
     try {
       await updateOrder(order.id, {
-        advance_amount:  parseFloat(order.advance_amount || 0) + amt,
-        balance_amount:  Math.max(0, balance - amt),
-        last_payment_date: payDate,
+        advance_amount:      parseFloat(order.advance_amount || 0) + amt,
+        balance_amount:      Math.max(0, balance - amt),
+        last_payment_date:   payDate,
         last_payment_method: method,
+        last_payment_amount: amt,   // ← Save exact amount for End of Day tracking
       });
       onSave(`Payment of ${fmtMoney(amt)} recorded on ${new Date(payDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}. New balance: ${fmtMoney(Math.max(0,balance-amt))}`);
     } catch(e) { setError('Failed to record payment.'); }
