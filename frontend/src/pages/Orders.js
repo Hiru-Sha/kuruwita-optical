@@ -70,8 +70,36 @@ function PaymentModal({ order, onClose, onSave }) {
         balance_amount:      Math.max(0, balance - amt),
         last_payment_date:   payDate,
         last_payment_method: method,
-        last_payment_amount: amt,   // ← Save exact amount for End of Day tracking
+        last_payment_amount: amt,   // saved for End of Day tracking
       });
+
+      // ── Auto-create bank deposit when payment is by bank/transfer ──
+      // Cash payments stay in the till; bank payments go straight to bank account
+      const isBankPay = method && method !== 'cash';
+      if (isBankPay) {
+        try {
+          const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+          const token = localStorage.getItem('ko_token');
+          await fetch(`${BASE}/cash-deposits`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              date:         payDate,
+              amount:       amt,
+              payment_type: method,
+              notes:        `Balance payment for order ${order.order_number}`,
+              order_id:     order.id,
+            }),
+          });
+        } catch (e) {
+          console.warn('Auto bank deposit entry failed:', e.message);
+          // Non-critical — order payment still recorded
+        }
+      }
+
       onSave(`Payment of ${fmtMoney(amt)} recorded on ${new Date(payDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}. New balance: ${fmtMoney(Math.max(0,balance-amt))}`);
     } catch(e) { setError('Failed to record payment.'); }
     finally { setSaving(false); }
