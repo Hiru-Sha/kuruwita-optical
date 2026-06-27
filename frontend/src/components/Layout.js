@@ -91,8 +91,16 @@ export default function Layout() {
   const [showScan,setShowScan] = useState(false);
   const [dark,setDark] = useState(()=>localStorage.getItem('ko_theme')==='dark');
 
-  useEffect(()=>{ document.body.setAttribute('data-theme',dark?'dark':'light'); localStorage.setItem('ko_theme',dark?'dark':'light'); },[dark]);
-  useEffect(()=>{ document.body.setAttribute('data-theme',dark?'dark':'light'); },[]);
+  useEffect(()=>{
+    document.body.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.body.classList.toggle('dark', dark);   // ← enables .dark CSS rules
+    localStorage.setItem('ko_theme', dark ? 'dark' : 'light');
+  },[dark]);
+  useEffect(()=>{
+    const saved = localStorage.getItem('ko_theme') === 'dark';
+    document.body.setAttribute('data-theme', saved ? 'dark' : 'light');
+    document.body.classList.toggle('dark', saved);
+  },[]);
   useEffect(()=>{ const fn=()=>setMob(window.innerWidth<768); window.addEventListener('resize',fn); return ()=>window.removeEventListener('resize',fn); },[]);
   useEffect(()=>{ if(mob) setOpen(false); },[location.pathname]);
 
@@ -144,10 +152,10 @@ export default function Layout() {
               {items.map(n=>{
                 const ac=ACCENT[n.icon]||'#c9a84c';
                 return (
-                  <NavLink key={n.to} to={n.to} style={({isActive})=>({display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:9,marginBottom:1,textDecoration:'none',transition:'all .12s',background:isActive?`${ac}18`:'transparent',borderLeft:isActive?`3px solid ${ac}`:'3px solid transparent'})}>
+                  <NavLink key={n.to} to={n.to} className={({isActive})=>`ko-nav-link${isActive?' ko-nav-link-active':''}`} style={({isActive})=>({display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:9,marginBottom:1,textDecoration:'none',transition:'all .12s',background:isActive?`${ac}18`:'transparent',borderLeft:isActive?`3px solid ${ac}`:'3px solid transparent','--item-accent':ac})}>
                     {({isActive})=>(
                       <>
-                        <div style={{width:28,height:28,borderRadius:7,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:isActive?`${ac}2a`:'rgba(255,255,255,.06)',transition:'all .12s'}}>
+                        <div className="ko-nav-icon" style={{width:28,height:28,borderRadius:7,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:isActive?`${ac}2a`:'rgba(255,255,255,.06)',transition:'all .12s'}}>
                           <Icon name={n.icon} size={14} color={isActive?ac:'rgba(255,255,255,.45)'}/>
                         </div>
                         <span style={{fontSize:13,fontWeight:isActive?600:400,color:isActive?'#fff':'rgba(255,255,255,.55)'}}>{n.label}</span>

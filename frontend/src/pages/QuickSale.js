@@ -92,7 +92,7 @@ function Receipt({ sale, items }) {
   const paid     = parseFloat(sale.amount_paid||0);
   const change   = parseFloat(sale.change_given||0);
   return (
-    <div style={{ maxWidth:440, margin:'0 auto', fontFamily:'var(--font-body)' }}>
+    <div style={{ width:'100%', fontFamily:'var(--font-body)' }}>
       <div style={{ background:C.navy, borderRadius:12, padding:'14px 18px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
           <div style={{ background:'#111', borderRadius:12, padding:'12px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -284,7 +284,7 @@ export default function QuickSale() {
 
   // ── Done screen ───────────────────────────────────────────
   if (done) return (
-    <div style={{fontFamily:'var(--font-body)',maxWidth:560,margin:'0 auto'}}>
+    <div style={{fontFamily:'var(--font-body)',width:'100%'}}>
       <div style={{textAlign:'center',padding:'20px 0 14px'}}>
         <div style={{fontSize:44,marginBottom:6}}>✅</div>
         <div style={{fontFamily:'var(--font-display)',fontSize:20,color:C.navy}}>Sale Complete!</div>
@@ -307,7 +307,7 @@ export default function QuickSale() {
 
   // ── Sale screen — single column on mobile ──────────────────
   return (
-    <div style={{fontFamily:'var(--font-body)',maxWidth:mob?'100%':720,margin:'0 auto',paddingBottom:mob?120:0}}>
+    <div style={{fontFamily:'var(--font-body)',width:'100%',paddingBottom:mob?120:0}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:8}}>
         <div>
           <h1 style={{fontFamily:'var(--font-display)',fontSize:mob?18:22,color:C.navy,margin:'0 0 2px'}}>🛍️ Quick Sale</h1>

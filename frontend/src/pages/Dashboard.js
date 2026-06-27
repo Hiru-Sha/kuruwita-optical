@@ -110,7 +110,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div style={{fontFamily:'var(--font-body)',maxWidth:900,margin:'0 auto',width:'100%'}}>
+    <div style={{fontFamily:'var(--font-body)',width:'100%'}}>
 
       {/* Greeting */}
       <div style={{marginBottom:24}}>

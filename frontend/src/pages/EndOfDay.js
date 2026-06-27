@@ -5,8 +5,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
 const C = {
-  navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
-  border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
+  navy:    'var(--navy)',
+  gold:    'var(--gold)',
+  cream:   'var(--bg-sunken)',
+  surface: 'var(--bg-surface)',
+  border:  'var(--border)',
+  muted:   'var(--text-muted)',
+  success: 'var(--success)',
+  danger:  'var(--danger)',
+  warning: 'var(--warning)',
+  info:    'var(--info)',
 };
 const fmt     = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 const fmtFull = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -58,30 +66,14 @@ export default function EndOfDay() {
       const orderBank   = todayOrders.filter(o=>o.payment_method&&o.payment_method!=='cash').reduce((s,o)=>s+parseFloat(o.advance_amount||0),0);
       const orderBal    = todayOrders.reduce((s,o)=>s+parseFloat(o.balance_amount||0),0);
 
-      // Balance payments received today (orders created on earlier dates, balance collected today)
+      // Balance payments received today (orders created earlier, paid today)
       const balPayments = (Array.isArray(orders)?orders:[]).filter(o =>
         o.last_payment_date === d && o.created_at?.slice(0,10) !== d
       );
-      const balCashItems = balPayments.map(o => {
-        // Use last_payment_amount if available (new column)
-        // Fallback: infer from total - advance - remaining balance
-        const stored = parseFloat(o.last_payment_amount || 0);
-        if (stored > 0) return stored;
-        // Fallback: if fully paid today, payment = total - original advance
-        // total_amount - current_balance_amount = everything paid so far
-        // But advance_amount was INCREASED when balance paid, so:
-        // Paid today ≈ total_amount - balance_amount - (advance at order creation)
-        // Best approximate: use total_amount - balance_amount as total collected
-        // For EOD, if no stored amount, use remaining balance that was cleared
-        if (parseFloat(o.balance_amount||0) === 0) {
-          return parseFloat(o.total_amount||0) - (parseFloat(o.total_amount||0) - parseFloat(o.advance_amount||0) - parseFloat(o.balance_amount||0));
-        }
-        return 0;
-      });
-      const balCash = balCashItems.reduce((s,a) => s + a, 0);
-      const balCashMethod = balPayments.map((o,i) => ({ amount: balCashItems[i], method: o.last_payment_method||'cash' }));
-      const balCashCash = balCashMethod.filter(x=>!x.method||x.method==='cash').reduce((s,x)=>s+x.amount,0);
-      const balCashBank = balCashMethod.filter(x=>x.method&&x.method!=='cash').reduce((s,x)=>s+x.amount,0);
+      const balCash = balPayments.reduce((s,o)=>{
+        const orig = parseFloat(o.advance_amount||0) + parseFloat(o.balance_amount||0);
+        return s + (parseFloat(o.last_payment_date===d ? o.advance_amount||0 : 0));
+      }, 0);
 
       // Quick sales today
       const todayQS   = (Array.isArray(qsales)?qsales:[]).filter(s => s.created_at?.slice(0,10)===d);
@@ -100,15 +92,13 @@ export default function EndOfDay() {
       const dep       = Array.isArray(deposits)?deposits:[];
       const depCash   = dep.reduce((s,d)=>s+parseFloat(d.amount||0),0);
 
-      // Include balance payments collected today from older orders
-      const totalIn     = orderCash + orderBank + qsCash + repCash + balCash;
-      const cashOnlyIn  = orderCash + qsCash + repCash + balCashCash;
+      const totalIn     = orderCash + orderBank + qsCash + repCash;
+      const cashOnlyIn  = orderCash + qsCash + repCash;
       const cashInHand  = cashOnlyIn - expCash - depCash;
 
       setData({
         date: d,
-        orders:      { list:todayOrders, cash:orderCash, bank:orderBank, total:orderCash+orderBank, count:todayOrders.length, outstanding:orderBal,
-                       balPayments, balCash, balCashCash, balCashBank },
+        orders:      { list:todayOrders, cash:orderCash, bank:orderBank, total:orderCash+orderBank, count:todayOrders.length, outstanding:orderBal },
         quickSales:  { list:todayQS,     cash:qsCash,    count:todayQS.length },
         repairs:     { list:todayRep,    cash:repCash,   count:todayRep.length },
         expenses:    { list:todayExp,    cashOut:expCash, bankOut:expBank },
@@ -158,7 +148,6 @@ export default function EndOfDay() {
 
 <div class="bold" style="margin-bottom:4px;">INCOME</div>
 <div class="row"><span>Orders (${data.orders.count})</span><span>${fmt(data.orders.cash)}</span></div>
-${(data.orders.balCash||0)>0 ? `<div class="row" style="padding-left:16px;font-size:12px;color:#059669"><span>↳ Balance collected (${data.orders.balPayments?.length||0} orders)</span><span>+${fmt(data.orders.balCash)}</span></div>` : ''}
 <div class="row"><span>Quick Sales (${data.quickSales.count})</span><span>${fmt(data.quickSales.cash)}</span></div>
 <div class="row"><span>Repairs (${data.repairs.count})</span><span>${fmt(data.repairs.cash)}</span></div>
 <div class="row bold" style="border-top:1px solid #999;padding-top:4px;margin-top:2px;">
@@ -207,12 +196,12 @@ ${data.orders.outstanding > 0 ? `
   );
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif", maxWidth:680, margin:'0 auto' }}>
+    <div style={{ fontFamily:'var(--font-body)', width:'100%' }}>
 
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:0 }}>🏦 End of Day</h1>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:24, color:C.navy, margin:0 }}>🏦 End of Day</h1>
           <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Daily cash register summary</p>
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
@@ -235,9 +224,9 @@ ${data.orders.outstanding > 0 ? `
 
       {data && (
         <>
-          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, color:C.navy, margin:'16px 0 12px' }}>
+          <div style={{ fontFamily:'var(--font-display)', fontSize:16, color:C.navy, margin:'16px 0 12px' }}>
             {fmtDate(data.date)}
-            {data.date===today() && <span style={{ marginLeft:10, background:C.gold, color:C.navy, fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:20, fontFamily:"'DM Sans',sans-serif" }}>Today</span>}
+            {data.date===today() && <span style={{ marginLeft:10, background:C.gold, color:C.navy, fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:20, fontFamily:'var(--font-body)' }}>Today</span>}
           </div>
 
           {/* Big cash in drawer card */}
@@ -246,7 +235,7 @@ ${data.orders.outstanding > 0 ? `
               <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:data.summary.cashInHand>=0?C.gold:'#c0392b', marginBottom:4 }}>
                 {drawerOpen ? 'Closing Balance' : 'Cash from Today'}
               </div>
-              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:36, fontWeight:700, color:data.summary.cashInHand>=0?'white':C.danger }}>
+              <div style={{ fontFamily:'var(--font-display)', fontSize:36, fontWeight:700, color:data.summary.cashInHand>=0?'white':C.danger }}>
                 {fmt(parseFloat(drawerOpen||0) + data.summary.cashInHand)}
               </div>
               {drawerOpen && (
@@ -275,7 +264,7 @@ ${data.orders.outstanding > 0 ? `
               <span style={{ color:C.muted, fontWeight:700 }}>{fmt(drawerOpen)} opening</span>
               <span style={{ color:C.muted }}>+</span>
             </>}
-            <span style={{ color:C.success, fontWeight:700 }}>{fmt(data.orders.cash + (data.orders.balCashCash||0))} orders</span>
+            <span style={{ color:C.success, fontWeight:700 }}>{fmt(data.orders.cash)} orders</span>
             <span style={{ color:C.muted }}>+</span>
             <span style={{ color:'#0891b2', fontWeight:700 }}>{fmt(data.quickSales.cash)} sales</span>
             <span style={{ color:C.muted }}>+</span>
@@ -291,7 +280,7 @@ ${data.orders.outstanding > 0 ? `
           </div>
 
           {/* Drawer opening balance */}
-          <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px', marginBottom:16, display:'flex', gap:10, alignItems:'center' }}>
+          <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 16px', marginBottom:16, display:'flex', gap:10, alignItems:'center' }}>
             <span style={{ fontSize:13, color:C.navy, fontWeight:600 }}>💵 Opening balance (cash in drawer at start of day):</span>
             <input type="number" value={drawerOpen} onChange={e=>handleDrawerOpen(e.target.value)}
               placeholder="0" style={{ padding:'6px 10px', border:`1.5px solid ${C.border}`, borderRadius:7, fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none', background:C.cream, width:120 }}/>
@@ -308,20 +297,20 @@ ${data.orders.outstanding > 0 ? `
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
             {[
               { icon:'📋', label:'Orders',
-              cash:(data.orders.total||data.orders.cash)+(data.orders.balCash||0),
+              cash:data.orders.total||data.orders.cash,
               count:data.orders.count, color:C.success,
               sub:(data.orders.bank||0)>0
-                ? `${fmt(data.orders.cash)} cash · ${fmt(data.orders.bank)} bank · ${fmt(data.orders.outstanding)} owed${(data.orders.balCash||0)>0?' · '+fmt(data.orders.balCash)+' bal collected':''}`
+                ? `${fmt(data.orders.cash)} cash · ${fmt(data.orders.bank)} bank · ${fmt(data.orders.outstanding)} owed`
                 : `${fmt(data.orders.outstanding)} outstanding` },
               { icon:'⚡', label:'Quick Sales', cash:data.quickSales.cash,  count:data.quickSales.count,  color:'#0891b2' },
               { icon:'🔧', label:'Repairs',     cash:data.repairs.cash,     count:data.repairs.count,     color:'#7c3aed' },
               { icon:'💸', label:'Cash Expenses',cash:data.expenses.cashOut,count:data.expenses.list.filter(e=>e.payment_method!=='bank').length, color:C.danger, neg:true },
             ].map(box=>(
-              <div key={box.label} style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 16px' }}>
+              <div key={box.label} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 16px' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                   <div>
                     <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:4 }}>{box.icon} {box.label}</div>
-                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:box.color }}>
+                    <div style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:700, color:box.color }}>
                       {box.neg?'− ':''}{fmt(box.cash)}
                     </div>
                     {box.sub && <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{box.sub}</div>}
@@ -334,9 +323,9 @@ ${data.orders.outstanding > 0 ? `
 
           {/* Detail sections */}
           {data.orders.list.length > 0 && (
-            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
               <div style={{ padding:'11px 16px', background:C.cream, borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>
-                📋 Orders ({data.orders.count}) — {fmt(data.orders.cash)} advance{(data.orders.balCash||0)>0?` + ${fmt(data.orders.balCash)} balance`:''} collected
+                📋 Orders ({data.orders.count}) — {fmt(data.orders.cash)} collected
               </div>
               {data.orders.list.map(o=>(
                 <Row key={o.id}
@@ -350,7 +339,7 @@ ${data.orders.outstanding > 0 ? `
           )}
 
           {data.quickSales.list.length > 0 && (
-            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
               <div style={{ padding:'11px 16px', background:C.cream, borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>
                 ⚡ Quick Sales ({data.quickSales.count}) — {fmt(data.quickSales.cash)}
               </div>
@@ -366,7 +355,7 @@ ${data.orders.outstanding > 0 ? `
           )}
 
           {data.repairs.list.length > 0 && (
-            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
               <div style={{ padding:'11px 16px', background:C.cream, borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>
                 🔧 Repairs ({data.repairs.count}) — {fmt(data.repairs.cash)}
               </div>
@@ -382,7 +371,7 @@ ${data.orders.outstanding > 0 ? `
           )}
 
           {data.expenses.list.length > 0 && (
-            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
               <div style={{ padding:'11px 16px', background:C.cream, borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>
                 💸 Expenses — {fmt(data.expenses.cashOut)} cash · {fmt(data.expenses.bankOut)} bank
               </div>
@@ -398,7 +387,7 @@ ${data.orders.outstanding > 0 ? `
           )}
 
           {data.deposits.list.length > 0 && (
-            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
               <div style={{ padding:'11px 16px', background:'#eff6ff', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:'#1e40af' }}>
                 🏦 Bank Deposits — {fmt(data.deposits.total)}
               </div>

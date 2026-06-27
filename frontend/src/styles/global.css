@@ -348,3 +348,15 @@ body{
   .ko-topbar{padding:0 14px}
 }
 @media(min-width:769px){.ko-mobile-nav{display:none}}
+
+/* ── Dark mode full-page overrides ──────────────────────────── */
+.dark body, body.dark {
+  background: #0c1a2e !important;
+  color: rgba(255,255,255,.87) !important;
+}
+.dark .card, body.dark .card,
+[data-theme="dark"] .card {
+  background: #111f35 !important;
+  border-color: rgba(255,255,255,.08) !important;
+  color: rgba(255,255,255,.87) !important;
+}

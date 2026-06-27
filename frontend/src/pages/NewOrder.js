@@ -587,7 +587,7 @@ export default function NewOrder() {
   };
 
   return (
-    <div style={{ fontFamily:'var(--font-body)', maxWidth:740, margin:'0 auto' }}>
+    <div style={{ fontFamily:'var(--font-body)', width:'100%' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4, flexWrap:'wrap', gap:8 }}>
         <h1 style={{ fontFamily:'var(--font-display)', fontSize:22, color:C.navy, margin:0 }}>New Order</h1>
         <button onClick={()=>navigate('/orders')}
