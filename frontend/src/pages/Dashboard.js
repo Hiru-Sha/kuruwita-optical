@@ -157,14 +157,25 @@ export default function Dashboard() {
             )}
             {cashTab==='bank' && (
               <div>
-                <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,color:'#93c5fd',lineHeight:1}}>{fmt(cash.bankBalance||0)}</div>
-                <div style={{fontSize:11,color:'rgba(255,255,255,.4)',marginTop:4}}>Deposits − bank expenses − bank stock payments</div>
+                <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,
+                  color:(cash.bankBalance||0)<0?'#fca5a5':'#93c5fd',lineHeight:1}}>
+                  {fmt(cash.bankBalance||0)}
+                </div>
+                <div style={{fontSize:11,color:'rgba(255,255,255,.4)',marginTop:4}}>
+                  {(cash.bankBalance||0)<0
+                    ? '⚠️ Negative = some deposits not recorded in system'
+                    : 'Deposits − bank expenses − bank stock payments'}
+                </div>
               </div>
             )}
             {cashTab==='total' && (
               <div>
-                <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,color:'#86efac',lineHeight:1}}>{fmt(cash.totalMoney||0)}</div>
-                <div style={{fontSize:11,color:'rgba(255,255,255,.4)',marginTop:4}}>Cash + Bank combined</div>
+                <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,color:'#86efac',lineHeight:1}}>
+                  {fmt(cash.totalMoney||0)}
+                </div>
+                <div style={{fontSize:11,color:'rgba(255,255,255,.4)',marginTop:4}}>
+                  Cash: {fmt(cash.allTimeCash||0)} + Bank: {fmt(cash.bankBalance||0)}
+                </div>
               </div>
             )}
             {cashTab==='deposits' && <div style={{fontFamily:'var(--font-display)',fontSize:30,fontWeight:700,color:'#86efac',lineHeight:1}}>{fmt(cash.allTimeDeposits||0)}</div>}

@@ -61,11 +61,12 @@ router.get('/', auth, async (req, res) => {
         FROM quick_sales WHERE created_at::date = $1
       `, [today]).catch(() => ({ rows: [] })),
 
-      // 3: Today's expenses with payment method
+      // 3: Today's expenses with payment method (exclude Lab Payment from cash calc)
       pool.query(`
         SELECT amount, COALESCE(payment_method,'cash') AS payment_method,
                category
         FROM expenses WHERE date = $1
+          AND category != 'Lab Payment'
       `, [today]).catch(() => ({ rows: [] })),
 
       // 4: Today's deposits to bank
@@ -239,15 +240,19 @@ router.get('/', auth, async (req, res) => {
             THEN charge END),0) AS v FROM repairs
         `).catch(() => ({ rows: [{ v: '0' }] })),
 
-        // Cash expenses (reduce cash)
+        // Cash expenses (reduce cash in hand)
+        // Exclude Lab Payment — it's a bank transfer to the lab, handled separately
         pool.query(`
           SELECT COALESCE(SUM(CASE WHEN COALESCE(payment_method,'cash')='cash'
+            AND category != 'Lab Payment'
             THEN amount END),0) AS v FROM expenses
         `).catch(() => ({ rows: [{ v: '0' }] })),
 
         // Bank expenses (reduce bank balance)
+        // Exclude Lab Payment — already counted in COGS
         pool.query(`
           SELECT COALESCE(SUM(CASE WHEN COALESCE(payment_method,'cash')!='cash'
+            AND category != 'Lab Payment'
             THEN amount END),0) AS v FROM expenses
         `).catch(() => ({ rows: [{ v: '0' }] })),
 
@@ -333,7 +338,8 @@ router.get('/', auth, async (req, res) => {
 
         // All-time
         allTimeCash,       // all cash ever received − spent − deposited − dealer cash
-        bankBalance,       // deposits − bank expenses − bank dealer payments
+        bankBalance,       // deposits − bank expenses − bank dealer purchases
+                         // NOTE: negative means not all deposits are recorded in system
         totalMoney,        // cash + bank = total liquid money
         allTimeDeposits,
         inventoryValue,    // stock on shelf (not liquid but yours)
