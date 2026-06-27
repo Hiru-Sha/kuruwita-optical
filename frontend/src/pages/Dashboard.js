@@ -110,7 +110,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div style={{fontFamily:'var(--font-body)',maxWidth:900,margin:'0 auto'}}>
+    <div style={{fontFamily:'var(--font-body)',maxWidth:900,margin:'0 auto',width:'100%'}}>
 
       {/* Greeting */}
       <div style={{marginBottom:24}}>
@@ -202,7 +202,7 @@ export default function Dashboard() {
         )}
 
         {/* 4 metric tiles */}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',borderTop:'1px solid rgba(255,255,255,.08)'}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',borderTop:'1px solid rgba(255,255,255,.08)'}} className="dash-grid-5">
           {[
             {label:'Orders (cash)',  val:fmt(cash.orderCash||0),                         sub:`${cash.orderCount||0} advances`,    color:'#86efac'},
             {label:'Sales+Repairs',  val:fmt((cash.qsCash||0)+(cash.repairCash||0)),     sub:`${cash.qsCount||0}+${cash.repairCount||0}`, color:'#86efac'},
@@ -243,13 +243,13 @@ export default function Dashboard() {
       {/* Quick actions */}
       <div style={{marginBottom:24}}>
         <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text-muted)',marginBottom:12}}>Quick Actions</div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10}} className="dash-quick-actions">
           {QUICK_ACTIONS.map(a=><QuickBtn key={a.label} {...a} onClick={()=>navigate(a.path)}/>)}
         </div>
       </div>
 
       {/* KPIs */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:24}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:24}} className="dash-grid-5">
         <StatCard dark label="This Month" icon={<span style={{fontSize:16}}>📅</span>}
           value={fmt(mr.grand_total||mr.total||0)}
           sub={`${mr.order_count||0} orders · ${mr.qs_count||0} sales · ${mr.repair_count||0} repairs`}
@@ -305,7 +305,7 @@ export default function Dashboard() {
         <div style={{padding:'14px 20px',borderBottom:'1px solid var(--border)'}}>
           <div style={{fontSize:14,fontWeight:600,color:'var(--text-primary)',fontFamily:'var(--font-display)'}}>📊 This month</div>
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:1,background:'var(--border)'}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:1,background:'var(--border)'}} className="kpi-grid">
           {[
             {l:'Total billed',  v:fmt(mr.grand_total||mr.total||0),                                                                          c:'var(--text-primary)'},
             {l:'Collected',     v:fmt((parseFloat(mr.collected||0))+(parseFloat(mr.qs_total||0))+(parseFloat(mr.repair_total||0))),           c:'var(--success)'},

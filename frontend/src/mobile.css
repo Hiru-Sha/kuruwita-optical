@@ -1,0 +1,109 @@
+/* ============================================================
+   mobile.css — Global mobile responsiveness
+   Import this in App.js: import './mobile.css';
+   ============================================================ */
+
+/* ── Base mobile resets ──────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html, body {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ── Page content padding on mobile ─────────────────────── */
+@media (max-width: 768px) {
+
+  /* Prevent any element from overflowing horizontally */
+  .main-content, main {
+    overflow-x: hidden !important;
+    padding: 14px 12px 100px !important;
+  }
+
+  /* ── Tables: horizontal scroll instead of overflow ── */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  /* ── Inputs: full width on mobile ── */
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="month"],
+  input[type="email"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+    width: 100%;
+  }
+
+  /* ── Dashboard grid fixes ── */
+  .dash-grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .dash-grid-5 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .dash-quick-actions {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  /* ── Report KPI grid ── */
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* ── Card grid: max 2 cols on mobile ── */
+  [style*="repeat(4,1fr)"],
+  [style*="repeat(4, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  [style*="repeat(3,1fr)"],
+  [style*="repeat(3, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  [style*="repeat(5,1fr)"],
+  [style*="repeat(5, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* ── Flex rows that should wrap on mobile ── */
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+  .mobile-full {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* ── Hide non-essential columns in tables ── */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* ── Sidebar overlay ── */
+  .sidebar-mobile-open {
+    transform: translateX(0) !important;
+  }
+}
+
+/* ── Very small screens ────────────────────────────────── */
+@media (max-width: 480px) {
+  [style*="repeat(2,1fr)"],
+  [style*="repeat(2, 1fr)"],
+  .dash-grid-4,
+  .dash-grid-5,
+  .kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Quick actions: 2 cols on very small screens */
+  .dash-quick-actions {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
