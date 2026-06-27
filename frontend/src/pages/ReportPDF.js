@@ -707,7 +707,7 @@ export default function ReportPDF() {
                 { l:'Quick Sales',    v:qs.total_sales||0,    sub:`${fmt(qs.revenue)} revenue`,     c:'#2563eb' },
                 { l:'Repairs',        v:r.total_repairs||0,   sub:`${fmt(r.revenue)} revenue`,      c:'#0891b2' },
                 { l:'Expenses',       v:ex.total_expenses||0, sub:fmt(s.totalExpenses),              c:C.danger },
-                { l:'Stock Purchased',v:fmt(data.stockPurchases.reduce((s,r)=>s+parseFloat(r.total||0),0)), sub:`${stockData.length} dealers`, c:C.danger },
+                { l:'Stock Purchased',v:fmt((data.dealerPurchases||data.stockPurchases||[]).reduce((s,r)=>s+parseFloat(r.total||0),0)), sub:`${(data.dealerPurchases||data.stockPurchases||[]).length} dealers`, c:C.danger },
                 { l:'Cash Deposited', v:fmt(data.deposits?.total||0), sub:`${data.deposits?.count||0} deposits`, c:'#2563eb' },
                 { l:'Collected',      v:fmt(o.collected||0),  sub:`${fmt(o.outstanding)} owed`,    c:C.success },
                 { l:'Gross Profit',   v:fmt(s.grossProfit),   sub:`before expenses`,                c:C.success },
