@@ -14,8 +14,6 @@ const C = {
   muted:   'var(--text-muted)',
   success: 'var(--success)',
   danger:  'var(--danger)',
-  warning: 'var(--warning)',
-  info:    'var(--info)',
 };
 const fmt  = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtD = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2});
@@ -35,17 +33,76 @@ function apiGet(path) {
 
 // ── Build the HTML for the PDF ─────────────────────────────────
 function buildReportHTML(data, from, to) {
-  const s    = data.summary;
-  const o    = data.orders;
-  const qs   = data.quickSales;
-  const rep  = data.repairs;
-  const ex   = data.expenses;
-  const dep  = data.deposits;
-  const now  = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const fmtR = (n) => 'Rs. ' + Math.round(parseFloat(n||0)).toLocaleString();
 
-  const fmtR = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0,maximumFractionDigits:0});
-  const totalStockSpend = data.stockPurchases.reduce((s,r)=>s+parseFloat(r.total||0),0);
-  const totalStockCount = data.stockPurchases.reduce((s,r)=>s+parseInt(r.count||0),0);
+  // ── Expenses: compute from byCategory if summary field is missing ──
+  const expCats   = (data.expenses?.byCategory || []);
+  const catTotal  = expCats.reduce((s,r) => s + parseFloat(r.total||0), 0);
+  const catCount  = expCats.reduce((s,r) => s + parseInt(r.count||0),  0);
+
+  // ── Summary with all fallbacks ────────────────────────────────────
+  const rawS = data.summary || {};
+  const s = {
+    netProfit:0, profitMargin:0, totalRevenue:0, grossProfit:0,
+    totalExpenses:0, totalCOGS:0, operatingExpenses:0,
+    ...rawS,
+    // Use byCategory sum as the most reliable source for totalExpenses
+    totalExpenses:  parseFloat(rawS.totalExpenses || rawS.operatingExpenses || 0) || catTotal,
+    grossProfit:    parseFloat(rawS.grossProfit || 0),
+    totalCOGS:      parseFloat(rawS.totalCOGS || 0),
+  };
+
+  // ── Sub-objects with safe fallbacks ──────────────────────────────
+  const o = {
+    total_orders:0, revenue:0, collected:0, outstanding:0,
+    delivered:0, in_progress:0, list:[],
+    ...(data.orders || {}),
+  };
+  const qs = {
+    total_sales:0, revenue:0, total_discount:0, list:[],
+    ...(data.quickSales || {}),
+  };
+  const rep = {
+    total_repairs:0, revenue:0, free_repairs:0, types:[],
+    ...(data.repairs || {}),
+  };
+  const ex = {
+    total_count:    catCount,   // compute from categories — always correct
+    total_expenses: catCount,   // alias used for display
+    total_amount:   catTotal,   // compute from categories — always correct
+    cash_expenses:  parseFloat(data.expenses?.cash_expenses || 0),
+    bank_expenses:  parseFloat(data.expenses?.bank_expenses || 0),
+    ...(data.expenses || {}),
+    // Override with computed values (more reliable)
+    total_count:    catCount,
+    total_expenses: catCount,
+    total_amount:   catTotal,
+  };
+  const dep = {
+    total: 0, total_deposited: 0, count: 0,
+    ...(data.deposits || {}),
+    // Use whichever field has the value
+    total: parseFloat(data.deposits?.total || data.deposits?.total_deposited || 0),
+    count: parseInt(data.deposits?.count || 0),
+  };
+
+  const now = new Date().toLocaleDateString('en-GB',{
+    day:'2-digit', month:'long', year:'numeric',
+    hour:'2-digit', minute:'2-digit',
+  });
+
+  // ── Stock purchases ────────────────────────────────────────────────
+  const stockData      = data.dealerPurchases || data.stockPurchases || [];
+  const totalStockSpend= stockData.reduce((s,r) => s + parseFloat(r.total||0), 0);
+  const totalStockCount= stockData.reduce((s,r) => s + parseInt(r.purchases||r.count||r.items||0), 0);
+
+  // ── Lens jobs — handle both old and new API formats ───────────────
+  const lensJobsRaw = data.lensJobs || [];
+  const lensJobsDisplay = lensJobsRaw.map(j => ({
+    lens_company: j.lens_company || j.lab || j.company || '—',
+    total:     j.total       ?? j.orders_with_bill ?? j.total_orders   ?? 0,
+    completed: j.completed   ?? j.orders_with_bill ?? j.delivered      ?? 0,
+  }));
 
   // Mini bar chart SVG for daily revenue
   const daily = data.daily || [];
@@ -89,7 +146,7 @@ function buildReportHTML(data, from, to) {
     </tr>`).join('');
 
   // Top frames
-  const frameRows = data.topFrames.slice(0,8).map((f,i)=>{
+  const frameRows = (data.topFrames||[]).slice(0,8).map((f,i)=>{
     const fname = f.frame || f.name || f.frame_name || Object.values(f).find(v=>typeof v==='string'&&v.length>1) || '—';
     const funits = f.units || f.count || f.unit_count || 0;
     const frev   = f.revenue || f.total_revenue || f.total || 0;
@@ -111,7 +168,7 @@ function buildReportHTML(data, from, to) {
     </tr>`).join('');
 
   // Dealer purchases
-  const dealerRows = data.stockPurchases.map(d=>`
+  const dealerRows = stockData.map(d=>`
     <tr>
       <td style="padding:5px 10px;border:1px solid #e0ddd6;">${d.dealer_name}</td>
       <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:center;">${d.count}</td>
@@ -231,7 +288,7 @@ function buildReportHTML(data, from, to) {
     <div style="font-size:11px;color:${profitColor};margin-bottom:4px;">Revenue</div>
     <div style="font-size:17px;font-weight:700;color:${profitColor};">${fmtR(s.totalRevenue)}</div>
     <div style="font-size:10px;color:${profitColor};margin-top:6px;">Expenses</div>
-    <div style="font-size:14px;font-weight:700;color:#c0392b;">${fmtR(s.totalExpenses)}</div>
+    <div style="font-size:14px;font-weight:700;color:#c0392b;">${fmtR(s.totalExpenses || catTotal)}</div>
   </div>
 </div>
 
@@ -241,7 +298,7 @@ function buildReportHTML(data, from, to) {
   <span class="op">−</span>
   <span class="f-cog">${fmtR(s.grossProfit > 0 ? parseFloat(s.totalRevenue)-parseFloat(s.grossProfit) : 0)}</span><span class="op" style="margin:0 2px;">COGS</span>
   <span class="op">−</span>
-  <span class="f-exp">${fmtR(s.totalExpenses)}</span><span class="op" style="margin:0 2px;">Expenses</span>
+  <span class="f-exp">${fmtR(s.totalExpenses || catTotal)}</span><span class="op" style="margin:0 2px;">Expenses</span>
   <span class="op">=</span>
   <span class="f-net">${fmtR(s.netProfit)}</span><span style="color:${profitColor};font-size:11px;margin-left:2px;">Net Profit (${s.profitMargin}%)</span>
 </div>
@@ -255,9 +312,9 @@ function buildReportHTML(data, from, to) {
 </div>
 
 <div class="grid4">
-  <div class="kpi"><span class="kpi-icon">💸</span><div class="kpi-label">Total Expenses</div><div class="kpi-value" style="color:#dc2626">${fmtR(s.totalExpenses)}</div><div class="kpi-sub">${ex.total_expenses} transactions</div></div>
-  <div class="kpi"><span class="kpi-icon">🛒</span><div class="kpi-label">Stock Purchased</div><div class="kpi-value" style="color:#dc2626">${fmtR(totalStockSpend)}</div><div class="kpi-sub">${totalStockCount} items from ${data.stockPurchases.length} dealer${data.stockPurchases.length!==1?'s':''}</div></div>
-  <div class="kpi"><span class="kpi-icon">🏦</span><div class="kpi-label">Cash Deposited</div><div class="kpi-value" style="color:#2563eb">${fmtR(dep.total)}</div><div class="kpi-sub">${dep.count} deposits</div></div>
+  <div class="kpi"><span class="kpi-icon">💸</span><div class="kpi-label">Total Expenses</div><div class="kpi-value" style="color:#dc2626">${fmtR(s.totalExpenses)}</div><div class="kpi-sub">${ex.total_expenses||ex.total_count||0} transactions</div></div>
+  <div class="kpi"><span class="kpi-icon">🛒</span><div class="kpi-label">Stock Purchased</div><div class="kpi-value" style="color:#dc2626">${fmtR(totalStockSpend)}</div><div class="kpi-sub">${totalStockCount} items from ${stockData.length} dealer${stockData.length!==1?'s':''}</div></div>
+  <div class="kpi"><span class="kpi-icon">🏦</span><div class="kpi-label">Cash Deposited</div><div class="kpi-value" style="color:#2563eb">${fmtR(dep.total||dep.total_deposited||0)}</div><div class="kpi-sub">${dep.count||0} deposits</div></div>
   <div class="kpi"><span class="kpi-icon">✅</span><div class="kpi-label">Collected</div><div class="kpi-value" style="color:#16a34a">${fmtR(o.collected)}</div><div class="kpi-sub">${fmtR(o.outstanding)} still owed</div></div>
 </div>
 
@@ -352,7 +409,7 @@ ${rep.types.length > 0 ? `
 <!-- ══ EXPENSES ════════════════════════════════════════════ -->
 <h2>Expenses</h2>
 <div class="grid3">
-  <div class="kpi dark"><div class="kpi-label">Total Expenses</div><div class="kpi-value">${fmtR(s.totalExpenses)}</div></div>
+  <div class="kpi dark"><div class="kpi-label">Total Expenses</div><div class="kpi-value">${fmtR(s.totalExpenses || catTotal)}</div><div class="kpi-sub">${ex.total_count} entries</div></div>
   <div class="kpi"><div class="kpi-label">Cash Expenses</div><div class="kpi-value" style="color:#c0392b">${fmtR(ex.cash_expenses)}</div></div>
   <div class="kpi"><div class="kpi-label">Bank Expenses</div><div class="kpi-value" style="color:#c0392b">${fmtR(ex.bank_expenses)}</div></div>
 </div>
@@ -364,13 +421,13 @@ ${data.expenses.byCategory.length > 0 ? `
   ${expCatRows}
   <tr class="total">
     <td style="padding:6px 10px;border:1px solid #e0ddd6;">TOTAL</td>
-    <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center;">${ex.total_expenses}</td>
+    <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:center;">${ex.total_expenses||ex.total_count||0}</td>
     <td style="padding:6px 10px;border:1px solid #e0ddd6;text-align:right;color:#c0392b;">${fmtR(s.totalExpenses)}</td>
   </tr>
 </table>` : ''}
 
 <!-- ══ STOCK PURCHASES ════════════════════════════════════ -->
-${data.stockPurchases.length > 0 ? `
+${stockData.length > 0 ? `
 <h2>Stock Purchases from Dealers</h2>
 <table>
   <tr><th>Dealer</th><th class="c">Purchases</th><th class="r">Total Spent</th></tr>
@@ -423,17 +480,17 @@ ${data.kalutota && data.kalutota.total_transactions > 0 ? `
 
 <!-- ══ TOP PERFORMERS ═════════════════════════════════════ -->
 <h2>Top Performing Frames</h2>
-${data.topFrames.length > 0 ? `
+${(data.topFrames||[]).length > 0 ? `
 <table>
   <tr><th>#</th><th>Frame</th><th class="c">Units Sold</th><th class="r">Revenue</th></tr>
   ${frameRows}
 </table>` : '<p style="color:#6b7280;font-size:12px;">No order data for this period</p>'}
 
 <h2>Lens Types</h2>
-${data.topLenses.length > 0 ? `
+${(data.topLenses||[]).length > 0 ? `
 <table>
   <tr><th>Lens Type</th><th class="c">Units</th><th class="r">Revenue</th></tr>
-  ${data.topLenses.map(l=>{
+  ${(data.topLenses||[]).map(l=>{
     const lname  = l.lens_type || l.type || l.name || l.lens || Object.values(l).find(v=>typeof v==='string'&&v.length>1) || '—';
     const lunits = l.units || l.count || 0;
     const lrev   = l.revenue || l.total || 0;
@@ -447,11 +504,11 @@ ${data.topLenses.length > 0 ? `
 </table>` : '<p style="color:#6b7280;font-size:12px;">No data for this period</p>'}
 
 <!-- ══ LENS JOBS ══════════════════════════════════════════ -->
-${data.lensJobs.length > 0 ? `
+${lensJobsDisplay.length > 0 ? `
 <h2>Lens Jobs by Lab</h2>
 <table>
   <tr><th>Lab / Company</th><th class="c">Total Jobs</th><th class="c">Completed</th></tr>
-  ${data.lensJobs.map(j=>`
+  ${lensJobsDisplay.map(j=>`
     <tr>
       <td style="padding:5px 10px;border:1px solid #e0ddd6;">${j.lens_company||'—'}</td>
       <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:center;">${j.total}</td>
@@ -483,8 +540,8 @@ ${data.lensJobs.length > 0 ? `
   </tr>
   <tr style="background:#fee2e2;">
     <td style="padding:8px 10px;border:1px solid #e0ddd6;font-weight:700;">Total Expenses</td>
-    <td style="padding:8px 10px;border:1px solid #e0ddd6;text-align:right;font-weight:700;color:#c0392b;">− ${fmtR(s.totalExpenses)}</td>
-    <td style="padding:8px 10px;border:1px solid #e0ddd6;text-align:right;color:#c0392b;">${s.totalRevenue>0?(parseFloat(s.totalExpenses)/parseFloat(s.totalRevenue)*100).toFixed(1)+'%':'—'}</td>
+    <td style="padding:8px 10px;border:1px solid #e0ddd6;text-align:right;font-weight:700;color:#c0392b;">− ${fmtR(s.totalExpenses || catTotal)}</td>
+    <td style="padding:8px 10px;border:1px solid #e0ddd6;text-align:right;color:#c0392b;">${s.totalRevenue>0?((parseFloat(s.totalExpenses||catTotal))/parseFloat(s.totalRevenue)*100).toFixed(1)+'%':'—'}</td>
   </tr>
   <tr style="background:${parseFloat(s.netProfit)>=0?'#dcfce7':'#fee2e2'};">
     <td style="padding:10px 10px;border:1px solid #e0ddd6;font-weight:700;font-size:14px;">NET PROFIT</td>
@@ -568,12 +625,12 @@ export default function ReportPDF() {
   const ex = data?.expenses || {};
 
   return (
-    <div style={{ fontFamily:'var(--font-body)' }}>
-      <h1 style={{ fontFamily:'var(--font-display)', fontSize:24, color:C.navy, margin:0 }}>📄 Business Report</h1>
+    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
+      <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, margin:0 }}>📄 Business Report</h1>
       <p style={{ fontSize:13, color:C.muted, margin:'4px 0 20px' }}>Select a date range to generate a full PDF report with all business data</p>
 
       {/* Date range picker */}
-      <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:20 }}>
+      <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:20 }}>
         <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:14 }}>📅 Select Date Range</div>
 
         {/* Presets */}
@@ -617,7 +674,7 @@ export default function ReportPDF() {
       {data && (
         <>
           {/* Summary KPI cards */}
-          <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:16 }}>
+          <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:16 }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
               <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>
                 Preview — {fmtDate(from)} to {fmtDate(to)}
@@ -632,12 +689,12 @@ export default function ReportPDF() {
             <div style={{ background:parseFloat(s.netProfit)>=0?'#dcfce7':'#fee2e2', border:`2px solid ${parseFloat(s.netProfit)>=0?'#86efac':'#fca5a5'}`, borderRadius:12, padding:'16px 20px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
               <div>
                 <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:parseFloat(s.netProfit)>=0?C.success:C.danger, marginBottom:4 }}>Net Profit</div>
-                <div style={{ fontFamily:'var(--font-display)', fontSize:32, fontWeight:700, color:parseFloat(s.netProfit)>=0?C.success:C.danger }}>{fmt(s.netProfit)}</div>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:32, fontWeight:700, color:parseFloat(s.netProfit)>=0?C.success:C.danger }}>{fmt(s.netProfit)}</div>
                 <div style={{ fontSize:12, color:parseFloat(s.netProfit)>=0?C.success:C.danger, marginTop:3 }}>Net margin: {s.profitMargin}%</div>
               </div>
               <div style={{ textAlign:'right' }}>
                 <div style={{ fontSize:12, color:C.muted, marginBottom:2 }}>Revenue</div>
-                <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color:C.navy, marginBottom:8 }}>{fmt(s.totalRevenue)}</div>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:C.navy, marginBottom:8 }}>{fmt(s.totalRevenue)}</div>
                 <div style={{ fontSize:12, color:C.muted, marginBottom:2 }}>Expenses</div>
                 <div style={{ fontSize:18, fontWeight:700, color:C.danger }}>{fmt(s.totalExpenses)}</div>
               </div>
@@ -650,14 +707,14 @@ export default function ReportPDF() {
                 { l:'Quick Sales',    v:qs.total_sales||0,    sub:`${fmt(qs.revenue)} revenue`,     c:'#2563eb' },
                 { l:'Repairs',        v:r.total_repairs||0,   sub:`${fmt(r.revenue)} revenue`,      c:'#0891b2' },
                 { l:'Expenses',       v:ex.total_expenses||0, sub:fmt(s.totalExpenses),              c:C.danger },
-                { l:'Stock Purchased',v:fmt(data.stockPurchases.reduce((s,r)=>s+parseFloat(r.total||0),0)), sub:`${data.stockPurchases.length} dealers`, c:C.danger },
+                { l:'Stock Purchased',v:fmt(data.stockPurchases.reduce((s,r)=>s+parseFloat(r.total||0),0)), sub:`${stockData.length} dealers`, c:C.danger },
                 { l:'Cash Deposited', v:fmt(data.deposits?.total||0), sub:`${data.deposits?.count||0} deposits`, c:'#2563eb' },
                 { l:'Collected',      v:fmt(o.collected||0),  sub:`${fmt(o.outstanding)} owed`,    c:C.success },
                 { l:'Gross Profit',   v:fmt(s.grossProfit),   sub:`before expenses`,                c:C.success },
               ].map(k=>(
                 <div key={k.l} style={{ background:C.cream, borderRadius:10, padding:'12px 14px' }}>
                   <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:4 }}>{k.l}</div>
-                  <div style={{ fontFamily:'var(--font-display)', fontSize:18, fontWeight:700, color:k.c }}>{k.v}</div>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:k.c }}>{k.v}</div>
                   <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{k.sub}</div>
                 </div>
               ))}
@@ -680,7 +737,7 @@ export default function ReportPDF() {
 
             {/* Expenses by category */}
             {data.expenses.byCategory.length > 0 && (
-              <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
+              <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
                 <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>💸 Expenses by Category</div>
                 {data.expenses.byCategory.map(e=>{
                   const maxE = parseFloat(data.expenses.byCategory[0]?.total)||1;
@@ -700,10 +757,10 @@ export default function ReportPDF() {
             )}
 
             {/* Top frames */}
-            {data.topFrames.length > 0 && (
-              <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
+            {(data.topFrames||[]).length > 0 && (
+              <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden' }}>
                 <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:C.navy }}>🕶️ Top Frames</div>
-                {data.topFrames.slice(0,7).map((f,i)=>{
+                {(data.topFrames||[]).slice(0,7).map((f,i)=>{
                   const fname = f.frame||f.name||f.frame_name||'—';
                   const frev  = f.revenue||f.total||0;
                   const funits= f.units||f.count||0;
@@ -737,7 +794,7 @@ export default function ReportPDF() {
       )}
 
       {!data && !loading && (
-        <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:60, textAlign:'center', color:C.muted }}>
+        <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, padding:60, textAlign:'center', color:C.muted }}>
           <div style={{ fontSize:48, marginBottom:16 }}>📊</div>
           <div style={{ fontSize:16, fontWeight:600, color:C.navy, marginBottom:8 }}>Select a date range and click Generate Report</div>
           <div style={{ fontSize:13 }}>The report will include all orders, quick sales, repairs, expenses, stock purchases and profit analysis</div>
