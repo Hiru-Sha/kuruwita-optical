@@ -34,7 +34,8 @@ router.get('/', auth, async (req, res) => {
       activeOrders,      // 7
       lensJobsOut,       // 8
       reminders,         // 9
-      todayDealerPurch,  // 10 — NEW: dealer purchases paid today
+      todayDealerPurch,  // 10 — dealer purchases paid today
+      todayBalPayments,  // 11 — balance payments received today from older orders
     ] = await Promise.all([
 
       // 0: Month revenue
@@ -124,6 +125,17 @@ router.get('/', auth, async (req, res) => {
         WHERE purchase_date = $1
           AND COALESCE(payment_status,'paid') != 'pending'
       `, [today]).catch(() => ({ rows: [] })),
+
+      // 11: Balance payments received TODAY from older orders (via any method)
+      // These are payments customers made today to clear their balance
+      pool.query(`
+        SELECT COALESCE(last_payment_amount, 0) AS amount,
+               COALESCE(last_payment_method, 'cash') AS payment_method
+        FROM orders
+        WHERE last_payment_date = $1
+          AND created_at::date != $1
+          AND last_payment_date IS NOT NULL
+      `, [today]).catch(() => ({ rows: [] })),
     ]);
 
     const mr = monthRevenue.rows[0];
@@ -195,6 +207,16 @@ router.get('/', auth, async (req, res) => {
     const totalDep = todayDeposits.rows
       .reduce((s, r) => s + parseFloat(r.amount || 0), 0);
 
+    // ── Balance payments received today (from older orders) ──
+    // These are collected today — split by payment method
+    const balTodayCash = (todayBalPayments?.rows || [])
+      .filter(r => !r.payment_method || r.payment_method === 'cash')
+      .reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+    const balTodayBank = (todayBalPayments?.rows || [])
+      .filter(r => r.payment_method && r.payment_method !== 'cash')
+      .reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+    const balTodayCount = (todayBalPayments?.rows || []).length;
+
     // Dealer purchases split by payment method
     // cash/credit → reduces cash in hand
     // bank/cheque → reduces bank balance
@@ -207,11 +229,15 @@ router.get('/', auth, async (req, res) => {
     const totalDealerToday = dealerCash + dealerBank;
 
     // ── CASH IN HAND (today) ─────────────────────────────────
-    const todayCashIn = orderCash + qsCash + repairCash;
+    // Include balance payments received today in cash
+    const todayCashIn = orderCash + qsCash + repairCash + balTodayCash;
     const cashInHand  = todayCashIn
                       - cashExpenses   // cash expenses paid
                       - totalDep       // deposited to bank
                       - dealerCash;    // stock paid by cash
+
+    // Bank received today = order bank advances + balance payments by bank today
+    const bankReceivedToday = orderBank + qsBank + repairBank + balTodayBank;
 
     // ── ALL-TIME CALCULATIONS ────────────────────────────────
     let allTimeCash = 0, allTimeDeposits = 0, bankBalance = 0;
@@ -221,6 +247,7 @@ router.get('/', auth, async (req, res) => {
         atCashExp, atBankExp,
         atDep,
         atDealerCash, atDealerBank,
+        atBalBank, atBalCash,
       ] = await Promise.all([
         // All order advances (cash only)
         pool.query(`
@@ -274,6 +301,27 @@ router.get('/', auth, async (req, res) => {
           WHERE payment_method IN ('bank','cheque')
             AND COALESCE(payment_status,'paid') != 'pending'
         `).catch(() => ({ rows: [{ v: '0' }] })),
+
+        // All balance payments received via bank from orders
+        // (customers paying balance by bank transfer)
+        pool.query(`
+          SELECT COALESCE(SUM(last_payment_amount), 0) AS v
+          FROM orders
+          WHERE last_payment_method NOT IN ('cash','')
+            AND last_payment_method IS NOT NULL
+            AND last_payment_date IS NOT NULL
+            AND last_payment_amount > 0
+        `).catch(() => ({ rows: [{ v: '0' }] })),
+
+        // All balance payments received via cash from older orders  
+        pool.query(`
+          SELECT COALESCE(SUM(last_payment_amount), 0) AS v
+          FROM orders
+          WHERE COALESCE(last_payment_method,'cash') = 'cash'
+            AND last_payment_date IS NOT NULL
+            AND last_payment_amount > 0
+            AND created_at::date != last_payment_date
+        `).catch(() => ({ rows: [{ v: '0' }] })),
       ]);
 
       const cashIn       = parseFloat(atOrders.rows[0].v)     || 0;
@@ -285,14 +333,18 @@ router.get('/', auth, async (req, res) => {
       const dealerCashAll= parseFloat(atDealerCash.rows[0].v) || 0;
       const dealerBankAll= parseFloat(atDealerBank.rows[0].v) || 0;
 
-      // Cash in hand = all cash income − cash expenses − deposits − cash dealer payments
-      allTimeCash = cashIn + qsIn + repIn
+      const balBankAll = parseFloat(atBalBank.rows[0].v) || 0; // bank balance payments all-time
+      const balCashAll = parseFloat(atBalCash.rows[0].v) || 0; // cash balance payments all-time
+
+      // Cash in hand = all cash income + cash balance payments − cash expenses − deposits − cash dealer payments
+      allTimeCash = cashIn + qsIn + repIn + balCashAll
                   - cashExpAll
                   - depAll
                   - dealerCashAll;
 
       // Bank balance = deposits received − bank expenses − bank dealer payments
-      bankBalance = depAll - bankExpAll - dealerBankAll;
+      // Bank balance = deposits + bank balance payments − bank expenses − bank stock payments
+      bankBalance = depAll + balBankAll - bankExpAll - dealerBankAll;
 
       allTimeDeposits = depAll;
 
@@ -344,8 +396,9 @@ router.get('/', auth, async (req, res) => {
         allTimeDeposits,
         inventoryValue,    // stock on shelf (not liquid but yours)
 
-        bankToday: orderBank + qsBank + repairBank,
+        bankToday: bankReceivedToday,  // includes balance payments via bank
 
+        balTodayCash, balTodayBank, balTodayCount,  // balance payments collected today
         // Counts for display
         orderCount:  todayOrders.rows.length,
         qsCount:     todayQS.rows.length,
