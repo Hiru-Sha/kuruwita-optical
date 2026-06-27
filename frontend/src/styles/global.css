@@ -360,3 +360,57 @@ body{
   border-color: rgba(255,255,255,.08) !important;
   color: rgba(255,255,255,.87) !important;
 }
+
+/* ── Dark mode — CSS variable overrides ─────────────────────── */
+/* Sets when Layout.js does: document.body.setAttribute('data-theme','dark') */
+[data-theme="dark"] {
+  --bg-base:        #0b1523;
+  --bg-surface:     #101e34;
+  --bg-elevated:    #142038;
+  --bg-sunken:      #0a1628;
+  --bg-overlay:     rgba(0,0,0,.65);
+
+  --border:         rgba(255,255,255,.09);
+  --border-strong:  rgba(255,255,255,.16);
+  --border-focus:   #C9A84C;
+
+  --text-primary:   rgba(255,255,255,.88);
+  --text-secondary: rgba(255,255,255,.6);
+  --text-muted:     rgba(255,255,255,.35);
+  --text-inverse:   #0A1628;
+
+  --topbar-bg:      rgba(10,22,40,.95);
+  --topbar-border:  rgba(255,255,255,.07);
+}
+
+/* Dark mode — applies when Layout.js sets both .dark class and data-theme attribute */
+body.dark, [data-theme="dark"] {
+  background: var(--bg-base) !important;
+  color: var(--text-primary) !important;
+}
+/* Pages use var() tokens — they auto-update when .dark redefines variables */
+body.dark .card, [data-theme="dark"] .card,
+body.dark [style*="background:white"], body.dark [style*="background: white"],
+body.dark [style*="background:#fff"], body.dark [style*="background: #fff"] {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+body.dark input, body.dark select, body.dark textarea,
+[data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea {
+  background: var(--bg-sunken) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+
+/* Sidebar nav item hover — handled via CSS class for performance */
+.ko-nav-link { transition: background .12s, border-color .12s; }
+.ko-nav-link:hover {
+  background: rgba(255,255,255,.07) !important;
+}
+.ko-nav-link:hover .ko-nav-icon {
+  background: rgba(255,255,255,.12) !important;
+}
+.ko-nav-link:hover .ko-nav-label {
+  color: rgba(255,255,255,.85) !important;
+}

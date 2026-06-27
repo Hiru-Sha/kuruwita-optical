@@ -271,7 +271,36 @@ router.patch('/:id', auth, async (req, res) => {
       values
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
-    res.json(result.rows[0]);
+    const updatedOrder = result.rows[0];
+
+    // ── Auto bank deposit for balance payments via bank ──
+    // Runs on every PATCH — retroactively fixes past payments too
+    const lpm = (updatedOrder.last_payment_method || '').toLowerCase();
+    const lpa = parseFloat(updatedOrder.last_payment_amount || 0);
+    const lpd = updatedOrder.last_payment_date;
+    if (lpm && lpm !== 'cash' && lpa > 0 && lpd) {
+      try {
+        const exists = await pool.query(
+          `SELECT id FROM cash_deposits WHERE order_id=$1 AND date=$2 AND ABS(amount-$3)<1 LIMIT 1`,
+          [updatedOrder.id, lpd, lpa]
+        ).catch(() => ({ rows: [] }));
+        if (exists.rows.length === 0) {
+          await pool.query(
+            `INSERT INTO cash_deposits (date,amount,payment_type,notes,added_by,order_id)
+             VALUES ($1,$2,$3,$4,$5,$6)`,
+            [lpd, lpa, lpm, 'Balance payment — order ' + (updatedOrder.order_number||updatedOrder.id), req.user.id, updatedOrder.id]
+          ).catch(() =>
+            pool.query(
+              `INSERT INTO cash_deposits (date,amount,payment_type,notes,added_by)
+               VALUES ($1,$2,$3,$4,$5)`,
+              [lpd, lpa, lpm, 'Balance payment — order ' + (updatedOrder.order_number||updatedOrder.id), req.user.id]
+            ).catch(() => {})
+          );
+        }
+      } catch(e) { console.warn('Auto-deposit failed:', e.message); }
+    }
+
+    res.json(updatedOrder);
   } catch (err) {
     console.error('Update order error:', err.message);
     if (err.message.includes('column') && err.message.includes('does not exist')) {

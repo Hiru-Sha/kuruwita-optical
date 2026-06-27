@@ -36,6 +36,8 @@ router.get('/', auth, async (req, res) => {
       reminders,         // 9
       todayDealerPurch,  // 10 — dealer purchases paid today
       todayBalPayments,  // 11 — balance payments received today from older orders
+      qsMonthRes,        // 12 — quick sales this month
+      repMonthRes,       // 13 — repairs this month
     ] = await Promise.all([
 
       // 0: Month revenue
@@ -127,7 +129,6 @@ router.get('/', auth, async (req, res) => {
       `, [today]).catch(() => ({ rows: [] })),
 
       // 11: Balance payments received TODAY from older orders (via any method)
-      // These are payments customers made today to clear their balance
       pool.query(`
         SELECT COALESCE(last_payment_amount, 0) AS amount,
                COALESCE(last_payment_method, 'cash') AS payment_method
@@ -136,33 +137,28 @@ router.get('/', auth, async (req, res) => {
           AND created_at::date != $1
           AND last_payment_date IS NOT NULL
       `, [today]).catch(() => ({ rows: [] })),
+
+      // 12: Month QS total (was sequential — now parallel)
+      pool.query(
+        `SELECT COALESCE(SUM(total),0) AS t, COUNT(*) AS c
+         FROM quick_sales WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [month]
+      ).catch(() => ({ rows: [{ t:'0', c:'0' }] })),
+
+      // 13: Month repairs total (was sequential — now parallel)
+      pool.query(
+        `SELECT COALESCE(SUM(COALESCE(charge,0)),0) AS t, COUNT(*) AS c
+         FROM repairs WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [month]
+      ).catch(() => ({ rows: [{ t:'0', c:'0' }] })),
     ]);
 
     const mr = monthRevenue.rows[0];
 
     // ── Month totals (QS + repairs) ──────────────────────────
-    let qs_month_total = 0, qs_month_count = 0;
-    let rep_month_total = 0, rep_month_count = 0;
-    try {
-      const qsM = await pool.query(
-        `SELECT COALESCE(SUM(total),0) AS t, COUNT(*) AS c
-         FROM quick_sales WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [month]);
-      qs_month_total = parseFloat(qsM.rows[0].t || 0);
-      qs_month_count = parseInt(qsM.rows[0].c   || 0);
-    } catch (e) {}
-
-    try {
-      const repM = await pool.query(
-        `SELECT COALESCE(SUM(COALESCE(charge,0)),0) AS t, COUNT(*) AS c
-         FROM repairs WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [month]);
-      rep_month_total = parseFloat(repM.rows[0].t || 0);
-      rep_month_count = parseInt(repM.rows[0].c   || 0);
-    } catch (e) {}
-
-    mr.qs_total     = qs_month_total;
-    mr.qs_count     = qs_month_count;
-    mr.repair_total = rep_month_total;
-    mr.repair_count = rep_month_count;
+    // Month totals — already fetched in parallel above
+    mr.qs_total     = parseFloat(qsMonthRes.rows[0]?.t  || 0);
+    mr.qs_count     = parseInt(qsMonthRes.rows[0]?.c    || 0);
+    mr.repair_total = parseFloat(repMonthRes.rows[0]?.t || 0);
+    mr.repair_count = parseInt(repMonthRes.rows[0]?.c   || 0);
     mr.grand_total  = parseFloat(mr.total || 0) + qs_month_total + rep_month_total;
     mr.collected    = parseFloat(mr.collected || 0) + qs_month_total + rep_month_total;
 
@@ -247,7 +243,8 @@ router.get('/', auth, async (req, res) => {
         atCashExp, atBankExp,
         atDep,
         atDealerCash, atDealerBank,
-        atBalBank, atBalCash,
+        atBalRows,  // single query for bank+cash balance payments
+        atInventory,
       ] = await Promise.all([
         // All order advances (cash only)
         pool.query(`
@@ -302,25 +299,23 @@ router.get('/', auth, async (req, res) => {
             AND COALESCE(payment_status,'paid') != 'pending'
         `).catch(() => ({ rows: [{ v: '0' }] })),
 
-        // All balance payments received via bank from orders
-        // (customers paying balance by bank transfer)
+        // Balance payments (bank + cash) from older orders — ONE combined query
         pool.query(`
-          SELECT COALESCE(SUM(last_payment_amount), 0) AS v
+          SELECT
+            COALESCE(SUM(CASE WHEN COALESCE(last_payment_method,'cash') != 'cash'
+                         THEN last_payment_amount END), 0) AS bank_bal,
+            COALESCE(SUM(CASE WHEN COALESCE(last_payment_method,'cash') = 'cash'
+                              AND created_at::date != last_payment_date
+                         THEN last_payment_amount END), 0) AS cash_bal
           FROM orders
-          WHERE last_payment_method NOT IN ('cash','')
-            AND last_payment_method IS NOT NULL
-            AND last_payment_date IS NOT NULL
+          WHERE last_payment_date IS NOT NULL
             AND last_payment_amount > 0
-        `).catch(() => ({ rows: [{ v: '0' }] })),
+        `).catch(() => ({ rows: [{ bank_bal:'0', cash_bal:'0' }] })),
 
-        // All balance payments received via cash from older orders  
+        // Inventory value (was sequential — now parallel)
         pool.query(`
-          SELECT COALESCE(SUM(last_payment_amount), 0) AS v
-          FROM orders
-          WHERE COALESCE(last_payment_method,'cash') = 'cash'
-            AND last_payment_date IS NOT NULL
-            AND last_payment_amount > 0
-            AND created_at::date != last_payment_date
+          SELECT COALESCE(SUM(quantity * COALESCE(cost_price,0)),0) AS v
+          FROM inventory WHERE quantity > 0
         `).catch(() => ({ rows: [{ v: '0' }] })),
       ]);
 
@@ -333,8 +328,8 @@ router.get('/', auth, async (req, res) => {
       const dealerCashAll= parseFloat(atDealerCash.rows[0].v) || 0;
       const dealerBankAll= parseFloat(atDealerBank.rows[0].v) || 0;
 
-      const balBankAll = parseFloat(atBalBank.rows[0].v) || 0; // bank balance payments all-time
-      const balCashAll = parseFloat(atBalCash.rows[0].v) || 0; // cash balance payments all-time
+      const balBankAll = parseFloat(atBalRows?.rows?.[0]?.bank_bal || 0); // bank balance payments all-time
+      const balCashAll = parseFloat(atBalRows?.rows?.[0]?.cash_bal || 0); // cash balance payments all-time
 
       // Cash in hand = all cash income + cash balance payments − cash expenses − deposits − cash dealer payments
       allTimeCash = cashIn + qsIn + repIn + balCashAll
@@ -352,15 +347,8 @@ router.get('/', auth, async (req, res) => {
       console.error('[CASH ALL-TIME ERROR]', e.message);
     }
 
-    // ── INVENTORY VALUE ──────────────────────────────────────
-    let inventoryValue = 0;
-    try {
-      const invRes = await pool.query(`
-        SELECT COALESCE(SUM(quantity * COALESCE(cost_price,0)),0) AS v
-        FROM inventory WHERE quantity > 0
-      `);
-      inventoryValue = parseFloat(invRes.rows[0].v || 0);
-    } catch (e) {}
+    // Inventory value — fetched in parallel above
+    const inventoryValue = parseFloat(atInventory.rows[0]?.v || 0);
 
     const totalMoney = allTimeCash + bankBalance; // cash + bank = liquid money
 
