@@ -5,19 +5,10 @@ import { createCustomer, createOrder, getCustomers, getInventory } from '../api'
 import { QRScanner } from '../components/QRStickers';
 
 const C = {
-  navy:    'var(--navy)',
-  gold:    'var(--gold)',
-  cream:   'var(--bg-sunken)',
-  surface: 'var(--bg-surface)',
-  border:  'var(--border)',
-  muted:   'var(--text-muted)',
-  success: 'var(--success)',
-  danger:  'var(--danger)',
-  warning: 'var(--warning)',
-  info:    'var(--info)',
-  white:   'var(--bg-surface)',
-  blue:    '#2563eb',
-  purple:  '#7c3aed',
+  navy:'#0f1f3d', gold:'#c9a84c', cream:'var(--cream,#f8f5ef)',
+  border:'var(--border,#e0ddd6)', muted:'var(--muted,#6b7280)',
+  success:'#16a34a', danger:'#dc2626', white:'var(--surface,#fff)', blue:'#1d4ed8',
+  surface:'var(--surface,#fff)',
 };
 
 const TITLES       = ['Mr.','Mrs.','Miss','Master','Baby','Rev.','Dr.'];
@@ -184,7 +175,7 @@ function StepBar({ step }) {
     { label:'Payment',     icon:'💳' },
   ];
   return (
-    <div style={{ display:'flex', alignItems:'center', background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:16, padding:'14px 20px', marginBottom:24, overflowX:'auto', boxShadow:'0 2px 8px rgba(0,0,0,.05)' }}>
+    <div style={{ display:'flex', alignItems:'center', background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:16, padding:'16px 24px', marginBottom:24, overflowX:'auto', boxShadow:'0 2px 8px rgba(0,0,0,.05)' }}>
       {steps.map((s,i) => {
         const n=i+1, done=step>n, active=step===n;
         return (
@@ -228,11 +219,11 @@ const Field = ({ label, children, span, hint }) => (
   </div>
 );
 
-const INP = { padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:C.surface, color:'var(--text,'+C.navy+')', width:'100%', transition:'border-color .15s' };
+const INP = { padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:14, fontFamily:"'Inter','DM Sans',sans-serif", outline:'none', background:C.surface, color:'var(--text,'+C.navy+')', width:'100%', transition:'border-color .15s' };
 const SEL = { ...INP, cursor:'pointer' };
 
 const Card = ({ children, style={} }) => (
-  <div style={{ background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:16, padding:'20px 24px', marginBottom:16, boxShadow:'0 2px 8px rgba(0,0,0,.04)', ...style }}>
+  <div style={{ background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:16, padding:'24px 28px', marginBottom:16, boxShadow:'0 2px 8px rgba(0,0,0,.04)', ...style }}>
     {children}
   </div>
 );
@@ -587,9 +578,9 @@ export default function NewOrder() {
   };
 
   return (
-    <div style={{ fontFamily:'var(--font-body)', width:'100%' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4, flexWrap:'wrap', gap:8 }}>
-        <h1 style={{ fontFamily:'var(--font-display)', fontSize:22, color:C.navy, margin:0 }}>New Order</h1>
+    <div style={{ fontFamily:"'DM Sans',sans-serif", maxWidth:900, width:'100%', margin:'0 auto' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, flexWrap:'wrap', gap:8 }}>
+        <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, margin:0 }}>New Order</h1>
         <button onClick={()=>navigate('/orders')}
           style={{ padding:'8px 18px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
           ← Back
@@ -624,7 +615,7 @@ export default function NewOrder() {
                 <input value={custSearch} onChange={e=>handleCustSearch(e.target.value)} placeholder="Type name or phone number..." style={INP}/>
               </Field>
               {custResults.length>0 && (
-                <div style={{ position:'absolute', top:'100%', left:0, right:0, background:C.surface, border:`1px solid ${C.border}`, borderRadius:10, boxShadow:'0 4px 20px rgba(0,0,0,.12)', zIndex:50, overflow:'hidden', marginTop:4 }}>
+                <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white', border:`1px solid ${C.border}`, borderRadius:10, boxShadow:'0 4px 20px rgba(0,0,0,.12)', zIndex:50, overflow:'hidden', marginTop:4 }}>
                   {custResults.map(c=>(
                     <div key={c.id} onMouseDown={()=>pickCustomer(c)}
                       style={{ padding:'12px 16px', cursor:'pointer', borderBottom:`1px solid ${C.cream}` }}>
@@ -656,7 +647,7 @@ export default function NewOrder() {
             </div>
           )}
           {custMode==='new' && (
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'100px 1fr 1fr', gap:12 }}>
               <Field label="Title"><select value={newCust.title} onChange={e=>setNewCust(c=>({...c,title:e.target.value}))} style={SEL}>{TITLES.map(t=><option key={t}>{t}</option>)}</select></Field>
               <Field label="Full Name *"><input value={newCust.name} onChange={e=>setNewCust(c=>({...c,name:e.target.value}))} placeholder="e.g. Nuwan Perera" style={INP}/></Field>
               <Field label="Phone *"><input value={newCust.phone} onChange={e=>setNewCust(c=>({...c,phone:e.target.value}))} placeholder="077-123-4567" type="tel" style={INP}/></Field>
@@ -710,7 +701,7 @@ export default function NewOrder() {
           <div style={{ background:'#f0f9ff', borderRadius:10, padding:'14px 16px', marginTop:14 }}>
             <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
               <div onClick={()=>setHasRx(h=>!h)} style={{ width:44, height:24, borderRadius:12, background:hasRx?C.navy:C.border, position:'relative', cursor:'pointer', transition:'background .2s', flexShrink:0 }}>
-                <div style={{ position:'absolute', top:3, left:hasRx?23:3, width:18, height:18, borderRadius:'50%', background:C.surface, transition:'left .2s' }}/>
+                <div style={{ position:'absolute', top:3, left:hasRx?23:3, width:18, height:18, borderRadius:'50%', background:'white', transition:'left .2s' }}/>
               </div>
               <span style={{ fontSize:14, fontWeight:500, color:C.navy }}>Customer brought a prescription (Rx)</span>
             </label>
@@ -734,7 +725,7 @@ export default function NewOrder() {
         <div>
           <Card>
             <SectionTitle icon="📋" title="Order Type" sub="Select what kind of order this is"/>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
               {[
                 { v:'normal',             icon:'📋', label:'Normal Order',          sub:'Standard paid order',         col:C.navy,    bg:'#f0f4ff' },
                 { v:'lens_warranty',      icon:'🔁', label:'Lens Free Replacement', sub:'Our fault — no charge',       col:'#166534', bg:'#f0fdf4' },
@@ -777,13 +768,13 @@ export default function NewOrder() {
                       style={INP}/>
                   </Field>
                   {frameResults.length>0 && (
-                    <div style={{ position:'absolute', top:'100%', left:0, right:0, background:C.surface, border:`1.5px solid ${C.gold}`, borderRadius:10, boxShadow:'0 8px 32px rgba(0,0,0,.18)', zIndex:100, overflow:'hidden', marginTop:4, maxHeight:320, overflowY:'auto' }}>
+                    <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white', border:`1.5px solid ${C.gold}`, borderRadius:10, boxShadow:'0 8px 32px rgba(0,0,0,.18)', zIndex:100, overflow:'hidden', marginTop:4, maxHeight:320, overflowY:'auto' }}>
                       <div style={{ padding:'6px 12px', background:C.cream, fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, borderBottom:`1px solid ${C.border}` }}>
                         {frameResults.length} items found — click to select
                       </div>
                       {frameResults.map(i=>(
                         <div key={i.id} onMouseDown={()=>pickFrame(i)}
-                          style={{ padding:'10px 14px', cursor:'pointer', borderBottom:`1px solid ${C.cream}`, display:'flex', alignItems:'center', gap:10, background:C.surface }}
+                          style={{ padding:'10px 14px', cursor:'pointer', borderBottom:`1px solid ${C.cream}`, display:'flex', alignItems:'center', gap:10, background:'white' }}
                           onMouseEnter={e=>e.currentTarget.style.background='#f8f5ef'}
                           onMouseLeave={e=>e.currentTarget.style.background='white'}>
                           {/* Frame image */}
@@ -995,7 +986,7 @@ export default function NewOrder() {
                     <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{frameDetails.name||'Frame'}</div>
                     <div style={{ fontSize:11, color:C.muted }}>{frameDetails.color} · {frameDetails.type}</div>
                   </div>
-                  <div style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:700, color:orderType==='frame_replace_free'?C.muted:C.navy }}>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:orderType==='frame_replace_free'?C.muted:C.navy }}>
                     {orderType==='frame_replace_free'?'Rs. 0':fmtMoney(frameFinal)}
                   </div>
                 </div>
@@ -1022,7 +1013,7 @@ export default function NewOrder() {
                   <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{lensDetails.type}</div>
                   <div style={{ fontSize:11, color:C.muted }}>{lensDetails.coating} · {lensDetails.lens_company}{lensDetails.lens_index&&lensDetails.lens_index!=='Default'?` · ${lensDetails.lens_index}`:''}</div>
                 </div>
-                <div style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:700, color:orderType==='lens_warranty'?C.muted:C.navy }}>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:orderType==='lens_warranty'?C.muted:C.navy }}>
                   {orderType==='lens_warranty'?'Rs. 0':fmtMoney(lensFinal)}
                 </div>
               </div>
@@ -1047,9 +1038,9 @@ export default function NewOrder() {
               <div style={{ fontSize:13, fontWeight:700, color:'#166534', marginBottom:10 }}>Free Gift Items</div>
               <input value={invSearch} onChange={e=>{ setInvSearch(e.target.value); searchInventory(e.target.value); }}
                 placeholder="Search: lens cleaner, chain, pouch..."
-                style={{ ...INP, background:C.surface, border:`1.5px solid #86efac`, marginBottom:6 }}/>
+                style={{ ...INP, background:'white', border:`1.5px solid #86efac`, marginBottom:6 }}/>
               {invResults.length>0 && (
-                <div style={{ background:C.surface, border:`1px solid #86efac`, borderRadius:7, marginBottom:6, overflow:'hidden', maxHeight:160, overflowY:'auto' }}>
+                <div style={{ background:'white', border:`1px solid #86efac`, borderRadius:7, marginBottom:6, overflow:'hidden', maxHeight:160, overflowY:'auto' }}>
                   {invResults.map(item=>(
                     <div key={item.id} onClick={()=>{ if(!freeItems.find(f=>f.inventory_id===item.id)) setFreeItems(p=>[...p,{inventory_id:item.id,name:item.name,qty:1,category:item.category,stock:item.quantity}]); setInvSearch(''); setInvResults([]); }}
                       style={{ display:'flex', justifyContent:'space-between', padding:'8px 12px', cursor:'pointer', borderBottom:`1px solid #f0fdf4`, fontSize:13 }}
@@ -1062,7 +1053,7 @@ export default function NewOrder() {
                 </div>
               )}
               {freeItems.map((fi,i)=>(
-                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, background:C.surface, borderRadius:7, padding:'7px 11px', marginBottom:5 }}>
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, background:'white', borderRadius:7, padding:'7px 11px', marginBottom:5 }}>
                   <span style={{ flex:1, fontSize:13, color:'#166534', fontWeight:600 }}>{fi.name}</span>
                   <input type="number" min="1" max={fi.stock} value={fi.qty}
                     onChange={e=>setFreeItems(p=>p.map((x,j)=>j===i?{...x,qty:parseInt(e.target.value)||1}:x))}
@@ -1075,7 +1066,7 @@ export default function NewOrder() {
             </div>
 
             {/* Discount */}
-            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:11, padding:'14px 16px', marginBottom:12 }}>
+            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:11, padding:'14px 16px', marginBottom:12 }}>
               <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:10 }}>Discount</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                 <div>
@@ -1101,7 +1092,7 @@ export default function NewOrder() {
                 <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.gold, marginBottom:2 }}>Order Total</div>
                 {subTotal!==totalAmount && <div style={{ fontSize:11, color:'rgba(255,255,255,.5)' }}>Sub: {fmtMoney(subTotal)} − {fmtMoney(pctAmt+rsAmt)}</div>}
               </div>
-              <div style={{ fontFamily:'var(--font-display)', fontSize:28, fontWeight:700, color:'white' }}>{fmtMoney(totalAmount)}</div>
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:'white' }}>{fmtMoney(totalAmount)}</div>
             </div>
           </Card>
 
@@ -1145,7 +1136,7 @@ export default function NewOrder() {
               </div>
               <div style={{ background:balanceAmount===0?'#dcfce7':C.cream, borderRadius:12, padding:'16px', display:'flex', flexDirection:'column', justifyContent:'center', border:`1px solid ${balanceAmount===0?'#86efac':C.border}` }}>
                 <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:balanceAmount===0?C.success:C.muted, marginBottom:6 }}>Balance Due</div>
-                <div style={{ fontFamily:'var(--font-display)', fontSize:26, fontWeight:700, color:balanceAmount===0?C.success:C.navy }}>{fmtMoney(balanceAmount)}</div>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26, fontWeight:700, color:balanceAmount===0?C.success:C.navy }}>{fmtMoney(balanceAmount)}</div>
                 {balanceAmount===0 && <div style={{ fontSize:12, color:C.success, marginTop:4, fontWeight:600 }}>Fully paid</div>}
               </div>
             </div>
