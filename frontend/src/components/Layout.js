@@ -92,17 +92,14 @@ export default function Layout() {
   const [dark,setDark] = useState(()=>localStorage.getItem('ko_theme')==='dark');
 
   useEffect(()=>{
-    // Set BOTH .dark class AND data-theme so all CSS selectors work
-    document.documentElement.classList.toggle('dark', dark);
-    document.body.classList.toggle('dark', dark);
     document.body.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.body.classList.toggle('dark', dark);   // ← enables .dark CSS rules
     localStorage.setItem('ko_theme', dark ? 'dark' : 'light');
   },[dark]);
   useEffect(()=>{
     const saved = localStorage.getItem('ko_theme') === 'dark';
-    document.documentElement.classList.toggle('dark', saved);
-    document.body.classList.toggle('dark', saved);
     document.body.setAttribute('data-theme', saved ? 'dark' : 'light');
+    document.body.classList.toggle('dark', saved);
   },[]);
   useEffect(()=>{ const fn=()=>setMob(window.innerWidth<768); window.addEventListener('resize',fn); return ()=>window.removeEventListener('resize',fn); },[]);
   useEffect(()=>{ if(mob) setOpen(false); },[location.pathname]);
@@ -121,6 +118,20 @@ export default function Layout() {
       if(item?.id) navigate(`/inventory?scan=${item.id}`);
     } catch(e){}
   };
+
+  // ── Persist sidebar scroll position across nav clicks ──────
+  const navScrollRef = React.useRef(null);
+  useEffect(() => {
+    const el = navScrollRef.current;
+    if (!el) return;
+    // Restore saved scroll position
+    const saved = sessionStorage.getItem('ko_sidebar_scroll');
+    if (saved) el.scrollTop = parseInt(saved);
+    // Save on scroll
+    const onScroll = () => sessionStorage.setItem('ko_sidebar_scroll', el.scrollTop);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
 
   const SidebarInner = ()=>(
     <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
@@ -145,7 +156,7 @@ export default function Layout() {
         </div>
       </div>
       {/* Nav */}
-      <nav style={{flex:1,overflowY:'auto',padding:'4px 8px 8px'}}>
+      <nav ref={navScrollRef} style={{flex:1,overflowY:'auto',padding:'4px 8px 8px'}}>
         {Object.entries(SECTIONS).map(([sk,sl])=>{
           const items=navItems.filter(n=>n.section===sk);
           if(!items.length) return null;
@@ -155,15 +166,13 @@ export default function Layout() {
               {items.map(n=>{
                 const ac=ACCENT[n.icon]||'#c9a84c';
                 return (
-                  <NavLink key={n.to} to={n.to}
-                    className="ko-nav-link"
-                    style={({isActive})=>({display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:9,marginBottom:1,textDecoration:'none',background:isActive?`${ac}18`:'transparent',borderLeft:isActive?`3px solid ${ac}`:'3px solid transparent'})}>
+                  <NavLink key={n.to} to={n.to} className={({isActive})=>`ko-nav-link${isActive?' ko-nav-link-active':''}`} style={({isActive})=>({display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:9,marginBottom:1,textDecoration:'none',transition:'all .12s',background:isActive?`${ac}18`:'transparent',borderLeft:isActive?`3px solid ${ac}`:'3px solid transparent','--item-accent':ac})}>
                     {({isActive})=>(
                       <>
-                        <div className="ko-nav-icon" style={{width:28,height:28,borderRadius:7,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:isActive?`${ac}2a`:'rgba(255,255,255,.06)',transition:'background .12s'}}>
+                        <div className="ko-nav-icon" style={{width:28,height:28,borderRadius:7,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:isActive?`${ac}2a`:'rgba(255,255,255,.06)',transition:'all .12s'}}>
                           <Icon name={n.icon} size={14} color={isActive?ac:'rgba(255,255,255,.45)'}/>
                         </div>
-                        <span className="ko-nav-label" style={{fontSize:13,fontWeight:isActive?600:400,color:isActive?'#fff':'rgba(255,255,255,.55)'}}>{n.label}</span>
+                        <span style={{fontSize:13,fontWeight:isActive?600:400,color:isActive?'#fff':'rgba(255,255,255,.55)'}}>{n.label}</span>
                       </>
                     )}
                   </NavLink>

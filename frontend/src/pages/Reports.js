@@ -2,19 +2,12 @@
 import React, { useEffect, useState } from 'react';
 
 const C = {
-  navy:    'var(--navy)',
-  gold:    'var(--gold)',
-  cream:   'var(--bg-sunken)',
-  surface: 'var(--bg-surface)',
-  border:  'var(--border)',
-  muted:   'var(--text-muted)',
-  success: 'var(--success)',
-  danger:  'var(--danger)',
-  warning: 'var(--warning)',
-  info:    'var(--info)',
+  navy:'#0f1f3d', gold:'#c9a84c', cream:'var(--cream,#f8f5ef)',
+  border:'var(--border,#e0ddd6)', muted:'var(--muted,#6b7280)',
+  success:'#16a34a', danger:'#dc2626', surface:'var(--surface,#fff)'
 };
 const fmt  = n => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0,maximumFractionDigits:0});
-const fmtK = n => 'Rs. ' + Math.round(parseFloat(n||0)).toLocaleString('en-LK');
+const fmtK = n => { const v=parseFloat(n||0); return v>=1000000?`Rs.${(v/1000000).toFixed(1)}M`:v>=1000?`Rs.${(v/1000).toFixed(0)}K`:`Rs.${Math.round(v)}`; };
 const thisMonth = () => new Date().toISOString().slice(0,7);
 
 function api(path) {
@@ -144,7 +137,7 @@ function StatCard({ label, value, sub, color=C.navy, dark=false, icon, trend }) 
         <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:dark?'rgba(201,168,76,.8)':C.muted}}>{label}</div>
         {icon && <span style={{fontSize:20}}>{icon}</span>}
       </div>
-      <div style={{fontFamily:'var(--font-display)',fontSize:26,fontWeight:700,color:dark?'white':color,lineHeight:1,marginBottom:sub?6:0}}>{value}</div>
+      <div style={{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:dark?'white':color,lineHeight:1,marginBottom:sub?6:0}}>{value}</div>
       {sub && <div style={{fontSize:12,color:dark?'rgba(255,255,255,.55)':C.muted,marginTop:4}}>{sub}</div>}
       {trend != null && (
         <div style={{display:'flex',alignItems:'center',gap:4,marginTop:6}}>
@@ -231,12 +224,12 @@ export default function Reports() {
   const totals = profit?.totals || {};
 
   return (
-    <div style={{fontFamily:'var(--font-body)',maxWidth:1100}}>
+    <div style={{fontFamily:"'Inter','DM Sans',sans-serif",maxWidth:1200,width:'100%'}}>
 
       {/* Header */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:24,flexWrap:'wrap',gap:12}}>
         <div>
-          <h1 style={{fontFamily:'var(--font-display)',fontSize:28,color:C.navy,margin:0}}>Reports</h1>
+          <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:28,color:C.navy,margin:0}}>Reports</h1>
           <p style={{fontSize:13,color:C.muted,margin:'4px 0 0'}}>Profit, revenue, lens jobs and top sellers</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
