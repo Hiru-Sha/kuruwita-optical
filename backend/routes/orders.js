@@ -266,41 +266,72 @@ router.patch('/:id', auth, async (req, res) => {
   fields.push('updated_at = NOW()');
   values.push(req.params.id);
   try {
-    const result = await pool.query(
-      `UPDATE orders SET ${fields.join(', ')} WHERE id = $${values.length} RETURNING *`,
-      values
-    );
-    if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
-    const updatedOrder = result.rows[0];
-
-    // ── Auto bank deposit for balance payments via bank ──
-    // Runs on every PATCH — retroactively fixes past payments too
-    const lpm = (updatedOrder.last_payment_method || '').toLowerCase();
-    const lpa = parseFloat(updatedOrder.last_payment_amount || 0);
-    const lpd = updatedOrder.last_payment_date;
-    if (lpm && lpm !== 'cash' && lpa > 0 && lpd) {
-      try {
-        const exists = await pool.query(
-          `SELECT id FROM cash_deposits WHERE order_id=$1 AND date=$2 AND ABS(amount-$3)<1 LIMIT 1`,
-          [updatedOrder.id, lpd, lpa]
-        ).catch(() => ({ rows: [] }));
-        if (exists.rows.length === 0) {
-          await pool.query(
-            `INSERT INTO cash_deposits (date,amount,payment_type,notes,added_by,order_id)
-             VALUES ($1,$2,$3,$4,$5,$6)`,
-            [lpd, lpa, lpm, 'Balance payment — order ' + (updatedOrder.order_number||updatedOrder.id), req.user.id, updatedOrder.id]
-          ).catch(() =>
-            pool.query(
-              `INSERT INTO cash_deposits (date,amount,payment_type,notes,added_by)
-               VALUES ($1,$2,$3,$4,$5)`,
-              [lpd, lpa, lpm, 'Balance payment — order ' + (updatedOrder.order_number||updatedOrder.id), req.user.id]
-            ).catch(() => {})
-          );
-        }
-      } catch(e) { console.warn('Auto-deposit failed:', e.message); }
+    // Auto-create last_payment_amount column if it doesn't exist (no migration needed)
+    if (req.body.last_payment_amount !== undefined) {
+      await pool.query(
+        `ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_payment_amount DECIMAL(10,2) DEFAULT 0`
+      ).catch(() => {});  // ignore if already exists or no permission
     }
 
-    res.json(updatedOrder);
+    let result;
+    try {
+      result = await pool.query(
+        `UPDATE orders SET ${fields.join(', ')} WHERE id = $${values.length} RETURNING *`,
+        values
+      );
+    } catch (colErr) {
+      // If column doesn't exist, retry without last_payment_amount
+      if (colErr.message && colErr.message.includes('last_payment_amount')) {
+        const safeFields = [], safeVals = [];
+        allowed.filter(f => f !== 'last_payment_amount').forEach(f => {
+          if (req.body[f] !== undefined) {
+            safeFields.push(`${f} = $${safeFields.length + 1}`);
+            safeVals.push(req.body[f]);
+          }
+        });
+        safeFields.push('updated_at = NOW()');
+        safeVals.push(req.params.id);
+        result = await pool.query(
+          `UPDATE orders SET ${safeFields.join(', ')} WHERE id = $${safeVals.length} RETURNING *`,
+          safeVals
+        );
+      } else { throw colErr; }
+    }
+
+    if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
+    const updated = result.rows[0];
+
+    // ── Auto bank/card deposit when balance paid by non-cash ──
+    const lpm = (req.body.last_payment_method||'').toLowerCase();
+    const lpa = parseFloat(req.body.last_payment_amount || 0);
+    const lpd = req.body.last_payment_date;
+    if (lpm && lpm !== 'cash' && lpa > 0 && lpd) {
+      // Check no duplicate deposit exists
+      const dup = await pool.query(
+        `SELECT id FROM cash_deposits WHERE order_id=$1 AND date=$2 LIMIT 1`,
+        [updated.id, lpd]
+      ).catch(() => ({ rows:[] }));
+      if (!dup.rows.length) {
+        await pool.query(
+          `INSERT INTO cash_deposits (date,amount,payment_type,notes,added_by,order_id)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [lpd, lpa, lpm,
+           'Balance payment — ' + (updated.order_number||'Order #'+updated.id),
+           req.user.id, updated.id]
+        ).catch(() =>
+          // Fallback without order_id if column missing
+          pool.query(
+            `INSERT INTO cash_deposits (date,amount,payment_type,notes,added_by)
+             VALUES ($1,$2,$3,$4,$5)`,
+            [lpd, lpa, lpm,
+             'Balance payment — ' + (updated.order_number||'Order #'+updated.id),
+             req.user.id]
+          ).catch(e => console.warn('Auto deposit failed:', e.message))
+        );
+      }
+    }
+
+    res.json(updated);
   } catch (err) {
     console.error('Update order error:', err.message);
     if (err.message.includes('column') && err.message.includes('does not exist')) {
