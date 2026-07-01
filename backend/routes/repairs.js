@@ -60,17 +60,24 @@ router.post('/', auth, async (req, res) => {
     await client.query('BEGIN');
     const repair_number = await nextRepairNumber(client);
     const import_date = req.body.repair_date || req.body.import_date || null;
+    // Auto-determine status: if fully paid at creation → collected
+    const advAmt  = parseFloat(advance) || 0;
+    const chgAmt  = parseFloat(charge)  || 0;
+    const effStatus = advAmt >= chgAmt && chgAmt > 0 ? 'collected' : (status || 'done');
+
     const result = await client.query(`
       INSERT INTO repairs
-        (repair_number, customer_name, phone, repair_type, description, charge, payment_method, status, notes, added_by, completed_at, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12::timestamp, NOW())) RETURNING *`,
+        (repair_number, customer_name, phone, repair_type, description, charge, payment_method,
+         status, notes, added_by, completed_at, created_at, advance)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12::timestamp, NOW()),$13) RETURNING *`,
       [repair_number,
        customer_name?.trim()||null, phone?.trim()||null,
        repair_type, description?.trim()||null,
-       parseFloat(charge)||0, payment_method||'cash',
-       status||'done', notes?.trim()||null, req.user.id,
-       (status||'done')==='done' ? new Date() : null,
-       import_date||null]
+       chgAmt, payment_method||'cash',
+       effStatus, notes?.trim()||null, req.user.id,
+       effStatus === 'done' ? new Date() : null,
+       import_date||null,
+       advAmt]
     );
     await client.query('COMMIT');
 
@@ -83,17 +90,17 @@ router.post('/', auth, async (req, res) => {
     }
     const newRepair = result.rows[0];
 
-    // Auto-create bank receipt if paid by bank or card
+    // Auto-create bank receipt if advance paid by bank/card at creation
     const pm_r  = (payment_method||'cash').toLowerCase();
-    const amt_r = parseFloat(charge)||0;
-    if ((pm_r==='bank'||pm_r==='card'||pm_r==='transfer') && amt_r > 0) {
+    const dep_r = advAmt > 0 ? advAmt : chgAmt; // use advance if set, else full charge
+    if ((pm_r==='bank'||pm_r==='card'||pm_r==='transfer') && dep_r > 0) {
       try {
         await pool.query(
           `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by)
            VALUES ($1,$2,$3,$4,$5,$6)`,
-          [new Date().toISOString().split('T')[0], amt_r, 'Pan Asia Bank',
+          [new Date().toISOString().split('T')[0], dep_r, null,
            pm_r==='card'?'card':'online',
-           'Auto: Repair ' + repair_number, req.user.id]
+           'Repair payment: ' + repair_number, req.user.id]
         );
       } catch(e) { console.warn('Repair bank receipt failed:', e.message); }
     }

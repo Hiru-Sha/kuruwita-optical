@@ -9,16 +9,8 @@ import { buildRepairBill, openPrint as openRepairPrint } from '../components/Pri
 import React, { useEffect, useState, useCallback } from 'react';
 
 const C = {
-  navy:    'var(--navy)',
-  gold:    'var(--gold)',
-  cream:   'var(--bg-sunken)',
-  surface: 'var(--bg-surface)',
-  border:  'var(--border)',
-  muted:   'var(--text-muted)',
-  success: 'var(--success)',
-  danger:  'var(--danger)',
-  warning: 'var(--warning)',
-  info:    'var(--info)',
+  navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
+  border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b',
 };
 const fmt     = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtFull = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2});
@@ -26,7 +18,7 @@ const fmtDate = (d) => { if(!d) return '—'; return new Date(d).toLocaleDateStr
 const fmtTime = (d) => { if(!d) return '—'; return new Date(d).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); };
 const thisMonth = () => new Date().toISOString().slice(0,7);
 
-const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
+const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
 
 // ── Common repair types with typical charges ──────────────────
 const REPAIR_TYPES = [
@@ -352,7 +344,7 @@ export default function Repairs() {
   };
 
   return (
-    <div style={{ fontFamily:'var(--font-body)' }}>
+    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
 
       {/* Toast */}
       {toast && (
@@ -369,10 +361,10 @@ export default function Repairs() {
         return (
           <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.55)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
             onClick={e=>{ if(e.target===e.currentTarget){ setPayRepair(null); setPayErr(''); } }}>
-            <div style={{ background:C.surface, borderRadius:16, padding:28, width:'100%', maxWidth:380, boxShadow:'0 20px 60px rgba(0,0,0,.25)' }}>
+            <div style={{ background:'white', borderRadius:16, padding:28, width:'100%', maxWidth:380, boxShadow:'0 20px 60px rgba(0,0,0,.25)' }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
                 <div>
-                  <div style={{ fontFamily:'var(--font-display)', fontSize:18, color:C.navy }}>Record Payment</div>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, color:C.navy }}>Record Payment</div>
                   <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>{payRepair.repair_number} · {payRepair.customer_name}</div>
                 </div>
                 <button onClick={()=>{ setPayRepair(null); setPayErr(''); }}
@@ -380,7 +372,7 @@ export default function Repairs() {
               </div>
               <div style={{ background:balance>0?'#fee2e2':'#dcfce7', borderRadius:10, padding:'12px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                 <span style={{ fontSize:12, color:C.muted }}>Balance due</span>
-                <span style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:700, color:balance>0?C.danger:C.success }}>{fmtFull(balance)}</span>
+                <span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:balance>0?C.danger:C.success }}>{fmtFull(balance)}</span>
               </div>
               {balance <= 0 ? (
                 <div style={{ textAlign:'center', color:C.success, fontSize:14, fontWeight:600, padding:'10px 0' }}>Fully paid</div>
@@ -443,7 +435,7 @@ export default function Repairs() {
               🖨️ Print Receipt
             </button>
             <button onClick={()=>setLastDone(null)}
-              style={{ padding:'8px 14px', background:C.surface, border:`1.5px solid #86efac`, borderRadius:8, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+              style={{ padding:'8px 14px', background:'white', border:`1.5px solid #86efac`, borderRadius:8, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
               Skip
             </button>
           </div>
@@ -453,7 +445,7 @@ export default function Repairs() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h1 style={{ fontFamily:'var(--font-display)', fontSize:28, color:C.navy, margin:0 }}>Repairs</h1>
+          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, color:C.navy, margin:0 }}>Repairs</h1>
           <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Frame repairs, adjustments & parts replacement</p>
         </div>
         <div style={{ display:'flex', gap:8 }}>
@@ -474,7 +466,7 @@ export default function Repairs() {
           <span style={{ fontSize:13, fontWeight:700, color:'#92400e' }}>📅 Date this repair was done:</span>
           <input type="date" value={repairDate} onChange={e=>setRepairDate(e.target.value)}
             max={new Date().toISOString().split('T')[0]}
-            style={{ padding:'8px 14px', border:'2px solid #f59e0b', borderRadius:8, fontSize:15, fontWeight:700, fontFamily:'inherit', outline:'none', background:C.surface, color:'#92400e' }}/>
+            style={{ padding:'8px 14px', border:'2px solid #f59e0b', borderRadius:8, fontSize:15, fontWeight:700, fontFamily:'inherit', outline:'none', background:'white', color:'#92400e' }}/>
           {repairDate && (
             <span style={{ fontSize:13, color:'#92400e', background:'#fef3c7', padding:'4px 12px', borderRadius:20, fontWeight:600 }}>
               {new Date(repairDate+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
@@ -494,7 +486,7 @@ export default function Repairs() {
         ].map(s=>(
           <div key={s.l} style={{ background:s.dark?C.navy:C.surface, border:`1.5px solid ${s.dark?C.navy:C.border}`, borderRadius:14, padding:'14px 16px', boxShadow:'0 2px 8px rgba(0,0,0,.05)' }}>
             <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:s.dark?C.gold:C.muted, marginBottom:6 }}>{s.l}</div>
-            <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':(s.c||C.navy) }}>{s.v}</div>
             {s.sub && <div style={{ fontSize:11, color:s.dark?'rgba(255,255,255,.6)':C.muted, marginTop:3 }}>{s.sub}</div>}
           </div>
         ))}
@@ -555,7 +547,8 @@ export default function Repairs() {
 
 
 
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr', gap:12, marginBottom:14 }}>
+          {/* Row 1: Charge + Cost + Status + Notes */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginBottom:12 }}>
             <div>
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Charge (Rs.) *</label>
               <input type="number" value={form.charge} onChange={e=>setForm(f=>({...f,charge:e.target.value}))}
@@ -565,14 +558,6 @@ export default function Repairs() {
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Repair Cost (Rs.)</label>
               <input type="number" value={form.repair_cost} onChange={e=>setForm(f=>({...f,repair_cost:e.target.value}))}
                 placeholder="Your cost" style={{ ...INP, fontSize:18, fontWeight:700 }}/>
-            </div>
-            <div>
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Payment</label>
-              <select value={form.payment_method} onChange={e=>setForm(f=>({...f,payment_method:e.target.value}))} style={{ ...INP, cursor:'pointer' }}>
-                <option value="cash">💵 Cash</option>
-                <option value="bank">🏦 Bank</option>
-                <option value="free">🎁 Free</option>
-              </select>
             </div>
             <div>
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Status</label>
@@ -588,12 +573,54 @@ export default function Repairs() {
             </div>
           </div>
 
+          {/* ── Payment Collected Now ── */}
+          {parseFloat(form.charge) > 0 && (
+            <div style={{ background:'linear-gradient(135deg,#f0fdf4,#dcfce7)', border:'1.5px solid #86efac', borderRadius:12, padding:'14px 16px', marginBottom:14 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'#15803d', textTransform:'uppercase', letterSpacing:'.8px', marginBottom:10 }}>
+                💳 Payment Collected Now
+              </div>
+              <div style={{ display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' }}>
+                <div style={{ display:'flex', gap:6 }}>
+                  {[{l:'Not Paid',v:''},{l:'Half',v:String(Math.round(parseFloat(form.charge||0)/2))},{l:'Full ✓',v:form.charge}].map(btn=>(
+                    <button key={btn.l} onClick={()=>setForm(f=>({...f,advance:btn.v}))}
+                      style={{ padding:'8px 14px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', border:'none',
+                        background:form.advance===btn.v?(btn.v===''?'#6b7280':'#15803d'):'white',
+                        color:form.advance===btn.v?'white':'#374151', boxShadow:'0 1px 3px rgba(0,0,0,.1)' }}>
+                      {btn.l}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ flex:1, minWidth:120 }}>
+                  <input type="number" value={form.advance} onChange={e=>setForm(f=>({...f,advance:e.target.value}))}
+                    placeholder="Custom amount..." style={{ ...INP, background:'white' }}/>
+                </div>
+                <select value={form.payment_method} onChange={e=>setForm(f=>({...f,payment_method:e.target.value}))} style={{ ...INP, cursor:'pointer', background:'white' }}>
+                  <option value="cash">💵 Cash</option>
+                  <option value="bank">🏦 Bank</option>
+                  <option value="card">💳 Card</option>
+                  <option value="free">🎁 Free</option>
+                </select>
+              </div>
+              {parseFloat(form.advance)>0 && parseFloat(form.advance)<parseFloat(form.charge) && (
+                <div style={{ marginTop:10, fontSize:12, color:'#92400e', background:'#fef9c3', borderRadius:7, padding:'6px 10px', display:'inline-block' }}>
+                  ⚠️ Balance remaining: Rs. {(parseFloat(form.charge)-parseFloat(form.advance)).toLocaleString()} — will show as balance due
+                </div>
+              )}
+              {parseFloat(form.advance)>=parseFloat(form.charge) && parseFloat(form.charge)>0 && (
+                <div style={{ marginTop:10, fontSize:12, color:'#15803d', background:'#dcfce7', borderRadius:7, padding:'6px 10px', display:'inline-block', fontWeight:700 }}>
+                  ✅ Fully paid — will be marked as Collected automatically
+                </div>
+              )}
+            </div>
+          )}
+
+
           {/* Quick total display */}
           {parseFloat(form.charge) > 0 && (
             <div style={{ background:C.navy, borderRadius:10, padding:'12px 16px', marginBottom:14 }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: parseFloat(form.repair_cost) > 0 ? 8 : 0 }}>
                 <span style={{ fontSize:13, color:'#ede9e0' }}>{form.repair_type || 'Repair'} · {form.payment_method === 'bank' ? '🏦 Bank' : '💵 Cash'}</span>
-                <span style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color:C.gold }}>{fmtFull(form.charge)}</span>
+                <span style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:C.gold }}>{fmtFull(form.charge)}</span>
               </div>
               {parseFloat(form.repair_cost) > 0 && (
                 <div style={{ display:'flex', gap:16, flexWrap:'wrap', borderTop:'1px solid rgba(255,255,255,.15)', paddingTop:8 }}>
@@ -665,7 +692,7 @@ export default function Repairs() {
       </div>
 
       {/* Repair list */}
-      <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
+      <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
         {loading
           ? <div style={{ padding:32, textAlign:'center', color:C.muted }}>Loading...</div>
           : !repairs.length
@@ -710,7 +737,7 @@ export default function Repairs() {
                             )}
                           </div>
                           <div style={{ textAlign:'right', flexShrink:0 }}>
-                            <div style={{ fontFamily:'var(--font-display)', fontSize:17, fontWeight:700, color:C.navy }}>
+                            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:C.navy }}>
                               {parseFloat(repair.charge)===0 ? <span style={{ color:C.muted, fontSize:13 }}>Free</span> : fmtFull(repair.charge)}
                             </div>
                             <div style={{ fontSize:10, color:C.muted }}>{repair.payment_method==='bank'?'🏦 Bank':repair.payment_method==='free'?'🎁':'💵 Cash'}</div>
