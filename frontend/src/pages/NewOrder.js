@@ -175,7 +175,7 @@ function StepBar({ step }) {
     { label:'Payment',     icon:'💳' },
   ];
   return (
-    <div style={{ display:'flex', alignItems:'center', background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:16, padding:'16px 24px', marginBottom:24, overflowX:'auto', boxShadow:'0 2px 8px rgba(0,0,0,.05)' }}>
+    <div style={{ display:'flex', alignItems:'center', background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:16, padding:'14px 20px', marginBottom:24, overflowX:'auto', boxShadow:'0 2px 8px rgba(0,0,0,.05)' }}>
       {steps.map((s,i) => {
         const n=i+1, done=step>n, active=step===n;
         return (
@@ -223,7 +223,7 @@ const INP = { padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadiu
 const SEL = { ...INP, cursor:'pointer' };
 
 const Card = ({ children, style={} }) => (
-  <div style={{ background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:16, padding:'24px 28px', marginBottom:16, boxShadow:'0 2px 8px rgba(0,0,0,.04)', ...style }}>
+  <div style={{ background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:16, padding:'20px 24px', marginBottom:16, boxShadow:'0 2px 8px rgba(0,0,0,.04)', ...style }}>
     {children}
   </div>
 );
@@ -326,10 +326,24 @@ export default function NewOrder() {
   const [customerOwnFrame, setCustomerOwnFrame]= useState(false);
   const [showScanner,      setShowScanner]     = useState(false);
 
-  const frameFinal  = (orderType==='frame_replace_free'||orderType==='lens_warranty'||orderType==='lens_change') ? 0
-    : Math.max(0,(frameDetails.sellPrice||0)-(frameDetails.frameDiscount||0));
-  const lensFinal   = orderType==='lens_warranty' ? 0
-    : Math.max(0,(lensDetails.sellPrice||0)-(lensDetails.lensDiscount||0));
+  // Frame price rules:
+  // lens_warranty  → customer brings their own frame (already have it) → 0
+  // lens_paid      → customer brings their own frame, just needs new lens → 0
+  // lens_change    → customer's own frame → 0
+  // frame_replace_free → we give free frame → 0
+  const frameFinal  = (
+    orderType==='frame_replace_free' ||
+    orderType==='lens_warranty'      ||
+    orderType==='lens_change'        ||
+    orderType==='lens_paid'
+  ) ? 0 : Math.max(0,(frameDetails.sellPrice||0)-(frameDetails.frameDiscount||0));
+  // Lens price rules:
+  // lens_warranty      → free lens replacement → 0
+  // frame_replace_free → customer keeps old lenses → 0
+  const lensFinal   = (
+    orderType==='lens_warranty'      ||
+    orderType==='frame_replace_free'
+  ) ? 0 : Math.max(0,(lensDetails.sellPrice||0)-(lensDetails.lensDiscount||0));
   const subTotal    = frameFinal + lensFinal;
   const pctAmt      = parseFloat(discountPct)>0 ? Math.round(subTotal*parseFloat(discountPct)/100) : 0;
   const rsAmt       = parseFloat(overallDiscount)||0;
@@ -578,8 +592,8 @@ export default function NewOrder() {
   };
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif", maxWidth:900, width:'100%', margin:'0 auto' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, flexWrap:'wrap', gap:8 }}>
+    <div style={{ fontFamily:"'DM Sans',sans-serif", maxWidth:740, margin:'0 auto' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4, flexWrap:'wrap', gap:8 }}>
         <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, margin:0 }}>New Order</h1>
         <button onClick={()=>navigate('/orders')}
           style={{ padding:'8px 18px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
@@ -647,7 +661,7 @@ export default function NewOrder() {
             </div>
           )}
           {custMode==='new' && (
-            <div style={{ display:'grid', gridTemplateColumns:'100px 1fr 1fr', gap:12 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
               <Field label="Title"><select value={newCust.title} onChange={e=>setNewCust(c=>({...c,title:e.target.value}))} style={SEL}>{TITLES.map(t=><option key={t}>{t}</option>)}</select></Field>
               <Field label="Full Name *"><input value={newCust.name} onChange={e=>setNewCust(c=>({...c,name:e.target.value}))} placeholder="e.g. Nuwan Perera" style={INP}/></Field>
               <Field label="Phone *"><input value={newCust.phone} onChange={e=>setNewCust(c=>({...c,phone:e.target.value}))} placeholder="077-123-4567" type="tel" style={INP}/></Field>
@@ -725,7 +739,7 @@ export default function NewOrder() {
         <div>
           <Card>
             <SectionTitle icon="📋" title="Order Type" sub="Select what kind of order this is"/>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {[
                 { v:'normal',             icon:'📋', label:'Normal Order',          sub:'Standard paid order',         col:C.navy,    bg:'#f0f4ff' },
                 { v:'lens_warranty',      icon:'🔁', label:'Lens Free Replacement', sub:'Our fault — no charge',       col:'#166534', bg:'#f0fdf4' },
@@ -734,7 +748,18 @@ export default function NewOrder() {
                 { v:'frame_replace_paid', icon:'💰', label:'Frame Replace Paid',    sub:'Replacement with payment',    col:'#b45309', bg:'#fffbeb' },
                 { v:'lens_change',        icon:'🔬', label:'Lens Change Only',        sub:"Customer's own frame — no frame cost", col:'#0891b2', bg:'#ecfeff' },
               ].map(t=>(
-                <button key={t.v} onClick={()=>{ setOrderType(t.v); if(t.v==='lens_change'){ setCustomerOwnFrame(true); setFrameDetails(f=>({...f,buyPrice:0,sellPrice:0})); } }}
+                <button key={t.v} onClick={()=>{
+                    setOrderType(t.v);
+                    // Set customerOwnFrame based on order type
+                    if (t.v==='lens_change' || t.v==='lens_warranty' || t.v==='lens_paid') {
+                      // Customer brings their own frame
+                      setCustomerOwnFrame(true);
+                      setFrameDetails(f=>({...f,buyPrice:0,sellPrice:0,inventoryId:null}));
+                    } else {
+                      // We supply the frame (normal, frame_replace_free, frame_replace_paid)
+                      setCustomerOwnFrame(false);
+                    }
+                  }}
                   style={{ padding:'10px 12px', borderRadius:10, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
                     border:`2px solid ${orderType===t.v?t.col:C.border}`,
                     background:orderType===t.v?t.bg:'white', color:orderType===t.v?t.col:C.muted,
@@ -812,9 +837,33 @@ export default function NewOrder() {
                     </button>
                   </div>
                 )}
-              </div>
-            </div>
-            {!customerOwnFrame && selectedFrame?.image_url && (
+                            </div>
+
+              {/* Info banner for special order types */}
+              {orderType !== 'normal' && (
+                <div style={{ marginTop:14, padding:'11px 16px', borderRadius:10, fontSize:13,
+                  background: {
+                    lens_warranty:     '#f0fdf4', lens_paid:      '#eff6ff',
+                    frame_replace_free:'#f5f3ff', frame_replace_paid:'#fffbeb',
+                    lens_change:       '#ecfeff',
+                  }[orderType] || '#f8faff',
+                  border: '1.5px solid',
+                  borderColor: {
+                    lens_warranty:     '#86efac', lens_paid:      '#93c5fd',
+                    frame_replace_free:'#c4b5fd', frame_replace_paid:'#fcd34d',
+                    lens_change:       '#67e8f9',
+                  }[orderType] || '#e5e7eb',
+                }}>
+                  {{
+                    lens_warranty:      '🔁 Lens Free Replacement — Frame price: FREE (customer brings their frame) · Lens price: FREE (warranty)',
+                    lens_paid:          '🔬 Lens Paid Replacement — Frame price: FREE (customer brings their frame) · Lens price: CHARGED',
+                    frame_replace_free: '🎁 Frame Replace Free — Frame price: FREE · Lens price: FREE (customer keeps old lenses)',
+                    frame_replace_paid: '💰 Frame Replace Paid — Frame price: CHARGED · Lens price: CHARGED',
+                    lens_change:        '🔬 Lens Change Only — Frame price: FREE (customer's own frame) · Lens price: CHARGED',
+                  }[orderType]}
+                </div>
+              )}
+            </div>!customerOwnFrame && selectedFrame?.image_url && (
               <div style={{ marginBottom:14, borderRadius:10, overflow:'hidden', border:`1px solid ${C.border}` }}>
                 <img src={selectedFrame.image_url} alt={selectedFrame.name} style={{ width:'100%', height:140, objectFit:'cover' }}/>
                 <div style={{ padding:'8px 12px', background:'#dcfce7', fontSize:12, fontWeight:600, color:C.success }}>
