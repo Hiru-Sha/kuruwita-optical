@@ -102,6 +102,17 @@ export default function Layout() {
     document.body.classList.toggle('dark', saved);
   },[]);
   useEffect(()=>{ const fn=()=>setMob(window.innerWidth<768); window.addEventListener('resize',fn); return ()=>window.removeEventListener('resize',fn); },[]);
+
+  // Restore sidebar scroll position after every navigation
+  useEffect(()=>{
+    const saved = sessionStorage.getItem('ko_nav_scroll');
+    if (!saved) return;
+    // Use requestAnimationFrame so DOM is ready
+    requestAnimationFrame(()=>{
+      const el = document.getElementById('ko-sidebar-nav');
+      if (el) el.scrollTop = parseInt(saved) || 0;
+    });
+  },[location.pathname]);
   useEffect(()=>{ if(mob) setOpen(false); },[location.pathname]);
 
   const navItems = NAV.filter(n=>!n.roles||n.roles.includes(role));
@@ -118,20 +129,6 @@ export default function Layout() {
       if(item?.id) navigate(`/inventory?scan=${item.id}`);
     } catch(e){}
   };
-
-  // ── Persist sidebar scroll position across nav clicks ──────
-  const navScrollRef = React.useRef(null);
-  useEffect(() => {
-    const el = navScrollRef.current;
-    if (!el) return;
-    // Restore saved scroll position
-    const saved = sessionStorage.getItem('ko_sidebar_scroll');
-    if (saved) el.scrollTop = parseInt(saved);
-    // Save on scroll
-    const onScroll = () => sessionStorage.setItem('ko_sidebar_scroll', el.scrollTop);
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, []);
 
   const SidebarInner = ()=>(
     <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
@@ -156,7 +153,11 @@ export default function Layout() {
         </div>
       </div>
       {/* Nav */}
-      <nav ref={navScrollRef} style={{flex:1,overflowY:'auto',padding:'4px 8px 8px'}}>
+      <nav
+        id="ko-sidebar-nav"
+        style={{flex:1,overflowY:'auto',padding:'4px 8px 8px'}}
+        onScroll={e=>sessionStorage.setItem('ko_nav_scroll',e.currentTarget.scrollTop)}
+      >
         {Object.entries(SECTIONS).map(([sk,sl])=>{
           const items=navItems.filter(n=>n.section===sk);
           if(!items.length) return null;
@@ -196,11 +197,11 @@ export default function Layout() {
   return (
     <div style={{display:'flex',minHeight:'100vh',background:'var(--bg-base)',fontFamily:'var(--font-body)'}}>
       {/* Desktop sidebar */}
-      {!mob && <aside style={sidebarStyle}><SidebarInner/></aside>}
+      {!mob && <aside style={sidebarStyle}>{SidebarInner()}</aside>}
       {/* Mobile drawer */}
       {mob && <>
         {open && <div onClick={()=>setOpen(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:40,backdropFilter:'blur(2px)'}}/>}
-        <aside style={{...sidebarStyle,transform:open?'translateX(0)':'translateX(-100%)',transition:'transform .22s cubic-bezier(.4,0,.2,1)',boxShadow:open?'8px 0 32px rgba(0,0,0,.4)':'none'}}><SidebarInner/></aside>
+        <aside style={{...sidebarStyle,transform:open?'translateX(0)':'translateX(-100%)',transition:'transform .22s cubic-bezier(.4,0,.2,1)',boxShadow:open?'8px 0 32px rgba(0,0,0,.4)':'none'}}>{SidebarInner()}</aside>
       </>}
 
       {/* Main */}
