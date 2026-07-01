@@ -6,13 +6,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getCustomers, getCustomer, addCommLog, updateOrder, updateCustomer } from '../api';
 
-const navy   = 'var(--navy)';
-const gold   = 'var(--gold)';
-const cream  = 'var(--bg-sunken)';
-const border = 'var(--border)';
-const muted  = 'var(--text-muted)';
-const success= 'var(--success)';
-const danger = 'var(--danger)';
+const navy  = '#0f1f3d';
+const gold  = '#c9a84c';
+const cream = '#f8f5ef';
+const border= '#e0ddd6';
+const muted = '#6b7280';
+const success='#2d7a4f';
+const danger ='#c0392b';
 
 const STATUS_STYLE = {
   created:   { bg:'#dbeafe', color:'#1e40af' },
@@ -81,7 +81,7 @@ function RxCard({ rx, prevRx, orderInfo, isLatest }) {
 
       {/* Expanded prescription table */}
       {expanded && (
-        <div style={{ padding:14, background:'var(--bg-surface)' }}>
+        <div style={{ padding:14, background:'white' }}>
           <div style={{ overflowX:'auto', marginBottom:prevRx?12:0 }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
               <thead>
@@ -101,7 +101,7 @@ function RxCard({ rx, prevRx, orderInfo, isLatest }) {
                   <tr key={row.eye}>
                     <td style={{ background:cream, padding:'8px 9px', fontWeight:700, fontSize:12, border:`1px solid ${border}`, color:navy, whiteSpace:'nowrap' }}>{row.eye}</td>
                     {[row.sph, row.cyl, row.axis, row.add, row.va, row.pd].map((v,i)=>(
-                      <td key={i} style={{ padding:'8px 9px', textAlign:'center', border:`1px solid ${border}`, fontSize:13, fontWeight:600, color:'#1a1a2e', background:'var(--bg-surface)' }}>
+                      <td key={i} style={{ padding:'8px 9px', textAlign:'center', border:`1px solid ${border}`, fontSize:13, fontWeight:600, color:'#1a1a2e', background:'white' }}>
                         {v||'—'}
                       </td>
                     ))}
@@ -222,7 +222,7 @@ function OrderCard({ o, customerId, onRefresh }) {
     finally { setSaving(false); }
   };
 
-  const INP_S = { padding:'7px 10px', border:`1.5px solid ${border}`, borderRadius:7, fontSize:13, fontFamily:'var(--font-body)', outline:'none', background:cream, color:navy, width:'100%' };
+  const INP_S = { padding:'7px 10px', border:`1.5px solid ${border}`, borderRadius:7, fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:'none', background:cream, color:navy, width:'100%' };
 
   return (
     <div style={{ background:cream, borderRadius:10, padding:'12px 14px', marginBottom:10 }}>
@@ -266,7 +266,7 @@ function OrderCard({ o, customerId, onRefresh }) {
       </button>
 
       {showMeas && (
-        <div style={{ marginTop:10, background:'var(--bg-surface)', borderRadius:9, padding:'12px 14px', border:`1px solid #93c5fd` }}>
+        <div style={{ marginTop:10, background:'white', borderRadius:9, padding:'12px 14px', border:`1px solid #93c5fd` }}>
           <div style={{ fontSize:12, fontWeight:700, color:'#1e40af', marginBottom:10 }}>📐 PD & Segment Height</div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
             <div>
@@ -388,14 +388,14 @@ export default function Customers() {
   };
 
   return (
-    <div style={{ fontFamily:'var(--font-body)', maxWidth:1100 }}>
-      <h1 style={{ fontFamily:'var(--font-display)', fontSize:24, color:navy, margin:'0 0 4px' }}>👥 Customers</h1>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1200, width:'100%' }}>
+      <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:navy, margin:'0 0 4px' }}>👥 Customers</h1>
       <p style={{ fontSize:13, color:muted, marginBottom:20 }}>Full profiles, order history and refraction records</p>
 
       <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="🔍  Search by name or phone..."
-          style={{ flex:1, minWidth:180, padding:'9px 14px', border:`1.5px solid ${border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'var(--bg-surface)' }}
+          style={{ flex:1, minWidth:180, padding:'9px 14px', border:`1.5px solid ${border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'white' }}
         />
         {[['all','All'],['balance','💰 Balance Due'],['rx','📄 Rx Held']].map(([f,l]) => (
           <button key={f} onClick={()=>setFilter(f)}
@@ -405,16 +405,16 @@ export default function Customers() {
         ))}
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:10, marginBottom:20 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
         {[
           { l:'Total Customers', v: customers.length,                                          dark:true },
           { l:'Balance Due',     v: customers.filter(c=>parseFloat(c.total_balance)>0).length, c:danger  },
           { l:'Rx Held',         v: customers.filter(c=>c.rx_held).length,                    c:'#0369a1'},
           { l:'Total Spent',     v:`Rs.${Math.round(customers.reduce((s,c)=>s+parseFloat(c.total_spent||0),0)/1000)}K`, c:success},
         ].map(s=>(
-          <div key={s.l} style={{ background:s.dark?navy:'white', border:`1px solid ${border}`, borderRadius:10, padding:'12px 14px', textAlign:'center' }}>
+          <div key={s.l} style={{ background:s.dark?navy:'white', border:`1.5px solid ${s.dark?navy:border}`, borderRadius:12, padding:'16px 14px', textAlign:'center', boxShadow:'0 2px 8px rgba(0,0,0,.04)' }}>
             <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?gold:muted, marginBottom:4 }}>{s.l}</div>
-            <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:700, color:s.dark?'white':s.c||navy }}>{s.v}</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':s.c||navy }}>{s.v}</div>
           </div>
         ))}
       </div>
@@ -424,19 +424,19 @@ export default function Customers() {
         : !filtered.length
           ? <p style={{ color:muted, fontSize:13 }}>No customers found</p>
           : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:14 }}>
             {filtered.map(c => (
               <div key={c.id} onClick={()=>openCustomer(c.id)}
-                style={{ background:'var(--bg-surface)', border:`1.5px solid ${c.rx_held?'#fde68a':border}`, borderRadius:14, padding:18, cursor:'pointer', transition:'all .15s' }}
-                onMouseEnter={e=>e.currentTarget.style.borderColor=gold}
-                onMouseLeave={e=>e.currentTarget.style.borderColor=c.rx_held?'#fde68a':border}>
+                style={{ background:'white', border:`1.5px solid ${c.rx_held?'#fde68a':border}`, borderRadius:14, padding:'18px 20px', cursor:'pointer', transition:'all .15s', boxShadow:'0 2px 6px rgba(0,0,0,.04)' }}
+                onMouseEnter={e=>{ e.currentTarget.style.borderColor=gold; e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'; }}
+                onMouseLeave={e=>{ e.currentTarget.style.borderColor=c.rx_held?'#fde68a':border; e.currentTarget.style.boxShadow='0 2px 6px rgba(0,0,0,.04)'; }}>
 
                 <div style={{ display:'flex', gap:12, marginBottom:10 }}>
-                  <div style={{ width:44, height:44, borderRadius:'50%', background:navy, display:'flex', alignItems:'center', justifyContent:'center', color:'#e8c96a', fontSize:16, fontWeight:700, flexShrink:0 }}>
+                  <div style={{ width:48, height:48, borderRadius:'50%', background:`linear-gradient(135deg,${navy},#1e3a5f)`, display:'flex', alignItems:'center', justifyContent:'center', color:'#e8c96a', fontSize:17, fontWeight:700, flexShrink:0, boxShadow:'0 2px 8px rgba(15,31,61,.25)' }}>
                     {initials(c.name)}
                   </div>
                   <div>
-                    <div style={{ fontSize:15, fontWeight:700, color:navy }}>{c.name}</div>
+                    <div style={{ fontSize:15, fontWeight:700, color:navy, lineHeight:1.3 }}>{c.name}</div>
                     <div style={{ fontSize:12, color:muted }}>Age {c.age||'—'} · 📞 {c.phone}</div>
                   </div>
                 </div>
@@ -450,11 +450,12 @@ export default function Customers() {
                   {c.rx_held && <span style={{ background:'#e0f2fe', color:'#0369a1', fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:20 }}>📄 Rx Held</span>}
                 </div>
 
-                <div style={{ fontSize:12, color:muted, marginBottom:12 }}>
-                  Total spent: <b style={{color:navy}}>Rs. {parseFloat(c.total_spent||0).toLocaleString()}</b>
+                <div style={{ fontSize:12, color:muted, marginBottom:12, display:'flex', alignItems:'center', gap:6 }}>
+                  <span>Total spent:</span>
+                  <b style={{color:navy, fontSize:13}}>Rs. {parseFloat(c.total_spent||0).toLocaleString()}</b>
                 </div>
 
-                <div style={{ display:'flex', gap:7 }}>
+                <div style={{ display:'flex', gap:7, marginTop:'auto' }}>
                   <a onClick={e=>e.stopPropagation()}
                     href={`https://wa.me/94${c.phone?.replace(/^0/,'')}?text=${encodeURIComponent(`Hello ${c.name}, this is Kuruwita Optical. `)}`}
                     target="_blank" rel="noreferrer"
@@ -462,7 +463,7 @@ export default function Customers() {
                     💬 WA
                   </a>
                   <button onClick={e=>{e.stopPropagation();openCustomer(c.id);}}
-                    style={{ padding:'6px 12px', background:navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                    style={{ flex:1, padding:'6px 12px', background:navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textAlign:'center' }}>
                     View Profile →
                   </button>
                 </div>
@@ -476,7 +477,7 @@ export default function Customers() {
       {selected && (
         <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.45)', zIndex:200, display:'flex', alignItems:'flex-start', justifyContent:'flex-end' }}
           onClick={e=>{ if(e.target===e.currentTarget) setSelected(null); }}>
-          <div style={{ background:'var(--bg-surface)', width:'100%', maxWidth:540, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
+          <div style={{ background:'white', width:'100%', maxWidth:540, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
 
             {/* Panel header */}
             <div style={{ background:navy, padding:'22px 22px 18px', position:'relative' }}>
@@ -488,7 +489,7 @@ export default function Customers() {
                     <div style={{ width:48, height:48, borderRadius:'50%', background:gold, display:'flex', alignItems:'center', justifyContent:'center', color:navy, fontSize:20, fontWeight:700, marginBottom:10 }}>
                       {initials(selected.name)}
                     </div>
-                    <div style={{ fontFamily:'var(--font-display)', fontSize:22, color:'white', marginBottom:3 }}>{selected.name}</div>
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:'white', marginBottom:3 }}>{selected.name}</div>
                     <div style={{ fontSize:13, color:'#ede9e0', marginBottom:14 }}>
                       Age {selected.age||'—'} · 📞 {selected.phone}
                     </div>
@@ -565,11 +566,11 @@ export default function Customers() {
                           <div style={{ background:navy, borderRadius:12, padding:'14px 16px', marginBottom:16, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, textAlign:'center' }}>
                             <div>
                               <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Total Records</div>
-                              <div style={{ fontFamily:'var(--font-display)', fontSize:22, color:'white', fontWeight:700 }}>{selected.refractions?.length||0}</div>
+                              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:'white', fontWeight:700 }}>{selected.refractions?.length||0}</div>
                             </div>
                             <div>
                               <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Latest Right</div>
-                              <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'white', fontWeight:700 }}>
+                              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'white', fontWeight:700 }}>
                                 {selected.refractions?.[0]?.r_sph||'Plano'}
                               </div>
                               <div style={{ fontSize:10, color:'#ede9e0', marginTop:2 }}>
@@ -578,7 +579,7 @@ export default function Customers() {
                             </div>
                             <div>
                               <div style={{ fontSize:10, color:gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:3 }}>Latest Left</div>
-                              <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'white', fontWeight:700 }}>
+                              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'white', fontWeight:700 }}>
                                 {selected.refractions?.[0]?.l_sph||'Plano'}
                               </div>
                               <div style={{ fontSize:10, color:'#ede9e0', marginTop:2 }}>

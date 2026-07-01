@@ -1,5 +1,6 @@
 /* eslint-disable */
 import { buildQuickSaleBill, openPrint } from '../components/PrintReceipt';
+import { QRScanner } from '../components/QRStickers';
 // ============================================================
 //  QuickSale.js — Mobile-friendly version
 //  On mobile: single column, sticky total bar at bottom
@@ -9,21 +10,14 @@ import { useLocation } from 'react-router-dom';
 import { getInventory } from '../api';
 
 const C = {
-  navy:    'var(--navy)',
-  gold:    'var(--gold)',
-  cream:   'var(--bg-sunken)',
-  surface: 'var(--bg-surface)',
-  border:  'var(--border)',
-  muted:   'var(--text-muted)',
-  success: 'var(--success)',
-  danger:  'var(--danger)',
-  warning: 'var(--warning)',
-  info:    'var(--info)',
+  navy:'#0f1f3d', gold:'#c9a84c', cream:'var(--cream,#f8f5ef)',
+  border:'var(--border,#e0ddd6)', muted:'var(--muted,#6b7280)',
+  success:'#16a34a', danger:'#dc2626', surface:'var(--surface,#fff)'
 };
 const fmtM = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2});
 const fmtI = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 const ICON = { Frames:'🕶️', Sunglasses:'😎', 'Reading Glasses':'👓', Boxes:'📦', 'Sunglass Pouches':'👜', 'Glass Cleaner':'🧴', Chains:'⛓️', 'Ear Tips':'🔧' };
-const INP  = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:C.cream, color:C.navy, width:'100%' };
+const INP  = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%' };
 
 // ── Print receipt in new blank window ─────────────────────────
 const printReceipt = (sale, items) => {
@@ -92,7 +86,7 @@ function Receipt({ sale, items }) {
   const paid     = parseFloat(sale.amount_paid||0);
   const change   = parseFloat(sale.change_given||0);
   return (
-    <div style={{ width:'100%', fontFamily:'var(--font-body)' }}>
+    <div style={{ maxWidth:440, margin:'0 auto', fontFamily:"'DM Sans',sans-serif" }}>
       <div style={{ background:C.navy, borderRadius:12, padding:'14px 18px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
           <div style={{ background:'#111', borderRadius:12, padding:'12px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -145,6 +139,8 @@ export default function QuickSale() {
   const [query,    setQuery]   = useState('');
   const [results,  setResults] = useState([]);
   const [cart,     setCart]    = useState([]);
+  const [showScan, setShowScan] = useState(false);
+  const [scanMsg,  setScanMsg]  = useState('');
   const [custName, setCustName]= useState('');
   const [custPhone,setCustPhone]=useState('');
   const [overDisc, setOverDisc]= useState('');
@@ -251,6 +247,29 @@ export default function QuickSale() {
     setQuery(''); setResults([]);
   };
 
+  // QR scan → fetch item → add to cart
+  const handleScan = async (data) => {
+    setShowScan(false);
+    const id = typeof data === 'object' ? data?.id : parseInt(data);
+    if (!id) return setScanMsg('❌ Invalid QR code');
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const item  = await fetch(`${BASE}/inventory/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.json());
+      if (item?.id && item.quantity > 0) {
+        addItem(item);
+        setScanMsg(`✅ Added: ${item.name}`);
+      } else if (item?.quantity === 0) {
+        setScanMsg(`⚠️ Out of stock: ${item.name}`);
+      } else {
+        setScanMsg('❌ Item not found');
+      }
+    } catch { setScanMsg('❌ Scan failed — try again'); }
+    setTimeout(() => setScanMsg(''), 3000);
+  };
+
   const upd = (id,f,v) => setCart(c=>c.map(x=>x.inventory_id===id?{...x,[f]:v}:x));
   const rem = (id)      => setCart(c=>c.filter(x=>x.inventory_id!==id));
 
@@ -284,10 +303,10 @@ export default function QuickSale() {
 
   // ── Done screen ───────────────────────────────────────────
   if (done) return (
-    <div style={{fontFamily:'var(--font-body)',width:'100%'}}>
+    <div style={{fontFamily:"'DM Sans',sans-serif",maxWidth:560,margin:'0 auto'}}>
       <div style={{textAlign:'center',padding:'20px 0 14px'}}>
         <div style={{fontSize:44,marginBottom:6}}>✅</div>
-        <div style={{fontFamily:'var(--font-display)',fontSize:20,color:C.navy}}>Sale Complete!</div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:C.navy}}>Sale Complete!</div>
         <div style={{fontSize:13,color:C.muted,marginTop:3}}>{done.sale_number} · {fmtM(done.total)}</div>
         {done.payment_method && done.payment_method !== 'cash' && (
           <div style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:8,background:'#eff6ff',border:'1px solid #bae6fd',borderRadius:20,padding:'5px 14px',fontSize:12,fontWeight:600,color:'#1e40af'}}>
@@ -295,7 +314,7 @@ export default function QuickSale() {
           </div>
         )}
       </div>
-      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:mob?16:24,marginBottom:14}}>
+      <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:mob?16:24,marginBottom:14}}>
         <Receipt sale={done} items={doneItems}/>
       </div>
       <div style={{display:'flex',gap:10,justifyContent:'center'}}>
@@ -307,10 +326,10 @@ export default function QuickSale() {
 
   // ── Sale screen — single column on mobile ──────────────────
   return (
-    <div style={{fontFamily:'var(--font-body)',width:'100%',paddingBottom:mob?120:0}}>
+    <div style={{fontFamily:"'DM Sans',sans-serif",maxWidth:mob?'100%':720,margin:'0 auto',paddingBottom:mob?120:0}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:8}}>
         <div>
-          <h1 style={{fontFamily:'var(--font-display)',fontSize:mob?18:22,color:C.navy,margin:'0 0 2px'}}>🛍️ Quick Sale</h1>
+          <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:mob?18:22,color:C.navy,margin:'0 0 2px'}}>🛍️ Quick Sale</h1>
           <p style={{fontSize:12,color:C.muted,margin:0}}>Walk-in customers — frames, sunglasses, accessories</p>
         </div>
         <div style={{display:'flex',gap:6}}>
@@ -346,12 +365,19 @@ export default function QuickSale() {
         /* ── MOBILE: single column ── */
         <div>
           {/* Search */}
-          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'14px',marginBottom:12}}>
-            <div style={{fontSize:14,fontWeight:700,color:C.navy,marginBottom:10}}>🔍 Add Items</div>
+          <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'14px',marginBottom:12}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+              <div style={{fontSize:14,fontWeight:700,color:C.navy}}>🔍 Add Items</div>
+              <button onClick={()=>setShowScan(true)}
+                style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:C.navy,color:'white',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                📷 Scan QR
+              </button>
+            </div>
+            {scanMsg&&<div style={{padding:'8px 12px',borderRadius:8,marginBottom:10,fontSize:13,fontWeight:600,background:scanMsg[0]==='✅'?'#dcfce7':scanMsg[0]==='⚠'?'#fef9c3':'#fee2e2',color:scanMsg[0]==='✅'?'#15803d':scanMsg[0]==='⚠'?'#92400e':'#dc2626'}}>{scanMsg}</div>}
             <div style={{position:'relative'}}>
               <input value={query} onChange={e=>search(e.target.value)} placeholder="Search frames, accessories..." style={{...INP,fontSize:16}} autoFocus/>
               {results.length>0&&(
-                <div style={{position:'absolute',top:'100%',left:0,right:0,background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,boxShadow:'0 4px 20px rgba(0,0,0,.15)',zIndex:50,overflow:'hidden',marginTop:4}}>
+                <div style={{position:'absolute',top:'100%',left:0,right:0,background:'white',border:`1px solid ${C.border}`,borderRadius:10,boxShadow:'0 4px 20px rgba(0,0,0,.15)',zIndex:50,overflow:'hidden',marginTop:4}}>
                   {results.map(item=>(
                     <div key={item.id} onMouseDown={()=>addItem(item)} style={{padding:'12px 14px',cursor:'pointer',borderBottom:`1px solid ${C.cream}`,display:'flex',alignItems:'center',gap:10}}>
                       {item.image_url
@@ -375,7 +401,7 @@ export default function QuickSale() {
 
           {/* Cart */}
           {cart.length>0&&(
-            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'14px',marginBottom:12}}>
+            <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'14px',marginBottom:12}}>
               <div style={{fontSize:14,fontWeight:700,color:C.navy,marginBottom:10}}>🛒 Cart ({cart.length})</div>
               {cart.map(item=>{
                 const ln=(parseFloat(item.price)||0)*(parseInt(item.qty)||1)-(parseFloat(item.item_discount)||0);
@@ -386,9 +412,9 @@ export default function QuickSale() {
                       <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
                         {/* Qty */}
                         <div style={{display:'flex',alignItems:'center',gap:4}}>
-                          <button onMouseDown={()=>upd(item.inventory_id,'qty',Math.max(1,item.qty-1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:C.surface,cursor:'pointer',fontSize:18,color:C.navy,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>−</button>
+                          <button onMouseDown={()=>upd(item.inventory_id,'qty',Math.max(1,item.qty-1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'white',cursor:'pointer',fontSize:18,color:C.navy,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>−</button>
                           <span style={{fontSize:15,fontWeight:700,color:C.navy,minWidth:24,textAlign:'center'}}>{item.qty}</span>
-                          <button onMouseDown={()=>upd(item.inventory_id,'qty',Math.min(item.max_qty,item.qty+1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:C.surface,cursor:'pointer',fontSize:18,color:C.navy,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>+</button>
+                          <button onMouseDown={()=>upd(item.inventory_id,'qty',Math.min(item.max_qty,item.qty+1))} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,background:'white',cursor:'pointer',fontSize:18,color:C.navy,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>+</button>
                         </div>
                         {/* Price */}
                         <input type="number" value={item.price} onChange={e=>upd(item.inventory_id,'price',parseFloat(e.target.value)||0)} style={{...INP,width:90,padding:'6px 9px',fontSize:13}}/>
@@ -410,7 +436,7 @@ export default function QuickSale() {
           )}
 
           {/* Customer (optional) */}
-          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'14px',marginBottom:12}}>
+          <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'14px',marginBottom:12}}>
             <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:8}}>👤 Customer <span style={{fontWeight:400,color:C.muted,fontSize:12}}>(optional)</span></div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               <input value={custName}  onChange={e=>setCustName(e.target.value)}  placeholder="Name"  style={{...INP,fontSize:13}}/>
@@ -425,7 +451,7 @@ export default function QuickSale() {
               <div style={{background:C.navy,padding:'16px 18px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <div>
                   <div style={{fontSize:10,fontWeight:700,letterSpacing:'2px',textTransform:'uppercase',color:'rgba(201,168,76,.8)',marginBottom:4}}>Sale Total</div>
-                  <div style={{fontFamily:'var(--font-display)',fontSize:28,fontWeight:700,color:'white'}}>{fmtM(total)}</div>
+                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:28,fontWeight:700,color:'white'}}>{fmtM(total)}</div>
                 </div>
                 {discAmt>0&&(
                   <div style={{textAlign:'right'}}>
@@ -474,7 +500,7 @@ export default function QuickSale() {
                   <div style={{background:change>0?'#fef9c3':'#dcfce7',border:`1.5px solid ${change>0?'#fde68a':'#86efac'}`,borderRadius:12,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                     <div>
                       <div style={{fontSize:11,fontWeight:700,color:change>0?'#92400e':C.success,textTransform:'uppercase',letterSpacing:'1px'}}>{change>0?'Change Due':'Exact Amount'}</div>
-                      {change>0&&<div style={{fontFamily:'var(--font-display)',fontSize:22,fontWeight:700,color:'#92400e',marginTop:2}}>{fmtM(change)}</div>}
+                      {change>0&&<div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:'#92400e',marginTop:2}}>{fmtM(change)}</div>}
                     </div>
                     {change===0&&<div style={{fontSize:24}}>✅</div>}
                   </div>
@@ -484,10 +510,10 @@ export default function QuickSale() {
           )}
 
           {/* Sticky bottom complete button on mobile */}
-          <div style={{position:'fixed',bottom:0,left:0,right:0,padding:'12px 16px',background:C.surface,borderTop:`1px solid ${C.border}`,zIndex:100,display:'flex',gap:10,alignItems:'center'}}>
+          <div style={{position:'fixed',bottom:0,left:0,right:0,padding:'12px 16px',background:'white',borderTop:`1px solid ${C.border}`,zIndex:100,display:'flex',gap:10,alignItems:'center'}}>
             <div style={{flex:1}}>
               <div style={{fontSize:11,color:C.muted}}>Total</div>
-              <div style={{fontFamily:'var(--font-display)',fontSize:20,fontWeight:700,color:C.navy}}>{fmtM(total)}</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:C.navy}}>{fmtM(total)}</div>
             </div>
             <button onClick={complete} disabled={saving||cart.length===0||paid<total}
               style={{padding:'14px 22px',fontSize:15,fontWeight:700,cursor:cart.length===0||paid<total||saving?'not-allowed':'pointer',background:cart.length===0||paid<total?C.border:C.success,color:cart.length===0||paid<total?C.muted:'white',border:'none',borderRadius:12,fontFamily:'inherit',flexShrink:0}}>
@@ -500,12 +526,19 @@ export default function QuickSale() {
         <div style={{display:'grid',gridTemplateColumns:'1fr 340px',gap:16,alignItems:'start'}}>
           <div>
             {/* Search */}
-            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'16px 18px',marginBottom:14}}>
-              <div style={{fontSize:14,fontWeight:700,color:C.navy,marginBottom:10}}>🔍 Add Items</div>
+            <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'16px 18px',marginBottom:14}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+              <div style={{fontSize:14,fontWeight:700,color:C.navy}}>🔍 Add Items</div>
+              <button onClick={()=>setShowScan(true)}
+                style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:C.navy,color:'white',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                📷 Scan QR
+              </button>
+            </div>
+            {scanMsg&&<div style={{padding:'8px 12px',borderRadius:8,marginBottom:10,fontSize:13,fontWeight:600,background:scanMsg[0]==='✅'?'#dcfce7':scanMsg[0]==='⚠'?'#fef9c3':'#fee2e2',color:scanMsg[0]==='✅'?'#15803d':scanMsg[0]==='⚠'?'#92400e':'#dc2626'}}>{scanMsg}</div>}
               <div style={{position:'relative'}}>
                 <input value={query} onChange={e=>search(e.target.value)} placeholder="Search frames, sunglasses, boxes, chains, ear tips..." style={{...INP,fontSize:14}} autoFocus/>
                 {results.length>0&&(
-                  <div style={{position:'absolute',top:'100%',left:0,right:0,background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,boxShadow:'0 4px 20px rgba(0,0,0,.12)',zIndex:50,overflow:'hidden',marginTop:4}}>
+                  <div style={{position:'absolute',top:'100%',left:0,right:0,background:'white',border:`1px solid ${C.border}`,borderRadius:10,boxShadow:'0 4px 20px rgba(0,0,0,.12)',zIndex:50,overflow:'hidden',marginTop:4}}>
                     {results.map(item=>(
                       <div key={item.id} onMouseDown={()=>addItem(item)} style={{padding:'10px 14px',cursor:'pointer',borderBottom:`1px solid ${C.cream}`,display:'flex',alignItems:'center',gap:12}}>
                         {item.image_url
@@ -529,7 +562,7 @@ export default function QuickSale() {
 
             {/* Cart */}
             {cart.length>0&&(
-              <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'16px 18px',marginBottom:14}}>
+              <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'16px 18px',marginBottom:14}}>
                 <div style={{fontSize:14,fontWeight:700,color:C.navy,marginBottom:12}}>🛒 Cart ({cart.length})</div>
                 {cart.map(item=>{
                   const ln=(parseFloat(item.price)||0)*(parseInt(item.qty)||1)-(parseFloat(item.item_discount)||0);
@@ -543,9 +576,9 @@ export default function QuickSale() {
                         <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:6}}>{item.name}</div>
                         <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
                           <div style={{display:'flex',alignItems:'center',gap:5}}>
-                            <button onMouseDown={()=>upd(item.inventory_id,'qty',Math.max(1,item.qty-1))} style={{width:26,height:26,borderRadius:6,border:`1px solid ${C.border}`,background:C.surface,cursor:'pointer',fontSize:16,color:C.navy,fontFamily:'inherit'}}>−</button>
+                            <button onMouseDown={()=>upd(item.inventory_id,'qty',Math.max(1,item.qty-1))} style={{width:26,height:26,borderRadius:6,border:`1px solid ${C.border}`,background:'white',cursor:'pointer',fontSize:16,color:C.navy,fontFamily:'inherit'}}>−</button>
                             <span style={{fontSize:14,fontWeight:700,color:C.navy,minWidth:22,textAlign:'center'}}>{item.qty}</span>
-                            <button onMouseDown={()=>upd(item.inventory_id,'qty',Math.min(item.max_qty,item.qty+1))} style={{width:26,height:26,borderRadius:6,border:`1px solid ${C.border}`,background:C.surface,cursor:'pointer',fontSize:16,color:C.navy,fontFamily:'inherit'}}>+</button>
+                            <button onMouseDown={()=>upd(item.inventory_id,'qty',Math.min(item.max_qty,item.qty+1))} style={{width:26,height:26,borderRadius:6,border:`1px solid ${C.border}`,background:'white',cursor:'pointer',fontSize:16,color:C.navy,fontFamily:'inherit'}}>+</button>
                           </div>
                           <div style={{display:'flex',alignItems:'center',gap:5}}>
                             <span style={{fontSize:11,color:C.muted}}>Price:</span>
@@ -568,7 +601,7 @@ export default function QuickSale() {
             )}
 
             {cart.length>0&&(
-              <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'14px 18px',marginBottom:14}}>
+              <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'14px 18px',marginBottom:14}}>
                 <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:8}}>💰 Overall Discount (optional)</div>
                 <div style={{display:'flex',alignItems:'center',gap:10}}>
                   <input type="number" value={overDisc} onChange={e=>setOverDisc(e.target.value)} placeholder="Enter discount Rs." style={{...INP,maxWidth:240}}/>
@@ -577,7 +610,7 @@ export default function QuickSale() {
               </div>
             )}
 
-            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'14px 18px'}}>
+            <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'14px 18px'}}>
               <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:2}}>👤 Customer <span style={{fontWeight:400,color:C.muted,fontSize:12}}>(optional)</span></div>
               <p style={{fontSize:12,color:C.muted,marginBottom:10,marginTop:4}}>Leave blank for anonymous sale</p>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
@@ -605,7 +638,7 @@ export default function QuickSale() {
                     {discAmt>0&&<div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'#4ade80',marginBottom:4}}><span>Discount</span><span>− {fmtM(discAmt)}</span></div>}
                     <div style={{borderTop:'1px solid rgba(255,255,255,.15)',marginTop:10,paddingTop:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                       <span style={{color:'rgba(255,255,255,.6)',fontWeight:600,fontSize:12,textTransform:'uppercase',letterSpacing:'1px'}}>Total</span>
-                      <span style={{fontFamily:'var(--font-display)',fontSize:26,fontWeight:700,color:C.gold}}>{fmtM(total)}</span>
+                      <span style={{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:C.gold}}>{fmtM(total)}</span>
                     </div>
                   </>
                 }
@@ -645,7 +678,7 @@ export default function QuickSale() {
                   <div style={{background:change>0?'#fef9c3':'#dcfce7',border:`1.5px solid ${change>0?'#fde68a':'#86efac'}`,borderRadius:12,padding:'12px 16px',marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                     <div>
                       <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:change>0?'#92400e':C.success}}>{change>0?'Change Due':'Exact Amount'}</div>
-                      {change>0&&<div style={{fontFamily:'var(--font-display)',fontSize:20,fontWeight:700,color:'#92400e',marginTop:2}}>{fmtM(change)}</div>}
+                      {change>0&&<div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:'#92400e',marginTop:2}}>{fmtM(change)}</div>}
                     </div>
                     {change===0&&<span style={{fontSize:24}}>✅</span>}
                   </div>
@@ -671,7 +704,7 @@ export default function QuickSale() {
         {/* Date range + name filter for history */}
         <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap', marginBottom:10 }}>
           <input value={histSearch} onChange={e=>setHistSearch(e.target.value)} placeholder="Search name or phone..."
-            style={{ flex:1, minWidth:160, padding:'6px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:12, fontFamily:'inherit', outline:'none', background:C.surface }}/>
+            style={{ flex:1, minWidth:160, padding:'6px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:12, fontFamily:'inherit', outline:'none', background:'white' }}/>
           <span style={{ fontSize:12, fontWeight:600, color:C.muted }}>Date:</span>
           <input type="date" value={histFrom} onChange={e=>setHistFrom(e.target.value)}
             style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:12,
@@ -694,13 +727,13 @@ export default function QuickSale() {
           )}
         </div>
         {histLoad
-          ? <div style={{textAlign:'center',padding:32,color:C.muted,background:C.surface,borderRadius:14,border:`1px solid ${C.border}`}}>⏳ Loading...</div>
+          ? <div style={{textAlign:'center',padding:32,color:C.muted,background:'white',borderRadius:14,border:`1px solid ${C.border}`}}>⏳ Loading...</div>
           : !history.length
-            ? <div style={{textAlign:'center',padding:48,color:C.muted,background:C.surface,borderRadius:14,border:`1px solid ${C.border}`}}>
+            ? <div style={{textAlign:'center',padding:48,color:C.muted,background:'white',borderRadius:14,border:`1px solid ${C.border}`}}>
                 <div style={{fontSize:36,marginBottom:12}}>🛍️</div>
                 <div style={{fontSize:14,fontWeight:600,color:C.navy}}>No sales yet</div>
               </div>
-            : <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden'}}>
+            : <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden'}}>
                 {/* Table header */}
                 <div style={{display:'grid',gridTemplateColumns:mob?'1fr 80px 70px':'1fr 200px 90px 80px 70px',gap:0,padding:'10px 16px',background:C.cream,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.7px',color:C.muted,borderBottom:`1px solid ${C.border}`}}>
                   <span>Sale / Customer</span>
@@ -787,7 +820,7 @@ export default function QuickSale() {
                           }}>
                             {sale.payment_method==='cash'?'Cash':'Bank'}
                           </span>
-                          <div style={{fontFamily:'var(--font-display)',fontSize:16,fontWeight:700,color:C.navy,whiteSpace:'nowrap'}}>
+                          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:C.navy,whiteSpace:'nowrap'}}>
                             {fmtM(sale.total)}
                           </div>
                           <div style={{display:'flex',gap:5}}>
@@ -829,6 +862,13 @@ export default function QuickSale() {
       </div>
     )}
 
+      {showScan && (
+        <QRScanner
+          title="Scan Frame QR Sticker"
+          onScan={handleScan}
+          onClose={()=>setShowScan(false)}
+        />
+      )}
     </div>
   );
 }
