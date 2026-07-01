@@ -837,7 +837,7 @@ export default function NewOrder() {
                     </button>
                   </div>
                 )}
-                            </div>
+              </div>
 
               {/* Info banner for special order types */}
               {orderType !== 'normal' && (
@@ -859,11 +859,12 @@ export default function NewOrder() {
                     lens_paid:          '🔬 Lens Paid Replacement — Frame price: FREE (customer brings their frame) · Lens price: CHARGED',
                     frame_replace_free: '🎁 Frame Replace Free — Frame price: FREE · Lens price: FREE (customer keeps old lenses)',
                     frame_replace_paid: '💰 Frame Replace Paid — Frame price: CHARGED · Lens price: CHARGED',
-                    lens_change:        '🔬 Lens Change Only — Frame price: FREE (customer's own frame) · Lens price: CHARGED',
+                    lens_change:        "🔬 Lens Change Only — Frame price: FREE (customer's own frame) · Lens price: CHARGED",
                   }[orderType]}
                 </div>
               )}
-            </div>!customerOwnFrame && selectedFrame?.image_url && (
+            </div>
+            {!customerOwnFrame && selectedFrame?.image_url && (
               <div style={{ marginBottom:14, borderRadius:10, overflow:'hidden', border:`1px solid ${C.border}` }}>
                 <img src={selectedFrame.image_url} alt={selectedFrame.name} style={{ width:'100%', height:140, objectFit:'cover' }}/>
                 <div style={{ padding:'8px 12px', background:'#dcfce7', fontSize:12, fontWeight:600, color:C.success }}>
