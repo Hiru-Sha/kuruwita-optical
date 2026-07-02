@@ -816,10 +816,12 @@ export default function Orders() {
                   { l:'Lens',    v:selected.lens_type },
                   { l:'Coating', v:printCoating(selected.lens_coating) },
                   { l:'Deliver', v:selected.deliver_date?.slice(0,10) },
-                ].map(item=>(
+                  selected.warranty_frame ? { l:'Frame Warranty', v:'🛡️ '+selected.warranty_frame, c:'#15803d' } : null,
+                  selected.warranty_lens  ? { l:'Lens Warranty',  v:'🛡️ '+selected.warranty_lens,  c:'#15803d' } : null,
+                ].filter(Boolean).map(item=>(
                   <div key={item.l} style={{ background:C.cream, borderRadius:8, padding:'10px 12px' }}>
                     <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:3 }}>{item.l}</div>
-                    <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{item.v||'—'}</div>
+                    <div style={{ fontSize:13, fontWeight:600, color:item.c||C.navy }}>{item.v||'—'}</div>
                   </div>
                 ))}
               </div>

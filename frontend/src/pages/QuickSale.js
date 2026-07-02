@@ -1,6 +1,5 @@
 /* eslint-disable */
 import { buildQuickSaleBill, openPrint } from '../components/PrintReceipt';
-import { QRScanner } from '../components/QRStickers';
 // ============================================================
 //  QuickSale.js — Mobile-friendly version
 //  On mobile: single column, sticky total bar at bottom
@@ -139,8 +138,11 @@ export default function QuickSale() {
   const [query,    setQuery]   = useState('');
   const [results,  setResults] = useState([]);
   const [cart,     setCart]    = useState([]);
-  const [showScan, setShowScan] = useState(false);
-  const [scanMsg,  setScanMsg]  = useState('');
+  const [custId,   setCustId]  = useState(null);   // linked customer
+  const [custName, setCustName]= useState('');      // for display
+  const [custSearch, setCustSearch] = useState('');
+  const [custResults, setCustResults] = useState([]);
+  const [showCustDrop, setShowCustDrop] = useState(false);
   const [custName, setCustName]= useState('');
   const [custPhone,setCustPhone]=useState('');
   const [overDisc, setOverDisc]= useState('');
@@ -247,28 +249,27 @@ export default function QuickSale() {
     setQuery(''); setResults([]);
   };
 
-  // QR scan → fetch item → add to cart
-  const handleScan = async (data) => {
-    setShowScan(false);
-    const id = typeof data === 'object' ? data?.id : parseInt(data);
-    if (!id) return setScanMsg('❌ Invalid QR code');
+  // Customer lookup for linking sale to profile
+  const searchCust = async (q) => {
+    setCustSearch(q); setCustName(q);
+    if (q.length < 2) { setCustResults([]); setShowCustDrop(false); return; }
     try {
-      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
       const token = localStorage.getItem('ko_token');
-      const item  = await fetch(`${BASE}/inventory/${id}`, {
+      const res = await fetch(`${BASE}/customers?search=${encodeURIComponent(q)}&limit=5`, {
         headers: { Authorization: `Bearer ${token}` }
-      }).then(r => r.json());
-      if (item?.id && item.quantity > 0) {
-        addItem(item);
-        setScanMsg(`✅ Added: ${item.name}`);
-      } else if (item?.quantity === 0) {
-        setScanMsg(`⚠️ Out of stock: ${item.name}`);
-      } else {
-        setScanMsg('❌ Item not found');
-      }
-    } catch { setScanMsg('❌ Scan failed — try again'); }
-    setTimeout(() => setScanMsg(''), 3000);
+      });
+      const data = await res.json();
+      const list = data.data || data || [];
+      setCustResults(list);
+      setShowCustDrop(list.length > 0);
+    } catch { setCustResults([]); }
   };
+  const selectCust = (c) => {
+    setCustId(c.id); setCustName(c.name + (c.phone ? ' · ' + c.phone : ''));
+    setCustSearch(''); setCustResults([]); setShowCustDrop(false);
+  };
+  const clearCust = () => { setCustId(null); setCustName(''); setCustSearch(''); };
 
   const upd = (id,f,v) => setCart(c=>c.map(x=>x.inventory_id===id?{...x,[f]:v}:x));
   const rem = (id)      => setCart(c=>c.filter(x=>x.inventory_id!==id));
@@ -366,14 +367,7 @@ export default function QuickSale() {
         <div>
           {/* Search */}
           <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'14px',marginBottom:12}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-              <div style={{fontSize:14,fontWeight:700,color:C.navy}}>🔍 Add Items</div>
-              <button onClick={()=>setShowScan(true)}
-                style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:C.navy,color:'white',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
-                📷 Scan QR
-              </button>
-            </div>
-            {scanMsg&&<div style={{padding:'8px 12px',borderRadius:8,marginBottom:10,fontSize:13,fontWeight:600,background:scanMsg[0]==='✅'?'#dcfce7':scanMsg[0]==='⚠'?'#fef9c3':'#fee2e2',color:scanMsg[0]==='✅'?'#15803d':scanMsg[0]==='⚠'?'#92400e':'#dc2626'}}>{scanMsg}</div>}
+            <div style={{fontSize:14,fontWeight:700,color:C.navy,marginBottom:10}}>🔍 Add Items</div>
             <div style={{position:'relative'}}>
               <input value={query} onChange={e=>search(e.target.value)} placeholder="Search frames, accessories..." style={{...INP,fontSize:16}} autoFocus/>
               {results.length>0&&(
@@ -527,14 +521,7 @@ export default function QuickSale() {
           <div>
             {/* Search */}
             <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'16px 18px',marginBottom:14}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-              <div style={{fontSize:14,fontWeight:700,color:C.navy}}>🔍 Add Items</div>
-              <button onClick={()=>setShowScan(true)}
-                style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:C.navy,color:'white',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
-                📷 Scan QR
-              </button>
-            </div>
-            {scanMsg&&<div style={{padding:'8px 12px',borderRadius:8,marginBottom:10,fontSize:13,fontWeight:600,background:scanMsg[0]==='✅'?'#dcfce7':scanMsg[0]==='⚠'?'#fef9c3':'#fee2e2',color:scanMsg[0]==='✅'?'#15803d':scanMsg[0]==='⚠'?'#92400e':'#dc2626'}}>{scanMsg}</div>}
+              <div style={{fontSize:14,fontWeight:700,color:C.navy,marginBottom:10}}>🔍 Add Items</div>
               <div style={{position:'relative'}}>
                 <input value={query} onChange={e=>search(e.target.value)} placeholder="Search frames, sunglasses, boxes, chains, ear tips..." style={{...INP,fontSize:14}} autoFocus/>
                 {results.length>0&&(
@@ -862,13 +849,6 @@ export default function QuickSale() {
       </div>
     )}
 
-      {showScan && (
-        <QRScanner
-          title="Scan Frame QR Sticker"
-          onScan={handleScan}
-          onClose={()=>setShowScan(false)}
-        />
-      )}
     </div>
   );
 }

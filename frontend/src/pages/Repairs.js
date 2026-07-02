@@ -221,6 +221,7 @@ export default function Repairs() {
   const [showAdd,   setShowAdd]  = useState(false);
   const [pastMode,  setPastMode]  = useState(false);
   const [repairDate,setRepairDate]= useState('');
+  const [linkedCust, setLinkedCust] = useState(null); // auto-linked customer
   const [saving,    setSaving]   = useState(false);
   const [error,     setError]    = useState('');
   const [toast,     setToast]    = useState('');
@@ -302,6 +303,7 @@ export default function Repairs() {
         repair_cost:  parseFloat(form.repair_cost)||0,
         advance: parseFloat(form.advance)||0,
         import_date: pastMode && repairDate ? repairDate : null,
+        customer_id: linkedCust?.id || null,
       });
       if (res.error) throw new Error(res.error);
       setLastDone(res);
@@ -535,7 +537,38 @@ export default function Repairs() {
             </div>
             <div>
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Phone (optional)</label>
-              <input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="07X XXX XXXX" type="tel" style={INP}/>
+              <input value={form.phone} onChange={async e=>{
+                const ph = e.target.value;
+                setForm(f=>({...f,phone:ph}));
+                // Auto-link customer by phone
+                if (ph.replace(/\D/g,'').length >= 9) {
+                  try {
+                    const BASE = process.env.REACT_APP_API_URL||'http://localhost:5000/api';
+                    const token = localStorage.getItem('ko_token');
+                    const res = await fetch(`${BASE}/customers?search=${encodeURIComponent(ph)}&limit=1`,{headers:{Authorization:`Bearer ${token}`}});
+                    const data = await res.json();
+                    const match = (data.data||data||[])[0];
+                    if (match && match.phone === ph) {
+                      setLinkedCust(match);
+                      setForm(f=>({...f,customer_name:f.customer_name||match.name}));
+                    } else setLinkedCust(null);
+                  } catch {setLinkedCust(null);}
+                } else setLinkedCust(null);
+                // Auto-link to customer by phone
+                if (ph.length >= 9) {
+                  try {
+                    const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+                    const token = localStorage.getItem('ko_token');
+                    const res = await fetch(`${BASE}/customers?search=${ph}&limit=1`, { headers:{ Authorization:`Bearer ${token}` }});
+                    const data = await res.json();
+                    const match = (data.data||data||[])[0];
+                    if (match && match.phone === ph) {
+                      setLinkedCust(match);
+                      setForm(f=>({...f, customer_name: f.customer_name || match.name }));
+                    } else { setLinkedCust(null); }
+                  } catch { setLinkedCust(null); }
+                }
+              }} placeholder="07X XXX XXXX" type="tel" style={INP}/>
             </div>
           </div>
 
@@ -547,8 +580,7 @@ export default function Repairs() {
 
 
 
-          {/* Row 1: Charge + Cost + Status + Notes */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginBottom:12 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr', gap:12, marginBottom:14 }}>
             <div>
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Charge (Rs.) *</label>
               <input type="number" value={form.charge} onChange={e=>setForm(f=>({...f,charge:e.target.value}))}
@@ -558,6 +590,14 @@ export default function Repairs() {
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Repair Cost (Rs.)</label>
               <input type="number" value={form.repair_cost} onChange={e=>setForm(f=>({...f,repair_cost:e.target.value}))}
                 placeholder="Your cost" style={{ ...INP, fontSize:18, fontWeight:700 }}/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Payment</label>
+              <select value={form.payment_method} onChange={e=>setForm(f=>({...f,payment_method:e.target.value}))} style={{ ...INP, cursor:'pointer' }}>
+                <option value="cash">💵 Cash</option>
+                <option value="bank">🏦 Bank</option>
+                <option value="free">🎁 Free</option>
+              </select>
             </div>
             <div>
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:6 }}>Status</label>
@@ -572,48 +612,6 @@ export default function Repairs() {
               <input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Optional" style={INP}/>
             </div>
           </div>
-
-          {/* ── Payment Collected Now ── */}
-          {parseFloat(form.charge) > 0 && (
-            <div style={{ background:'linear-gradient(135deg,#f0fdf4,#dcfce7)', border:'1.5px solid #86efac', borderRadius:12, padding:'14px 16px', marginBottom:14 }}>
-              <div style={{ fontSize:12, fontWeight:700, color:'#15803d', textTransform:'uppercase', letterSpacing:'.8px', marginBottom:10 }}>
-                💳 Payment Collected Now
-              </div>
-              <div style={{ display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' }}>
-                <div style={{ display:'flex', gap:6 }}>
-                  {[{l:'Not Paid',v:''},{l:'Half',v:String(Math.round(parseFloat(form.charge||0)/2))},{l:'Full ✓',v:form.charge}].map(btn=>(
-                    <button key={btn.l} onClick={()=>setForm(f=>({...f,advance:btn.v}))}
-                      style={{ padding:'8px 14px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', border:'none',
-                        background:form.advance===btn.v?(btn.v===''?'#6b7280':'#15803d'):'white',
-                        color:form.advance===btn.v?'white':'#374151', boxShadow:'0 1px 3px rgba(0,0,0,.1)' }}>
-                      {btn.l}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ flex:1, minWidth:120 }}>
-                  <input type="number" value={form.advance} onChange={e=>setForm(f=>({...f,advance:e.target.value}))}
-                    placeholder="Custom amount..." style={{ ...INP, background:'white' }}/>
-                </div>
-                <select value={form.payment_method} onChange={e=>setForm(f=>({...f,payment_method:e.target.value}))} style={{ ...INP, cursor:'pointer', background:'white' }}>
-                  <option value="cash">💵 Cash</option>
-                  <option value="bank">🏦 Bank</option>
-                  <option value="card">💳 Card</option>
-                  <option value="free">🎁 Free</option>
-                </select>
-              </div>
-              {parseFloat(form.advance)>0 && parseFloat(form.advance)<parseFloat(form.charge) && (
-                <div style={{ marginTop:10, fontSize:12, color:'#92400e', background:'#fef9c3', borderRadius:7, padding:'6px 10px', display:'inline-block' }}>
-                  ⚠️ Balance remaining: Rs. {(parseFloat(form.charge)-parseFloat(form.advance)).toLocaleString()} — will show as balance due
-                </div>
-              )}
-              {parseFloat(form.advance)>=parseFloat(form.charge) && parseFloat(form.charge)>0 && (
-                <div style={{ marginTop:10, fontSize:12, color:'#15803d', background:'#dcfce7', borderRadius:7, padding:'6px 10px', display:'inline-block', fontWeight:700 }}>
-                  ✅ Fully paid — will be marked as Collected automatically
-                </div>
-              )}
-            </div>
-          )}
-
 
           {/* Quick total display */}
           {parseFloat(form.charge) > 0 && (

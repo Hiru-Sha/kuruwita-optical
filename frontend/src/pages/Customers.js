@@ -338,7 +338,9 @@ export default function Customers() {
       const cust        = json?.data || json;
       const orders      = json?.orders      || [];
       const refractions = json?.refractions || [];
-      setSelected({ ...cust, orders, refractions });
+      const quickSales  = json?.quickSales || [];
+      const repairs     = json?.repairs    || [];
+      setSelected({ ...cust, orders, refractions, quickSales, repairs });
     } catch(e) {
       console.error('openCustomer failed:', e.message);
       setSelected(s => ({ ...s, _loading: false, name: 'Failed to load — check connection' }));
@@ -365,7 +367,9 @@ export default function Customers() {
       const cust   = _json?.data || _json;
       const orders = _json?.orders || [];
       const refractions = _json?.refractions || [];
-      setSelected({ ...cust, orders, refractions });
+      const quickSales  = json?.quickSales || [];
+      const repairs     = json?.repairs    || [];
+      setSelected({ ...cust, orders, refractions, quickSales, repairs });
     } catch {}
     finally { setAddingComm(false); }
   };
@@ -382,7 +386,9 @@ export default function Customers() {
       const cust   = _json?.data || _json;
       const orders = _json?.orders || [];
       const refractions = _json?.refractions || [];
-      setSelected({ ...cust, orders, refractions });
+      const quickSales  = json?.quickSales || [];
+      const repairs     = json?.repairs    || [];
+      setSelected({ ...cust, orders, refractions, quickSales, repairs });
       load();
     } catch {}
   };
@@ -516,6 +522,8 @@ export default function Customers() {
                     { key:'orders',        label:'Orders',      count: selected.orders?.length },
                     { key:'refraction',    label:'👁️ Refraction', count: selected.refractions?.length||0 },
                     { key:'communication', label:'Comms',        count: null },
+                    { key:'quicksales',    label:'Quick Sales',  count: selected.quickSales?.length||0 },
+                    { key:'repairs',       label:'Repairs',      count: selected.repairs?.length||0 },
                     { key:'profile',       label:'Profile',      count: null },
                   ].map(t => (
                     <button key={t.key} onClick={()=>setTab(t.key)}
@@ -637,6 +645,82 @@ export default function Customers() {
                   )}
 
                   {/* ── COMMUNICATION TAB ── */}
+                  {/* Quick Sales tab */}
+                  {tab==='quicksales' && (
+                    <div>
+                      {(!selected.quickSales||selected.quickSales.length===0) ? (
+                        <div style={{ padding:'24px', textAlign:'center', color:muted, fontSize:13 }}>
+                          No quick sales recorded for this customer yet
+                        </div>
+                      ) : selected.quickSales.map(s=>{
+                        let items=[]; try{items=typeof s.items==='string'?JSON.parse(s.items):s.items||[];}catch{}
+                        return (
+                          <div key={s.id} style={{ padding:'12px 16px', borderBottom:`1px solid ${border}` }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                              <div>
+                                <span style={{ fontSize:12, fontWeight:700, color:navy }}>{s.sale_number}</span>
+                                <span style={{ fontSize:11, color:muted, marginLeft:10 }}>{s.created_at?.slice(0,10)}</span>
+                                <span style={{ fontSize:11, marginLeft:8, padding:'2px 8px', borderRadius:12, background:'#dcfce7', color:'#15803d', fontWeight:600 }}>
+                                  {s.payment_method}
+                                </span>
+                              </div>
+                              <span style={{ fontWeight:700, color:navy }}>Rs. {parseFloat(s.total||0).toLocaleString()}</span>
+                            </div>
+                            {items.length>0 && (
+                              <div style={{ fontSize:12, color:muted, marginTop:4 }}>
+                                {items.slice(0,3).map(i=>i.name).join(', ')}{items.length>3?` +${items.length-3} more`:''}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {selected.quickSales?.length>0 && (
+                        <div style={{ padding:'10px 16px', background:'#f8faff', fontSize:13, color:navy, fontWeight:700 }}>
+                          Total: Rs. {selected.quickSales.reduce((s,x)=>s+parseFloat(x.total||0),0).toLocaleString()}
+                          <span style={{ fontWeight:400, color:muted, marginLeft:8 }}>from {selected.quickSales.length} sales</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Repairs tab */}
+                  {tab==='repairs' && (
+                    <div>
+                      {(!selected.repairs||selected.repairs.length===0) ? (
+                        <div style={{ padding:'24px', textAlign:'center', color:muted, fontSize:13 }}>
+                          No repairs recorded for this customer yet
+                        </div>
+                      ) : selected.repairs.map(r=>(
+                        <div key={r.id} style={{ padding:'12px 16px', borderBottom:`1px solid ${border}` }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                            <div>
+                              <span style={{ fontSize:12, fontWeight:700, color:navy }}>{r.repair_number}</span>
+                              <span style={{ fontSize:11, color:muted, marginLeft:10 }}>{r.created_at?.slice(0,10)}</span>
+                              <span style={{ fontSize:11, marginLeft:8, padding:'2px 8px', borderRadius:12,
+                                background:r.status==='collected'?'#dcfce7':r.status==='done'?'#dbeafe':'#fef9c3',
+                                color:r.status==='collected'?'#15803d':r.status==='done'?'#1d4ed8':'#92400e',
+                                fontWeight:600 }}>
+                                {r.status}
+                              </span>
+                            </div>
+                            <span style={{ fontWeight:700, color:r.status==='collected'?'#15803d':navy }}>
+                              Rs. {parseFloat(r.charge||0).toLocaleString()}
+                            </span>
+                          </div>
+                          <div style={{ fontSize:12, color:muted, marginTop:3 }}>
+                            {r.repair_type} {r.description ? '· ' + r.description.slice(0,40) : ''}
+                          </div>
+                        </div>
+                      ))}
+                      {selected.repairs?.length>0 && (
+                        <div style={{ padding:'10px 16px', background:'#f8faff', fontSize:13, color:navy, fontWeight:700 }}>
+                          Total: Rs. {selected.repairs.reduce((s,x)=>s+parseFloat(x.charge||0),0).toLocaleString()}
+                          <span style={{ fontWeight:400, color:muted, marginLeft:8 }}>from {selected.repairs.length} repairs</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {tab==='communication' && (
                     <>
                       <div style={{ marginBottom:14 }}>

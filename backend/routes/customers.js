@@ -78,7 +78,41 @@ router.get('/:id', auth, async (req, res) => {
       }));
     }
 
-    res.json({ data: cust.rows[0], orders: orders.rows, refractions: refractionRows });
+    // Fetch quick sales by customer_id OR name+phone match
+    let quickSales = [];
+    try {
+      const cust_row = cust.rows[0];
+      const qs = await pool.query(
+        `SELECT * FROM quick_sales
+         WHERE customer_id = $1
+            OR (customer_name ILIKE $2 AND customer_phone = $3)
+         ORDER BY created_at DESC LIMIT 50`,
+        [req.params.id, cust_row.name, cust_row.phone]
+      );
+      quickSales = qs.rows;
+    } catch(e) { /* customer_id column may not exist yet */ }
+
+    // Fetch repairs by customer_id OR name+phone match
+    let repairs = [];
+    try {
+      const cust_row = cust.rows[0];
+      const rp = await pool.query(
+        `SELECT * FROM repairs
+         WHERE customer_id = $1
+            OR (customer_name ILIKE $2 AND phone = $3)
+         ORDER BY created_at DESC LIMIT 50`,
+        [req.params.id, cust_row.name, cust_row.phone]
+      );
+      repairs = rp.rows;
+    } catch(e) { /* customer_id column may not exist yet */ }
+
+    res.json({
+      data:       cust.rows[0],
+      orders:     orders.rows,
+      refractions: refractionRows,
+      quickSales,
+      repairs,
+    });
   } catch(err) {
     console.error('GET customer error:', err.message);
     res.status(500).json({ error: err.message });

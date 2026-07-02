@@ -325,6 +325,8 @@ export default function NewOrder() {
   const [orderType,        setOrderType]       = useState('normal');
   const [customerOwnFrame, setCustomerOwnFrame]= useState(false);
   const [showScanner,      setShowScanner]     = useState(false);
+  const [warrantyFrame,    setWarrantyFrame]   = useState('');
+  const [warrantyLens,     setWarrantyLens]    = useState('');
 
   // Frame price rules:
   // lens_warranty  → customer brings their own frame (already have it) → 0
@@ -532,6 +534,8 @@ export default function NewOrder() {
         payment_method:     payMethod,
         customer_own_frame: customerOwnFrame,
         order_type:         orderType,
+        warranty_frame:     warrantyFrame || null,
+        warranty_lens:      warrantyLens  || null,
         deliver_date:       deliverDate,
         status:             pastMode?'delivered':'created',
         import_date:        pastMode?orderDate:null,
@@ -837,7 +841,7 @@ export default function NewOrder() {
                     </button>
                   </div>
                 )}
-              </div>
+                            </div>
 
               {/* Info banner for special order types */}
               {orderType !== 'normal' && (
@@ -1193,6 +1197,66 @@ export default function NewOrder() {
           </Card>
 
           <Card>
+            <SectionTitle icon="🛡️" title="Warranty" sub="Set warranty period for frame and lens"/>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+              {/* Frame Warranty */}
+              <div>
+                <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:8 }}>🖼️ Frame Warranty</label>
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  {[
+                    { l:'No Warranty', v:'' },
+                    { l:'3 Months',    v:'3 months' },
+                    { l:'6 Months',    v:'6 months' },
+                    { l:'1 Year',      v:'1 year' },
+                    { l:'2 Years',     v:'2 years' },
+                  ].map(w=>(
+                    <button key={w.v||'none'} onClick={()=>setWarrantyFrame(w.v)}
+                      style={{ padding:'9px 14px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textAlign:'left',
+                        border:`1.5px solid ${warrantyFrame===w.v?C.navy:C.border}`,
+                        background:warrantyFrame===w.v?C.navy:'white',
+                        color:warrantyFrame===w.v?'white':w.v===''?C.muted:C.navy,
+                      }}>
+                      {w.v===''?'❌ No Warranty':'🛡️ '+w.l}
+                    </button>
+                  ))}
+                </div>
+                {warrantyFrame && (
+                  <div style={{ marginTop:10, fontSize:12, color:'#15803d', background:'#dcfce7', borderRadius:8, padding:'8px 12px', fontWeight:600 }}>
+                    ✅ Frame: {warrantyFrame} warranty
+                  </div>
+                )}
+              </div>
+              {/* Lens Warranty */}
+              <div>
+                <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:8 }}>🔬 Lens Warranty</label>
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  {[
+                    { l:'No Warranty', v:'' },
+                    { l:'3 Months',    v:'3 months' },
+                    { l:'6 Months',    v:'6 months' },
+                    { l:'1 Year',      v:'1 year' },
+                    { l:'2 Years',     v:'2 years' },
+                  ].map(w=>(
+                    <button key={w.v||'none'} onClick={()=>setWarrantyLens(w.v)}
+                      style={{ padding:'9px 14px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textAlign:'left',
+                        border:`1.5px solid ${warrantyLens===w.v?C.navy:C.border}`,
+                        background:warrantyLens===w.v?C.navy:'white',
+                        color:warrantyLens===w.v?'white':w.v===''?C.muted:C.navy,
+                      }}>
+                      {w.v===''?'❌ No Warranty':'🛡️ '+w.l}
+                    </button>
+                  ))}
+                </div>
+                {warrantyLens && (
+                  <div style={{ marginTop:10, fontSize:12, color:'#15803d', background:'#dcfce7', borderRadius:8, padding:'8px 12px', fontWeight:600 }}>
+                    ✅ Lens: {warrantyLens} warranty
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          <Card>
             <SectionTitle icon="📦" title="Delivery & Notes" sub="Set delivery date and any internal notes"/>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
               <Field label="Delivery Date *">
@@ -1209,7 +1273,9 @@ export default function NewOrder() {
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, fontSize:13 }}>
               {[
                 {l:'Customer',    v:custMode==='new'?`${newCust.title} ${newCust.name}`:selectedCust?.name},
-                {l:'Order Type',  v:{normal:'Normal',lens_warranty:'Lens Free',lens_paid:'Lens Paid',frame_replace_free:'Frame Free',frame_replace_paid:'Frame Paid'}[orderType]},
+                {l:'Order Type',  v:{normal:'Normal',lens_warranty:'Lens Free',lens_paid:'Lens Paid',frame_replace_free:'Frame Free',frame_replace_paid:'Frame Paid',lens_change:'Lens Change'}[orderType]||orderType},
+                {l:'Frame Warranty', v: warrantyFrame || '—'},
+                {l:'Lens Warranty',  v: warrantyLens  || '—'},
                 {l:'Frame',       v:customerOwnFrame?`${frameDetails.name} (Own)`:frameDetails.name||'—'},
                 {l:'Lens',        v:`${lensDetails.type} · ${lensDetails.coating}`},
                 {l:'Supplier',    v:lensDetails.lens_company},

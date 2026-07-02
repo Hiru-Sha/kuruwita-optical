@@ -127,6 +127,10 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
 
   const client = await pool.connect();
   try {
+    // Auto-create warranty columns if they don't exist
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_frame VARCHAR(20)`).catch(()=>{});
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_lens  VARCHAR(20)`).catch(()=>{});
+
     await client.query('BEGIN');
 
     // nextOrderNumber now takes the client so it uses the advisory lock
@@ -146,9 +150,10 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
         deliver_date, status,
         has_rx, rx_hospital, rx_date, rx_doctor, notes,
         customer_own_frame, order_type, frame_inventory_id,
-        discount_amount, discount_percent, payment_method
+        discount_amount, discount_percent, payment_method,
+        warranty_frame, warranty_lens
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
-                $18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)
+                $18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32)
       RETURNING *
     `, [
       orderNum, customer_id,
@@ -169,6 +174,8 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
       parseFloat(req.body.discount_amount)  || 0,
       parseFloat(req.body.discount_percent) || 0,
       req.body.payment_method || 'cash',
+      req.body.warranty_frame || null,
+      req.body.warranty_lens  || null,
     ]);
 
     if (importTs) {
@@ -249,6 +256,7 @@ router.patch('/:id', auth, async (req, res) => {
     'has_rx','rx_hospital','rx_date','rx_doctor','rx_returned','notes',
     'lab_bill_amount','lab_paid','lab_paid_date','lab_payment_method','lab_notes',
     'last_payment_date','last_payment_method','last_payment_amount',
+    'warranty_frame','warranty_lens',
     'frame_buy_price','frame_sell_price',
     'lens_buy_price','lens_sell_price',
     'order_type','customer_own_frame',
@@ -392,6 +400,10 @@ router.post('/import', auth, async (req, res) => {
 
   const client = await pool.connect();
   try {
+    // Auto-create warranty columns if they don't exist
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_frame VARCHAR(20)`).catch(()=>{});
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_lens  VARCHAR(20)`).catch(()=>{});
+
     await client.query('BEGIN');
 
     const dateObj = new Date(import_date || Date.now());
