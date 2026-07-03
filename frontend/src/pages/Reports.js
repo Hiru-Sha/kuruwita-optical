@@ -262,7 +262,7 @@ export default function Reports() {
       {/* ── PROFIT TAB ─────────────────────────────────────── */}
       {!loading && activeTab==='profit' && (
         <div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:20}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:20}}>
             <StatCard label="6-Month Revenue"   value={fmtK(totals.revenue)}      dark icon="💵"/>
             <StatCard label="Cost of Goods"     value={fmtK(totals.cost_of_goods)} color={C.danger}  icon="🛒" sub="Frames + lenses"/>
             <StatCard label="Gross Profit"      value={fmtK(totals.gross_profit)}  color={parseFloat(totals.gross_profit)>=0?C.success:C.danger} icon="📊" sub={`${totals.revenue>0?Math.round(totals.gross_profit/totals.revenue*100):0}% margin`}/>
@@ -385,7 +385,7 @@ export default function Reports() {
       {/* ── REVENUE TAB ────────────────────────────────────── */}
       {!loading && activeTab==='revenue' && (
         <div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:20}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
             <StatCard label="Total Revenue"  value={fmtK(revenue?.summary?.total)}        dark icon="💵"/>
             <StatCard label="From Orders"    value={fmtK(revenue?.summary?.order_total)}  color={C.navy}    icon="📋" sub={`${revenue?.summary?.order_count||0} orders`}/>
             <StatCard label="Quick Sales"    value={fmtK(revenue?.summary?.qs_total)}     color='#0891b2'   icon="🛍️" sub={`${revenue?.summary?.qs_count||0} sales`}/>
@@ -559,7 +559,7 @@ export default function Reports() {
           {(() => {
             const byLab = (lensJobs||[]).reduce((acc,o)=>{ const lab=o.lens_company||'Unknown'; if(!acc[lab]) acc[lab]={count:0,pending:0}; acc[lab].count++; if(o.lens_step<3) acc[lab].pending++; return acc; },{});
             return (
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12,marginBottom:20}}>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:12,marginBottom:20}}>
                 {Object.entries(byLab).map(([lab,s])=>(
                   <StatCard key={lab} label={lab} value={s.count} icon="🔬" sub={`${s.pending} pending · ${s.count-s.pending} done`} color={s.pending>0?C.danger:C.success}/>
                 ))}
