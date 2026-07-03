@@ -184,8 +184,6 @@ function buildAdvanceBill(order) {
         <div class="kv"><div class="k">Ready By</div><div class="v" style="color:#c9a84c;">${fmtD(order.deliver_date)}</div></div>
         ${order.warranty_frame ? `<div class="kv"><div class="k">🛡️ Frame Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_frame}</div></div>` : ''}
         ${order.warranty_lens  ? `<div class="kv"><div class="k">🛡️ Lens Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_lens}</div></div>` : ''}
-        ${order.warranty_frame ? `<div class="kv"><div class="k">🛡️ Frame Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_frame}</div></div>` : ''}
-        ${order.warranty_lens  ? `<div class="kv"><div class="k">🛡️ Lens Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_lens}</div></div>` : ''}
       </div>
     </div>
 

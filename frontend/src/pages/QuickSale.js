@@ -431,8 +431,7 @@ export default function QuickSale() {
               <div style={{padding:'16px 18px'}}>
                 {/* Payment method */}
 {/* Warranty for frames/sunglasses */}
-                {cart.some(i=>i.category&&['Frames','Sunglasses'].includes(i.category))&&(
-                  <div style={{marginBottom:14,background:'#f0fdf4',border:'1.5px solid #86efac',borderRadius:10,padding:'12px 14px'}}>
+                <div style={{marginBottom:14,background:'#f0fdf4',border:'1.5px solid #86efac',borderRadius:10,padding:'12px 14px'}}>
                     <div style={{fontSize:12,fontWeight:700,color:'#15803d',marginBottom:8,textTransform:'uppercase',letterSpacing:'.8px'}}>🛡️ Warranty (optional)</div>
                     <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                       {[{v:'',l:'No Warranty'},{v:'3 months',l:'3 Months'},{v:'6 months',l:'6 Months'},{v:'1 year',l:'1 Year'},{v:'2 years',l:'2 Years'}].map(w=>(
@@ -446,8 +445,22 @@ export default function QuickSale() {
                     </div>
                     {warrantyPeriod&&<div style={{marginTop:8,fontSize:12,fontWeight:600,color:'#15803d'}}>✅ {warrantyPeriod} warranty on receipt</div>}
                   </div>
-                )}
-                                <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:10}}>Payment Method</div>
+                                {/* Warranty option — desktop */}
+              <div style={{marginBottom:14,background:'#f0fdf4',border:'1.5px solid #86efac',borderRadius:10,padding:'12px 14px'}}>
+                <div style={{fontSize:12,fontWeight:700,color:'#15803d',marginBottom:8,textTransform:'uppercase',letterSpacing:'.8px'}}>🛡️ Warranty (optional)</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {[{v:'',l:'No Warranty'},{v:'3 months',l:'3 Months'},{v:'6 months',l:'6 Months'},{v:'1 year',l:'1 Year'},{v:'2 years',l:'2 Years'}].map(w=>(
+                    <button key={w.v||'nowar2'} onClick={()=>setWarrantyPeriod(w.v)}
+                      style={{padding:'7px 12px',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',
+                        border:'none',background:warrantyPeriod===w.v?(w.v?'#15803d':'#6b7280'):'white',
+                        color:warrantyPeriod===w.v?'white':'#374151',boxShadow:'0 1px 3px rgba(0,0,0,.1)'}}>
+                      {w.v?'🛡️ '+w.l:'❌ '+w.l}
+                    </button>
+                  ))}
+                </div>
+                {warrantyPeriod&&<div style={{marginTop:8,fontSize:12,fontWeight:600,color:'#15803d'}}>✅ {warrantyPeriod} warranty on receipt</div>}
+              </div>
+              <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:10}}>Payment Method</div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:16}}>
                   {[['cash','💵 Cash'],['bank','🏦 Bank'],['card','💳 Card']].map(([v,l])=>(
                     <button key={v} onClick={()=>setPayMethod(v)} style={{
