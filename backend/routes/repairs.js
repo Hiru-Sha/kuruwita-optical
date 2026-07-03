@@ -57,11 +57,7 @@ router.post('/', auth, async (req, res) => {
   if (!repair_type) return res.status(400).json({ error: 'repair_type required' });
   const client = await pool.connect();
   try {
-    // Auto-add customer_id column if missing
-    await pool.query(
-      `ALTER TABLE repairs ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL`
-    ).catch(() => {});
-
+    await pool.query(`ALTER TABLE repairs ADD COLUMN IF NOT EXISTS customer_id INTEGER`).catch(()=>{});
     await client.query('BEGIN');
     const repair_number = await nextRepairNumber(client);
     const import_date = req.body.repair_date || req.body.import_date || null;

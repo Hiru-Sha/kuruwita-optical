@@ -338,7 +338,7 @@ export default function Customers() {
       const cust        = json?.data || json;
       const orders      = json?.orders      || [];
       const refractions = json?.refractions || [];
-      const quickSales  = json?.quickSales || [];
+      const quickSales = json?.quickSales || [];
       const repairs     = json?.repairs    || [];
       setSelected({ ...cust, orders, refractions, quickSales, repairs });
     } catch(e) {
@@ -367,7 +367,7 @@ export default function Customers() {
       const cust   = _json?.data || _json;
       const orders = _json?.orders || [];
       const refractions = _json?.refractions || [];
-      const quickSales  = json?.quickSales || [];
+      const quickSales = json?.quickSales || [];
       const repairs     = json?.repairs    || [];
       setSelected({ ...cust, orders, refractions, quickSales, repairs });
     } catch {}
@@ -386,7 +386,7 @@ export default function Customers() {
       const cust   = _json?.data || _json;
       const orders = _json?.orders || [];
       const refractions = _json?.refractions || [];
-      const quickSales  = json?.quickSales || [];
+      const quickSales = json?.quickSales || [];
       const repairs     = json?.repairs    || [];
       setSelected({ ...cust, orders, refractions, quickSales, repairs });
       load();
@@ -394,8 +394,8 @@ export default function Customers() {
   };
 
   return (
-    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1200, width:'100%' }}>
-      <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:navy, margin:'0 0 4px' }}>👥 Customers</h1>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1100 }}>
+      <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:navy, margin:'0 0 4px' }}>👥 Customers</h1>
       <p style={{ fontSize:13, color:muted, marginBottom:20 }}>Full profiles, order history and refraction records</p>
 
       <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
@@ -411,14 +411,14 @@ export default function Customers() {
         ))}
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:10, marginBottom:20 }}>
         {[
           { l:'Total Customers', v: customers.length,                                          dark:true },
           { l:'Balance Due',     v: customers.filter(c=>parseFloat(c.total_balance)>0).length, c:danger  },
           { l:'Rx Held',         v: customers.filter(c=>c.rx_held).length,                    c:'#0369a1'},
           { l:'Total Spent',     v:`Rs.${Math.round(customers.reduce((s,c)=>s+parseFloat(c.total_spent||0),0)/1000)}K`, c:success},
         ].map(s=>(
-          <div key={s.l} style={{ background:s.dark?navy:'white', border:`1.5px solid ${s.dark?navy:border}`, borderRadius:12, padding:'16px 14px', textAlign:'center', boxShadow:'0 2px 8px rgba(0,0,0,.04)' }}>
+          <div key={s.l} style={{ background:s.dark?navy:'white', border:`1px solid ${border}`, borderRadius:10, padding:'12px 14px', textAlign:'center' }}>
             <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?gold:muted, marginBottom:4 }}>{s.l}</div>
             <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':s.c||navy }}>{s.v}</div>
           </div>
@@ -430,19 +430,19 @@ export default function Customers() {
         : !filtered.length
           ? <p style={{ color:muted, fontSize:13 }}>No customers found</p>
           : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:14 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
             {filtered.map(c => (
               <div key={c.id} onClick={()=>openCustomer(c.id)}
-                style={{ background:'white', border:`1.5px solid ${c.rx_held?'#fde68a':border}`, borderRadius:14, padding:'18px 20px', cursor:'pointer', transition:'all .15s', boxShadow:'0 2px 6px rgba(0,0,0,.04)' }}
-                onMouseEnter={e=>{ e.currentTarget.style.borderColor=gold; e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'; }}
-                onMouseLeave={e=>{ e.currentTarget.style.borderColor=c.rx_held?'#fde68a':border; e.currentTarget.style.boxShadow='0 2px 6px rgba(0,0,0,.04)'; }}>
+                style={{ background:'white', border:`1.5px solid ${c.rx_held?'#fde68a':border}`, borderRadius:14, padding:18, cursor:'pointer', transition:'all .15s' }}
+                onMouseEnter={e=>e.currentTarget.style.borderColor=gold}
+                onMouseLeave={e=>e.currentTarget.style.borderColor=c.rx_held?'#fde68a':border}>
 
                 <div style={{ display:'flex', gap:12, marginBottom:10 }}>
-                  <div style={{ width:48, height:48, borderRadius:'50%', background:`linear-gradient(135deg,${navy},#1e3a5f)`, display:'flex', alignItems:'center', justifyContent:'center', color:'#e8c96a', fontSize:17, fontWeight:700, flexShrink:0, boxShadow:'0 2px 8px rgba(15,31,61,.25)' }}>
+                  <div style={{ width:44, height:44, borderRadius:'50%', background:navy, display:'flex', alignItems:'center', justifyContent:'center', color:'#e8c96a', fontSize:16, fontWeight:700, flexShrink:0 }}>
                     {initials(c.name)}
                   </div>
                   <div>
-                    <div style={{ fontSize:15, fontWeight:700, color:navy, lineHeight:1.3 }}>{c.name}</div>
+                    <div style={{ fontSize:15, fontWeight:700, color:navy }}>{c.name}</div>
                     <div style={{ fontSize:12, color:muted }}>Age {c.age||'—'} · 📞 {c.phone}</div>
                   </div>
                 </div>
@@ -456,12 +456,11 @@ export default function Customers() {
                   {c.rx_held && <span style={{ background:'#e0f2fe', color:'#0369a1', fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:20 }}>📄 Rx Held</span>}
                 </div>
 
-                <div style={{ fontSize:12, color:muted, marginBottom:12, display:'flex', alignItems:'center', gap:6 }}>
-                  <span>Total spent:</span>
-                  <b style={{color:navy, fontSize:13}}>Rs. {parseFloat(c.total_spent||0).toLocaleString()}</b>
+                <div style={{ fontSize:12, color:muted, marginBottom:12 }}>
+                  Total spent: <b style={{color:navy}}>Rs. {parseFloat(c.total_spent||0).toLocaleString()}</b>
                 </div>
 
-                <div style={{ display:'flex', gap:7, marginTop:'auto' }}>
+                <div style={{ display:'flex', gap:7 }}>
                   <a onClick={e=>e.stopPropagation()}
                     href={`https://wa.me/94${c.phone?.replace(/^0/,'')}?text=${encodeURIComponent(`Hello ${c.name}, this is Kuruwita Optical. `)}`}
                     target="_blank" rel="noreferrer"
@@ -469,7 +468,7 @@ export default function Customers() {
                     💬 WA
                   </a>
                   <button onClick={e=>{e.stopPropagation();openCustomer(c.id);}}
-                    style={{ flex:1, padding:'6px 12px', background:navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textAlign:'center' }}>
+                    style={{ padding:'6px 12px', background:navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                     View Profile →
                   </button>
                 </div>
@@ -519,12 +518,12 @@ export default function Customers() {
                 {/* Tabs */}
                 <div style={{ display:'flex', borderBottom:`1px solid ${border}`, padding:'0 20px', overflowX:'auto' }}>
                   {[
-                    { key:'orders',        label:'Orders',      count: selected.orders?.length },
-                    { key:'refraction',    label:'👁️ Refraction', count: selected.refractions?.length||0 },
-                    { key:'communication', label:'Comms',        count: null },
-                    { key:'quicksales',    label:'Quick Sales',  count: selected.quickSales?.length||0 },
-                    { key:'repairs',       label:'Repairs',      count: selected.repairs?.length||0 },
-                    { key:'profile',       label:'Profile',      count: null },
+                    { key:'orders',        label:'Orders',        count: selected.orders?.length },
+                    { key:'quicksales',    label:'🛍️ Quick Sales', count: selected.quickSales?.length||0 },
+                    { key:'repairs',       label:'🔧 Repairs',     count: selected.repairs?.length||0 },
+                    { key:'refraction',    label:'👁️ Refraction',  count: selected.refractions?.length||0 },
+                    { key:'communication', label:'Comms',          count: null },
+                    { key:'profile',       label:'Profile',        count: null },
                   ].map(t => (
                     <button key={t.key} onClick={()=>setTab(t.key)}
                       style={{ padding:'12px 14px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:tab===t.key?navy:muted, borderBottom:`2.5px solid ${tab===t.key?gold:'transparent'}`, marginBottom:-1 }}>
@@ -545,6 +544,170 @@ export default function Customers() {
                             <OrderCard key={o.id} o={o} customerId={selected.id} onRefresh={()=>openCustomer(selected.id)}/>
                           );
                         })
+                  )}
+
+                  {/* ── QUICK SALES TAB ── */}
+                  {tab==='quicksales' && (
+                    <div>
+                      {(!selected.quickSales || selected.quickSales.length === 0) ? (
+                        <div style={{ padding:'32px 20px', textAlign:'center', color:muted, fontSize:13 }}>
+                          <div style={{ fontSize:32, marginBottom:8 }}>🛍️</div>
+                          No quick sales recorded for this customer yet
+                        </div>
+                      ) : (
+                        <>
+                          {selected.quickSales.map(s => {
+                            let items = [];
+                            try { items = typeof s.items === 'string' ? JSON.parse(s.items) : (s.items || []); } catch {}
+                            return (
+                              <div key={s.id} style={{ padding:'12px 20px', borderBottom:`1px solid ${border}` }}>
+                                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                                  <div>
+                                    <span style={{ fontSize:13, fontWeight:700, color:navy }}>{s.sale_number}</span>
+                                    <span style={{ fontSize:12, color:muted, marginLeft:12 }}>
+                                      {new Date(s.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+                                    </span>
+                                    <span style={{ marginLeft:8, padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:700,
+                                      background:'#dcfce7', color:'#15803d' }}>{s.payment_method}</span>
+                                  </div>
+                                  <span style={{ fontWeight:700, color:navy }}>Rs. {parseFloat(s.total||0).toLocaleString()}</span>
+                                </div>
+                                {items.length > 0 && (
+                                  <div style={{ fontSize:12, color:muted, marginTop:4 }}>
+                                    {items.slice(0,3).map(i=>i.name).join(', ')}{items.length>3?` +${items.length-3} more`:''}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          <div style={{ padding:'12px 20px', background:'#f8faff', fontSize:13, fontWeight:700, color:navy }}>
+                            Total: Rs. {selected.quickSales.reduce((s,x)=>s+parseFloat(x.total||0),0).toLocaleString()}
+                            <span style={{ fontWeight:400, color:muted, marginLeft:8 }}>from {selected.quickSales.length} sale{selected.quickSales.length!==1?'s':''}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── REPAIRS TAB ── */}
+                  {tab==='repairs' && (
+                    <div>
+                      {(!selected.repairs || selected.repairs.length === 0) ? (
+                        <div style={{ padding:'32px 20px', textAlign:'center', color:muted, fontSize:13 }}>
+                          <div style={{ fontSize:32, marginBottom:8 }}>🔧</div>
+                          No repairs recorded for this customer yet
+                        </div>
+                      ) : (
+                        <>
+                          {selected.repairs.map(r => {
+                            const stCol = r.status==='collected'?'#15803d':r.status==='done'?'#1d4ed8':'#92400e';
+                            const stBg  = r.status==='collected'?'#dcfce7':r.status==='done'?'#dbeafe':'#fef9c3';
+                            return (
+                              <div key={r.id} style={{ padding:'12px 20px', borderBottom:`1px solid ${border}` }}>
+                                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                                  <div>
+                                    <span style={{ fontSize:13, fontWeight:700, color:navy }}>{r.repair_number}</span>
+                                    <span style={{ fontSize:12, color:muted, marginLeft:12 }}>
+                                      {new Date(r.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+                                    </span>
+                                    <span style={{ marginLeft:8, padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:700,
+                                      background:stBg, color:stCol }}>{r.status}</span>
+                                  </div>
+                                  <span style={{ fontWeight:700, color:r.status==='collected'?'#15803d':navy }}>
+                                    Rs. {parseFloat(r.charge||0).toLocaleString()}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize:12, color:muted, marginTop:3 }}>
+                                  {r.repair_type}{r.description ? ' · ' + r.description.slice(0,50) : ''}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div style={{ padding:'12px 20px', background:'#f8faff', fontSize:13, fontWeight:700, color:navy }}>
+                            Total: Rs. {selected.repairs.reduce((s,x)=>s+parseFloat(x.charge||0),0).toLocaleString()}
+                            <span style={{ fontWeight:400, color:muted, marginLeft:8 }}>from {selected.repairs.length} repair{selected.repairs.length!==1?'s':''}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── QUICK SALES TAB ── */}
+                  {tab==='quicksales' && (
+                    <div>
+                      {(!selected.quickSales || selected.quickSales.length === 0) ? (
+                        <div style={{ padding:'32px 20px', textAlign:'center', color:muted, fontSize:13 }}>
+                          <div style={{ fontSize:32, marginBottom:8 }}>🛍️</div>
+                          No quick sales recorded for this customer yet
+                        </div>
+                      ) : <>
+                          {selected.quickSales.map(s => {
+                            let items = [];
+                            try { items = typeof s.items==='string' ? JSON.parse(s.items) : (s.items||[]); } catch {}
+                            return (
+                              <div key={s.id} style={{ padding:'12px 20px', borderBottom:`1px solid ${border}` }}>
+                                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                                  <div>
+                                    <span style={{ fontSize:13, fontWeight:700, color:navy }}>{s.sale_number}</span>
+                                    <span style={{ fontSize:12, color:muted, marginLeft:12 }}>
+                                      {new Date(s.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+                                    </span>
+                                    <span style={{ marginLeft:8, padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:700, background:'#dcfce7', color:'#15803d' }}>{s.payment_method}</span>
+                                  </div>
+                                  <span style={{ fontWeight:700, color:navy }}>Rs. {parseFloat(s.total||0).toLocaleString()}</span>
+                                </div>
+                                {items.length>0 && (
+                                  <div style={{ fontSize:12, color:muted, marginTop:4 }}>
+                                    {items.slice(0,3).map(i=>i.name).join(', ')}{items.length>3?` +${items.length-3} more`:''}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          <div style={{ padding:'12px 20px', background:'#f8faff', fontSize:13, fontWeight:700, color:navy }}>
+                            Total: Rs. {selected.quickSales.reduce((s,x)=>s+parseFloat(x.total||0),0).toLocaleString()}
+                            <span style={{ fontWeight:400, color:muted, marginLeft:8 }}>from {selected.quickSales.length} sale{selected.quickSales.length!==1?'s':''}</span>
+                          </div>
+                        </>}
+                    </div>
+                  )}
+
+                  {/* ── REPAIRS TAB ── */}
+                  {tab==='repairs' && (
+                    <div>
+                      {(!selected.repairs || selected.repairs.length === 0) ? (
+                        <div style={{ padding:'32px 20px', textAlign:'center', color:muted, fontSize:13 }}>
+                          <div style={{ fontSize:32, marginBottom:8 }}>🔧</div>
+                          No repairs recorded for this customer yet
+                        </div>
+                      ) : <>
+                          {selected.repairs.map(r => {
+                            const stCol = r.status==='collected'?'#15803d':r.status==='done'?'#1d4ed8':'#92400e';
+                            const stBg  = r.status==='collected'?'#dcfce7':r.status==='done'?'#dbeafe':'#fef9c3';
+                            return (
+                              <div key={r.id} style={{ padding:'12px 20px', borderBottom:`1px solid ${border}` }}>
+                                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                                  <div>
+                                    <span style={{ fontSize:13, fontWeight:700, color:navy }}>{r.repair_number}</span>
+                                    <span style={{ fontSize:12, color:muted, marginLeft:12 }}>
+                                      {new Date(r.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+                                    </span>
+                                    <span style={{ marginLeft:8, padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:700, background:stBg, color:stCol }}>{r.status}</span>
+                                  </div>
+                                  <span style={{ fontWeight:700, color:stCol }}>Rs. {parseFloat(r.charge||0).toLocaleString()}</span>
+                                </div>
+                                <div style={{ fontSize:12, color:muted, marginTop:3 }}>
+                                  {r.repair_type}{r.description?' · '+r.description.slice(0,50):''}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div style={{ padding:'12px 20px', background:'#f8faff', fontSize:13, fontWeight:700, color:navy }}>
+                            Total: Rs. {selected.repairs.reduce((s,x)=>s+parseFloat(x.charge||0),0).toLocaleString()}
+                            <span style={{ fontWeight:400, color:muted, marginLeft:8 }}>from {selected.repairs.length} repair{selected.repairs.length!==1?'s':''}</span>
+                          </div>
+                        </>}
+                    </div>
                   )}
 
                   {/* ── REFRACTION HISTORY TAB ── */}
@@ -645,82 +808,6 @@ export default function Customers() {
                   )}
 
                   {/* ── COMMUNICATION TAB ── */}
-                  {/* Quick Sales tab */}
-                  {tab==='quicksales' && (
-                    <div>
-                      {(!selected.quickSales||selected.quickSales.length===0) ? (
-                        <div style={{ padding:'24px', textAlign:'center', color:muted, fontSize:13 }}>
-                          No quick sales recorded for this customer yet
-                        </div>
-                      ) : selected.quickSales.map(s=>{
-                        let items=[]; try{items=typeof s.items==='string'?JSON.parse(s.items):s.items||[];}catch{}
-                        return (
-                          <div key={s.id} style={{ padding:'12px 16px', borderBottom:`1px solid ${border}` }}>
-                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                              <div>
-                                <span style={{ fontSize:12, fontWeight:700, color:navy }}>{s.sale_number}</span>
-                                <span style={{ fontSize:11, color:muted, marginLeft:10 }}>{s.created_at?.slice(0,10)}</span>
-                                <span style={{ fontSize:11, marginLeft:8, padding:'2px 8px', borderRadius:12, background:'#dcfce7', color:'#15803d', fontWeight:600 }}>
-                                  {s.payment_method}
-                                </span>
-                              </div>
-                              <span style={{ fontWeight:700, color:navy }}>Rs. {parseFloat(s.total||0).toLocaleString()}</span>
-                            </div>
-                            {items.length>0 && (
-                              <div style={{ fontSize:12, color:muted, marginTop:4 }}>
-                                {items.slice(0,3).map(i=>i.name).join(', ')}{items.length>3?` +${items.length-3} more`:''}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {selected.quickSales?.length>0 && (
-                        <div style={{ padding:'10px 16px', background:'#f8faff', fontSize:13, color:navy, fontWeight:700 }}>
-                          Total: Rs. {selected.quickSales.reduce((s,x)=>s+parseFloat(x.total||0),0).toLocaleString()}
-                          <span style={{ fontWeight:400, color:muted, marginLeft:8 }}>from {selected.quickSales.length} sales</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Repairs tab */}
-                  {tab==='repairs' && (
-                    <div>
-                      {(!selected.repairs||selected.repairs.length===0) ? (
-                        <div style={{ padding:'24px', textAlign:'center', color:muted, fontSize:13 }}>
-                          No repairs recorded for this customer yet
-                        </div>
-                      ) : selected.repairs.map(r=>(
-                        <div key={r.id} style={{ padding:'12px 16px', borderBottom:`1px solid ${border}` }}>
-                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                            <div>
-                              <span style={{ fontSize:12, fontWeight:700, color:navy }}>{r.repair_number}</span>
-                              <span style={{ fontSize:11, color:muted, marginLeft:10 }}>{r.created_at?.slice(0,10)}</span>
-                              <span style={{ fontSize:11, marginLeft:8, padding:'2px 8px', borderRadius:12,
-                                background:r.status==='collected'?'#dcfce7':r.status==='done'?'#dbeafe':'#fef9c3',
-                                color:r.status==='collected'?'#15803d':r.status==='done'?'#1d4ed8':'#92400e',
-                                fontWeight:600 }}>
-                                {r.status}
-                              </span>
-                            </div>
-                            <span style={{ fontWeight:700, color:r.status==='collected'?'#15803d':navy }}>
-                              Rs. {parseFloat(r.charge||0).toLocaleString()}
-                            </span>
-                          </div>
-                          <div style={{ fontSize:12, color:muted, marginTop:3 }}>
-                            {r.repair_type} {r.description ? '· ' + r.description.slice(0,40) : ''}
-                          </div>
-                        </div>
-                      ))}
-                      {selected.repairs?.length>0 && (
-                        <div style={{ padding:'10px 16px', background:'#f8faff', fontSize:13, color:navy, fontWeight:700 }}>
-                          Total: Rs. {selected.repairs.reduce((s,x)=>s+parseFloat(x.charge||0),0).toLocaleString()}
-                          <span style={{ fontWeight:400, color:muted, marginLeft:8 }}>from {selected.repairs.length} repairs</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   {tab==='communication' && (
                     <>
                       <div style={{ marginBottom:14 }}>

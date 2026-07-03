@@ -137,12 +137,10 @@ function Receipt({ sale, items }) {
 export default function QuickSale() {
   const [query,    setQuery]   = useState('');
   const [results,  setResults] = useState([]);
-  const [cart,     setCart]    = useState([]);
-  const [custId,   setCustId]  = useState(null);   // linked customer
-  const [custName, setCustName]= useState('');      // for display
-  const [custSearch, setCustSearch] = useState('');
-  const [custResults, setCustResults] = useState([]);
-  const [showCustDrop, setShowCustDrop] = useState(false);
+  const [cart,       setCart]      = useState([]);
+  const [linkedCust, setLinkedCust]= useState(null);
+  const [custSearch, setCustSearch]= useState('');
+  const [custDrop,   setCustDrop]  = useState([]);
   const [custName, setCustName]= useState('');
   const [custPhone,setCustPhone]=useState('');
   const [overDisc, setOverDisc]= useState('');
@@ -249,27 +247,18 @@ export default function QuickSale() {
     setQuery(''); setResults([]);
   };
 
-  // Customer lookup for linking sale to profile
-  const searchCust = async (q) => {
-    setCustSearch(q); setCustName(q);
-    if (q.length < 2) { setCustResults([]); setShowCustDrop(false); return; }
+  const searchCust = async q => {
+    setCustSearch(q);
+    if (q.length < 2) { setCustDrop([]); return; }
     try {
-      const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-      const token = localStorage.getItem('ko_token');
-      const res = await fetch(`${BASE}/customers?search=${encodeURIComponent(q)}&limit=5`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      const list = data.data || data || [];
-      setCustResults(list);
-      setShowCustDrop(list.length > 0);
-    } catch { setCustResults([]); }
+      const BASE=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
+      const token=localStorage.getItem('ko_token');
+      const res=await fetch(`${BASE}/customers?search=${encodeURIComponent(q)}&limit=5`,{headers:{Authorization:`Bearer ${token}`}});
+      const data=await res.json();
+      setCustDrop(Array.isArray(data)?data:(data.data||[]));
+    } catch { setCustDrop([]); }
   };
-  const selectCust = (c) => {
-    setCustId(c.id); setCustName(c.name + (c.phone ? ' · ' + c.phone : ''));
-    setCustSearch(''); setCustResults([]); setShowCustDrop(false);
-  };
-  const clearCust = () => { setCustId(null); setCustName(''); setCustSearch(''); };
+  const pickCust = c => { setLinkedCust(c); setCustSearch(''); setCustDrop([]); };
 
   const upd = (id,f,v) => setCart(c=>c.map(x=>x.inventory_id===id?{...x,[f]:v}:x));
   const rem = (id)      => setCart(c=>c.filter(x=>x.inventory_id!==id));
@@ -290,7 +279,7 @@ export default function QuickSale() {
       const res   = await fetch(`${BASE}/quick-sales`,{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-        body:JSON.stringify({customer_name:custName.trim()||null,customer_phone:custPhone.trim()||null,items:cart,subtotal,discount:discAmt,total,payment_method:payMethod,amount_paid:paid,change_given:change,import_date:pastMode&&saleDate?saleDate:null})
+        body:JSON.stringify({customer_name:custName.trim()||null,customer_phone:custPhone.trim()||null,customer_id:linkedCust?.id||null,items:cart,subtotal,discount:discAmt,total,payment_method:payMethod,amount_paid:paid,change_given:change,import_date:pastMode&&saleDate?saleDate:null})
       });
       if (!res.ok){const d=await res.json();throw new Error(d.error||'Failed');}
       const data=await res.json();
@@ -367,6 +356,31 @@ export default function QuickSale() {
         <div>
           {/* Search */}
           <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'14px',marginBottom:12}}>
+            {/* Customer link */}
+            {linkedCust ? (
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px', marginBottom:10, background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:9 }}>
+                <span style={{ fontSize:16 }}>👤</span>
+                <span style={{ fontSize:13, fontWeight:600, color:'#15803d', flex:1 }}>{linkedCust.name} · {linkedCust.phone}</span>
+                <button onClick={()=>setLinkedCust(null)} style={{ background:'none', border:'none', color:'#dc2626', cursor:'pointer', fontSize:16 }}>✕</button>
+              </div>
+            ) : (
+              <div style={{ position:'relative', marginBottom:10 }}>
+                <input value={custSearch} onChange={e=>searchCust(e.target.value)}
+                  placeholder="🔗 Link to customer (optional)" style={{ ...INP, fontSize:13 }}
+                  onBlur={()=>setTimeout(()=>setCustDrop([]),200)}/>
+                {custDrop.length>0 && (
+                  <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white', border:`1px solid ${C.border}`, borderRadius:9, zIndex:100, boxShadow:'0 4px 16px rgba(0,0,0,.12)', marginTop:2 }}>
+                    {custDrop.map(cu=>(
+                      <div key={cu.id} onMouseDown={()=>pickCust(cu)}
+                        style={{ padding:'10px 14px', cursor:'pointer', fontSize:13, borderBottom:`1px solid ${C.cream}` }}>
+                        <b style={{ color:C.navy }}>{cu.name}</b>
+                        <span style={{ color:C.muted, marginLeft:8 }}>{cu.phone}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{fontSize:14,fontWeight:700,color:C.navy,marginBottom:10}}>🔍 Add Items</div>
             <div style={{position:'relative'}}>
               <input value={query} onChange={e=>search(e.target.value)} placeholder="Search frames, accessories..." style={{...INP,fontSize:16}} autoFocus/>

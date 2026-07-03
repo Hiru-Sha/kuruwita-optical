@@ -221,7 +221,7 @@ export default function Repairs() {
   const [showAdd,   setShowAdd]  = useState(false);
   const [pastMode,  setPastMode]  = useState(false);
   const [repairDate,setRepairDate]= useState('');
-  const [linkedCust, setLinkedCust] = useState(null); // auto-linked customer
+  const [linkedCust, setLinkedCust] = useState(null);
   const [saving,    setSaving]   = useState(false);
   const [error,     setError]    = useState('');
   const [toast,     setToast]    = useState('');
@@ -540,35 +540,25 @@ export default function Repairs() {
               <input value={form.phone} onChange={async e=>{
                 const ph = e.target.value;
                 setForm(f=>({...f,phone:ph}));
-                // Auto-link customer by phone
+                setLinkedCust(null);
                 if (ph.replace(/\D/g,'').length >= 9) {
                   try {
-                    const BASE = process.env.REACT_APP_API_URL||'http://localhost:5000/api';
-                    const token = localStorage.getItem('ko_token');
-                    const res = await fetch(`${BASE}/customers?search=${encodeURIComponent(ph)}&limit=1`,{headers:{Authorization:`Bearer ${token}`}});
-                    const data = await res.json();
-                    const match = (data.data||data||[])[0];
-                    if (match && match.phone === ph) {
-                      setLinkedCust(match);
-                      setForm(f=>({...f,customer_name:f.customer_name||match.name}));
-                    } else setLinkedCust(null);
-                  } catch {setLinkedCust(null);}
-                } else setLinkedCust(null);
-                // Auto-link to customer by phone
-                if (ph.length >= 9) {
-                  try {
-                    const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-                    const token = localStorage.getItem('ko_token');
-                    const res = await fetch(`${BASE}/customers?search=${ph}&limit=1`, { headers:{ Authorization:`Bearer ${token}` }});
-                    const data = await res.json();
-                    const match = (data.data||data||[])[0];
-                    if (match && match.phone === ph) {
-                      setLinkedCust(match);
-                      setForm(f=>({...f, customer_name: f.customer_name || match.name }));
-                    } else { setLinkedCust(null); }
-                  } catch { setLinkedCust(null); }
+                    const BASE=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
+                    const token=localStorage.getItem('ko_token');
+                    const res=await fetch(`${BASE}/customers?search=${encodeURIComponent(ph)}&limit=3`,{headers:{Authorization:`Bearer ${token}`}});
+                    const data=await res.json();
+                    const list=Array.isArray(data)?data:(data.data||[]);
+                    const match=list.find(cu=>cu.phone===ph);
+                    if (match) { setLinkedCust(match); setForm(f=>({...f,customer_name:f.customer_name||match.name})); }
+                  } catch {}
                 }
               }} placeholder="07X XXX XXXX" type="tel" style={INP}/>
+              {linkedCust && (
+                <div style={{ marginTop:6, fontSize:12, fontWeight:600, color:'#15803d', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:7, padding:'6px 12px', display:'inline-flex', gap:8, alignItems:'center' }}>
+                  ✅ Linked: {linkedCust.name}
+                  <button onClick={()=>setLinkedCust(null)} style={{ background:'none', border:'none', color:'#dc2626', cursor:'pointer', fontWeight:700 }}>✕</button>
+                </div>
+              )}
             </div>
           </div>
 

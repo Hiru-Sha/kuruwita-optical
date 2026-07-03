@@ -78,41 +78,37 @@ router.get('/:id', auth, async (req, res) => {
       }));
     }
 
-    // Fetch quick sales by customer_id OR name+phone match
+    // Quick Sales — match by customer_id OR name+phone
     let quickSales = [];
     try {
-      const cust_row = cust.rows[0];
+      const custRow = cust.rows[0];
       const qs = await pool.query(
-        `SELECT * FROM quick_sales
+        `SELECT id, sale_number, created_at, total, payment_method, items, customer_name
+         FROM quick_sales
          WHERE customer_id = $1
             OR (customer_name ILIKE $2 AND customer_phone = $3)
          ORDER BY created_at DESC LIMIT 50`,
-        [req.params.id, cust_row.name, cust_row.phone]
+        [req.params.id, custRow.name || '', custRow.phone || '']
       );
       quickSales = qs.rows;
-    } catch(e) { /* customer_id column may not exist yet */ }
+    } catch(e) { quickSales = []; }
 
-    // Fetch repairs by customer_id OR name+phone match
+    // Repairs — match by customer_id OR name+phone
     let repairs = [];
     try {
-      const cust_row = cust.rows[0];
+      const custRow = cust.rows[0];
       const rp = await pool.query(
-        `SELECT * FROM repairs
+        `SELECT id, repair_number, created_at, repair_type, description, charge, status, customer_name
+         FROM repairs
          WHERE customer_id = $1
             OR (customer_name ILIKE $2 AND phone = $3)
          ORDER BY created_at DESC LIMIT 50`,
-        [req.params.id, cust_row.name, cust_row.phone]
+        [req.params.id, custRow.name || '', custRow.phone || '']
       );
       repairs = rp.rows;
-    } catch(e) { /* customer_id column may not exist yet */ }
+    } catch(e) { repairs = []; }
 
-    res.json({
-      data:       cust.rows[0],
-      orders:     orders.rows,
-      refractions: refractionRows,
-      quickSales,
-      repairs,
-    });
+    res.json({ data: cust.rows[0], orders: orders.rows, refractions: refractionRows, quickSales, repairs });
   } catch(err) {
     console.error('GET customer error:', err.message);
     res.status(500).json({ error: err.message });

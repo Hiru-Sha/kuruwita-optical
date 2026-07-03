@@ -74,10 +74,7 @@ router.get('/:id', auth, async (req, res) => {
 // ── POST /api/quick-sales ────────────────────────────────────
 // Fixed: uses advisory lock to prevent duplicate sale numbers
 router.post('/', auth, async (req, res) => {
-  // Auto-add customer_id column if missing
-  await pool.query(
-    `ALTER TABLE quick_sales ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL`
-  ).catch(() => {});
+  await pool.query(`ALTER TABLE quick_sales ADD COLUMN IF NOT EXISTS customer_id INTEGER`).catch(()=>{});
 
   const { customer_name, customer_phone, items, subtotal, discount, total,
           payment_method, amount_paid, change_given, notes } = req.body;
@@ -107,7 +104,6 @@ router.post('/', auth, async (req, res) => {
        RETURNING *`,
       [
         saleNum, customer_name || null, customer_phone || null, JSON.stringify(items),
-        req.body.customer_id || null,
         parseFloat(subtotal)    || 0,
         parseFloat(discount)    || 0,
         parseFloat(total)       || 0,
