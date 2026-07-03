@@ -182,6 +182,10 @@ function buildAdvanceBill(order) {
       </div>
       <div>
         <div class="kv"><div class="k">Ready By</div><div class="v" style="color:#c9a84c;">${fmtD(order.deliver_date)}</div></div>
+        ${order.warranty_frame ? `<div class="kv"><div class="k">🛡️ Frame Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_frame}</div></div>` : ''}
+        ${order.warranty_lens  ? `<div class="kv"><div class="k">🛡️ Lens Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_lens}</div></div>` : ''}
+        ${order.warranty_frame ? `<div class="kv"><div class="k">🛡️ Frame Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_frame}</div></div>` : ''}
+        ${order.warranty_lens  ? `<div class="kv"><div class="k">🛡️ Lens Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_lens}</div></div>` : ''}
       </div>
     </div>
 
@@ -746,10 +750,12 @@ export default function PrintReceipt({ order, onClose }) {
               { l: 'Advance', v: fmt2(order.advance_amount) },
               { l: 'Balance', v: fmt2(order.balance_amount) },
               { l: 'Delivery', v: fmtD(order.deliver_date) },
+              ...(order.warranty_frame ? [{ l: '🛡️ Frame Warranty', v: order.warranty_frame, green: true }] : []),
+              ...(order.warranty_lens  ? [{ l: '🛡️ Lens Warranty',  v: order.warranty_lens,  green: true }] : []),
             ].map(r => (
               <div key={r.l} style={{ background: '#f9f9f9', borderRadius: 8, padding: '8px 10px' }}>
                 <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: C.muted, marginBottom: 2 }}>{r.l}</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>{r.v || '—'}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: r.green ? '#15803d' : C.navy }}>{r.v || '—'}</div>
               </div>
             ))}
           </div>
