@@ -224,7 +224,7 @@ export default function Reports() {
   const totals = profit?.totals || {};
 
   return (
-    <div style={{fontFamily:"'Inter','DM Sans',sans-serif",maxWidth:1200,width:'100%'}}>
+    <div style={{fontFamily:"'Inter','DM Sans',sans-serif",maxWidth:1200,width:'100%',margin:'0 auto'}}>
 
       {/* Header */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:24,flexWrap:'wrap',gap:12}}>

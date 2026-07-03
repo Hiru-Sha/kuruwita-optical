@@ -371,7 +371,7 @@ export default function Orders() {
   const INP = { padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:13, fontFamily:'inherit', outline:'none', background:C.surface, color:'var(--text,#111827)', transition:'border-color .15s' };
 
   return (
-    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1400, width:'100%' }}>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1400, width:'100%', margin:'0 auto' }}>
 
       {/* Toast */}
       {toast && (
@@ -501,14 +501,7 @@ export default function Orders() {
                       </span>
                     )}
                   </div>
-                  <div style={{ textAlign:'right', flexShrink:0 }}>
-                    <div style={{ fontSize:11, color:C.muted }}>📅 {o.created_at?.slice(0,10)}</div>
-                    {o.deliver_date && (
-                      <div style={{ fontSize:11, fontWeight:600, color: new Date(o.deliver_date)<new Date()&&o.status!=='delivered'?C.danger:C.success, marginTop:2 }}>
-                        📦 {o.deliver_date.slice(0,10)}
-                      </div>
-                    )}
-                  </div>
+                  <span style={{ fontSize:11, color:C.muted, flexShrink:0 }}>{o.deliver_date?.slice(0,10)}</span>
                 </div>
                 <div style={{ fontSize:15, fontWeight:600, color:C.navy, marginBottom:4 }}>{o.customer_name}</div>
                 <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>

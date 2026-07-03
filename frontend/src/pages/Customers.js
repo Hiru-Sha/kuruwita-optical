@@ -394,7 +394,7 @@ export default function Customers() {
   };
 
   return (
-    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1200, width:'100%' }}>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1200, width:'100%', margin:'0 auto' }}>
       <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:navy, margin:'0 0 4px' }}>👥 Customers</h1>
       <p style={{ fontSize:13, color:muted, marginBottom:20 }}>Full profiles, order history and refraction records</p>
 
