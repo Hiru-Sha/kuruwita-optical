@@ -394,7 +394,7 @@ export default function Customers() {
   };
 
   return (
-    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1100 }}>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1200, width:'100%' }}>
       <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:navy, margin:'0 0 4px' }}>👥 Customers</h1>
       <p style={{ fontSize:13, color:muted, marginBottom:20 }}>Full profiles, order history and refraction records</p>
 
@@ -411,14 +411,14 @@ export default function Customers() {
         ))}
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:10, marginBottom:20 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
         {[
           { l:'Total Customers', v: customers.length,                                          dark:true },
           { l:'Balance Due',     v: customers.filter(c=>parseFloat(c.total_balance)>0).length, c:danger  },
           { l:'Rx Held',         v: customers.filter(c=>c.rx_held).length,                    c:'#0369a1'},
           { l:'Total Spent',     v:`Rs.${Math.round(customers.reduce((s,c)=>s+parseFloat(c.total_spent||0),0)/1000)}K`, c:success},
         ].map(s=>(
-          <div key={s.l} style={{ background:s.dark?navy:'white', border:`1px solid ${border}`, borderRadius:10, padding:'12px 14px', textAlign:'center' }}>
+          <div key={s.l} style={{ background:s.dark?navy:'white', border:`1.5px solid ${s.dark?navy:border}`, borderRadius:12, padding:'18px 14px', textAlign:'center', boxShadow:'0 2px 8px rgba(0,0,0,.04)' }}>
             <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:s.dark?gold:muted, marginBottom:4 }}>{s.l}</div>
             <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:s.dark?'white':s.c||navy }}>{s.v}</div>
           </div>
@@ -430,12 +430,12 @@ export default function Customers() {
         : !filtered.length
           ? <p style={{ color:muted, fontSize:13 }}>No customers found</p>
           : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:14 }}>
             {filtered.map(c => (
               <div key={c.id} onClick={()=>openCustomer(c.id)}
-                style={{ background:'white', border:`1.5px solid ${c.rx_held?'#fde68a':border}`, borderRadius:14, padding:18, cursor:'pointer', transition:'all .15s' }}
-                onMouseEnter={e=>e.currentTarget.style.borderColor=gold}
-                onMouseLeave={e=>e.currentTarget.style.borderColor=c.rx_held?'#fde68a':border}>
+                style={{ background:'white', border:`1.5px solid ${c.rx_held?'#fde68a':border}`, borderRadius:14, padding:'18px 20px', cursor:'pointer', transition:'all .15s', boxShadow:'0 2px 6px rgba(0,0,0,.05)' }}
+                onMouseEnter={e=>{ e.currentTarget.style.borderColor=gold; e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'; }}
+                onMouseLeave={e=>{ e.currentTarget.style.borderColor=c.rx_held?'#fde68a':border; e.currentTarget.style.boxShadow='0 2px 6px rgba(0,0,0,.05)'; }}>
 
                 <div style={{ display:'flex', gap:12, marginBottom:10 }}>
                   <div style={{ width:44, height:44, borderRadius:'50%', background:navy, display:'flex', alignItems:'center', justifyContent:'center', color:'#e8c96a', fontSize:16, fontWeight:700, flexShrink:0 }}>
@@ -468,7 +468,7 @@ export default function Customers() {
                     💬 WA
                   </a>
                   <button onClick={e=>{e.stopPropagation();openCustomer(c.id);}}
-                    style={{ padding:'6px 12px', background:navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                    style={{ flex:1, padding:'6px 12px', background:navy, color:'white', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textAlign:'center' }}>
                     View Profile →
                   </button>
                 </div>

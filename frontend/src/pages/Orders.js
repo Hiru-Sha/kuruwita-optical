@@ -58,11 +58,10 @@ function PaymentModal({ order, onClose, onSave }) {
     setSaving(true);
     try {
       await updateOrder(order.id, {
-        advance_amount:      parseFloat(order.advance_amount || 0) + amt,
-        balance_amount:      Math.max(0, balance - amt),
-        last_payment_date:   payDate,
+        advance_amount:  parseFloat(order.advance_amount || 0) + amt,
+        balance_amount:  Math.max(0, balance - amt),
+        last_payment_date: payDate,
         last_payment_method: method,
-        last_payment_amount: amt,    // ← amount tracked for dashboard & auto-deposit
       });
       onSave(`Payment of ${fmtMoney(amt)} recorded on ${new Date(payDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}. New balance: ${fmtMoney(Math.max(0,balance-amt))}`);
     } catch(e) { setError('Failed to record payment.'); }
@@ -372,7 +371,7 @@ export default function Orders() {
   const INP = { padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:13, fontFamily:'inherit', outline:'none', background:C.surface, color:'var(--text,#111827)', transition:'border-color .15s' };
 
   return (
-    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1400 }}>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1400, width:'100%' }}>
 
       {/* Toast */}
       {toast && (
@@ -502,7 +501,14 @@ export default function Orders() {
                       </span>
                     )}
                   </div>
-                  <span style={{ fontSize:11, color:C.muted, flexShrink:0 }}>{o.deliver_date?.slice(0,10)}</span>
+                  <div style={{ textAlign:'right', flexShrink:0 }}>
+                    <div style={{ fontSize:11, color:C.muted }}>📅 {o.created_at?.slice(0,10)}</div>
+                    {o.deliver_date && (
+                      <div style={{ fontSize:11, fontWeight:600, color: new Date(o.deliver_date)<new Date()&&o.status!=='delivered'?C.danger:C.success, marginTop:2 }}>
+                        📦 {o.deliver_date.slice(0,10)}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div style={{ fontSize:15, fontWeight:600, color:C.navy, marginBottom:4 }}>{o.customer_name}</div>
                 <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
@@ -816,12 +822,10 @@ export default function Orders() {
                   { l:'Lens',    v:selected.lens_type },
                   { l:'Coating', v:printCoating(selected.lens_coating) },
                   { l:'Deliver', v:selected.deliver_date?.slice(0,10) },
-                  selected.warranty_frame ? { l:'Frame Warranty', v:'🛡️ '+selected.warranty_frame, c:'#15803d' } : null,
-                  selected.warranty_lens  ? { l:'Lens Warranty',  v:'🛡️ '+selected.warranty_lens,  c:'#15803d' } : null,
-                ].filter(Boolean).map(item=>(
+                ].map(item=>(
                   <div key={item.l} style={{ background:C.cream, borderRadius:8, padding:'10px 12px' }}>
                     <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:3 }}>{item.l}</div>
-                    <div style={{ fontSize:13, fontWeight:600, color:item.c||C.navy }}>{item.v||'—'}</div>
+                    <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{item.v||'—'}</div>
                   </div>
                 ))}
               </div>
