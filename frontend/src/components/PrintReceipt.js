@@ -35,7 +35,7 @@ const PAGE_CSS = `
   .body { padding: 5mm 7mm 4mm; flex: 1; display:flex; flex-direction:column; }
 
   /* CUSTOMER BLOCK — full width single column */
-  .cust-block { background:#f8f7f4; border-radius:7px; padding:5px 9px; margin-bottom:3.5mm; display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 6mm; }
+  .cust-block { background:#f8f7f4; border-radius:7px; padding:6px 10px; margin-bottom:3.5mm; display:flex; justify-content:space-between; align-items:center; gap:4mm; }
   .sec-title { font-size: 6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #9ca3af; margin-bottom: 3px; }
   .kv { margin-bottom: 2px; }
   .kv .k { font-size: 6.5pt; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; font-weight:600; }
@@ -169,21 +169,19 @@ function buildAdvanceBill(order) {
       <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Order Date: ${orderDate}</span>
     </div>
 
-    <!-- Customer block: name full width, then phone + age + ready by -->
+    <!-- Customer block: left = name/phone/age, right = ready by/warranty -->
     <div class="cust-block">
-      <div style="grid-column:1/4;margin-bottom:2px;">
-        <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
+      <div style="flex:1;">
+        <div class="kv" style="margin-bottom:4px;"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
+        <div style="display:flex;gap:8mm;margin-top:4px;">
+          <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
+          <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
+        </div>
       </div>
-      <div>
-        <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
-      </div>
-      <div>
-        <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
-      </div>
-      <div>
-        <div class="kv"><div class="k">Ready By</div><div class="v" style="color:#c9a84c;">${fmtD(order.deliver_date)}</div></div>
-        ${order.warranty_frame ? `<div class="kv"><div class="k">🛡️ Frame Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_frame}</div></div>` : ''}
-        ${order.warranty_lens  ? `<div class="kv"><div class="k">🛡️ Lens Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_lens}</div></div>` : ''}
+      <div style="text-align:right;flex-shrink:0;">
+        <div class="kv" style="text-align:right;"><div class="k" style="text-align:right;">Ready By</div><div class="v" style="color:#c9a84c;font-size:11pt;">${fmtD(order.deliver_date)}</div></div>
+        ${order.warranty_frame ? `<div class="kv" style="text-align:right;"><div class="k" style="text-align:right;">🛡️ Frame Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_frame}</div></div>` : ''}
+        ${order.warranty_lens  ? `<div class="kv" style="text-align:right;"><div class="k" style="text-align:right;">🛡️ Lens Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_lens}</div></div>` : ''}
       </div>
     </div>
 
@@ -270,14 +268,12 @@ function buildBalanceBill(order) {
 
     <!-- Customer block -->
     <div class="cust-block">
-      <div style="grid-column:1/4;margin-bottom:2px;">
-        <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
-      </div>
-      <div>
-        <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
-      </div>
-      <div>
-        <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
+      <div style="flex:1;">
+        <div class="kv" style="margin-bottom:4px;"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
+        <div style="display:flex;gap:8mm;margin-top:4px;">
+          <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
+          <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
+        </div>
       </div>
       <div>
         <div class="kv"><div class="k">Order Date</div><div class="v">${orderDate}</div></div>
@@ -382,7 +378,7 @@ function buildQuickSaleBill(sale, items) {
 
     ${sale.customer_name || sale.customer_phone ? `
     <div class="cust-block" style="margin-bottom:3.5mm;">
-      <div style="grid-column:1/4;margin-bottom:2px;">
+      <div style="flex:1;">
         <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${sale.customer_name || '—'}</div></div>
       </div>
       <div><div class="kv"><div class="k">Phone</div><div class="v">${sale.customer_phone || '—'}</div></div></div>
@@ -450,7 +446,7 @@ function buildRepairBill(repair) {
 
     <!-- Customer block -->
     <div class="cust-block">
-      <div style="grid-column:1/4;margin-bottom:2px;">
+      <div style="flex:1;">
         <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${repair.customer_name || '—'}</div></div>
       </div>
       <div>
