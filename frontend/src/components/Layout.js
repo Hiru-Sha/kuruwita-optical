@@ -31,6 +31,7 @@ const Icon = ({ name, size=16, color='currentColor' }) => {
     sun:        <><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>,
     moon:       <><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></>,
     more:       <><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></>,
+    warranty:   <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -51,6 +52,7 @@ const ACCENT = {
 const NAV = [
   { to:'/dashboard',      icon:'dashboard',  label:'Dashboard',      section:'main'      },
   { to:'/orders',         icon:'orders',     label:'Orders',         section:'main'      },
+  { to:'/warranty',       icon:'warranty',   label:'Warranty',       section:'main'      },
   { to:'/balance',        icon:'balance',    label:'Balance Due',    section:'main'      },
   { to:'/quick-sale',     icon:'sale',       label:'Quick Sale',     section:'main'      },
   { to:'/repairs',        icon:'repairs',    label:'Repairs',        section:'main'      },
