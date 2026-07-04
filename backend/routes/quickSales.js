@@ -74,6 +74,7 @@ router.get('/:id', auth, async (req, res) => {
 // ── POST /api/quick-sales ────────────────────────────────────
 // Fixed: uses advisory lock to prevent duplicate sale numbers
 router.post('/', auth, async (req, res) => {
+  // Auto-add columns if missing (safe, idempotent)
   await pool.query(`ALTER TABLE quick_sales ADD COLUMN IF NOT EXISTS customer_id INTEGER`).catch(()=>{});
 
   const { customer_name, customer_phone, items, subtotal, discount, total,
@@ -98,9 +99,9 @@ router.post('/', auth, async (req, res) => {
     const import_date = req.body.import_date || null;
     const result = await client.query(
       `INSERT INTO quick_sales
-         (sale_number,customer_name,customer_phone,items,subtotal,discount,total,customer_id,
-          payment_method,amount_paid,change_given,notes,served_by,created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13::timestamp, NOW()))
+         (sale_number,customer_name,customer_phone,items,subtotal,discount,total,
+          payment_method,amount_paid,change_given,notes,served_by,created_at,customer_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13::timestamp, NOW()),$14)
        RETURNING *`,
       [
         saleNum, customer_name || null, customer_phone || null, JSON.stringify(items),
@@ -111,6 +112,7 @@ router.post('/', auth, async (req, res) => {
         parseFloat(amount_paid) || 0,
         parseFloat(change_given)|| 0,
         notes || null, req.user.id, import_date || null,
+        req.body.customer_id || null,   // $14
       ]
     );
 
