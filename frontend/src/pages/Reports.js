@@ -149,6 +149,74 @@ function StatCard({ label, value, sub, color=C.navy, dark=false, icon, trend }) 
   );
 }
 
+
+// ── Stacked Area Chart ────────────────────────────────────────
+function StackedAreaChart({ data, keys, colors, labelKey='month', height=180 }) {
+  if (!data?.length) return null;
+  const maxVal = Math.max(...data.map(d => keys.reduce((s,k)=>s+(parseFloat(d[k])||0),0))) || 1;
+  const W=600, H=height, P=24;
+  const gx = (i) => P + (i/(data.length-1||1)) * (W-2*P);
+  const gy = (v) => H - P - (v/maxVal) * (H-2*P);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height}}>
+      {[...keys].reverse().map((key, ri) => {
+        const idx = keys.length-1-ri;
+        const top = data.map((d,i) => `${gx(i)},${gy(keys.slice(0,idx+1).reduce((s,k)=>s+(parseFloat(d[k])||0),0))}`).join(" ");
+        const bot = idx===0
+          ? data.map((_,i)=>`${gx(i)},${H-P}`).join(" ")
+          : data.map((d,i)=>`${gx(i)},${gy(keys.slice(0,idx).reduce((s,k)=>s+(parseFloat(d[k])||0),0))}`).reverse().join(" ");
+        return <polygon key={key} points={`${top} ${bot}`} fill={colors[idx]} opacity={0.85}/>;
+      })}
+      {data.map((d,i)=><text key={i} x={gx(i)} y={H-4} textAnchor="middle" fontSize="9" fill="#9ca3af">{d[labelKey]}</text>)}
+    </svg>
+  );
+}
+// ── Waterfall Chart ───────────────────────────────────────────
+function WaterfallChart({ items=[], height=160 }) {
+  const maxAbs = Math.max(...items.map(i=>Math.abs(i.value)),1);
+  return (
+    <div style={{display:"flex",alignItems:"flex-end",gap:4,height,paddingTop:16,paddingBottom:22}}>
+      {items.map((it,i)=>{
+        const pct = Math.abs(it.value)/maxAbs*100;
+        const isT=it.type==="total", isP=it.value>=0;
+        return (
+          <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+            <div style={{fontSize:9,fontWeight:700,color:isT?"white":isP?"#15803d":"#dc2626",
+              background:isT?"#0f1f3d":"transparent",borderRadius:3,padding:"1px 3px",textAlign:"center"}}>
+              {isP&&!isT?"+":""}{Math.abs(it.value)>=1000?`${(it.value/1000).toFixed(0)}K`:it.value}
+            </div>
+            <div style={{width:"100%",borderRadius:3,height:`${Math.max(pct*1.4,5)}px`,
+              background:isT?"#0f1f3d":isP?"#86efac":"#fca5a5",
+              border:`2px solid ${isT?"#0f1f3d":isP?"#15803d":"#dc2626"}`}}/>
+            <div style={{fontSize:8,color:"#6b7280",textAlign:"center",marginTop:2,lineHeight:1.2}}>{it.label}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+// ── Gauge Chart ───────────────────────────────────────────────
+function GaugeChart({ value=0, max=100, label="", color="#15803d", size=88 }) {
+  const pct=Math.min(Math.max(value/max,0),1), r=36, cx=50, cy=54;
+  const pt=(deg)=>({x:cx+r*Math.cos(deg*Math.PI/180),y:cy-r*Math.sin(deg*Math.PI/180)});
+  const s=pt(180),e=pt(180-pct*180);
+  return (
+    <svg viewBox="0 0 100 62" style={{width:size}}>
+      <path d={`M ${cx-r} ${cy} A ${r} ${r} 0 1 1 ${cx+r} ${cy}`} fill="none" stroke="#e5e7eb" strokeWidth="9" strokeLinecap="round"/>
+      {pct>0.01&&<path d={`M ${s.x} ${s.y} A ${r} ${r} 0 ${pct>.5?1:0} 1 ${e.x} ${e.y}`} fill="none" stroke={color} strokeWidth="9" strokeLinecap="round"/>}
+      <text x={cx} y={cy-5} textAnchor="middle" fontSize="14" fontWeight="800" fill="#0f1f3d">{Math.round(pct*100)}%</text>
+      <text x={cx} y={cy+6} textAnchor="middle" fontSize="7" fill="#9ca3af">{label}</text>
+    </svg>
+  );
+}
+// ── Sparkline ─────────────────────────────────────────────────
+function Sparkline({ values=[], color="#c9a84c", width=70, height=26 }) {
+  if (values.length<2) return null;
+  const mx=Math.max(...values)||1, mn=Math.min(...values), rng=mx-mn||1;
+  const pts=values.map((v,i)=>`${(i/(values.length-1))*width},${height-((v-mn)/rng)*height}`).join(" ");
+  return <svg viewBox={`0 0 ${width} ${height}`} style={{width,height}}><polyline points={pts} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+}
+
 function SectionCard({ title, subtitle, children, action }) {
   return (
     <div style={{background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:16,overflow:'hidden',marginBottom:16,boxShadow:'0 2px 8px rgba(0,0,0,.04)'}}>
@@ -201,6 +269,7 @@ export default function Reports() {
   const [lensJobs,  setLensJobs] = useState(null);
   const [profit,    setProfit]   = useState(null);
   const [loading,   setLoading]  = useState(true);
+  const [compare,   setCompare]  = useState(null); // monthly comparison data
 
   useEffect(()=>{
     setLoading(true);
@@ -209,7 +278,8 @@ export default function Reports() {
       api('/reports/topsellers'),
       api('/reports/lensjobs'),
       api('/reports/profit'),
-    ]).then(([rev,top,jobs,prof])=>{ setRevenue(rev); setTop(top); setLensJobs(jobs); setProfit(prof); })
+      api(`/reports/comparison?month=${month}`),
+    ]).then(([rev,top,jobs,prof,cmp])=>{ setRevenue(rev); setTop(top); setLensJobs(jobs); setProfit(prof); setCompare(cmp); })
     .catch(console.error).finally(()=>setLoading(false));
   },[month]);
 
@@ -474,37 +544,130 @@ export default function Reports() {
       {/* ── COMPARE TAB ────────────────────────────────────── */}
       {!loading && activeTab==='compare' && (
         <div>
+          {/* ══ THIS MONTH vs LAST MONTH vs SAME MONTH LAST YEAR ══ */}
+          {compare && (
+            <div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:C.navy,marginBottom:4}}>📅 Monthly Comparison</div>
+              <div style={{fontSize:12,color:C.muted,marginBottom:16}}>
+                This month vs last month vs same month last year
+              </div>
+
+              {/* 3-column comparison cards */}
+              {[
+                {key:'revenue',    label:'Revenue',     color:'#0f1f3d', icon:'💰', fmt:fmtK},
+                {key:'net_profit', label:'Net Profit',  color:C.success, icon:'📈', fmt:fmtK},
+                {key:'expenses',   label:'Expenses',    color:C.danger,  icon:'💸', fmt:fmtK},
+                {key:'order_count',label:'Orders',      color:'#7c3aed', icon:'📋', fmt:(v)=>v},
+              ].map(metric => {
+                const tm = compare.thisMonth?.[metric.key] || 0;
+                const pm = compare.prevMonth?.[metric.key] || 0;
+                const ly = compare.lastYearMonth?.[metric.key] || 0;
+                const vsMo = pm>0 ? Math.round((tm-pm)/pm*100) : 0;
+                const vsYr = ly>0 ? Math.round((tm-ly)/ly*100) : 0;
+                return (
+                  <div key={metric.key} style={{background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:14,padding:'16px 20px',marginBottom:12}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                      <div style={{fontSize:13,fontWeight:700,color:C.navy}}>{metric.icon} {metric.label}</div>
+                      <div style={{display:'flex',gap:8}}>
+                        <span style={{fontSize:11,padding:'3px 10px',borderRadius:20,fontWeight:700,
+                          background:vsMo>=0?'#dcfce7':'#fee2e2',color:vsMo>=0?C.success:C.danger}}>
+                          {vsMo>=0?'▲':'▼'} {Math.abs(vsMo)}% vs last mo
+                        </span>
+                        <span style={{fontSize:11,padding:'3px 10px',borderRadius:20,fontWeight:700,
+                          background:vsYr>=0?'#dbeafe':'#fef9c3',color:vsYr>=0?'#1d4ed8':'#92400e'}}>
+                          {vsYr>=0?'▲':'▼'} {Math.abs(vsYr)}% vs last yr
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+                      {[
+                        {label:`This Month (${compare.thisMonth?.month||'—'})`, val:tm, highlight:true},
+                        {label:`Last Month (${compare.prevMonth?.month||'—'})`, val:pm},
+                        {label:`Last Year (${compare.lastYearMonth?.month||'—'})`, val:ly},
+                      ].map((col,ci)=>(
+                        <div key={ci} style={{background:col.highlight?`${metric.color}12`:C.cream,borderRadius:10,padding:'12px 14px',
+                          border:col.highlight?`2px solid ${metric.color}33`:`1px solid ${C.border}`}}>
+                          <div style={{fontSize:10,color:C.muted,marginBottom:6,fontWeight:600}}>{col.label}</div>
+                          <div style={{fontSize:20,fontWeight:800,color:col.highlight?metric.color:C.navy}}>{metric.fmt(col.val)}</div>
+                          {ci>0 && pm>0 && (
+                            <div style={{fontSize:10,color:tm>col.val?C.success:C.danger,marginTop:4,fontWeight:600}}>
+                              {tm>col.val?'▼ lower':'▲ higher'} this mo
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* P&L Waterfall for this month */}
+              <SectionCard title="📊 This Month P&L Breakdown" subtitle="How revenue flows to net profit">
+                <WaterfallChart height={160} items={[
+                  {label:'Orders',       value:Math.round(compare.thisMonth?.order_revenue||0),  type:'pos'},
+                  {label:'Quick Sales',  value:Math.round(compare.thisMonth?.qs_revenue||0),     type:'pos'},
+                  {label:'Repairs',      value:Math.round(compare.thisMonth?.repair_revenue||0), type:'pos'},
+                  {label:'Frame COGS',   value:-Math.round(compare.thisMonth?.cogs||0),          type:'neg'},
+                  {label:'Expenses',     value:-Math.round(compare.thisMonth?.expenses||0),      type:'neg'},
+                  {label:'Net Profit',   value:Math.round(compare.thisMonth?.net_profit||0),     type:'total'},
+                ]}/>
+              </SectionCard>
+
+              {/* 3 Gauges */}
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:16}}>
+                {[
+                  {label:'Net Margin', val:Math.max(compare.thisMonth?.net_margin||0,0), max:100, color:C.success},
+                  {label:'Collection Rate', val:compare.thisMonth?.revenue>0?Math.round((compare.thisMonth?.collected||0)/compare.thisMonth.revenue*100):0, max:100, color:'#0891b2'},
+                  {label:'Repair Revenue %', val:compare.thisMonth?.revenue>0?Math.round((compare.thisMonth?.repair_revenue||0)/compare.thisMonth.revenue*100):0, max:100, color:'#7c3aed'},
+                ].map((g,i)=>(
+                  <div key={i} style={{background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:14,padding:'16px',textAlign:'center'}}>
+                    <GaugeChart value={g.val} max={g.max} label={g.label} color={g.color} size={100}/>
+                    <div style={{fontSize:12,fontWeight:700,color:C.navy,marginTop:6}}>{g.label}</div>
+                    <div style={{fontSize:11,color:C.muted}}>{g.val}% this month</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ══ 6-MONTH TRENDS ══ */}
           {profit?.monthly?.length > 0 ? (
             <div>
-              {/* Side-by-side comparison of key metrics */}
+              {/* Stacked area chart — revenue streams */}
+              <SectionCard title="📈 Revenue Streams (Stacked Area)" subtitle="Orders + Quick Sales + Repairs over time">
+                <StackedAreaChart
+                  data={profit.monthly}
+                  keys={['order_revenue','qs_revenue','repair_revenue']}
+                  colors={[C.navy,'#0891b2','#7c3aed']}
+                  labelKey="month" height={180}/>
+                <Legend items={[{label:'Orders',color:C.navy},{label:'Quick Sales',color:'#0891b2'},{label:'Repairs',color:'#7c3aed'}]}/>
+              </SectionCard>
+
+              {/* Revenue vs Net Profit line */}
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
-                <SectionCard title="Revenue vs Net Profit" subtitle="How much you keep after all costs">
-                  <LineChart data={profit.monthly} valueKey="revenue"    labelKey="month" color={C.navy}    height={120}/>
-                  <div style={{height:8}}/>
-                  <LineChart data={profit.monthly} valueKey="net_profit" labelKey="month" color={C.success} height={120}/>
+                <SectionCard title="Revenue vs Net Profit" subtitle="6-month trend">
+                  <LineChart data={profit.monthly} valueKey="revenue"    labelKey="month" color={C.navy}    height={110}/>
+                  <div style={{height:6}}/>
+                  <LineChart data={profit.monthly} valueKey="net_profit" labelKey="month" color={C.success} height={110}/>
                   <Legend items={[{label:'Revenue',color:C.navy},{label:'Net Profit',color:C.success}]}/>
                 </SectionCard>
-
-                <SectionCard title="Cost Breakdown" subtitle="Where the money goes each month">
-                  <MultiBarChart
-                    data={profit.monthly}
-                    keys={['cost_of_goods','expenses']}
-                    colors={[C.danger,'#f97316']}
-                    labelKey="month" height={220}/>
-                  <Legend items={[{label:'Cost of Goods',color:C.danger},{label:'Expenses',color:'#f97316'}]}/>
+                <SectionCard title="Cost Breakdown" subtitle="COGS vs Operating Expenses">
+                  <MultiBarChart data={profit.monthly} keys={['cost_of_goods','expenses']}
+                    colors={[C.danger,'#f97316']} labelKey="month" height={220}/>
+                  <Legend items={[{label:'COGS',color:C.danger},{label:'Expenses',color:'#f97316'}]}/>
                 </SectionCard>
               </div>
 
-              {/* Margin % trend */}
-              <SectionCard title="Net Margin % Trend" subtitle="Your actual take-home percentage each month">
+              {/* Margin % bars */}
+              <SectionCard title="Net Margin % Trend" subtitle="Your monthly take-home percentage">
                 <div style={{display:'flex',alignItems:'flex-end',gap:8,height:120}}>
                   {profit.monthly.map((m,i)=>{
-                    const pct = parseFloat(m.net_margin)||0;
-                    const pos = pct >= 0;
+                    const pct=parseFloat(m.net_margin)||0, pos=pct>=0;
                     return (
                       <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
                         <div style={{fontSize:10,fontWeight:700,color:pos?C.success:C.danger}}>{pct}%</div>
-                        <div style={{width:'100%',background:pos?C.success:C.danger,borderRadius:'6px 6px 0 0',height:`${Math.max(Math.abs(pct)/50*80,3)}%`,minHeight:3,opacity:.85}}/>
+                        <div style={{width:'100%',background:pos?C.success:C.danger,borderRadius:'6px 6px 0 0',
+                          height:`${Math.max(Math.abs(pct)/50*80,3)}%`,minHeight:3,opacity:.85}}/>
                         <div style={{fontSize:9,color:C.muted}}>{m.month}</div>
                       </div>
                     );
@@ -512,33 +675,28 @@ export default function Reports() {
                 </div>
                 <div style={{display:'flex',justifyContent:'space-between',marginTop:12,fontSize:12,color:C.muted}}>
                   <span>Best: <b style={{color:C.success}}>{Math.max(...profit.monthly.map(m=>parseFloat(m.net_margin)||0))}%</b></span>
-                  <span>Average: <b style={{color:C.navy}}>{Math.round(profit.monthly.reduce((s,m)=>s+(parseFloat(m.net_margin)||0),0)/profit.monthly.length)}%</b></span>
+                  <span>Avg: <b style={{color:C.navy}}>{Math.round(profit.monthly.reduce((s,m)=>s+(parseFloat(m.net_margin)||0),0)/profit.monthly.length)}%</b></span>
                   <span>Latest: <b style={{color:C.navy}}>{profit.monthly[profit.monthly.length-1]?.net_margin}%</b></span>
                 </div>
               </SectionCard>
 
-              {/* Revenue source split per month */}
+              {/* Revenue source stacked bars */}
               {revenue?.trend?.length > 0 && (
-                <SectionCard title="Monthly Revenue Split" subtitle="Orders vs Quick Sales vs Repairs contribution">
+                <SectionCard title="Monthly Revenue Mix" subtitle="Orders vs Quick Sales vs Repairs">
                   <div style={{overflowX:'auto'}}>
                     {revenue.trend.map((m,i)=>{
-                      const tot = (parseFloat(m.order_revenue)||0)+(parseFloat(m.qs_revenue)||0)+(parseFloat(m.repair_revenue)||0)||1;
-                      const segs = [
-                        {label:'Orders',    val:parseFloat(m.order_revenue)||0,  color:C.navy},
-                        {label:'QS',        val:parseFloat(m.qs_revenue)||0,     color:'#0891b2'},
-                        {label:'Repairs',   val:parseFloat(m.repair_revenue)||0, color:'#7c3aed'},
-                      ];
+                      const tot=(parseFloat(m.order_revenue)||0)+(parseFloat(m.qs_revenue)||0)+(parseFloat(m.repair_revenue)||0)||1;
                       return (
-                        <div key={i} style={{display:'flex',alignItems:'center',gap:12,marginBottom:10}}>
-                          <div style={{fontSize:11,fontWeight:600,color:C.navy,minWidth:36}}>{m.month}</div>
+                        <div key={i} style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
+                          <div style={{fontSize:11,fontWeight:600,color:C.navy,minWidth:38}}>{m.month}</div>
                           <div style={{flex:1,height:22,borderRadius:11,overflow:'hidden',display:'flex',background:'#f3f4f6'}}>
-                            {segs.map((s,si)=>(
-                              <div key={si} style={{width:`${s.val/tot*100}%`,background:s.color,display:'flex',alignItems:'center',justifyContent:'center',minWidth:s.val>0?24:0,transition:'width .3s'}}>
-                                {s.val/tot>0.12 && <span style={{fontSize:9,color:'white',fontWeight:700}}>{Math.round(s.val/tot*100)}%</span>}
+                            {[{v:parseFloat(m.order_revenue)||0,c:C.navy},{v:parseFloat(m.qs_revenue)||0,c:'#0891b2'},{v:parseFloat(m.repair_revenue)||0,c:'#7c3aed'}].map((s,si)=>(
+                              <div key={si} style={{width:`${s.v/tot*100}%`,background:s.c,display:'flex',alignItems:'center',justifyContent:'center',minWidth:s.v>0?20:0}}>
+                                {s.v/tot>0.1&&<span style={{fontSize:9,color:'white',fontWeight:700}}>{Math.round(s.v/tot*100)}%</span>}
                               </div>
                             ))}
                           </div>
-                          <div style={{fontSize:11,fontWeight:700,color:C.navy,minWidth:64,textAlign:'right'}}>{fmtK(tot)}</div>
+                          <div style={{fontSize:11,fontWeight:700,color:C.navy,minWidth:60,textAlign:'right'}}>{fmtK(tot)}</div>
                         </div>
                       );
                     })}
@@ -553,62 +711,7 @@ export default function Reports() {
         </div>
       )}
 
-      {/* ── LENS JOBS TAB ──────────────────────────────────── */}
-      {!loading && activeTab==='lensjobs' && (
-        <div>
-          {(() => {
-            const byLab = (lensJobs||[]).reduce((acc,o)=>{ const lab=o.lens_company||'Unknown'; if(!acc[lab]) acc[lab]={count:0,pending:0}; acc[lab].count++; if(o.lens_step<3) acc[lab].pending++; return acc; },{});
-            return (
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:12,marginBottom:20}}>
-                {Object.entries(byLab).map(([lab,s])=>(
-                  <StatCard key={lab} label={lab} value={s.count} icon="🔬" sub={`${s.pending} pending · ${s.count-s.pending} done`} color={s.pending>0?C.danger:C.success}/>
-                ))}
-                {!lensJobs?.length && <div style={{gridColumn:'1/-1',textAlign:'center',padding:40,color:C.muted,fontSize:13}}>No active lens jobs</div>}
-              </div>
-            );
-          })()}
 
-          <SectionCard title="Active Lens Jobs" subtitle="All lenses currently at labs">
-            {!lensJobs?.length
-              ? <div style={{textAlign:'center',padding:30,color:C.muted,fontSize:13}}>No active lens jobs</div>
-              : lensJobs.map(o=>{
-                  const steps = ['Sent','Grinding','Ready','Received'];
-                  const step  = parseInt(o.lens_step||0);
-                  return (
-                    <div key={o.id} style={{padding:'14px 0',borderBottom:`1px solid ${C.border}`}}>
-                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10,flexWrap:'wrap',gap:6}}>
-                        <div>
-                          <div style={{fontSize:14,fontWeight:700,color:C.navy}}>{o.customer_name}</div>
-                          <div style={{fontSize:11,color:C.muted,marginTop:2}}>{o.order_number} · {o.lens_company} · {o.lens_type}</div>
-                        </div>
-                        <div style={{display:'flex',alignItems:'center',gap:8}}>
-                          <span style={{fontSize:12,fontWeight:700,color:'white',background:step>=3?C.success:step===2?C.gold:step===1?'#0891b2':C.navy,padding:'3px 10px',borderRadius:20}}>{steps[step]}</span>
-                          {o.deliver_date && <span style={{fontSize:11,color:C.muted}}>Due: {o.deliver_date?.slice(0,10)}</span>}
-                        </div>
-                      </div>
-                      {/* Progress steps */}
-                      <div style={{display:'flex',gap:4,alignItems:'center'}}>
-                        {steps.map((s,i)=>(
-                          <React.Fragment key={i}>
-                            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
-                              <div style={{width:24,height:24,borderRadius:'50%',background:i<=step?C.gold:C.cream,border:`2px solid ${i<=step?C.gold:C.border}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:i<=step?C.navy:C.muted}}>
-                                {i<=step?'✓':i+1}
-                              </div>
-                              <div style={{fontSize:8,color:i<=step?C.navy:C.muted,fontWeight:i===step?700:400}}>{s}</div>
-                            </div>
-                            {i<steps.length-1 && <div style={{flex:1,height:2,background:i<step?C.gold:C.border,marginBottom:14,borderRadius:1}}/>}
-                          </React.Fragment>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })
-            }
-          </SectionCard>
-        </div>
-      )}
-
-      {/* ── TOP SELLERS TAB ────────────────────────────────── */}
       {!loading && activeTab==='topsellers' && (
         <div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>

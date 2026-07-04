@@ -360,4 +360,65 @@ router.get('/topsellers', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+
+// ── GET /api/reports/comparison?month=YYYY-MM ────────────────
+// Returns this month, last month, and same month last year data
+router.get('/comparison', auth, async (req, res) => {
+  try {
+    const month    = req.query.month || new Date().toISOString().slice(0, 7);
+    const [y, m]   = month.split('-').map(Number);
+    const lastM    = m === 1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
+    const lastYear = `${y-1}-${String(m).padStart(2,'0')}`;
+
+    const periodData = async (mo) => {
+      const [orders, qs, repairs, expenses] = await Promise.all([
+        safeQuery(`SELECT
+          COALESCE(SUM(total_amount),0) AS revenue,
+          COALESCE(SUM(advance_amount),0) AS collected,
+          COALESCE(SUM(balance_amount),0) AS owed,
+          COALESCE(SUM(CASE WHEN customer_own_frame THEN 0 ELSE COALESCE(frame_buy_price,0) END),0) AS frame_cogs,
+          COUNT(*) AS order_count
+        FROM orders WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [mo]),
+        safeQuery(`SELECT COALESCE(SUM(total),0) AS qs_revenue, COUNT(*) AS qs_count FROM quick_sales WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [mo]),
+        safeQuery(`SELECT COALESCE(SUM(charge),0) AS repair_revenue, COUNT(*) AS repair_count FROM repairs WHERE TO_CHAR(created_at,'YYYY-MM')=$1 AND status IN ('done','collected')`, [mo]),
+        safeQuery(`SELECT COALESCE(SUM(amount),0) AS total_expenses FROM expenses WHERE TO_CHAR(date,'YYYY-MM')=$1 AND category != 'Lab Payment'`, [mo]),
+      ]);
+      const ord = orders[0]||{};
+      const q   = qs[0]||{};
+      const r   = repairs[0]||{};
+      const e   = expenses[0]||{};
+      const total_revenue = parseFloat(ord.revenue||0) + parseFloat(q.qs_revenue||0) + parseFloat(r.repair_revenue||0);
+      const expenses_amt  = parseFloat(e.total_expenses||0);
+      const cogs          = parseFloat(ord.frame_cogs||0);
+      const gross_profit  = total_revenue - cogs;
+      const net_profit    = gross_profit - expenses_amt;
+      return {
+        month: mo,
+        revenue:       total_revenue,
+        order_revenue: parseFloat(ord.revenue||0),
+        qs_revenue:    parseFloat(q.qs_revenue||0),
+        repair_revenue:parseFloat(r.repair_revenue||0),
+        expenses:      expenses_amt,
+        cogs,
+        gross_profit,
+        net_profit,
+        net_margin:    total_revenue > 0 ? Math.round(net_profit/total_revenue*100) : 0,
+        order_count:   parseInt(ord.order_count||0),
+        qs_count:      parseInt(q.qs_count||0),
+        repair_count:  parseInt(r.repair_count||0),
+        collected:     parseFloat(ord.collected||0),
+        owed:          parseFloat(ord.owed||0),
+      };
+    };
+
+    const [thisMonth, prevMonth, lastYearMonth] = await Promise.all([
+      periodData(month),
+      periodData(lastM),
+      periodData(lastYear),
+    ]);
+
+    res.json({ thisMonth, prevMonth, lastYearMonth });
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
 module.exports = router;
