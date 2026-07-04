@@ -77,7 +77,9 @@ router.post('/', auth, async (req, res) => {
     )).rows[0];
 
     // Auto-update inventory
-    if (update_inventory) {
+    // Auto-deduct when Kalutota takes stock ('out') even if update_inventory not explicitly set
+    const should_auto_update = update_inventory || (direction === 'out' && !!(inventory_item_name || description));
+    if (should_auto_update) {
       const itemName = (inventory_item_name||description).trim();
       const qty      = parseInt(quantity);
       const cat      = category||'Old Stock';

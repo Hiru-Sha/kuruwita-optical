@@ -96,15 +96,16 @@ export default function Warranty() {
     setSaving(true);
     try {
       await apiPost('/repairs', {
-        customer_name:  selected.customer_name,
-        phone:          selected.phone,
-        customer_id:    selected.customer_id,
-        repair_type:    `Warranty Claim — ${claim.type === 'both' ? 'Frame & Lens' : claim.type === 'frame' ? 'Frame' : 'Lens'}`,
-        description:    claim.issue,
-        charge:         parseFloat(claim.charge) || 0,
-        payment_method: 'cash',
-        status:         'done',
-        notes:          `Warranty claim on order ${selected.order_number}. Action: ${claim.action}.`,
+        customer_name:   selected.customer_name,
+        phone:           selected.phone,
+        customer_id:     selected.customer_id,
+        repair_type:     `🛡️ Warranty — ${claim.type==='both'?'Frame & Lens':claim.type==='frame'?'Frame Only':'Lens Only'}`,
+        description:     claim.issue,
+        frame_description: selected.frame || '',
+        charge:          parseFloat(claim.charge) || 0,
+        payment_method:  'cash',
+        status:          'done',
+        notes:           `WARRANTY CLAIM | Order: ${selected.order_number} | Frame warranty: ${selected.warranty_frame||'—'} | Lens warranty: ${selected.warranty_lens||'—'} | Action: ${claim.action}`,
       });
       showToast(`✅ Warranty claim filed for ${selected.order_number}`);
       setSelected(null);
@@ -244,6 +245,10 @@ export default function Warranty() {
                 <div style={{ fontSize:18, fontWeight:700, color:C.navy }}>📋 File Warranty Claim</div>
                 <div style={{ fontSize:13, color:C.muted, marginTop:2 }}>
                   {selected.order_number} · {selected.customer_name}
+                </div>
+                <div style={{ display:'flex', gap:6, marginTop:6 }}>
+                  {selected.warranty_frame && <span style={{ fontSize:11, background:'#dcfce7', color:'#15803d', padding:'2px 10px', borderRadius:20, fontWeight:700 }}>🖼️ Frame: {selected.warranty_frame}</span>}
+                  {selected.warranty_lens  && <span style={{ fontSize:11, background:'#dbeafe', color:'#1d4ed8', padding:'2px 10px', borderRadius:20, fontWeight:700 }}>👁️ Lens: {selected.warranty_lens}</span>}
                 </div>
               </div>
               <button onClick={()=>setSelected(null)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:C.muted }}>✕</button>

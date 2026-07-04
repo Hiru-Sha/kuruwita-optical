@@ -251,8 +251,24 @@ ${data.orders.outstanding > 0 ? `
               <div style={{ fontSize:12, color:data.summary.cashInHand>=0?'#ede9e0':C.muted }}>Total In</div>
               <div style={{ fontSize:22, fontWeight:700, color:data.summary.cashInHand>=0?'#86efac':C.navy }}>{fmt(data.summary.totalIn)}</div>
               {data.summary.toDeposit > 0 && (
-                <div style={{ marginTop:8, background:'rgba(255,255,255,.15)', borderRadius:8, padding:'6px 12px', fontSize:12, color:data.summary.cashInHand>=0?'white':C.navy, fontWeight:600 }}>
-                  Suggest deposit: {fmt(data.summary.toDeposit)}
+                <div style={{ marginTop:8, background:'rgba(255,255,255,.15)', borderRadius:8, padding:'8px 12px', fontSize:12, color:data.summary.cashInHand>=0?'white':C.navy, fontWeight:600, display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
+                  <span>💡 {fmt(data.summary.toDeposit)} ready to deposit</span>
+                  <button onClick={async () => {
+                    try {
+                      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+                      const token = localStorage.getItem('ko_token');
+                      const r = await fetch(`${BASE}/cash-deposits`, {
+                        method:'POST',
+                        headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+                        body:JSON.stringify({ date:viewDate, amount:data.summary.toDeposit, payment_type:'cash', notes:`EOD deposit — ${viewDate}` }),
+                      });
+                      if (r.ok) { alert(`✅ Rs. ${Number(data.summary.toDeposit).toLocaleString()} deposit recorded!`); loadDay(viewDate); }
+                      else { const e=await r.json(); alert('❌ '+(e.error||'Failed')); }
+                    } catch(e) { alert('❌ '+e.message); }
+                  }}
+                  style={{ padding:'5px 12px', background:'white', color:'#1d4ed8', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', fontFamily:'inherit' }}>
+                    💰 Record
+                  </button>
                 </div>
               )}
             </div>

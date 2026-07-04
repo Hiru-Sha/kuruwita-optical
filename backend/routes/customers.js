@@ -29,7 +29,10 @@ router.get('/', auth, async (req, res) => {
         SELECT
           customer_id,
           COUNT(*)                          AS total_orders,
-          COALESCE(SUM(total_amount), 0)    AS total_spent,
+          COALESCE(SUM(total_amount), 0)
+            + COALESCE((SELECT SUM(total)  FROM quick_sales WHERE customer_id = c.id), 0)
+            + COALESCE((SELECT SUM(charge) FROM repairs     WHERE customer_id = c.id AND charge > 0), 0)
+            AS total_spent,
           COALESCE(SUM(balance_amount), 0)  AS total_balance,
           BOOL_OR(has_rx AND NOT COALESCE(rx_returned, false)) AS rx_held
         FROM orders
