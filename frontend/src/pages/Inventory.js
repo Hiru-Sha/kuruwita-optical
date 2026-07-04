@@ -23,7 +23,7 @@ function AutoInput({ value, onChange, placeholder, style, suggestions=[] }) {
         onBlur={()=>setTimeout(()=>setOpen(false), 200)}
         placeholder={placeholder} style={style}/>
       {open && filtered.length > 0 && (
-        <div style={{ position:'absolute', top:'100%', left:0, right:0, background:C.surface,
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white',
           border:'1.5px solid #c9a84c', borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,.15)',
           zIndex:200, overflow:'hidden', marginTop:2, maxHeight:220, overflowY:'auto' }}>
           {filtered.map((s,i)=>(
@@ -44,21 +44,7 @@ function AutoInput({ value, onChange, placeholder, style, suggestions=[] }) {
 
 import { StickerModal, QRScanner, PriceUpdateModal } from '../components/QRStickers';
 
-const C = {
-  navy:    'var(--navy)',
-  gold:    'var(--gold)',
-  cream:   'var(--bg-sunken)',
-  surface: 'var(--bg-surface)',
-  border:  'var(--border)',
-  muted:   'var(--text-muted)',
-  success: 'var(--success)',
-  danger:  'var(--danger)',
-  warning: 'var(--warning)',
-  info:    'var(--info)',
-  white:   'var(--bg-surface)',
-  blue:    '#2563eb',
-  purple:  '#7c3aed',
-};
+const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280', success:'#2d7a4f', danger:'#c0392b' };
 const fmtMoney = (n) => 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 // Compress image to max 500px wide, 70% quality JPEG — keeps size under 50KB
 const compressImage = (file, maxWidth=500, quality=0.7) => new Promise((resolve, reject) => {
@@ -100,7 +86,7 @@ const REASONS = [
   'Wrong count correction','Expired / spoiled','Given as sample','Other',
 ];
 
-const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:C.cream, color:C.navy, width:'100%' };
+const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%' };
 const SEL = { ...INP, cursor:'pointer' };
 const LBL = { fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, marginBottom:5, display:'block' };
 
@@ -238,7 +224,7 @@ function ItemCard({ item, onClick, onSticker }) {
   else if (item.category==='Reading Glasses')sub=[item.rg_power,item.rg_lens_type].filter(Boolean).join(' · ');
   else sub=item.brand||'';
   return (
-    <div ref={cardRef} style={{ background:C.surface, border:`1.5px solid ${isOut?'#d1d5db':isLow?'#fca5a5':C.border}`, borderRadius:14, cursor:'pointer', overflow:'hidden', position:'relative', transition:'all .15s', borderLeft:isLow&&!isOut?`4px solid ${C.danger}`:undefined }}
+    <div ref={cardRef} style={{ background:'white', border:`1.5px solid ${isOut?'#d1d5db':isLow?'#fca5a5':C.border}`, borderRadius:14, cursor:'pointer', overflow:'hidden', position:'relative', transition:'all .15s', borderLeft:isLow&&!isOut?`4px solid ${C.danger}`:undefined }}
       onMouseEnter={e=>e.currentTarget.style.borderColor=C.gold}
       onMouseLeave={e=>e.currentTarget.style.borderColor=isOut?'#d1d5db':isLow?'#fca5a5':C.border}>
       <div onClick={onClick} style={{ height:110, background:C.cream, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative' }}>
@@ -358,12 +344,12 @@ function AdjustmentPanel({ item, onDone }) {
       <div style={{ background:C.navy, borderRadius:12, padding:'14px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <div>
           <div style={{ fontSize:10, color:C.gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:3 }}>Current Stock</div>
-          <div style={{ fontFamily:'var(--font-display)', fontSize:32, fontWeight:700, color:'white' }}>{currentQty}</div>
+          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:32, fontWeight:700, color:'white' }}>{currentQty}</div>
         </div>
         {previewQty !== null && (
           <div style={{ textAlign:'right' }}>
             <div style={{ fontSize:10, color:'#ede9e0', marginBottom:3 }}>After adjustment</div>
-            <div style={{ fontFamily:'var(--font-display)', fontSize:28, fontWeight:700, color: adjType==='add'?'#86efac':'#fca5a5' }}>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color: adjType==='add'?'#86efac':'#fca5a5' }}>
               {previewQty}
             </div>
           </div>
@@ -585,7 +571,7 @@ function AddVariantPanel({ item, items, onDone }) {
           </div>
           <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
             {existing.map(e=>(
-              <span key={e.id} style={{ background:C.surface, border:'1px solid #bae6fd', borderRadius:20,
+              <span key={e.id} style={{ background:'white', border:'1px solid #bae6fd', borderRadius:20,
                 padding:'3px 10px', fontSize:12, color:'#1e40af', fontWeight:600 }}>
                 {e.frame_color} ({e.quantity} in stock)
               </span>
@@ -600,7 +586,7 @@ function AddVariantPanel({ item, items, onDone }) {
       </div>
 
       {variants.map((v, i) => (
-        <div key={i} style={{ background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:12,
+        <div key={i} style={{ background:'white', border:`1.5px solid ${C.border}`, borderRadius:12,
           padding:'14px', marginBottom:10 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
             <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Variant {i+1}</div>
@@ -817,13 +803,11 @@ export default function Inventory() {
   const [activeCat,    setActiveCat]   = useState('All');
   const [stockFilter,  setStockFilter]  = useState('all'); // 'all' | 'low' | 'out'
   const [subFilter,    setSubFilter]   = useState('');
-  const [filterColor,  setFilterColor]  = useState('');
-  const [filterBrand,  setFilterBrand]  = useState('');
-  const [filterShape,  setFilterShape]  = useState('');
-  const [filterMat,    setFilterMat]    = useState('');
   const [search,       setSearch]      = useState('');
   const [selected,     setSelected]    = useState(null);
   const [panelTab,     setPanelTab]    = useState('details');
+  const [stockHistory, setStockHistory] = useState([]);
+  const [histLoading,  setHistLoading]  = useState(false);
   const [showAdd,      setShowAdd]     = useState(false);
   const [addStep,      setAddStep]     = useState('category'); // 'category' | 'form'
   const [suggestions,  setSuggestions] = useState({ dealers:[], brands:[], names:[], models:[], colors:[], frame_types:[], sg_types:[], materials:[], sizes:[] });
@@ -861,7 +845,7 @@ export default function Inventory() {
     setLoading(true);
     const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
     const token = localStorage.getItem('ko_token');
-    const params = new URLSearchParams({ limit:'5000', no_images:'1' });
+    const params = new URLSearchParams({ limit:'500', no_images:'1' });
     if (search)                   params.set('search', search);
     if (activeCat !== 'All')      params.set('category', activeCat);
     fetch(`${BASE}/inventory?${params}`, { headers:{ Authorization:`Bearer ${token}` } })
@@ -1302,12 +1286,12 @@ export default function Inventory() {
   const val = items.reduce((s,i)=>s+(parseFloat(i.cost_price||0)*i.quantity),0);
 
   return (
-    <div style={{ fontFamily:'var(--font-body)' }}>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif" }}>
       {/* ── Page header ── */}
       <div style={{ marginBottom:20 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12, marginBottom:14 }}>
           <div>
-            <h1 style={{ fontFamily:'var(--font-display)', fontSize:28, color:C.navy, margin:0 }}>Inventory</h1>
+            <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, color:C.navy, margin:0 }}>Inventory</h1>
             <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Frames, sunglasses, accessories and supplies</p>
           </div>
           {/* Primary action */}
@@ -1355,7 +1339,7 @@ export default function Inventory() {
             </div>
           </div>
           <button onClick={()=>{ setPcPolling(false); setPcSessionId(null); clearInterval(pollIntervalRef.current); }}
-            style={{ padding:'6px 14px', background:C.surface, border:'1px solid #93c5fd', borderRadius:8,
+            style={{ padding:'6px 14px', background:'white', border:'1px solid #93c5fd', borderRadius:8,
               fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#1e40af', flexShrink:0 }}>
             Cancel
           </button>
@@ -1418,7 +1402,7 @@ export default function Inventory() {
                     <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:s.dark?'rgba(201,168,76,.8)':C.muted }}>{s.l}</div>
                     <span style={{ fontSize:18 }}>{s.icon}</span>
                   </div>
-                  <div style={{ fontFamily:'var(--font-display)', fontSize:26, fontWeight:700, color:s.dark?'white':(s.c||C.navy), lineHeight:1 }}>{s.v}</div>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26, fontWeight:700, color:s.dark?'white':(s.c||C.navy), lineHeight:1 }}>{s.v}</div>
                   <div style={{ fontSize:11, color:s.dark?'rgba(255,255,255,.5)':C.muted, marginTop:4 }}>{s.sub}</div>
                   {s.sf && s.sf!=='all' && stockFilter!==s.sf && <div style={{ fontSize:9, color:C.gold, marginTop:4, fontWeight:600 }}>↑ click to filter</div>}
                 </div>
@@ -1430,7 +1414,7 @@ export default function Inventory() {
                   {stockFilter==='low' ? '⚠️ Showing low stock items only' : '❌ Showing out of stock items only'}
                 </span>
                 <button onClick={()=>setStockFilter('all')}
-                  style={{ fontSize:12, fontWeight:600, background:C.surface, border:`1px solid ${C.danger}`, borderRadius:7, padding:'3px 10px', cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
+                  style={{ fontSize:12, fontWeight:600, background:'white', border:`1px solid ${C.danger}`, borderRadius:7, padding:'3px 10px', cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
                   ✕ Clear filter
                 </button>
               </div>
@@ -1485,11 +1469,11 @@ export default function Inventory() {
 
       {/* ── ADD ITEM WIZARD ─────────────────────────────────── */}
       {showAdd && (
-        <div style={{ background:C.surface, border:`2px solid ${C.gold}`, borderRadius:14, marginBottom:16, overflow:'hidden' }}>
+        <div style={{ background:'white', border:`2px solid ${C.gold}`, borderRadius:14, marginBottom:16, overflow:'hidden' }}>
 
           {/* Wizard header */}
           <div style={{ background:C.navy, padding:'12px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <div style={{ fontFamily:'var(--font-display)', fontSize:16, color:'white' }}>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, color:'white' }}>
               {addStep==='category' ? '➕ Add New Item — Choose Category' : `➕ Add ${addCat}`}
             </div>
             <button onClick={()=>{ setShowAdd(false); setImgData(null); setAddCat(''); setAddStep('category'); setForm(defaults('Frames')); setColorVariants([{color:'Black',qty:'1',image:null}]); }}
@@ -1552,7 +1536,7 @@ export default function Inventory() {
                     setAddStep('form');
                   }}
                     style={{ padding:'14px 10px', borderRadius:12, border:`2px solid ${C.border}`,
-                      background:C.surface, cursor:'pointer', fontFamily:'inherit',
+                      background:'white', cursor:'pointer', fontFamily:'inherit',
                       display:'flex', flexDirection:'column', alignItems:'center', gap:6,
                       transition:'all .15s' }}
                     onMouseEnter={e=>{ e.currentTarget.style.border=`2px solid ${color}`; e.currentTarget.style.background='#f8f5ef'; }}
@@ -1580,7 +1564,7 @@ export default function Inventory() {
                   </div>
                 </div>
                 <button onClick={()=>{ setAddStep('category'); }}
-                  style={{ padding:'5px 12px', background:C.surface, border:`1px solid ${C.border}`, borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted, flexShrink:0 }}>
+                  style={{ padding:'5px 12px', background:'white', border:`1px solid ${C.border}`, borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted, flexShrink:0 }}>
                   ← Change
                 </button>
                 {!imgData && (
@@ -1663,7 +1647,7 @@ export default function Inventory() {
                       </button>
                     </div>
                     {(form.sizeVariants||[]).map((sv,si)=>(
-                      <div key={si} style={{ background:C.surface, border:'1px solid #fde68a', borderRadius:10, padding:'10px 12px', marginBottom:10 }}>
+                      <div key={si} style={{ background:'white', border:'1px solid #fde68a', borderRadius:10, padding:'10px 12px', marginBottom:10 }}>
                         {/* Size header */}
                         <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:8 }}>
                           <select value={['XS','S','M','L','XL','XXL','Small','Medium','Large','Extra Large','One Size','36','38','40','42','44','46','48','50','52','54','56','58','60'].includes(sv.size)?sv.size:'Custom'}
@@ -1741,7 +1725,7 @@ export default function Inventory() {
 
 
       {/* Category tabs */}
-      <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, marginBottom:16, overflowX:'auto', background:C.surface, borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
+      <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, marginBottom:16, overflowX:'auto', background:'white', borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
         {CATS.map(c=>(
           <button key={c} onClick={()=>setActiveCat(c)}
             style={{ padding:'11px 16px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:activeCat===c?C.navy:C.muted, borderBottom:`3px solid ${activeCat===c?C.gold:'transparent'}`, marginBottom:-1, transition:'all .15s', display:'flex', alignItems:'center', gap:6 }}>
@@ -1750,37 +1734,9 @@ export default function Inventory() {
         ))}
       </div>
 
-      {/* Search + attribute filters */}
-      <div style={{ marginBottom:14, display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Search items..." style={{ ...INP, maxWidth:320, flex:'1 1 200px' }}/>
-
-        {suggestions.colors.length > 0 && (
-          <select value={filterColor} onChange={e=>setFilterColor(e.target.value)}
-            style={{ padding:'9px 10px', border:`1.5px solid ${filterColor?'var(--navy)':C.border}`, borderRadius:9, fontSize:12, fontFamily:'inherit', outline:'none', background:filterColor?C.navy:C.cream, color:filterColor?'white':C.navy, cursor:'pointer' }}>
-            <option value="">🎨 Color</option>
-            {suggestions.colors.map(c=><option key={c} value={c}>{c}</option>)}
-          </select>
-        )}
-        {suggestions.brands.length > 0 && (
-          <select value={filterBrand} onChange={e=>setFilterBrand(e.target.value)}
-            style={{ padding:'9px 10px', border:`1.5px solid ${filterBrand?'var(--navy)':C.border}`, borderRadius:9, fontSize:12, fontFamily:'inherit', outline:'none', background:filterBrand?C.navy:C.cream, color:filterBrand?'white':C.navy, cursor:'pointer' }}>
-            <option value="">🏷️ Brand</option>
-            {suggestions.brands.map(b=><option key={b} value={b}>{b}</option>)}
-          </select>
-        )}
-        {suggestions.materials.length > 0 && (
-          <select value={filterMat} onChange={e=>setFilterMat(e.target.value)}
-            style={{ padding:'9px 10px', border:`1.5px solid ${filterMat?'var(--navy)':C.border}`, borderRadius:9, fontSize:12, fontFamily:'inherit', outline:'none', background:filterMat?C.navy:C.cream, color:filterMat?'white':C.navy, cursor:'pointer' }}>
-            <option value="">🔩 Material</option>
-            {suggestions.materials.map(m=><option key={m} value={m}>{m}</option>)}
-          </select>
-        )}
-        {(filterColor||filterBrand||filterShape||filterMat) && (
-          <button onClick={()=>{setFilterColor('');setFilterBrand('');setFilterShape('');setFilterMat('');}}
-            style={{ padding:'9px 12px', background:'#fee2e2', color:C.danger, border:`1.5px solid #fca5a5`, borderRadius:9, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-            ✕ Clear filters
-          </button>
-        )}
+      {/* Search */}
+      <div style={{ marginBottom:14 }}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Search items..." style={{ ...INP, maxWidth:380 }}/>
       </div>
 
       {/* Bulk reorder banner — shows when low/out stock items exist */}
@@ -1818,11 +1774,6 @@ export default function Inventory() {
                 // Stock filter
                 if (stockFilter==='low') return item.quantity>0 && item.quantity<=item.min_quantity;
                 if (stockFilter==='out') return item.quantity===0;
-                // Attribute filters
-                if (filterColor && (item.frame_color||'').toLowerCase() !== filterColor.toLowerCase()) return false;
-                if (filterBrand && !(item.brand||'').toLowerCase().includes(filterBrand.toLowerCase())) return false;
-                if (filterShape && (item.frame_shape||'').toLowerCase() !== filterShape.toLowerCase()) return false;
-                if (filterMat   && (item.frame_material||item.rg_material||'').toLowerCase() !== filterMat.toLowerCase()) return false;
                 // Hide Old Stock in All tab — only show when Old Stock tab is active
                 if (activeCat==='All' && item.category==='Old Stock') return false;
                 if (!subFilter) return true;
@@ -1849,7 +1800,7 @@ export default function Inventory() {
       {selected && (
         <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.45)', zIndex:200, display:'flex', alignItems:'flex-start', justifyContent:'flex-end' }}
           onClick={e=>{ if(e.target===e.currentTarget) setSelected(null); }}>
-          <div style={{ background:C.surface, width:'100%', maxWidth:480, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
+          <div style={{ background:'white', width:'100%', maxWidth:480, height:'100vh', overflowY:'auto', boxShadow:'-8px 0 40px rgba(0,0,0,.18)' }}>
 
             {/* Photo */}
             <div style={{ height:selected.image_url?'auto':'160px', maxHeight:320, background:C.cream, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative' }}>
@@ -1868,7 +1819,7 @@ export default function Inventory() {
 
             {/* Name + tabs */}
             <div style={{ padding:'16px 22px 0' }}>
-              <div style={{ fontFamily:'var(--font-display)', fontSize:17, color:C.navy, marginBottom:2 }}>{selected.name}</div>
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:17, color:C.navy, marginBottom:2 }}>{selected.name}</div>
               <div style={{ fontSize:12, color:C.muted, marginBottom:12 }}>{selected.category}</div>
 
               {/* Stock qty badge */}
@@ -1925,10 +1876,12 @@ export default function Inventory() {
                 {[
                   { key:'details',    label:'📋 Details'    },
                   { key:'adjust',     label:'📦 Adjust Stock'},
+                  { key:'history',    label:'📜 History'     },
                   { key:'variant',    label:'🎨 Add Colour'  },
                 ].map(t=>(
                   <button key={t.key} onClick={()=>setPanelTab(t.key)}
-                    style={{ padding:'10px 14px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:panelTab===t.key?C.navy:C.muted, borderBottom:`2.5px solid ${panelTab===t.key?C.gold:'transparent'}`, marginBottom:-1 }}>
+                    style={{ padding:'10px 14px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:panelTab===t.key?C.navy:C.muted, borderBottom:`2.5px solid ${panelTab===t.key?C.gold:'transparent'}`, marginBottom:-1 }}
+                    onClick={()=>{ setPanelTab(t.key); if(t.key==='history'&&selected?.id) loadHistory(selected.id); }}>
                     {t.label}
                   </button>
                 ))}
@@ -2044,7 +1997,7 @@ export default function Inventory() {
                   {/* ── Actions ── */}
                   <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                     <button onClick={()=>handleSavePanel(selected)} style={{ padding:'10px 18px', background:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>💾 Save All</button>
-                    <button onClick={()=>{ setStickerItems([selected]); setShowStickers(true); }} style={{ padding:'10px 16px', background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>🏷️ Sticker</button>
+                    <button onClick={()=>{ setStickerItems([selected]); setShowStickers(true); }} style={{ padding:'10px 16px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>🏷️ Sticker</button>
                     <button onClick={()=>{ setPriceUpdateItems([selected]); setShowPriceUpdate(true); }} style={{ padding:'10px 16px', background:'#fef9c3', border:`1.5px solid #fde68a`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#92400e' }}>💰 Price Label</button>
                     <button onClick={()=>setPanelTab('adjust')} style={{ padding:'10px 16px', background:'#eff6ff', border:`1.5px solid #bae6fd`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#0369a1' }}>📦 Adjust Stock</button>
                     <button onClick={()=>handleDelete(selected.id)} style={{ padding:'10px 14px', background:'#fee2e2', color:C.danger, border:`1.5px solid #fca5a5`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>🗑️</button>
@@ -2053,6 +2006,81 @@ export default function Inventory() {
               )}
 
               {/* ── ADJUST STOCK TAB ── */}
+              {/* ── HISTORY TAB ── */}
+              {panelTab==='history' && (
+                <div style={{ padding:'16px 20px' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                    <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>📜 Stock Movement History</div>
+                    <button onClick={()=>loadHistory(selected.id)}
+                      style={{ padding:'6px 12px', background:C.cream, border:`1px solid ${C.border}`, borderRadius:7, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                      🔄 Refresh
+                    </button>
+                  </div>
+                  {histLoading ? (
+                    <div style={{ textAlign:'center', padding:24, color:C.muted }}>Loading history...</div>
+                  ) : stockHistory.length === 0 ? (
+                    <div style={{ textAlign:'center', padding:24, color:C.muted }}>
+                      <div style={{ fontSize:28, marginBottom:8 }}>📭</div>
+                      <div style={{ fontSize:13 }}>No movement recorded yet.</div>
+                      <div style={{ fontSize:12, marginTop:4, color:C.muted }}>Stock changes from orders, sales, adjustments will appear here.</div>
+                    </div>
+                  ) : (
+                    <div>
+                      {/* Summary */}
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, marginBottom:14 }}>
+                        {[
+                          { l:'Total Moved Out', v: Math.abs(stockHistory.filter(h=>h.quantity_change<0).reduce((s,h)=>s+h.quantity_change,0)), col:C.danger, icon:'📤' },
+                          { l:'Total Added In',  v: stockHistory.filter(h=>h.quantity_change>0).reduce((s,h)=>s+h.quantity_change,0), col:C.success, icon:'📥' },
+                          { l:'Movements',       v: stockHistory.length, col:C.navy, icon:'📋' },
+                        ].map(s=>(
+                          <div key={s.l} style={{ background:C.cream, borderRadius:10, padding:'10px 12px', textAlign:'center' }}>
+                            <div style={{ fontSize:18 }}>{s.icon}</div>
+                            <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', color:C.muted, marginBottom:2 }}>{s.l}</div>
+                            <div style={{ fontSize:20, fontWeight:700, color:s.col }}>{s.v}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Movement list */}
+                      {stockHistory.map(h => {
+                        const isRemove = h.quantity_change < 0;
+                        const reasonColor = {
+                          'Order':'#1d4ed8', 'Quick Sale':'#0891b2', 'Damaged item':'#dc2626',
+                          'Free gift':'#7c3aed', 'Order Cancelled':'#15803d', 'Manual':'#6b7280',
+                          'Dealer Purchase':'#15803d',
+                        }[h.reason] || C.muted;
+                        return (
+                          <div key={h.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', padding:'10px 0', borderBottom:`1px solid ${C.border}` }}>
+                            <div style={{ flex:1 }}>
+                              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
+                                <span style={{ fontSize:16 }}>{isRemove ? '📤' : '📥'}</span>
+                                <span style={{ fontSize:13, fontWeight:700, color:reasonColor }}>{h.reason || h.change_type}</span>
+                                {h.notes && <span style={{ fontSize:11, color:C.muted }}>· {h.notes.slice(0,30)}</span>}
+                              </div>
+                              <div style={{ fontSize:11, color:C.muted }}>
+                                {new Date(h.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+                                {h.user_name && ` · ${h.user_name}`}
+                              </div>
+                              {(h.quantity_before !== null && h.quantity_after !== null) && (
+                                <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>
+                                  Stock: {h.quantity_before} → {h.quantity_after}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ textAlign:'right', flexShrink:0, marginLeft:12 }}>
+                              <div style={{ fontSize:16, fontWeight:700, color:isRemove?C.danger:C.success }}>
+                                {isRemove ? '' : '+'}{h.quantity_change}
+                              </div>
+                              <div style={{ fontSize:10, color:C.muted }}>units</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {panelTab==='adjust' && (
                 <AdjustmentPanel item={selected} onDone={handleAdjDone}/>
               )}
@@ -2083,7 +2111,7 @@ export default function Inventory() {
             style={{ maxWidth:'90vw', maxHeight:'75vh', objectFit:'contain', borderRadius:12,
               boxShadow:'0 8px 40px rgba(0,0,0,.6)' }}/>
           <div style={{ marginTop:20, textAlign:'center' }}>
-            <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'white', marginBottom:6 }}>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'white', marginBottom:6 }}>
               {selected.name}
             </div>
             <div style={{ fontSize:13, color:'rgba(255,255,255,.6)', marginBottom:4 }}>
@@ -2110,8 +2138,8 @@ export default function Inventory() {
       {showAIScan && (
         <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.7)', zIndex:500,
           display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div style={{ background:C.surface, borderRadius:16, width:'100%', maxWidth:500,
-            boxShadow:'0 24px 60px rgba(0,0,0,.3)', fontFamily:'var(--font-body)', overflow:'hidden' }}>
+          <div style={{ background:'white', borderRadius:16, width:'100%', maxWidth:500,
+            boxShadow:'0 24px 60px rgba(0,0,0,.3)', fontFamily:"'DM Sans',sans-serif", overflow:'hidden' }}>
 
             {/* Header */}
             <div style={{ background:'#7c3aed', padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>

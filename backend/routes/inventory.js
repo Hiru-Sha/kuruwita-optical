@@ -7,7 +7,7 @@ const auth   = require('../middleware/auth');
 
 // GET /api/inventory
 router.get('/', auth, async (req, res) => {
-  const { search, category, limit = 5000, no_images, frame_color, brand, frame_shape, frame_material } = req.query;
+  const { search, category, limit = 500, no_images } = req.query;
 
   // Skip image_url in list for speed — images loaded individually when needed
   const imageCol = no_images === '1' ? 'NULL::text AS image_url' : 'image_url';
@@ -42,22 +42,6 @@ router.get('/', auth, async (req, res) => {
     if (category && category !== 'All') {
       params.push(category);
       sql += ` AND category = $${params.length}`;
-    }
-    if (frame_color) {
-      params.push(frame_color);
-      sql += ` AND LOWER(frame_color) = LOWER($${params.length})`;
-    }
-    if (brand) {
-      params.push(`%${brand}%`);
-      sql += ` AND brand ILIKE $${params.length}`;
-    }
-    if (frame_shape) {
-      params.push(frame_shape);
-      sql += ` AND LOWER(frame_shape) = LOWER($${params.length})`;
-    }
-    if (frame_material) {
-      params.push(frame_material);
-      sql += ` AND (LOWER(frame_material) = LOWER($${params.length}) OR LOWER(rg_material) = LOWER($${params.length}))`;
     }
     params.push(parseInt(limit));
     sql += ` ORDER BY category ASC, name ASC LIMIT $${params.length}`;
@@ -163,6 +147,52 @@ router.delete('/:id', auth, async (req, res) => {
     await pool.query('DELETE FROM inventory WHERE id = $1', [req.params.id]);
     res.json({ message: 'Deleted' });
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+
+// ── GET /api/inventory/:id/history — stock movement log ──────
+router.get('/:id/history', auth, async (req, res) => {
+  try {
+    // Auto-create stock_adjustments if not yet created
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS stock_adjustments (
+        id              SERIAL PRIMARY KEY,
+        inventory_id    INTEGER,
+        item_name       VARCHAR(200),
+        change_type     VARCHAR(20),
+        quantity_change INTEGER,
+        quantity_before INTEGER,
+        quantity_after  INTEGER,
+        reason          VARCHAR(100),
+        notes           TEXT,
+        adjusted_by     INTEGER,
+        adjusted_by_name VARCHAR(100),
+        created_at      TIMESTAMP DEFAULT NOW()
+      )
+    `).catch(()=>{});
+
+    const limit = parseInt(req.query.limit) || 50;
+    const rows = await pool.query(`
+      SELECT sa.*,
+             COALESCE(sa.adjusted_by_name, u.full_name, 'System') AS user_name
+      FROM stock_adjustments sa
+      LEFT JOIN users u ON sa.adjusted_by = u.id
+      WHERE sa.inventory_id = $1
+      ORDER BY sa.created_at DESC
+      LIMIT $2
+    `, [req.params.id, limit]);
+
+    // Also get current item info
+    const item = await pool.query('SELECT id, name, quantity FROM inventory WHERE id=$1', [req.params.id]);
+
+    res.json({
+      item:     item.rows[0] || null,
+      history:  rows.rows,
+      total:    rows.rowCount,
+    });
+  } catch(err) {
+    console.error('History error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

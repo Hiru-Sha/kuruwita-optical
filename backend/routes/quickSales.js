@@ -7,6 +7,23 @@
 const router = require('express').Router();
 const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
+// Log stock movement to stock_adjustments
+async function logStockMove(pool_or_client, { inventory_id, item_name, change, qty_before, qty_after, reason, ref, user_id, user_name }) {
+  try {
+    const qty_change = change;
+    const change_type = change < 0 ? 'remove' : 'add';
+    await pool_or_client.query(`
+      INSERT INTO stock_adjustments
+        (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, adjusted_by, adjusted_by_name)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      ON CONFLICT DO NOTHING`,
+      [inventory_id, item_name||'Item', change_type, qty_change, qty_before, qty_after,
+       reason, ref||null, user_id||1, user_name||'System']
+    );
+  } catch(e) { /* non-critical — don't block main operation */ }
+}
+
+
 
 // ── GET /api/quick-sales ─────────────────────────────────────
 router.get('/', auth, async (req, res) => {
@@ -74,9 +91,6 @@ router.get('/:id', auth, async (req, res) => {
 // ── POST /api/quick-sales ────────────────────────────────────
 // Fixed: uses advisory lock to prevent duplicate sale numbers
 router.post('/', auth, async (req, res) => {
-  // Auto-add columns if missing (safe, idempotent)
-  await pool.query(`ALTER TABLE quick_sales ADD COLUMN IF NOT EXISTS customer_id INTEGER`).catch(()=>{});
-
   const { customer_name, customer_phone, items, subtotal, discount, total,
           payment_method, amount_paid, change_given, notes } = req.body;
   if (!items || !items.length) return res.status(400).json({ error: 'No items in sale' });
@@ -100,8 +114,8 @@ router.post('/', auth, async (req, res) => {
     const result = await client.query(
       `INSERT INTO quick_sales
          (sale_number,customer_name,customer_phone,items,subtotal,discount,total,
-          payment_method,amount_paid,change_given,notes,served_by,created_at,customer_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13::timestamp, NOW()),$14)
+          payment_method,amount_paid,change_given,notes,served_by,created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13::timestamp, NOW()))
        RETURNING *`,
       [
         saleNum, customer_name || null, customer_phone || null, JSON.stringify(items),
@@ -112,7 +126,6 @@ router.post('/', auth, async (req, res) => {
         parseFloat(amount_paid) || 0,
         parseFloat(change_given)|| 0,
         notes || null, req.user.id, import_date || null,
-        req.body.customer_id || null,   // $14
       ]
     );
 
@@ -124,10 +137,15 @@ router.post('/', auth, async (req, res) => {
       const invId = item.inventory_id || item.inventoryId || item.id;
       const qty   = parseInt(item.qty) || parseInt(item.quantity) || 1;
       if (invId) {
+        const qsBefore = await client.query('SELECT quantity FROM inventory WHERE id=$1', [invId]).catch(()=>({rows:[{quantity:0}]}));
+        const qsQtyB = parseInt(qsBefore.rows[0]?.quantity||0);
         await client.query(
           'UPDATE inventory SET quantity = GREATEST(0, quantity - $1), updated_at = NOW() WHERE id = $2',
           [qty, invId]
         );
+        await logStockMove(pool, { inventory_id:invId, item_name:item.name||'Item',
+          change:-qty, qty_before:qsQtyB, qty_after:Math.max(0,qsQtyB-qty),
+          reason:'Quick Sale', ref:`Sale ${saleNum}`, user_id:req.user.id, user_name:req.user.name||req.user.username });
       }
     }
 

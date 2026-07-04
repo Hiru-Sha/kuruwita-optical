@@ -9,6 +9,23 @@ const router = require('express').Router();
 const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 const { orderValidation, validate } = require('../middleware/orderValidation');
+// Log stock movement to stock_adjustments
+async function logStockMove(pool_or_client, { inventory_id, item_name, change, qty_before, qty_after, reason, ref, user_id, user_name }) {
+  try {
+    const qty_change = change;
+    const change_type = change < 0 ? 'remove' : 'add';
+    await pool_or_client.query(`
+      INSERT INTO stock_adjustments
+        (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, adjusted_by, adjusted_by_name)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      ON CONFLICT DO NOTHING`,
+      [inventory_id, item_name||'Item', change_type, qty_change, qty_before, qty_after,
+       reason, ref||null, user_id||1, user_name||'System']
+    );
+  } catch(e) { /* non-critical — don't block main operation */ }
+}
+
+
 
 // ── Next order number (inside an open client transaction) ────
 // Uses pg_advisory_xact_lock(1001) to prevent race conditions.
@@ -127,10 +144,6 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
 
   const client = await pool.connect();
   try {
-    // Auto-create warranty columns if they don't exist
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_frame VARCHAR(20)`).catch(()=>{});
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_lens  VARCHAR(20)`).catch(()=>{});
-
     await client.query('BEGIN');
 
     // nextOrderNumber now takes the client so it uses the advisory lock
@@ -150,10 +163,9 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
         deliver_date, status,
         has_rx, rx_hospital, rx_date, rx_doctor, notes,
         customer_own_frame, order_type, frame_inventory_id,
-        discount_amount, discount_percent, payment_method,
-        warranty_frame, warranty_lens
+        discount_amount, discount_percent, payment_method
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
-                $18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32)
+                $18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)
       RETURNING *
     `, [
       orderNum, customer_id,
@@ -174,8 +186,6 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
       parseFloat(req.body.discount_amount)  || 0,
       parseFloat(req.body.discount_percent) || 0,
       req.body.payment_method || 'cash',
-      req.body.warranty_frame || null,
-      req.body.warranty_lens  || null,
     ]);
 
     if (importTs) {
@@ -255,8 +265,7 @@ router.patch('/:id', auth, async (req, res) => {
     'total_amount','advance_amount','balance_amount','deliver_date','status',
     'has_rx','rx_hospital','rx_date','rx_doctor','rx_returned','notes',
     'lab_bill_amount','lab_paid','lab_paid_date','lab_payment_method','lab_notes',
-    'last_payment_date','last_payment_method','last_payment_amount',
-    'warranty_frame','warranty_lens',
+    'last_payment_date','last_payment_method',
     'frame_buy_price','frame_sell_price',
     'lens_buy_price','lens_sell_price',
     'order_type','customer_own_frame',
@@ -274,72 +283,12 @@ router.patch('/:id', auth, async (req, res) => {
   fields.push('updated_at = NOW()');
   values.push(req.params.id);
   try {
-    // Auto-create last_payment_amount column if it doesn't exist (no migration needed)
-    if (req.body.last_payment_amount !== undefined) {
-      await pool.query(
-        `ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_payment_amount DECIMAL(10,2) DEFAULT 0`
-      ).catch(() => {});  // ignore if already exists or no permission
-    }
-
-    let result;
-    try {
-      result = await pool.query(
-        `UPDATE orders SET ${fields.join(', ')} WHERE id = $${values.length} RETURNING *`,
-        values
-      );
-    } catch (colErr) {
-      // If column doesn't exist, retry without last_payment_amount
-      if (colErr.message && colErr.message.includes('last_payment_amount')) {
-        const safeFields = [], safeVals = [];
-        allowed.filter(f => f !== 'last_payment_amount').forEach(f => {
-          if (req.body[f] !== undefined) {
-            safeFields.push(`${f} = $${safeFields.length + 1}`);
-            safeVals.push(req.body[f]);
-          }
-        });
-        safeFields.push('updated_at = NOW()');
-        safeVals.push(req.params.id);
-        result = await pool.query(
-          `UPDATE orders SET ${safeFields.join(', ')} WHERE id = $${safeVals.length} RETURNING *`,
-          safeVals
-        );
-      } else { throw colErr; }
-    }
-
+    const result = await pool.query(
+      `UPDATE orders SET ${fields.join(', ')} WHERE id = $${values.length} RETURNING *`,
+      values
+    );
     if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
-    const updated = result.rows[0];
-
-    // ── Auto bank/card deposit when balance paid by non-cash ──
-    const lpm = (req.body.last_payment_method||'').toLowerCase();
-    const lpa = parseFloat(req.body.last_payment_amount || 0);
-    const lpd = req.body.last_payment_date;
-    if (lpm && lpm !== 'cash' && lpa > 0 && lpd) {
-      // Check no duplicate deposit exists
-      const dup = await pool.query(
-        `SELECT id FROM cash_deposits WHERE order_id=$1 AND date=$2 LIMIT 1`,
-        [updated.id, lpd]
-      ).catch(() => ({ rows:[] }));
-      if (!dup.rows.length) {
-        await pool.query(
-          `INSERT INTO cash_deposits (date,amount,payment_type,notes,added_by,order_id)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
-          [lpd, lpa, lpm,
-           'Balance payment — ' + (updated.order_number||'Order #'+updated.id),
-           req.user.id, updated.id]
-        ).catch(() =>
-          // Fallback without order_id if column missing
-          pool.query(
-            `INSERT INTO cash_deposits (date,amount,payment_type,notes,added_by)
-             VALUES ($1,$2,$3,$4,$5)`,
-            [lpd, lpa, lpm,
-             'Balance payment — ' + (updated.order_number||'Order #'+updated.id),
-             req.user.id]
-          ).catch(e => console.warn('Auto deposit failed:', e.message))
-        );
-      }
-    }
-
-    res.json(updated);
+    res.json(result.rows[0]);
   } catch (err) {
     console.error('Update order error:', err.message);
     if (err.message.includes('column') && err.message.includes('does not exist')) {
@@ -356,10 +305,15 @@ router.delete('/:id', auth, async (req, res) => {
   try {
     const ord = await pool.query('SELECT * FROM orders WHERE id=$1', [req.params.id]);
     if (ord.rows.length && ord.rows[0].frame_inventory_id && !ord.rows[0].customer_own_frame) {
+      const rBefore = await pool.query('SELECT quantity, name FROM inventory WHERE id=$1', [ord.rows[0].frame_inventory_id]).catch(()=>({rows:[{}]}));
+      const rQty = parseInt(rBefore.rows[0]?.quantity||0);
       await pool.query(
         'UPDATE inventory SET quantity = quantity + 1, updated_at = NOW() WHERE id = $1',
         [ord.rows[0].frame_inventory_id]
       ).catch(() => {});
+      await logStockMove(pool, { inventory_id:ord.rows[0].frame_inventory_id, item_name:rBefore.rows[0]?.name||ord.rows[0].frame,
+        change:+1, qty_before:rQty, qty_after:rQty+1,
+        reason:'Order Cancelled', ref:`Order ${ord.rows[0].order_number}`, user_id:req.user.id, user_name:req.user.name||req.user.username });
     }
     await pool.query('DELETE FROM cash_deposits WHERE order_id = $1', [req.params.id]).catch(() => {});
     await pool.query('DELETE FROM orders WHERE id = $1', [req.params.id]);
@@ -400,10 +354,6 @@ router.post('/import', auth, async (req, res) => {
 
   const client = await pool.connect();
   try {
-    // Auto-create warranty columns if they don't exist
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_frame VARCHAR(20)`).catch(()=>{});
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_lens  VARCHAR(20)`).catch(()=>{});
-
     await client.query('BEGIN');
 
     const dateObj = new Date(import_date || Date.now());
