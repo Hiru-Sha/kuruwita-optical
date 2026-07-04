@@ -371,7 +371,7 @@ export default function Orders() {
   const INP = { padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:13, fontFamily:'inherit', outline:'none', background:C.surface, color:'var(--text,#111827)', transition:'border-color .15s' };
 
   return (
-    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1400, width:'100%', margin:'0 auto' }}>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1400 }}>
 
       {/* Toast */}
       {toast && (
@@ -495,13 +495,27 @@ export default function Orders() {
                     {o.has_rx && !o.rx_returned && (
                       <span style={{ background:'#e0f2fe', color:'#0369a1', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>Rx</span>
                     )}
+                    {(o.warranty_frame || o.warranty_lens) && (
+                      <span style={{ background:'#dcfce7', color:'#15803d', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}
+                        title={[o.warranty_frame && '🖼️ Frame: '+o.warranty_frame, o.warranty_lens && '👁️ Lens: '+o.warranty_lens].filter(Boolean).join(' · ')}>
+                        🛡️ Warranty
+                      </span>
+                    )}
                     {(!parseFloat(o.lens_buy_price) || (!parseFloat(o.frame_buy_price) && !o.customer_own_frame)) && (
                       <span style={{ background:'#fff7ed', color:'#c2410c', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, border:'1px solid #fed7aa' }}>
                         ⚠️ No cost
                       </span>
                     )}
                   </div>
-                  <span style={{ fontSize:11, color:C.muted, flexShrink:0 }}>{o.deliver_date?.slice(0,10)}</span>
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', flexShrink:0, gap:2 }}>
+                    <span style={{ fontSize:11, color:C.muted }}>📅 {o.created_at?.slice(0,10)}</span>
+                    {o.deliver_date && (
+                      <span style={{ fontSize:11, fontWeight:600,
+                        color: new Date(o.deliver_date) < new Date() && o.status !== 'delivered' ? C.danger : C.success }}>
+                        📦 {o.deliver_date.slice(0,10)}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div style={{ fontSize:15, fontWeight:600, color:C.navy, marginBottom:4 }}>{o.customer_name}</div>
                 <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
