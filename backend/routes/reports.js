@@ -383,10 +383,10 @@ router.get('/comparison', auth, async (req, res) => {
         safeQuery(`SELECT COALESCE(SUM(charge),0) AS repair_revenue, COUNT(*) AS repair_count FROM repairs WHERE TO_CHAR(created_at,'YYYY-MM')=$1 AND status IN ('done','collected')`, [mo]),
         safeQuery(`SELECT COALESCE(SUM(amount),0) AS total_expenses FROM expenses WHERE TO_CHAR(date,'YYYY-MM')=$1 AND category != 'Lab Payment'`, [mo]),
       ]);
-      const ord = orders[0]||{};
-      const q   = qs[0]||{};
-      const r   = repairs[0]||{};
-      const e   = expenses[0]||{};
+      const ord = orders.rows[0]||{};
+      const q   = qs.rows[0]||{};
+      const r   = repairs.rows[0]||{};
+      const e   = expenses.rows[0]||{};
       const total_revenue = parseFloat(ord.revenue||0) + parseFloat(q.qs_revenue||0) + parseFloat(r.repair_revenue||0);
       const expenses_amt  = parseFloat(e.total_expenses||0);
       const cogs          = parseFloat(ord.frame_cogs||0);
