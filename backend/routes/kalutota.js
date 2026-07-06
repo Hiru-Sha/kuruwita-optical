@@ -71,7 +71,7 @@ router.post('/', auth, async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
       [date||new Date().toISOString().split('T')[0], direction, category||null,
        description, parseInt(quantity), parseFloat(unit_price), total_amount,
-       payment_status||'pending', parseFloat(paid_amount)||0,
+       ((['paid','partial','pending'].includes(payment_status))?payment_status:'pending'), parseFloat(paid_amount)||0,
        paid_date||null, payment_method||'cash', notes||null,
        image_url||null, req.user.id]
     )).rows[0];
