@@ -70,10 +70,13 @@ export default function EndOfDay() {
       const balPayments = (Array.isArray(orders)?orders:[]).filter(o =>
         o.last_payment_date === d && o.created_at?.slice(0,10) !== d
       );
+      // Use last_payment_amount (correct) — falls back to 0 if column missing
       const balCash = balPayments.reduce((s,o)=>{
-        const orig = parseFloat(o.advance_amount||0) + parseFloat(o.balance_amount||0);
-        return s + (parseFloat(o.last_payment_date===d ? o.advance_amount||0 : 0));
+        const amt = parseFloat(o.last_payment_amount||0);
+        return s + amt;
       }, 0);
+      const balCashCash = balPayments.filter(o=>!o.last_payment_method||o.last_payment_method==='cash').reduce((s,o)=>s+parseFloat(o.last_payment_amount||0),0);
+      const balCashBank = balPayments.filter(o=>o.last_payment_method&&o.last_payment_method!=='cash').reduce((s,o)=>s+parseFloat(o.last_payment_amount||0),0);
 
       // Quick sales today
       const todayQS   = (Array.isArray(qsales)?qsales:[]).filter(s => s.created_at?.slice(0,10)===d);
@@ -92,8 +95,8 @@ export default function EndOfDay() {
       const dep       = Array.isArray(deposits)?deposits:[];
       const depCash   = dep.reduce((s,d)=>s+parseFloat(d.amount||0),0);
 
-      const totalIn     = orderCash + orderBank + qsCash + repCash;
-      const cashOnlyIn  = orderCash + qsCash + repCash;
+      const totalIn     = orderCash + orderBank + qsCash + repCash + balCash;
+      const cashOnlyIn  = orderCash + qsCash + repCash + balCashCash;
       const cashInHand  = cashOnlyIn - expCash - depCash;
 
       setData({

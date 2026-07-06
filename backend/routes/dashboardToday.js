@@ -25,7 +25,7 @@ router.get('/', auth, async (req, res) => {
       activeOrders,      // 7
       lensJobsOut,       // 8
       reminders,         // 9
-      todayBalPayments,  // 10: balance payments from older orders collected today
+      todayBalPayments,  // 10 — balance payments from older orders collected today
     ] = await Promise.all([
 
       // 0: Month revenue
@@ -109,15 +109,13 @@ router.get('/', auth, async (req, res) => {
         LIMIT 10
       `).catch(() => ({ rows: [] })),
 
-      // 10: Balance payments collected TODAY from OLDER orders
-      //     Uses last_payment_amount (auto-created by orders.js if missing)
+      // 10: Balance payments collected TODAY from older orders
       pool.query(`
-        SELECT
-          COALESCE(last_payment_amount, 0)     AS amount,
-          COALESCE(last_payment_method,'cash') AS method
+        SELECT COALESCE(last_payment_amount,0) AS amount,
+               COALESCE(last_payment_method,'cash') AS method
         FROM orders
-        WHERE last_payment_date  = $1
-          AND created_at::date  != $1
+        WHERE last_payment_date = $1
+          AND created_at::date != $1
           AND last_payment_amount > 0
       `, [today]).catch(() => ({ rows: [] })),
     ]);
@@ -160,14 +158,10 @@ router.get('/', auth, async (req, res) => {
     const totalExp     = todayExpenses.rows.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
     const totalDep     = todayDeposits.rows.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
     // Balance payments collected today from older orders
-    const balRows   = todayBalPayments?.rows || [];
-    const balCash   = balRows.filter(r=>!r.method||r.method==='cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
-    const balBank   = balRows.filter(r=>r.method&&r.method!=='cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+    const balRows    = todayBalPayments?.rows || [];
+    const balCash    = balRows.filter(r => !r.method||r.method==='cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+    const balBank    = balRows.filter(r => r.method&&r.method!=='cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
 
-    // Cash in hand:
-    //   + balance cash payments (arrived in till)
-    //   + balBank offset: bank balance payments create a deposit entry (in totalDep),
-    //     so adding balBank here cancels that deduction — net effect on cash = 0
     const todayCashIn  = orderCash + qsIncome + repairIncome + balCash + balBank;
     const cashInHand   = todayCashIn - totalExp - totalDep;
     const bankToday    = orderBank + balBank;
@@ -200,10 +194,10 @@ router.get('/', auth, async (req, res) => {
 
       daily_cash: {
         orderIncome, orderCash, orderBank,
+        balCash, balBank, balTotal: balCash+balBank,
         qsIncome, repairIncome, totalIncome,
         totalExp, totalDep, cashInHand,
         allTimeCash, allTimeDeposits, bankToday,
-        balCash, balBank,   // balance payments collected today
         orderCount:  todayOrders.rows.length,
         qsCount:     todayQS.rows.length,
         repairCount: todayRepairs.rows.length,

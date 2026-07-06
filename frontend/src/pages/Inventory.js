@@ -300,6 +300,48 @@ function AdjustmentPanel({ item, onDone }) {
     finally { setLoadingLog(false); }
   };
 
+  // Check for existing item with same name + category before saving new
+  const [existMatch, setExistMatch] = useState(null);
+
+  const checkDuplicate = async (name, category) => {
+    if (!name || !category) return;
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/inventory?search=${encodeURIComponent(name)}&category=${encodeURIComponent(category)}&limit=5&no_images=1`,
+        { headers: { Authorization: `Bearer ${token}` } });
+      const data  = await res.json();
+      const items = Array.isArray(data) ? data : (data.items || []);
+      const exact = items.find(i => i.name?.toLowerCase() === name.toLowerCase() && i.category === category);
+      setExistMatch(exact || null);
+    } catch { setExistMatch(null); }
+  };
+
+  const handleAddToExisting = async () => {
+    if (!existMatch) return;
+    const addQty = parseInt(form.quantity) || 1;
+    const newSell = parseFloat(form.sell_price) || parseFloat(existMatch.sell_price) || 0;
+    const newBuy  = parseFloat(form.buy_price)  || parseFloat(existMatch.buy_price)  || 0;
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      await fetch(`${BASE}/inventory/${existMatch.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+        body: JSON.stringify({
+          quantity:   (parseInt(existMatch.quantity)||0) + addQty,
+          sell_price: newSell,
+          cost_price: newBuy,
+          buy_price:  newBuy,
+        }),
+      });
+      setShowAdd(false); setExistMatch(null);
+      setForm(defaultForm('Frames'));
+      load();
+      alert(`✅ Added ${addQty} units to "${existMatch.name}". New price: Rs. ${newSell.toLocaleString()}`);
+    } catch(e) { alert('Failed: ' + e.message); }
+  };
+
   const handleSave = async () => {
     if (!adjQty || parseInt(adjQty) <= 0) return setError('Enter a valid quantity');
     if (!adjReason) return setError('Select a reason');
@@ -460,6 +502,48 @@ function AddVariantPanel({ item, items, onDone }) {
     );
     setExisting(sameModel);
   }, [item, items]);
+
+  // Check for existing item with same name + category before saving new
+  const [existMatch, setExistMatch] = useState(null);
+
+  const checkDuplicate = async (name, category) => {
+    if (!name || !category) return;
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/inventory?search=${encodeURIComponent(name)}&category=${encodeURIComponent(category)}&limit=5&no_images=1`,
+        { headers: { Authorization: `Bearer ${token}` } });
+      const data  = await res.json();
+      const items = Array.isArray(data) ? data : (data.items || []);
+      const exact = items.find(i => i.name?.toLowerCase() === name.toLowerCase() && i.category === category);
+      setExistMatch(exact || null);
+    } catch { setExistMatch(null); }
+  };
+
+  const handleAddToExisting = async () => {
+    if (!existMatch) return;
+    const addQty = parseInt(form.quantity) || 1;
+    const newSell = parseFloat(form.sell_price) || parseFloat(existMatch.sell_price) || 0;
+    const newBuy  = parseFloat(form.buy_price)  || parseFloat(existMatch.buy_price)  || 0;
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      await fetch(`${BASE}/inventory/${existMatch.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+        body: JSON.stringify({
+          quantity:   (parseInt(existMatch.quantity)||0) + addQty,
+          sell_price: newSell,
+          cost_price: newBuy,
+          buy_price:  newBuy,
+        }),
+      });
+      setShowAdd(false); setExistMatch(null);
+      setForm(defaultForm('Frames'));
+      load();
+      alert(`✅ Added ${addQty} units to "${existMatch.name}". New price: Rs. ${newSell.toLocaleString()}`);
+    } catch(e) { alert('Failed: ' + e.message); }
+  };
 
   const handleSave = async () => {
     if (!variants.length) return;
@@ -690,6 +774,23 @@ function AddVariantPanel({ item, items, onDone }) {
         + Add Another Colour
       </button>
 
+      {existMatch && (
+        <div style={{ background:'#fef9c3', border:'1.5px solid #fcd34d', borderRadius:10, padding:'12px 16px', marginBottom:12 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'#92400e', marginBottom:6 }}>
+            ⚠️ Similar item found: <b>{existMatch.name}</b> (Qty: {existMatch.quantity}, Price: Rs. {parseFloat(existMatch.sell_price||0).toLocaleString()})
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={handleAddToExisting}
+              style={{ flex:1, padding:'9px', background:'#15803d', color:'white', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              ➕ Add Stock to Existing (update price & qty)
+            </button>
+            <button onClick={()=>setExistMatch(null)}
+              style={{ padding:'9px 14px', background:'white', border:'1px solid #e5e7eb', borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'#6b7280' }}>
+              Create New Instead
+            </button>
+          </div>
+        </div>
+      )}
       <button onClick={handleSave} disabled={saving}
         style={{ width:'100%', padding:'12px', background:saving?C.muted:C.navy,
           color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700,
@@ -845,7 +946,7 @@ export default function Inventory() {
     setLoading(true);
     const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
     const token = localStorage.getItem('ko_token');
-    const params = new URLSearchParams({ limit:'500', no_images:'1' });
+    const params = new URLSearchParams({ limit:'5000', no_images:'1' });
     if (search)                   params.set('search', search);
     if (activeCat !== 'All')      params.set('category', activeCat);
     fetch(`${BASE}/inventory?${params}`, { headers:{ Authorization:`Bearer ${token}` } })
@@ -2301,4 +2402,4 @@ export default function Inventory() {
 
     </div>
   );
-} 
+}

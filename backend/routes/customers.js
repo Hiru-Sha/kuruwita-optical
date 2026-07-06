@@ -29,10 +29,7 @@ router.get('/', auth, async (req, res) => {
         SELECT
           customer_id,
           COUNT(*)                          AS total_orders,
-          COALESCE(SUM(total_amount), 0)
-            + COALESCE((SELECT SUM(total)  FROM quick_sales WHERE customer_id = c.id), 0)
-            + COALESCE((SELECT SUM(charge) FROM repairs     WHERE customer_id = c.id AND charge > 0), 0)
-            AS total_spent,
+          COALESCE(SUM(total_amount), 0) AS total_spent,
           COALESCE(SUM(balance_amount), 0)  AS total_balance,
           BOOL_OR(has_rx AND NOT COALESCE(rx_returned, false)) AS rx_held
         FROM orders
@@ -43,7 +40,21 @@ router.get('/', auth, async (req, res) => {
       LIMIT $${params.length}
     `;
     const result = await pool.query(sql, params);
-    res.json(result.rows);
+    // Safely enrich total_spent with quick_sales + repairs (customer_id may not exist)
+    let rows = result.rows;
+    try {
+      const qsMap  = {};
+      const repMap = {};
+      const qsRows  = await pool.query(`SELECT customer_id, COALESCE(SUM(total),0) AS qs_total FROM quick_sales WHERE customer_id IS NOT NULL GROUP BY customer_id`).catch(()=>({rows:[]}));
+      const repRows = await pool.query(`SELECT customer_id, COALESCE(SUM(charge),0) AS rep_total FROM repairs WHERE customer_id IS NOT NULL AND charge>0 GROUP BY customer_id`).catch(()=>({rows:[]}));
+      qsRows.rows.forEach(r  => { qsMap[r.customer_id]  = parseFloat(r.qs_total||0); });
+      repRows.rows.forEach(r => { repMap[r.customer_id] = parseFloat(r.rep_total||0); });
+      rows = rows.map(c => ({
+        ...c,
+        total_spent: parseFloat(c.total_spent||0) + (qsMap[c.id]||0) + (repMap[c.id]||0),
+      }));
+    } catch(e) { /* ignore — use orders-only total_spent */ }
+    res.json(rows);
   } catch(err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
 

@@ -7,7 +7,7 @@ const auth   = require('../middleware/auth');
 
 // GET /api/inventory
 router.get('/', auth, async (req, res) => {
-  const { search, category, limit = 500, no_images } = req.query;
+  const { search, category, limit = 5000, no_images } = req.query;
 
   // Skip image_url in list for speed — images loaded individually when needed
   const imageCol = no_images === '1' ? 'NULL::text AS image_url' : 'image_url';

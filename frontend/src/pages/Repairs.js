@@ -603,6 +603,52 @@ export default function Repairs() {
             </div>
           </div>
 
+          {/* Payment Collected Now — pay now or later option */}
+          {parseFloat(form.charge) > 0 && (
+            <div style={{ background:'linear-gradient(135deg,#f0fdf4,#dcfce7)', border:'1.5px solid #86efac', borderRadius:12, padding:'14px 16px', marginBottom:14 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'#15803d', textTransform:'uppercase', letterSpacing:'.8px', marginBottom:10 }}>
+                💳 Payment Collected Now
+              </div>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'flex-end' }}>
+                <div style={{ display:'flex', gap:6 }}>
+                  {[
+                    { l:'Not Paid', v:'' },
+                    { l:'Half',     v: String(Math.round(parseFloat(form.charge||0)/2)) },
+                    { l:'Full ✓',   v: form.charge },
+                  ].map(btn => (
+                    <button key={btn.l} onClick={()=>setForm(f=>({...f,advance:btn.v}))}
+                      style={{ padding:'8px 14px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', border:'none',
+                        background: form.advance===btn.v ? (btn.v===''?'#6b7280':'#15803d') : 'white',
+                        color: form.advance===btn.v ? 'white' : '#374151', boxShadow:'0 1px 3px rgba(0,0,0,.1)' }}>
+                      {btn.l}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ flex:1, minWidth:120 }}>
+                  <input type="number" value={form.advance} onChange={e=>setForm(f=>({...f,advance:e.target.value}))}
+                    placeholder="Custom amount..." style={{ ...INP, background:'white' }} max={parseFloat(form.charge||0)}/>
+                </div>
+                <select value={form.payment_method} onChange={e=>setForm(f=>({...f,payment_method:e.target.value}))}
+                  style={{ ...INP, cursor:'pointer', background:'white', maxWidth:130 }}>
+                  <option value="cash">💵 Cash</option>
+                  <option value="bank">🏦 Bank</option>
+                  <option value="card">💳 Card</option>
+                  <option value="free">🎁 Free</option>
+                </select>
+              </div>
+              {parseFloat(form.advance)>0 && parseFloat(form.advance)<parseFloat(form.charge) && (
+                <div style={{ marginTop:8, fontSize:12, color:'#92400e', background:'#fef9c3', borderRadius:7, padding:'6px 10px', display:'inline-block' }}>
+                  ⚠️ Balance remaining: Rs. {(parseFloat(form.charge)-parseFloat(form.advance)).toLocaleString()} — collect later
+                </div>
+              )}
+              {parseFloat(form.advance)>=parseFloat(form.charge) && parseFloat(form.charge)>0 && (
+                <div style={{ marginTop:8, fontSize:12, color:'#15803d', background:'#dcfce7', borderRadius:7, padding:'6px 10px', display:'inline-block', fontWeight:700 }}>
+                  ✅ Fully paid — will be marked Collected
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Quick total display */}
           {parseFloat(form.charge) > 0 && (
             <div style={{ background:C.navy, borderRadius:10, padding:'12px 16px', marginBottom:14 }}>
