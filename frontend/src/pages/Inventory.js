@@ -281,6 +281,8 @@ function AdjustmentPanel({ item, onDone }) {
   const [adjQty,     setAdjQty]    = useState('');
   const [adjReason,  setAdjReason] = useState('New stock received');
   const [adjNotes,   setAdjNotes]  = useState('');
+  const [adjBuyPrice,  setAdjBuyPrice]  = useState('');
+  const [adjSellPrice, setAdjSellPrice] = useState('');
   const [saving,     setSaving]    = useState(false);
   const [error,      setError]     = useState('');
   const [history,    setHistory]   = useState([]);
@@ -355,8 +357,33 @@ function AdjustmentPanel({ item, onDone }) {
         notes:  adjNotes.trim() || null,
       });
       if (res.error) throw new Error(res.error);
-      showToast(`Stock ${adjType==='add'?'added':'removed'} — now ${res.new_quantity} in stock`);
+
+      // Also update prices if provided (when adding new stock batch with different price)
+      if (adjType === 'add' && (adjBuyPrice || adjSellPrice)) {
+        const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('ko_token');
+        const priceUpdate = {};
+        if (adjSellPrice && parseFloat(adjSellPrice) > 0) {
+          priceUpdate.sell_price = parseFloat(adjSellPrice);
+        }
+        if (adjBuyPrice && parseFloat(adjBuyPrice) > 0) {
+          priceUpdate.buy_price  = parseFloat(adjBuyPrice);
+          priceUpdate.cost_price = parseFloat(adjBuyPrice);
+        }
+        if (Object.keys(priceUpdate).length > 0) {
+          await fetch(`${BASE}/inventory/${item.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(priceUpdate),
+          });
+        }
+      }
+
+      const priceMsg = adjType==='add' && (adjBuyPrice||adjSellPrice)
+        ? ` · Price updated` : '';
+      showToast(`Stock ${adjType==='add'?'added':'removed'} — now ${res.new_quantity} in stock${priceMsg}`);
       setAdjQty(''); setAdjNotes(''); setAdjReason('New stock received');
+      setAdjBuyPrice(''); setAdjSellPrice('');
       loadHistory();
       onDone(res.new_quantity); // update parent's displayed qty
     } catch(e) { setError(e.message||'Failed to save'); }
@@ -433,6 +460,37 @@ function AdjustmentPanel({ item, onDone }) {
         <input value={adjNotes} onChange={e=>setAdjNotes(e.target.value)}
           placeholder="Any additional details..." style={INP}/>
       </div>
+
+      {/* Price update — only when ADDING stock */}
+      {adjType === 'add' && (
+        <div style={{ marginBottom:14, background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:10, padding:'12px 14px' }}>
+          <div style={{ fontSize:12, fontWeight:700, color:'#15803d', marginBottom:10, textTransform:'uppercase', letterSpacing:'.8px' }}>
+            💰 Update Price with New Stock (optional)
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <div>
+              <label style={{ fontSize:11, fontWeight:600, color:'#15803d', display:'block', marginBottom:5 }}>
+                New Buy/Cost Price (Rs.) · Current: {parseInt(selected?.cost_price||selected?.buy_price||0).toLocaleString()}
+              </label>
+              <input type="number" value={adjBuyPrice} onChange={e=>setAdjBuyPrice(e.target.value)}
+                placeholder="Leave blank to keep current" style={{ ...INP, border:'1.5px solid #86efac' }}/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, fontWeight:600, color:'#15803d', display:'block', marginBottom:5 }}>
+                New Sell Price (Rs.) · Current: {parseInt(selected?.sell_price||0).toLocaleString()}
+              </label>
+              <input type="number" value={adjSellPrice} onChange={e=>setAdjSellPrice(e.target.value)}
+                placeholder="Leave blank to keep current" style={{ ...INP, border:'1.5px solid #86efac' }}/>
+            </div>
+          </div>
+          {(adjBuyPrice || adjSellPrice) && (
+            <div style={{ fontSize:12, color:'#15803d', marginTop:8, fontWeight:600 }}>
+              ✅ Will update: {adjBuyPrice?`Cost → Rs. ${parseInt(adjBuyPrice).toLocaleString()} `:''}
+              {adjSellPrice?`Sell → Rs. ${parseInt(adjSellPrice).toLocaleString()}`:''}
+            </div>
+          )}
+        </div>
+      )}
 
       <button onClick={handleSave} disabled={saving}
         style={{ width:'100%', padding:'12px', background:saving?C.muted:TYPE_INFO[adjType].color, color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit', marginBottom:20 }}>

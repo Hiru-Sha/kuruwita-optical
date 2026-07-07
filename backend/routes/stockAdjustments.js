@@ -14,6 +14,17 @@ const auth   = require('../middleware/auth');
 router.get('/', auth, async (req, res) => {
   const { limit = 50, inventory_id } = req.query;
   try {
+    // Ensure table exists before querying
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS stock_adjustments (
+        id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
+        change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
+        quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
+        adjusted_by INTEGER, adjusted_by_name VARCHAR(100), order_id INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `).catch(()=>{});
+
     let query  = `SELECT sa.*, i.sell_price, i.cost_price AS current_cost
                   FROM stock_adjustments sa
                   LEFT JOIN inventory i ON i.id = sa.inventory_id
@@ -32,6 +43,26 @@ router.get('/', auth, async (req, res) => {
 
 // POST /api/stock-adjustments — record adjustment + update inventory + snapshot cost
 router.post('/', auth, async (req, res) => {
+  // Auto-create table if not exists
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS stock_adjustments (
+      id               SERIAL PRIMARY KEY,
+      inventory_id     INTEGER,
+      item_name        VARCHAR(200),
+      change_type      VARCHAR(20),
+      quantity_change  INTEGER,
+      quantity_before  INTEGER,
+      quantity_after   INTEGER,
+      reason           VARCHAR(100),
+      notes            TEXT,
+      adjusted_by      INTEGER,
+      adjusted_by_name VARCHAR(100),
+      unit_cost        DECIMAL(10,2),
+      order_id         INTEGER,
+      created_at       TIMESTAMP DEFAULT NOW()
+    )
+  `).catch(() => {});
+
   const { inventory_id, change_type, quantity_change, reason, notes, order_id } = req.body;
 
   if (!inventory_id || !change_type || !quantity_change || !reason) {

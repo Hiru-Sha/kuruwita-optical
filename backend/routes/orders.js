@@ -9,23 +9,6 @@ const router = require('express').Router();
 const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 const { orderValidation, validate } = require('../middleware/orderValidation');
-// Log stock movement to stock_adjustments
-async function logStockMove(pool_or_client, { inventory_id, item_name, change, qty_before, qty_after, reason, ref, user_id, user_name }) {
-  try {
-    const qty_change = change;
-    const change_type = change < 0 ? 'remove' : 'add';
-    await pool_or_client.query(`
-      INSERT INTO stock_adjustments
-        (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, adjusted_by, adjusted_by_name)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-      ON CONFLICT DO NOTHING`,
-      [inventory_id, item_name||'Item', change_type, qty_change, qty_before, qty_after,
-       reason, ref||null, user_id||1, user_name||'System']
-    );
-  } catch(e) { /* non-critical — don't block main operation */ }
-}
-
-
 
 // ── Next order number (inside an open client transaction) ────
 // Uses pg_advisory_xact_lock(1001) to prevent race conditions.
@@ -259,13 +242,17 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
 
 // ── PATCH /api/orders/:id ────────────────────────────────────
 router.patch('/:id', auth, async (req, res) => {
+  // Auto-create last_payment_amount column if missing (needed for dashboard balance tracking)
+  await pool.query(
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_payment_amount DECIMAL(10,2) DEFAULT 0`
+  ).catch(() => {});
   const allowed = [
     'frame','frame_type','frame_color','frame_material','lens_type','lens_coating',
     'lens_company','lens_step','lens_index',
     'total_amount','advance_amount','balance_amount','deliver_date','status',
     'has_rx','rx_hospital','rx_date','rx_doctor','rx_returned','notes',
     'lab_bill_amount','lab_paid','lab_paid_date','lab_payment_method','lab_notes',
-    'last_payment_date','last_payment_method',
+    'last_payment_date','last_payment_method','last_payment_amount',
     'frame_buy_price','frame_sell_price',
     'lens_buy_price','lens_sell_price',
     'order_type','customer_own_frame',
@@ -305,15 +292,10 @@ router.delete('/:id', auth, async (req, res) => {
   try {
     const ord = await pool.query('SELECT * FROM orders WHERE id=$1', [req.params.id]);
     if (ord.rows.length && ord.rows[0].frame_inventory_id && !ord.rows[0].customer_own_frame) {
-      const rBefore = await pool.query('SELECT quantity, name FROM inventory WHERE id=$1', [ord.rows[0].frame_inventory_id]).catch(()=>({rows:[{}]}));
-      const rQty = parseInt(rBefore.rows[0]?.quantity||0);
       await pool.query(
         'UPDATE inventory SET quantity = quantity + 1, updated_at = NOW() WHERE id = $1',
         [ord.rows[0].frame_inventory_id]
       ).catch(() => {});
-      await logStockMove(pool, { inventory_id:ord.rows[0].frame_inventory_id, item_name:rBefore.rows[0]?.name||ord.rows[0].frame,
-        change:+1, qty_before:rQty, qty_after:rQty+1,
-        reason:'Order Cancelled', ref:`Order ${ord.rows[0].order_number}`, user_id:req.user.id, user_name:req.user.name||req.user.username });
     }
     await pool.query('DELETE FROM cash_deposits WHERE order_id = $1', [req.params.id]).catch(() => {});
     await pool.query('DELETE FROM orders WHERE id = $1', [req.params.id]);
