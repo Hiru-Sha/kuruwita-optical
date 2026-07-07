@@ -180,7 +180,7 @@ export default function KalutotaAccount() {
     setCart(prev => {
       const ex = prev.find(c => c.inventory_id === item.id);
       if (ex) return prev.map(c => c.inventory_id===item.id ? {...c, qty:c.qty+1} : c);
-      return [...prev, { inventory_id:item.id, name:item.name, qty:1, unit_price:parseFloat(item.sell_price||0), max_qty:item.quantity }];
+      return [...prev, { inventory_id:item.id, name:item.name, qty:1, unit_price:parseFloat(item.cost_price||item.buy_price||0), max_qty:item.quantity }];
     });
     setItemSearch(''); setItemResults([]);
   };
@@ -433,7 +433,7 @@ export default function KalutotaAccount() {
                     <span style={{color:C.muted,fontSize:11,marginLeft:8}}>{item.category}</span>
                   </div>
                   <div style={{textAlign:'right',flexShrink:0}}>
-                    <div style={{fontSize:12,fontWeight:700,color:C.success}}>Rs. {parseFloat(item.sell_price||0).toLocaleString()}</div>
+                    <div style={{fontSize:12,fontWeight:700,color:'#1d4ed8'}}>Buy: Rs. {parseFloat(item.cost_price||item.buy_price||0).toLocaleString()}</div>
                     <div style={{fontSize:10,color:item.quantity<=3?C.danger:C.muted}}>Stock: {item.quantity}</div>
                   </div>
                 </div>
@@ -447,7 +447,7 @@ export default function KalutotaAccount() {
               <div key={item.inventory_id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:C.cream,borderRadius:9,marginBottom:6}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,fontWeight:600,color:C.navy}}>{item.name}</div>
-                  <div style={{fontSize:11,color:C.muted}}>Rs. {item.unit_price.toLocaleString()} each</div>
+                  <div style={{fontSize:11,color:'#1d4ed8',fontWeight:600}}>Buy price: Rs. {item.unit_price.toLocaleString()} each</div>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:6}}>
                   <button onClick={()=>setCart(p=>p.map(c=>c.inventory_id===item.inventory_id&&c.qty>1?{...c,qty:c.qty-1}:c))}
