@@ -65,4 +65,40 @@ app.use('/api/scan-session',      require('./routes/scanSession'));
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 
 const PORT = process.env.PORT || 5000;
+
+// ── Startup: auto-create tables that may not exist yet ────────
+const pool = require('./db/pool');
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS stock_adjustments (
+        id               SERIAL PRIMARY KEY,
+        inventory_id     INTEGER,
+        item_name        VARCHAR(200),
+        change_type      VARCHAR(20),
+        quantity_change  INTEGER,
+        quantity_before  INTEGER,
+        quantity_after   INTEGER,
+        reason           VARCHAR(100),
+        notes            TEXT,
+        unit_cost        DECIMAL(10,2),
+        adjusted_by      INTEGER,
+        adjusted_by_name VARCHAR(100),
+        order_id         INTEGER,
+        created_at       TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_stock_adj_inv ON stock_adjustments(inventory_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_stock_adj_date ON stock_adjustments(created_at DESC)`);
+
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_payment_amount DECIMAL(10,2) DEFAULT 0`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_frame VARCHAR(30)`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_lens  VARCHAR(30)`);
+    await pool.query(`ALTER TABLE quick_sales ADD COLUMN IF NOT EXISTS customer_id INTEGER`);
+    await pool.query(`ALTER TABLE repairs ADD COLUMN IF NOT EXISTS customer_id INTEGER`);
+
+    console.log('✅ DB migrations complete');
+  } catch(e) { console.warn('Migration warning:', e.message); }
+})();
+
 app.listen(PORT, () => console.log(`✅ Kuruwita Optical on port ${PORT}`));
