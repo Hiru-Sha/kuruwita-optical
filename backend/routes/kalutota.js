@@ -101,8 +101,16 @@ router.post('/', auth, async (req, res) => {
           `UPDATE inventory SET ${updFields} WHERE id=$2 RETURNING *`, updParams
         )).rows[0];
 
-        // Log stock adjustment
-        await client.query(`
+        // Ensure stock_adjustments table exists, then log
+        await pool.query(`CREATE TABLE IF NOT EXISTS stock_adjustments (
+          id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
+          change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
+          quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
+          adjusted_by INTEGER, adjusted_by_name VARCHAR(100), order_id INTEGER,
+          created_at TIMESTAMP DEFAULT NOW()
+        )`).catch(()=>{});
+
+        await pool.query(`
           INSERT INTO stock_adjustments
             (inventory_id,item_name,change_type,quantity_change,quantity_before,quantity_after,reason,adjusted_by_name)
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,

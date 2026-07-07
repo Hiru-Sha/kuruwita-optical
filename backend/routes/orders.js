@@ -199,10 +199,34 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
     // ── FIXED: Deduct frame inventory INSIDE the transaction ──
     const frameInvId = req.body.frame_inventory_id;
     if (frameInvId && !req.body.customer_own_frame) {
+      // Get quantity before deduction
+      const fBefore = await pool.query('SELECT quantity, name FROM inventory WHERE id=$1', [frameInvId]).catch(()=>({rows:[{quantity:0,name:'Frame'}]}));
+      const fQtyBefore = parseInt(fBefore.rows[0]?.quantity || 0);
+
       await client.query(
         'UPDATE inventory SET quantity = GREATEST(0, quantity - 1), updated_at = NOW() WHERE id = $1',
         [frameInvId]
       );
+
+      // Log to stock_adjustments
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS stock_adjustments (
+          id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
+          change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
+          quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
+          adjusted_by INTEGER, adjusted_by_name VARCHAR(100), created_at TIMESTAMP DEFAULT NOW()
+        )
+      `).catch(()=>{});
+      await pool.query(`
+        INSERT INTO stock_adjustments
+          (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, unit_cost, adjusted_by)
+        VALUES ($1,$2,'remove',-1,$3,$4,'Order','Order: '||$5,$6,$7)`,
+        [frameInvId, fBefore.rows[0]?.name || req.body.frame,
+         fQtyBefore, Math.max(0, fQtyBefore - 1),
+         orderNum,
+         parseFloat(req.body.frame_buy_price) || 0,
+         req.user.id]
+      ).catch(e => console.warn('Stock log failed:', e.message));
     }
 
     // Auto-create bank receipt if payment method is bank/card/transfer
@@ -292,9 +316,20 @@ router.delete('/:id', auth, async (req, res) => {
   try {
     const ord = await pool.query('SELECT * FROM orders WHERE id=$1', [req.params.id]);
     if (ord.rows.length && ord.rows[0].frame_inventory_id && !ord.rows[0].customer_own_frame) {
+      const rBefore = await pool.query('SELECT quantity, name FROM inventory WHERE id=$1',
+        [ord.rows[0].frame_inventory_id]).catch(()=>({rows:[{quantity:0,name:'Frame'}]}));
+      const rQtyB = parseInt(rBefore.rows[0]?.quantity || 0);
+
       await pool.query(
         'UPDATE inventory SET quantity = quantity + 1, updated_at = NOW() WHERE id = $1',
         [ord.rows[0].frame_inventory_id]
+      ).catch(() => {});
+
+      await pool.query(`INSERT INTO stock_adjustments
+        (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, adjusted_by)
+        VALUES ($1,$2,'add',1,$3,$4,'Order Cancelled','Returned: order '||$5,$6)`,
+        [ord.rows[0].frame_inventory_id, rBefore.rows[0]?.name || ord.rows[0].frame,
+         rQtyB, rQtyB + 1, ord.rows[0].order_number, req.user.id]
       ).catch(() => {});
     }
     await pool.query('DELETE FROM cash_deposits WHERE order_id = $1', [req.params.id]).catch(() => {});

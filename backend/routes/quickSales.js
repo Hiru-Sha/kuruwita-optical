@@ -7,23 +7,6 @@
 const router = require('express').Router();
 const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
-// Log stock movement to stock_adjustments
-async function logStockMove(pool_or_client, { inventory_id, item_name, change, qty_before, qty_after, reason, ref, user_id, user_name }) {
-  try {
-    const qty_change = change;
-    const change_type = change < 0 ? 'remove' : 'add';
-    await pool_or_client.query(`
-      INSERT INTO stock_adjustments
-        (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, adjusted_by, adjusted_by_name)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-      ON CONFLICT DO NOTHING`,
-      [inventory_id, item_name||'Item', change_type, qty_change, qty_before, qty_after,
-       reason, ref||null, user_id||1, user_name||'System']
-    );
-  } catch(e) { /* non-critical — don't block main operation */ }
-}
-
-
 
 // ── GET /api/quick-sales ─────────────────────────────────────
 router.get('/', auth, async (req, res) => {
@@ -133,19 +116,38 @@ router.post('/', auth, async (req, res) => {
       ? items
       : (typeof items === 'string' ? JSON.parse(items) : []);
 
+    // Ensure stock_adjustments table exists (once per sale)
+    await pool.query(`CREATE TABLE IF NOT EXISTS stock_adjustments (
+      id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
+      change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
+      quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
+      adjusted_by INTEGER, adjusted_by_name VARCHAR(100), created_at TIMESTAMP DEFAULT NOW()
+    )`).catch(()=>{});
+
     for (const item of itemsArr) {
       const invId = item.inventory_id || item.inventoryId || item.id;
       const qty   = parseInt(item.qty) || parseInt(item.quantity) || 1;
       if (invId) {
-        const qsBefore = await client.query('SELECT quantity FROM inventory WHERE id=$1', [invId]).catch(()=>({rows:[{quantity:0}]}));
-        const qsQtyB = parseInt(qsBefore.rows[0]?.quantity||0);
+        // Get qty before deduction for history log
+        const before = await pool.query('SELECT quantity, name FROM inventory WHERE id=$1', [invId])
+          .catch(()=>({rows:[{quantity:0,name:item.name||'Item'}]}));
+        const qtyBefore = parseInt(before.rows[0]?.quantity || 0);
+
         await client.query(
           'UPDATE inventory SET quantity = GREATEST(0, quantity - $1), updated_at = NOW() WHERE id = $2',
           [qty, invId]
         );
-        await logStockMove(pool, { inventory_id:invId, item_name:item.name||'Item',
-          change:-qty, qty_before:qsQtyB, qty_after:Math.max(0,qsQtyB-qty),
-          reason:'Quick Sale', ref:`Sale ${saleNum}`, user_id:req.user.id, user_name:req.user.name||req.user.username });
+
+        // Log to stock_adjustments
+        await pool.query(`INSERT INTO stock_adjustments
+          (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, unit_cost, adjusted_by)
+          VALUES ($1,$2,'remove',$3,$4,$5,'Quick Sale','Sale: '||$6,$7,$8)`,
+          [invId, before.rows[0]?.name || item.name || 'Item',
+           -qty, qtyBefore, Math.max(0, qtyBefore - qty),
+           saleNum,
+           parseFloat(item.cost_price || item.unit_price || 0),
+           req.user.id]
+        ).catch(e => console.warn('Stock log failed:', e.message));
       }
     }
 
