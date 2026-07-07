@@ -388,7 +388,7 @@ export default function Expenses() {
   ];
 
   return (
-    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1200, width:'100%' }}>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1300, width:'100%', margin:'0 auto' }}>
 
       {/* Toast */}
       {toast && (
@@ -541,7 +541,7 @@ export default function Expenses() {
                       const cat = getCatAll(exp.category);
                       return (
                         <div key={exp.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderBottom:`1px solid ${C.cream}` }}>
-                          <div style={{ width:36, height:36, borderRadius:9, background:cat.color+'15', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
+                          <div style={{ width:40, height:40, borderRadius:10, background:cat.color+'15', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
                             {cat.icon}
                           </div>
                           <div style={{ flex:1, minWidth:0 }}>
@@ -680,7 +680,7 @@ export default function Expenses() {
                     </div>
                   : dailyDeposits.map(dep=>(
                       <div key={dep.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderBottom:`1px solid ${C.cream}` }}>
-                        <div style={{ width:36, height:36, borderRadius:9, background:'#dbeafe', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
+                        <div style={{ width:40, height:40, borderRadius:10, background:'#dbeafe', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
                           🏦
                         </div>
                         <div style={{ flex:1, minWidth:0 }}>
@@ -833,7 +833,7 @@ export default function Expenses() {
             </div>
           )}
 
-          <div style={{ display:'grid', gridTemplateColumns:'280px 1fr', gap:16 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'260px 1fr', gap:20 }}>
             {/* Category breakdown */}
             <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
               <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -901,17 +901,22 @@ export default function Expenses() {
               )}
             </div>
 
-            {/* Lab Payment note */}
-            <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:9, padding:'9px 14px', marginBottom:10, fontSize:12, color:'#92400e', display:'flex', gap:6 }}>
+            {/* RIGHT COLUMN: tip + full expense list */}
+            <div style={{ display:'flex', flexDirection:'column', gap:10, minWidth:0 }}>
+
+            <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:9, padding:'9px 14px', fontSize:12, color:'#92400e', display:'flex', gap:6 }}>
               <span>ℹ️</span>
-              <span><b>Tip:</b> This total includes Lab Payment expenses. The Reports page shows expenses <b>excluding</b> Lab Payment (it's counted in COGS there). This is why the two totals differ.</span>
+              <span><b>Note:</b> This total includes Lab Payment. Reports excludes it (counted in COGS).</span>
             </div>
 
             {/* Expense list */}
-            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
-              <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, display:'flex', justifyContent:'space-between' }}>
-                <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{catFilter==='all'?'All Expenses':`${getCatAll(catFilter).icon} ${catFilter}`}</span>
-                <span style={{ fontSize:12, color:C.muted }}>{allExpenses.length} records</span>
+            <div style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden', flex:1 }}>
+              <div style={{ padding:'14px 18px', borderBottom:`1px solid ${C.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div>
+                  <span style={{ fontSize:15, fontWeight:700, color:C.navy }}>{catFilter==='all'?'All Expenses':`${getCatAll(catFilter).icon} ${catFilter}`}</span>
+                  {catFilter!=='all' && <button onClick={()=>setCatFilter('all')} style={{ marginLeft:10, fontSize:11, color:C.muted, background:'none', border:`1px solid ${C.border}`, borderRadius:6, padding:'2px 8px', cursor:'pointer', fontFamily:'inherit' }}>✕ Clear</button>}
+                </div>
+                <span style={{ fontSize:13, fontWeight:600, color:C.muted }}>{allExpenses.length} records</span>
               </div>
               {!allExpenses.length
                 ? <div style={{ padding:40, textAlign:'center', color:C.muted }}><div style={{ fontSize:32, marginBottom:8 }}>💸</div>No expenses</div>
@@ -927,10 +932,10 @@ export default function Expenses() {
                             {exp.date?.slice(0,10)===today() && <span style={{ marginLeft:8, background:C.gold, color:C.navy, fontSize:9, padding:'1px 7px', borderRadius:20 }}>Today</span>}
                           </div>
                         )}
-                        <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', borderBottom:`1px solid ${C.cream}` }}>
-                          <div style={{ width:34, height:34, borderRadius:8, background:cat.color+'15', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>{cat.icon}</div>
-                          <div style={{ flex:1 }}>
-                            <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{exp.description}</div>
+                        <div style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 18px', borderBottom:`1px solid ${C.cream}` }}>
+                          <div style={{ width:42, height:42, borderRadius:10, background:cat.color+'20', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>{cat.icon}</div>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:1 }}>{exp.description}</div>
                             <div style={{ fontSize:11, color:C.muted }}>
                               <span style={{ background:cat.color+'15', color:cat.color, padding:'1px 7px', borderRadius:20, fontWeight:600, fontSize:10 }}>{exp.category}</span>
                               <span style={{ marginLeft:6 }}>{exp.payment_method==='bank'?'🏦 Bank':'💵 Cash'}</span>
@@ -947,7 +952,8 @@ export default function Expenses() {
                   })
               }
             </div>
-          </div>
+            </div> {/* end right column wrapper */}
+          </div> {/* end expenses grid */}
         </div>
       )}
 
