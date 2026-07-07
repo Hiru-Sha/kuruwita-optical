@@ -98,9 +98,6 @@ function PayModal({ tx, onClose, onSave }) {
           <button onClick={onClose} style={{padding:'11px 16px',background:C.cream,border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,cursor:'pointer',fontFamily:'inherit',color:C.muted}}>Cancel</button>
         </div>
       </div>
-      {showScanner && (
-        <QRScanner title="Scan Item QR" onScan={handleQRScan} onClose={()=>setShowScanner(false)}/>
-      )}
     </div>
   );
 }
@@ -121,15 +118,10 @@ export default function KalutotaAccount() {
   const [imgData,  setImgData] = useState(null);
   const [invResult,   setInvResult]   = useState(null);
   const [showScanner, setShowScanner] = useState(false);
-
-  // ── Cart system (like Quick Sale) ────────────────────────────
-  const [cart,         setCart]        = useState([]);       // items to add to Kalutota
-  const [itemSearch,   setItemSearch]  = useState('');       // inventory search
-  const [itemResults,  setItemResults] = useState([]);       // search results
+  const [cart,         setCart]        = useState([]);
+  const [itemSearch,   setItemSearch]  = useState('');
+  const [itemResults,  setItemResults] = useState([]);
   const [cartLoading,  setCartLoading] = useState(false);
-  const [payNow,       setPayNow]      = useState('none');   // 'none'|'partial'|'full'
-  const [payNowAmt,    setPayNowAmt]   = useState('');
-  const [payNowMethod, setPayNowMethod]= useState('cash');
 
   const [showCashPay,  setShowCashPay]  = useState(false);
   const [cashPayForm,  setCashPayForm]  = useState({
@@ -168,68 +160,33 @@ export default function KalutotaAccount() {
     setImgData(await toB64(f));
   };
 
-  // Search inventory for cart
+  // Item search for cart
   const searchItems = async (q) => {
     setItemSearch(q);
     if (q.length < 2) { setItemResults([]); return; }
     setCartLoading(true);
     try {
-      const BASE_  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-      const token_ = localStorage.getItem('ko_token');
-      const res    = await fetch(`${BASE_}/inventory?search=${encodeURIComponent(q)}&limit=8&no_images=1`,
-        { headers: { Authorization: `Bearer ${token_}` } });
-      const data   = await res.json();
-      setItemResults(Array.isArray(data) ? data : (data.items || []));
+      const BASE_ = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const tok_  = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE_}/inventory?search=${encodeURIComponent(q)}&limit=8&no_images=1`,
+        { headers: { Authorization: `Bearer ${tok_}` } });
+      const data  = await res.json();
+      setItemResults(Array.isArray(data) ? data : (data.data || []));
     } catch { setItemResults([]); }
     finally { setCartLoading(false); }
   };
 
   const addToCart = (item) => {
     setCart(prev => {
-      const existing = prev.find(c => c.inventory_id === item.id);
-      if (existing) return prev.map(c => c.inventory_id===item.id ? {...c, qty: c.qty+1} : c);
-      return [...prev, {
-        inventory_id: item.id,
-        name: item.name,
-        category: item.category,
-        qty: 1,
-        unit_price: parseFloat(item.sell_price || item.cost_price || 0),
-        max_qty: item.quantity,
-      }];
+      const ex = prev.find(c => c.inventory_id === item.id);
+      if (ex) return prev.map(c => c.inventory_id===item.id ? {...c, qty:c.qty+1} : c);
+      return [...prev, { inventory_id:item.id, name:item.name, qty:1, unit_price:parseFloat(item.sell_price||0), max_qty:item.quantity }];
     });
     setItemSearch(''); setItemResults([]);
   };
 
   const removeFromCart = (id) => setCart(p => p.filter(c => c.inventory_id !== id));
   const cartTotal = cart.reduce((s, c) => s + c.qty * c.unit_price, 0);
-
-  const handleCartSubmit = async () => {
-    if (!cart.length) return alert('Add items to cart first');
-    setSaving(true);
-    try {
-      // Submit each cart item as a separate Kalutota transaction
-      for (const item of cart) {
-        await apiPost('/kalutota', {
-          date:                today(),
-          direction:           'out',
-          category:            item.category || 'Frames',
-          description:         item.name,
-          quantity:            item.qty,
-          unit_price:          item.unit_price,
-          payment_status:      payNow==='full' ? 'paid' : payNow==='partial' ? 'partial' : 'pending',
-          paid_amount:         payNow==='full' ? item.qty*item.unit_price : payNow==='partial' ? parseFloat(payNowAmt)||0 : 0,
-          paid_date:           (payNow!=='none') ? today() : '',
-          payment_method:      payNowMethod,
-          update_inventory:    true,
-          inventory_item_name: item.name,
-          notes:               `Cart transaction — ${cart.length} item types`,
-        });
-      }
-      showToast(`✅ ${cart.length} item${cart.length!==1?'s':''} sent to Kalutota · Total: Rs. ${cartTotal.toLocaleString()}`);
-      setCart([]); setPayNow('none'); setPayNowAmt(''); load();
-    } catch(e) { alert('Failed: '+e.message); }
-    finally { setSaving(false); }
-  };
 
   const handleQRScan = async (scannedId) => {
     setShowScanner(false);
@@ -249,9 +206,7 @@ export default function KalutotaAccount() {
           quantity:            '1',
           update_inventory:    true,
         }));
-        // Add directly to cart
-        addToCart(item);
-        showToast(`📦 ${item.name} added to cart`);
+        setInvResult({ message: `📦 ${item.name} — Stock: ${item.quantity} — Rs.${parseFloat(item.sell_price||0).toLocaleString()}` });
       }
     } catch(e) {}
   };
@@ -455,112 +410,74 @@ export default function KalutotaAccount() {
         </div>
       )}
 
-      {/* ── QUICK ADD: Cart-based item selection ── */}
-      <div style={{background:C.surface,border:`1.5px solid ${C.gold}40`,borderRadius:14,padding:20,marginBottom:16,boxShadow:'0 2px 8px rgba(0,0,0,.05)'}}>
-        <div style={{fontSize:14,fontWeight:700,color:C.navy,marginBottom:12}}>
-          🛒 Add Items to Kalutota
-        </div>
-
-        {/* Search + QR row */}
-        <div style={{display:'flex',gap:8,marginBottom:10}}>
-          <div style={{flex:1,position:'relative'}}>
-            <input value={itemSearch} onChange={e=>searchItems(e.target.value)}
-              placeholder="🔍 Search frames, sunglasses..." style={{...INP,width:'100%'}}/>
-            {itemResults.length>0 && (
-              <div style={{position:'absolute',top:'100%',left:0,right:0,background:'white',border:`1px solid ${C.border}`,borderRadius:10,zIndex:100,boxShadow:'0 4px 16px rgba(0,0,0,.12)',maxHeight:220,overflowY:'auto',marginTop:2}}>
-                {itemResults.map(item=>(
-                  <div key={item.id} onMouseDown={()=>addToCart(item)}
-                    style={{padding:'10px 14px',cursor:'pointer',fontSize:13,borderBottom:`1px solid ${C.cream}`,display:'flex',justifyContent:'space-between'}}>
-                    <div>
-                      <b style={{color:C.navy}}>{item.name}</b>
-                      <span style={{color:C.muted,fontSize:11,marginLeft:8}}>{item.category}</span>
-                    </div>
-                    <div style={{textAlign:'right',flexShrink:0}}>
-                      <div style={{fontSize:12,fontWeight:700,color:C.success}}>Rs. {parseFloat(item.sell_price||0).toLocaleString()}</div>
-                      <div style={{fontSize:10,color:item.quantity<=3?C.danger:C.muted}}>Stock: {item.quantity}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* ─── Quick Item Search ─── */}
+      <div style={{background:'white',border:`1.5px solid ${C.gold}44`,borderRadius:12,padding:16,marginBottom:14}}>
+        <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:10}}>🛒 Add Items to Kalutota</div>
+        <div style={{display:'flex',gap:8,position:'relative'}}>
+          <input value={itemSearch} onChange={e=>searchItems(e.target.value)}
+            placeholder="Search frames, sunglasses by name..." style={{...INP,flex:1}}
+            onBlur={()=>setTimeout(()=>setItemResults([]),200)}/>
           <button onClick={()=>setShowScanner(true)}
-            style={{padding:'10px 14px',background:C.navy,color:'white',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}>
+            style={{padding:'10px 14px',background:C.navy,color:'white',border:'none',borderRadius:9,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}>
             📷 Scan QR
           </button>
-        </div>
-
-        {/* Cart items */}
-        {cart.length > 0 && (
-          <div>
-            <div style={{background:C.cream,borderRadius:10,marginBottom:10,overflow:'hidden'}}>
-              {cart.map(item=>(
-                <div key={item.inventory_id} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',borderBottom:`1px solid ${C.border}`}}>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:13,fontWeight:600,color:C.navy}}>{item.name}</div>
-                    <div style={{fontSize:11,color:C.muted}}>Rs. {item.unit_price.toLocaleString()} each</div>
+          {itemResults.length>0 && (
+            <div style={{position:'absolute',top:'100%',left:0,right:60,background:'white',border:`1px solid ${C.border}`,borderRadius:10,zIndex:100,boxShadow:'0 4px 16px rgba(0,0,0,.12)',maxHeight:220,overflowY:'auto',marginTop:2}}>
+              {itemResults.map(item=>(
+                <div key={item.id} onMouseDown={()=>addToCart(item)}
+                  style={{padding:'10px 14px',cursor:'pointer',fontSize:13,borderBottom:`1px solid #f3f4f6`,display:'flex',justifyContent:'space-between',alignItems:'center'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='#f8faff'}
+                  onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                  <div>
+                    <b style={{color:C.navy}}>{item.name}</b>
+                    <span style={{color:C.muted,fontSize:11,marginLeft:8}}>{item.category}</span>
                   </div>
-                  {/* Qty control */}
-                  <div style={{display:'flex',alignItems:'center',gap:6}}>
-                    <button onClick={()=>setCart(p=>p.map(c=>c.inventory_id===item.inventory_id&&c.qty>1?{...c,qty:c.qty-1}:c))}
-                      style={{width:26,height:26,borderRadius:6,border:`1px solid ${C.border}`,background:'white',cursor:'pointer',fontSize:14,fontWeight:700}}>−</button>
-                    <span style={{fontSize:13,fontWeight:700,minWidth:20,textAlign:'center'}}>{item.qty}</span>
-                    <button onClick={()=>setCart(p=>p.map(c=>c.inventory_id===item.inventory_id?{...c,qty:c.qty+1}:c))}
-                      style={{width:26,height:26,borderRadius:6,border:`1px solid ${C.border}`,background:'white',cursor:'pointer',fontSize:14,fontWeight:700}}>+</button>
+                  <div style={{textAlign:'right',flexShrink:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:C.success}}>Rs. {parseFloat(item.sell_price||0).toLocaleString()}</div>
+                    <div style={{fontSize:10,color:item.quantity<=3?C.danger:C.muted}}>Stock: {item.quantity}</div>
                   </div>
-                  <div style={{fontSize:13,fontWeight:700,color:C.navy,minWidth:70,textAlign:'right'}}>
-                    Rs. {(item.qty*item.unit_price).toLocaleString()}
-                  </div>
-                  <button onClick={()=>removeFromCart(item.inventory_id)}
-                    style={{background:'none',border:'none',color:C.danger,cursor:'pointer',fontSize:16,fontWeight:700}}>✕</button>
                 </div>
               ))}
-              <div style={{padding:'12px 14px',display:'flex',justifyContent:'space-between',alignItems:'center',background:'#f0f4ff',borderTop:`2px solid ${C.navy}`}}>
-                <span style={{fontSize:13,fontWeight:700,color:C.navy}}>{cart.length} item{cart.length!==1?'s':''} · Total Kalutota owes:</span>
-                <span style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:800,color:C.navy}}>Rs. {cartTotal.toLocaleString()}</span>
-              </div>
             </div>
-
-            {/* Payment option */}
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:12,fontWeight:700,color:C.muted,textTransform:'uppercase',letterSpacing:'.8px',marginBottom:8}}>Payment Received Now?</div>
-              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                {[{v:'none',l:'💳 Pay Later'},{v:'partial',l:'💵 Partial Now'},{v:'full',l:'✅ Pay in Full'}].map(opt=>(
-                  <button key={opt.v} onClick={()=>setPayNow(opt.v)}
-                    style={{padding:'8px 16px',borderRadius:9,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',border:'none',
-                      background:payNow===opt.v?C.navy:'white',color:payNow===opt.v?'white':C.muted,
-                      boxShadow:'0 1px 4px rgba(0,0,0,.1)'}}>
-                    {opt.l}
-                  </button>
-                ))}
+          )}
+        </div>
+        {cart.length>0 && (
+          <div style={{marginTop:12}}>
+            {cart.map(item=>(
+              <div key={item.inventory_id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:C.cream,borderRadius:9,marginBottom:6}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600,color:C.navy}}>{item.name}</div>
+                  <div style={{fontSize:11,color:C.muted}}>Rs. {item.unit_price.toLocaleString()} each</div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <button onClick={()=>setCart(p=>p.map(c=>c.inventory_id===item.inventory_id&&c.qty>1?{...c,qty:c.qty-1}:c))}
+                    style={{width:26,height:26,borderRadius:6,border:`1px solid ${C.border}`,background:'white',cursor:'pointer',fontSize:14,fontWeight:700}}>−</button>
+                  <span style={{fontWeight:700,minWidth:20,textAlign:'center'}}>{item.qty}</span>
+                  <button onClick={()=>setCart(p=>p.map(c=>c.inventory_id===item.inventory_id?{...c,qty:c.qty+1}:c))}
+                    style={{width:26,height:26,borderRadius:6,border:`1px solid ${C.border}`,background:'white',cursor:'pointer',fontSize:14,fontWeight:700}}>+</button>
+                </div>
+                <span style={{fontWeight:700,color:C.navy,minWidth:70,textAlign:'right'}}>Rs. {(item.qty*item.unit_price).toLocaleString()}</span>
+                <button onClick={()=>removeFromCart(item.inventory_id)}
+                  style={{background:'none',border:'none',color:C.danger,cursor:'pointer',fontSize:16,fontWeight:700}}>✕</button>
               </div>
-              {payNow==='partial' && (
-                <div style={{display:'flex',gap:8,marginTop:8}}>
-                  <input type="number" value={payNowAmt} onChange={e=>setPayNowAmt(e.target.value)}
-                    placeholder="Amount received..." style={{...INP,flex:1}} max={cartTotal}/>
-                  <select value={payNowMethod} onChange={e=>setPayNowMethod(e.target.value)} style={{...SEL,minWidth:130}}>
-                    <option value="cash">💵 Cash</option>
-                    <option value="cheque">📋 Cheque</option>
-                    <option value="bank">🏦 Bank</option>
-                  </select>
-                </div>
-              )}
-              {payNow==='full' && (
-                <div style={{display:'flex',gap:8,marginTop:8,alignItems:'center'}}>
-                  <span style={{fontSize:12,color:C.success,fontWeight:700}}>✅ Full Rs. {cartTotal.toLocaleString()} will be marked paid</span>
-                  <select value={payNowMethod} onChange={e=>setPayNowMethod(e.target.value)} style={{...SEL,minWidth:130,marginLeft:'auto'}}>
-                    <option value="cash">💵 Cash</option>
-                    <option value="cheque">📋 Cheque</option>
-                    <option value="bank">🏦 Bank</option>
-                  </select>
-                </div>
-              )}
+            ))}
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 12px',background:'#f0f4ff',borderRadius:9,border:`1px solid ${C.border}`}}>
+              <span style={{fontSize:13,fontWeight:700,color:C.navy}}>Total: Rs. {cartTotal.toLocaleString()}</span>
+              <button onClick={async()=>{
+                if(!cart.length)return;
+                setSaving(true);
+                for(const item of cart){
+                  await apiPost('/kalutota',{date:today(),direction:'out',category:item.category||'Frames',description:item.name,quantity:item.qty,unit_price:item.unit_price,payment_status:'pending',paid_amount:0,update_inventory:true,inventory_item_name:item.name,notes:'Cart transaction'});
+                }
+                setCart([]);
+                showToast(`✅ ${cart.length} item${cart.length!==1?'s':''} sent to Kalutota`);
+                load();
+                setSaving(false);
+              }} disabled={saving}
+                style={{padding:'8px 18px',background:saving?C.muted:C.navy,color:'white',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:saving?'not-allowed':'pointer',fontFamily:'inherit'}}>
+                {saving?'⏳ Saving...':'📤 Send to Kalutota'}
+              </button>
             </div>
-
-            <button onClick={handleCartSubmit} disabled={saving}
-              style={{width:'100%',padding:'12px',background:saving?C.muted:C.navy,color:'white',border:'none',borderRadius:10,fontSize:14,fontWeight:700,cursor:saving?'not-allowed':'pointer',fontFamily:'inherit'}}>
-              {saving?'⏳ Saving...':'📤 Send to Kalutota — Stock will reduce'}
-            </button>
           </div>
         )}
       </div>
