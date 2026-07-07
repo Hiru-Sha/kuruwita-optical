@@ -293,6 +293,17 @@ function AdjustmentPanel({ item, onDone }) {
 
   useEffect(()=>{ loadHistory(); },[item.id]);
 
+  const [batches,     setBatches]     = useState([]);
+
+  const loadBatches = async () => {
+    try {
+      const data = await apiAdj(`/stock-adjustments/batches/${item.id}`);
+      setBatches(Array.isArray(data) ? data : []);
+    } catch { setBatches([]); }
+  };
+
+  useEffect(() => { loadBatches(); }, [item.id]);
+
   const loadHistory = async () => {
     setLoadingLog(true);
     try {
@@ -308,34 +319,18 @@ function AdjustmentPanel({ item, onDone }) {
     setError(''); setSaving(true);
     try {
       const res = await apiAdj('/stock-adjustments', 'POST', {
-        inventory_id: item.id,
-        change_type:  adjType,
+        inventory_id:    item.id,
+        change_type:     adjType,
         quantity_change: parseInt(adjQty),
-        reason: adjReason,
-        notes:  adjNotes.trim() || null,
+        reason:          adjReason,
+        notes:           adjNotes.trim() || null,
+        // Pass prices — backend creates a batch record (keeps old price for old stock)
+        buy_price:  adjBuyPrice  ? parseFloat(adjBuyPrice)  : undefined,
+        sell_price: adjSellPrice ? parseFloat(adjSellPrice) : undefined,
       });
       if (res.error) throw new Error(res.error);
 
-      // Also update prices if provided (when adding new stock batch with different price)
-      if (adjType === 'add' && (adjBuyPrice || adjSellPrice)) {
-        const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-        const token = localStorage.getItem('ko_token');
-        const priceUpdate = {};
-        if (adjSellPrice && parseFloat(adjSellPrice) > 0) {
-          priceUpdate.sell_price = parseFloat(adjSellPrice);
-        }
-        if (adjBuyPrice && parseFloat(adjBuyPrice) > 0) {
-          priceUpdate.buy_price  = parseFloat(adjBuyPrice);
-          priceUpdate.cost_price = parseFloat(adjBuyPrice);
-        }
-        if (Object.keys(priceUpdate).length > 0) {
-          await fetch(`${BASE}/inventory/${item.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify(priceUpdate),
-          });
-        }
-      }
+
 
       const priceMsg = adjType==='add' && (adjBuyPrice||adjSellPrice)
         ? ` · Price updated` : '';
@@ -343,6 +338,7 @@ function AdjustmentPanel({ item, onDone }) {
       setAdjQty(''); setAdjNotes(''); setAdjReason('New stock received');
       setAdjBuyPrice(''); setAdjSellPrice('');
       loadHistory();
+      loadBatches();  // refresh batch price list
       onDone(res.new_quantity); // update parent's displayed qty
     } catch(e) { setError(e.message||'Failed to save'); }
     finally { setSaving(false); }
@@ -364,6 +360,60 @@ function AdjustmentPanel({ item, onDone }) {
       {toast && (
         <div style={{ background:C.navy, color:'white', padding:'10px 14px', borderRadius:9, fontSize:13, fontWeight:600, marginBottom:14, borderLeft:`3px solid ${C.gold}` }}>
           ✅ {toast}
+        </div>
+      )}
+
+      {/* 🏷️ Stock Batches — show different price batches */}
+      {batches.length > 0 && (
+        <div style={{ background:'#f8faff', border:`1.5px solid ${C.border}`, borderRadius:12, padding:'14px 16px', marginBottom:14 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:10, display:'flex', justifyContent:'space-between' }}>
+            <span>🏷️ Stock Batches — different buy prices</span>
+            <button onClick={loadBatches} style={{ background:'none', border:'none', fontSize:11, color:C.muted, cursor:'pointer', fontFamily:'inherit' }}>↻ Refresh</button>
+          </div>
+          {batches.map((b, i) => {
+            const totalLeft = batches.reduce((s, x) => s + (x.qty_remaining || 0), 0);
+            const pct = totalLeft > 0 ? Math.round((b.qty_remaining / totalLeft) * 100) : 0;
+            const isOld = i < batches.length - 1;
+            return (
+              <div key={b.id} style={{
+                display:'flex', alignItems:'center', gap:12, padding:'10px 12px',
+                background:'white', borderRadius:9, marginBottom:6,
+                border:`1.5px solid ${isOld ? '#e5e7eb' : C.gold}`,
+              }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ fontSize:10, fontWeight:700, background: isOld?'#f3f4f6':'#0f1f3d', color: isOld?'#6b7280':'#c9a84c', padding:'2px 8px', borderRadius:20 }}>
+                      {isOld ? `Batch ${i+1}` : '🆕 Latest'}
+                    </span>
+                    <span style={{ fontSize:11, color:'#6b7280' }}>
+                      Added {new Date(b.created_at).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'})}
+                    </span>
+                  </div>
+                  <div style={{ marginTop:4, display:'flex', gap:14 }}>
+                    <div>
+                      <div style={{ fontSize:10, color:'#6b7280' }}>Buy Price</div>
+                      <div style={{ fontSize:15, fontWeight:800, color:'#dc2626' }}>Rs. {parseFloat(b.buy_price||0).toLocaleString()}</div>
+                    </div>
+                    {b.sell_price && (
+                      <div>
+                        <div style={{ fontSize:10, color:'#6b7280' }}>Sell Price</div>
+                        <div style={{ fontSize:15, fontWeight:800, color:'#15803d' }}>Rs. {parseFloat(b.sell_price||0).toLocaleString()}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div style={{ textAlign:'right', flexShrink:0 }}>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:24, fontWeight:800, color: b.qty_remaining > 0 ? C.navy : '#9ca3af' }}>
+                    {b.qty_remaining}
+                  </div>
+                  <div style={{ fontSize:10, color:'#6b7280' }}>units left</div>
+                  {b.qty_remaining > 0 && (
+                    <div style={{ fontSize:10, color:C.muted }}>{pct}% of stock</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -419,36 +469,92 @@ function AdjustmentPanel({ item, onDone }) {
           placeholder="Any additional details..." style={INP}/>
       </div>
 
-      {/* Price update — only when ADDING stock */}
-      {adjType === 'add' && (
-        <div style={{ marginBottom:14, background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:10, padding:'12px 14px' }}>
-          <div style={{ fontSize:12, fontWeight:700, color:'#15803d', marginBottom:10, textTransform:'uppercase', letterSpacing:'.8px' }}>
-            💰 Update Price with New Stock (optional)
+      {/* Price update — only when ADDING stock — shows weighted average */}
+      {adjType === 'add' && (() => {
+        const curQty   = item.quantity || 0;
+        const curCost  = parseFloat(item.cost_price || item.buy_price || 0);
+        const newQty   = parseInt(adjQty) || 0;
+        const newCost  = parseFloat(adjBuyPrice) || 0;
+        const newSell  = parseFloat(adjSellPrice) || 0;
+
+        // Weighted average cost = (old qty × old cost + new qty × new cost) / total qty
+        const totalQty = curQty + newQty;
+        const avgCost  = newCost > 0 && totalQty > 0
+          ? Math.round((curQty * curCost + newQty * newCost) / totalQty)
+          : curCost;
+
+        return (
+          <div style={{ marginBottom:14, background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:10, padding:'14px 16px' }}>
+            <div style={{ fontSize:12, fontWeight:700, color:'#15803d', marginBottom:12, textTransform:'uppercase', letterSpacing:'.8px' }}>
+              🆕 New Batch Buy Price (keeps old stock at its original price)
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
+              {/* Buy price for NEW batch */}
+              <div>
+                <label style={{ fontSize:11, fontWeight:600, color:'#15803d', display:'block', marginBottom:5 }}>
+                  New Batch Buy Price (Rs.)
+                </label>
+                <input type="number" value={adjBuyPrice} onChange={e=>setAdjBuyPrice(e.target.value)}
+                  placeholder={`Leave blank — keep Rs. ${curCost.toLocaleString()}`}
+                  style={{ ...INP, border:'1.5px solid #86efac' }}/>
+                <div style={{ fontSize:10, color:'#6b7280', marginTop:3 }}>
+                  Current buy price: Rs. {curCost.toLocaleString()}
+                </div>
+              </div>
+
+              {/* New sell price */}
+              <div>
+                <label style={{ fontSize:11, fontWeight:600, color:'#15803d', display:'block', marginBottom:5 }}>
+                  New Sell Price (Rs.)
+                </label>
+                <input type="number" value={adjSellPrice} onChange={e=>setAdjSellPrice(e.target.value)}
+                  placeholder={`Leave blank — keep Rs. ${(item.sell_price||0).toLocaleString()}`}
+                  style={{ ...INP, border:'1.5px solid #86efac' }}/>
+                <div style={{ fontSize:10, color:'#6b7280', marginTop:3 }}>
+                  Current sell price: Rs. {(item.sell_price||0).toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            {/* Weighted average calculation */}
+            {newCost > 0 && newQty > 0 && (
+              <div style={{ background:'white', borderRadius:8, padding:'10px 14px', border:'1px solid #86efac' }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'#15803d', marginBottom:8 }}>
+                  📊 Weighted Average Cost Calculation
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6, fontSize:12 }}>
+                  <div style={{ background:'#f0fdf4', borderRadius:6, padding:'8px 10px' }}>
+                    <div style={{ color:'#6b7280', fontSize:10 }}>Old stock</div>
+                    <div style={{ fontWeight:700, color:'#0f1f3d' }}>{curQty} × Rs. {curCost.toLocaleString()}</div>
+                    <div style={{ color:'#6b7280', fontSize:10 }}>= Rs. {(curQty*curCost).toLocaleString()}</div>
+                  </div>
+                  <div style={{ background:'#dbeafe', borderRadius:6, padding:'8px 10px' }}>
+                    <div style={{ color:'#1d4ed8', fontSize:10 }}>New batch</div>
+                    <div style={{ fontWeight:700, color:'#1d4ed8' }}>{newQty} × Rs. {newCost.toLocaleString()}</div>
+                    <div style={{ color:'#1d4ed8', fontSize:10 }}>= Rs. {(newQty*newCost).toLocaleString()}</div>
+                  </div>
+                  <div style={{ background:'#0f1f3d', borderRadius:6, padding:'8px 10px' }}>
+                    <div style={{ color:'#c9a84c', fontSize:10 }}>New avg cost</div>
+                    <div style={{ fontWeight:800, color:'white', fontSize:14 }}>Rs. {avgCost.toLocaleString()}</div>
+                    <div style={{ color:'rgba(255,255,255,.6)', fontSize:10 }}>{totalQty} units total</div>
+                  </div>
+                </div>
+                <div style={{ marginTop:8, fontSize:11, color:'#15803d', fontWeight:600 }}>
+                  ✅ Buy price will update to Rs. {avgCost.toLocaleString()} (weighted average)
+                  {newSell > 0 && ` · Sell price → Rs. ${newSell.toLocaleString()}`}
+                </div>
+              </div>
+            )}
+
+            {newCost === 0 && adjBuyPrice === '' && (
+              <div style={{ fontSize:11, color:'#6b7280', fontStyle:'italic' }}>
+                Leave buy price blank to keep current price (Rs. {curCost.toLocaleString()}) unchanged.
+              </div>
+            )}
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            <div>
-              <label style={{ fontSize:11, fontWeight:600, color:'#15803d', display:'block', marginBottom:5 }}>
-                New Buy/Cost Price (Rs.) · Current: {parseInt(selected?.cost_price||selected?.buy_price||0).toLocaleString()}
-              </label>
-              <input type="number" value={adjBuyPrice} onChange={e=>setAdjBuyPrice(e.target.value)}
-                placeholder="Leave blank to keep current" style={{ ...INP, border:'1.5px solid #86efac' }}/>
-            </div>
-            <div>
-              <label style={{ fontSize:11, fontWeight:600, color:'#15803d', display:'block', marginBottom:5 }}>
-                New Sell Price (Rs.) · Current: {parseInt(selected?.sell_price||0).toLocaleString()}
-              </label>
-              <input type="number" value={adjSellPrice} onChange={e=>setAdjSellPrice(e.target.value)}
-                placeholder="Leave blank to keep current" style={{ ...INP, border:'1.5px solid #86efac' }}/>
-            </div>
-          </div>
-          {(adjBuyPrice || adjSellPrice) && (
-            <div style={{ fontSize:12, color:'#15803d', marginTop:8, fontWeight:600 }}>
-              ✅ Will update: {adjBuyPrice?`Cost → Rs. ${parseInt(adjBuyPrice).toLocaleString()} `:''}
-              {adjSellPrice?`Sell → Rs. ${parseInt(adjSellPrice).toLocaleString()}`:''}
-            </div>
-          )}
-        </div>
-      )}
+        );
+      })()}
 
       <button onClick={handleSave} disabled={saving}
         style={{ width:'100%', padding:'12px', background:saving?C.muted:TYPE_INFO[adjType].color, color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit', marginBottom:20 }}>

@@ -16,7 +16,23 @@ router.get('/', auth, async (req, res) => {
   try {
     // Ensure table exists before querying
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS stock_adjustments (
+      CREATE TABLE IF NOT EXISTS stock_batches (
+        id           SERIAL PRIMARY KEY,
+        inventory_id INTEGER NOT NULL,
+        item_name    VARCHAR(200),
+        qty_received INTEGER NOT NULL,
+        qty_remaining INTEGER NOT NULL,
+        buy_price    DECIMAL(10,2) NOT NULL,
+        sell_price   DECIMAL(10,2),
+        batch_date   DATE DEFAULT CURRENT_DATE,
+        notes        TEXT,
+        added_by     INTEGER,
+        created_at   TIMESTAMP DEFAULT NOW()
+      )
+    `).catch(()=>{});
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_batches_inv ON stock_batches(inventory_id)`).catch(()=>{});
+    await pool.query(`
+    CREATE TABLE IF NOT EXISTS stock_adjustments (
         id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
         change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
         quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
@@ -45,6 +61,22 @@ router.get('/', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   // Auto-create table if not exists
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS stock_batches (
+        id           SERIAL PRIMARY KEY,
+        inventory_id INTEGER NOT NULL,
+        item_name    VARCHAR(200),
+        qty_received INTEGER NOT NULL,
+        qty_remaining INTEGER NOT NULL,
+        buy_price    DECIMAL(10,2) NOT NULL,
+        sell_price   DECIMAL(10,2),
+        batch_date   DATE DEFAULT CURRENT_DATE,
+        notes        TEXT,
+        added_by     INTEGER,
+        created_at   TIMESTAMP DEFAULT NOW()
+      )
+    `).catch(()=>{});
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_batches_inv ON stock_batches(inventory_id)`).catch(()=>{});
+    await pool.query(`
     CREATE TABLE IF NOT EXISTS stock_adjustments (
       id               SERIAL PRIMARY KEY,
       inventory_id     INTEGER,
@@ -93,6 +125,9 @@ router.post('/', auth, async (req, res) => {
     const qty_change = change_type === 'remove'
       ? -Math.abs(parseInt(quantity_change))
       : Math.abs(parseInt(quantity_change));
+
+    // Fetch item name for batch record
+    const inv_item = await pool.query('SELECT name FROM inventory WHERE id=$1', [inventory_id]).catch(()=>({rows:[{}]}));
 
     const qty_before = parseInt(item.quantity);
     const qty_after  = Math.max(0, qty_before + qty_change);
@@ -163,6 +198,27 @@ router.post('/', auth, async (req, res) => {
   } finally {
     client.release();
   }
+});
+
+// GET /api/stock-adjustments/batches/:inventory_id — list price batches
+router.get('/batches/:inventory_id', require('../middleware/auth'), async (req, res) => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS stock_batches (
+        id SERIAL PRIMARY KEY, inventory_id INTEGER NOT NULL, item_name VARCHAR(200),
+        qty_received INTEGER NOT NULL, qty_remaining INTEGER NOT NULL,
+        buy_price DECIMAL(10,2) NOT NULL, sell_price DECIMAL(10,2),
+        batch_date DATE DEFAULT CURRENT_DATE, notes TEXT, added_by INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `).catch(()=>{});
+    const rows = await pool.query(`
+      SELECT * FROM stock_batches
+      WHERE inventory_id = $1
+      ORDER BY created_at ASC
+    `, [req.params.inventory_id]);
+    res.json(rows.rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 module.exports = router;
