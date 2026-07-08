@@ -467,7 +467,7 @@ export default function KalutotaAccount() {
                 if(!cart.length)return;
                 setSaving(true);
                 for(const item of cart){
-                  await apiPost('/kalutota',{date:today(),direction:'out',category:item.category||'Frames',description:item.name,quantity:item.qty,unit_price:item.unit_price,payment_status:'pending',paid_amount:0,update_inventory:true,inventory_item_name:item.name,notes:'Cart transaction'});
+                  await apiPost('/kalutota',{date:today(),direction:'out',category:item.category||'Frames',description:item.name,quantity:item.qty,unit_price:item.unit_price,payment_status:'pending',paid_amount:0,update_inventory:true,inventory_item_name:item.name,inventory_id:item.inventory_id,notes:'Cart transaction'});
                 }
                 setCart([]);
                 showToast(`✅ ${cart.length} item${cart.length!==1?'s':''} sent to Kalutota`);

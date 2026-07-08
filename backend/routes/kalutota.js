@@ -84,13 +84,16 @@ router.post('/', auth, async (req, res) => {
       const qty      = parseInt(quantity);
       const cat      = category||'Old Stock';
 
-      const existing = (await client.query(
-        `SELECT id, quantity FROM inventory WHERE name ILIKE $1 LIMIT 1`, [itemName]
-      )).rows;
+      // Use inventory_id directly if provided (faster + avoids name mismatch)
+      const directId = req.body.inventory_id ? parseInt(req.body.inventory_id) : null;
+      const existing = directId
+        ? (await client.query(`SELECT id, quantity, name FROM inventory WHERE id=$1 LIMIT 1`, [directId])).rows
+        : (await client.query(`SELECT id, quantity, name FROM inventory WHERE name ILIKE $1 LIMIT 1`, [itemName])).rows;
 
       if (existing.length) {
         const invId  = existing[0].id;
         const oldQty = parseInt(existing[0].quantity);
+        const invName = existing[0].name || itemName;  // use actual DB name for logging
         const newQty = direction==='out' ? Math.max(0,oldQty-qty) : oldQty+qty;
 
         const updFields = image_url
@@ -114,7 +117,7 @@ router.post('/', auth, async (req, res) => {
           INSERT INTO stock_adjustments
             (inventory_id,item_name,change_type,quantity_change,quantity_before,quantity_after,reason,adjusted_by_name)
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-          [invId, itemName,
+          [invId, invName||itemName,
            direction==='out'?'remove':'add',
            direction==='out'?-qty:qty,
            oldQty, newQty,
