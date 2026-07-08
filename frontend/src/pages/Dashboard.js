@@ -202,15 +202,16 @@ export default function Dashboard() {
         )}
 
         {/* 4 metric tiles */}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',borderTop:'1px solid rgba(255,255,255,.08)'}} className="dash-grid-5">
+        <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',borderTop:'1px solid rgba(255,255,255,.08)'}} className="dash-grid-5">
           {[
             {label:'Orders (cash)',  val:fmt(cash.orderCash||0),                         sub:`${cash.orderCount||0} advances`,    color:'#86efac'},
             {label:'Sales+Repairs',  val:fmt((cash.qsCash||0)+(cash.repairCash||0)),     sub:`${cash.qsCount||0}+${cash.repairCount||0}`, color:'#86efac'},
+            {label:'Bal. Payments',  val:fmt((cash.balCash||0)+(cash.balBank||0)),         sub:(cash.balCash||0)+(cash.balBank||0)>0?'collected today':'none today', color:'#f9d97f'},
             {label:'Expenses',       val:fmt(cash.cashExpenses||cash.totalExp||0),       sub:`${cash.expCount||0} items`,         color:'#fca5a5'},
             {label:'Stock Paid',     val:fmt(cash.dealerCash||0),                        sub:`${cash.dealerCount||0} purchases`,  color:'#fb923c'},
             {label:'Deposited',      val:fmt(cash.totalDep||0),                          sub:`${cash.depCount||0} deposits`,      color:'#93c5fd'},
           ].map((b,i)=>(
-            <div key={i} style={{padding:'14px 18px',borderRight:i<3?'1px solid rgba(255,255,255,.07)':'none'}}>
+            <div key={i} style={{padding:'14px 18px',borderRight:i<4?'1px solid rgba(255,255,255,.07)':'none'}}>
               <div style={{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'rgba(255,255,255,.35)',marginBottom:6}}>{b.label}</div>
               <div style={{fontFamily:'var(--font-display)',fontSize:17,fontWeight:700,color:b.color,marginBottom:3}}>{b.val}</div>
               <div style={{fontSize:10,color:'rgba(255,255,255,.35)'}}>{b.sub}</div>
