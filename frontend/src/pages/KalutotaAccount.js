@@ -469,25 +469,26 @@ export default function KalutotaAccount() {
                 for(const item of cart){
                   const txRes = await apiPost('/kalutota',{date:today(),direction:'out',category:item.category||'Frames',description:item.name,quantity:item.qty,unit_price:item.unit_price,payment_status:'pending',paid_amount:0,update_inventory:true,inventory_item_name:item.name,inventory_id:item.inventory_id,notes:'Cart transaction'});
 
-                  // Log stock movement directly (reliable, separate from main tx)
-                  if (item.inventory_id) {
+                  // Log to history (log-only endpoint — does NOT double-deduct stock)
+                  if (item.inventory_id && txRes) {
                     try {
                       const BASE_ = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
                       const tok_  = localStorage.getItem('ko_token');
-                      // Get current stock before it was reduced
-                      await fetch(`${BASE_}/stock-adjustments`, {
+                      const qty   = item.qty;
+                      await fetch(`${BASE_}/stock-adjustments/log`, {
                         method: 'POST',
                         headers: {'Content-Type':'application/json', Authorization:`Bearer ${tok_}`},
                         body: JSON.stringify({
                           inventory_id:    item.inventory_id,
+                          item_name:       item.name,
                           change_type:     'remove',
-                          quantity_change: item.qty,
+                          quantity_change: -qty,
                           reason:          'Kalutota Opticals',
-                          notes:           `Taken by Kalutota Opticals — ${item.qty} unit${item.qty!==1?'s':''}`,
+                          notes:           `Given to Kalutota Opticals — ${qty} unit${qty!==1?'s':''}`,
                           unit_cost:       item.unit_price || 0,
                         }),
                       });
-                    } catch(le) { /* non-critical — stock already reduced */ }
+                    } catch(le) { /* non-critical */ }
                   }
                 }
                 setCart([]);

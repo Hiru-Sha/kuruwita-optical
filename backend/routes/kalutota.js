@@ -123,7 +123,7 @@ router.post('/', auth, async (req, res) => {
            oldQty, newQty,
            direction==='out'?'Given to Kalutota Opticals':'Received from Kalutota Opticals',
            req.user.name||req.user.username]
-        );
+        ).catch(e => console.warn('Stock log insert:', e.message));
         inventoryResult = { action:'updated', item:updItem, old_qty:oldQty, new_qty:newQty };
 
       } else if (direction==='in') {
@@ -166,12 +166,57 @@ router.patch('/:id', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
 });
 
-// DELETE /api/kalutota/:id
+// DELETE /api/kalutota/:id — deletes tx AND restores inventory if it was stock-out
 router.delete('/:id', auth, async (req, res) => {
   try {
-    await pool.query('DELETE FROM kalutota_transactions WHERE id=$1',[req.params.id]);
-    res.json({ message:'Deleted' });
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+    // Get transaction before deleting so we can reverse inventory
+    const tx = await pool.query('SELECT * FROM kalutota_transactions WHERE id=$1', [req.params.id]);
+    if (!tx.rows.length) return res.status(404).json({ error: 'Not found' });
+
+    const t = tx.rows[0];
+    await pool.query('DELETE FROM kalutota_transactions WHERE id=$1', [req.params.id]);
+
+    // Restore inventory if this was stock going OUT to Kalutota
+    if (t.direction === 'out' && (t.update_inventory || true)) {
+      const itemName = (t.inventory_item_name || t.description || '').trim();
+      const qty      = parseInt(t.quantity) || 1;
+
+      // Try find by stored inventory_id first, then by name
+      const invId = t.inventory_id ? parseInt(t.inventory_id) : null;
+      const found = invId
+        ? (await pool.query('SELECT id, quantity, name FROM inventory WHERE id=$1', [invId])).rows
+        : (await pool.query('SELECT id, quantity, name FROM inventory WHERE name ILIKE $1 LIMIT 1', [itemName])).rows;
+
+      if (found.length) {
+        const item    = found[0];
+        const qtyBefore = parseInt(item.quantity);
+        const qtyAfter  = qtyBefore + qty;
+
+        await pool.query(
+          'UPDATE inventory SET quantity=$1, updated_at=NOW() WHERE id=$2',
+          [qtyAfter, item.id]
+        );
+
+        // Log the return to stock history
+        await pool.query(`CREATE TABLE IF NOT EXISTS stock_adjustments (
+          id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
+          change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
+          quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
+          adjusted_by INTEGER, adjusted_by_name VARCHAR(100), created_at TIMESTAMP DEFAULT NOW()
+        )`).catch(()=>{});
+
+        await pool.query(`INSERT INTO stock_adjustments
+          (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, adjusted_by)
+          VALUES ($1,$2,'add',$3,$4,$5,'Returned from Kalutota','Transaction deleted — stock restored',$6)`,
+          [item.id, item.name || itemName, qty, qtyBefore, qtyAfter, req.user.id]
+        ).catch(e => console.warn('Stock log failed:', e.message));
+
+        return res.json({ message: 'Deleted and stock restored', restored_qty: qty, item: item.name });
+      }
+    }
+
+    res.json({ message: 'Deleted' });
+  } catch (err) { console.error('Kalutota delete error:', err.message); res.status(500).json({ error: 'Failed' }); }
 });
 
 module.exports = router;

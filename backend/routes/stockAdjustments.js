@@ -221,4 +221,69 @@ router.get('/batches/:inventory_id', require('../middleware/auth'), async (req, 
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// POST /api/stock-adjustments/log — log only, NO inventory update
+// Used by frontend after Kalutota/Order already changed stock
+router.post('/log', require('../middleware/auth'), async (req, res) => {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS stock_adjustments (
+      id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
+      change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
+      quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
+      adjusted_by INTEGER, adjusted_by_name VARCHAR(100), created_at TIMESTAMP DEFAULT NOW()
+    )`).catch(()=>{});
+
+    const { inventory_id, item_name, change_type, quantity_change,
+            quantity_before, quantity_after, reason, notes, unit_cost } = req.body;
+
+    const result = await pool.query(`
+      INSERT INTO stock_adjustments
+        (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after,
+         reason, notes, unit_cost, adjusted_by, adjusted_by_name)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+      [inventory_id, item_name||'Item',
+       change_type||'remove', quantity_change||0,
+       quantity_before||0, quantity_after||0,
+       reason||'Manual', notes||null, unit_cost||0,
+       req.user.id, req.user.name||req.user.username]
+    );
+    res.json({ success: true, id: result.rows[0].id });
+  } catch(e) {
+    console.error('Log-only insert failed:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// POST /api/stock-adjustments/log — INSERT ONLY, no inventory update
+// Safe to call after another route already changed stock (Kalutota, etc.)
+router.post('/log', require('../middleware/auth'), async (req, res) => {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS stock_adjustments (
+      id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
+      change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
+      quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
+      adjusted_by INTEGER, adjusted_by_name VARCHAR(100), created_at TIMESTAMP DEFAULT NOW()
+    )`).catch(()=>{});
+
+    const { inventory_id, item_name, change_type, quantity_change,
+            quantity_before, quantity_after, reason, notes, unit_cost } = req.body;
+
+    const result = await pool.query(
+      `INSERT INTO stock_adjustments
+        (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after,
+         reason, notes, unit_cost, adjusted_by, adjusted_by_name)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+      [inventory_id||null, item_name||'Item',
+       change_type||'remove', parseInt(quantity_change)||0,
+       parseInt(quantity_before)||0, parseInt(quantity_after)||0,
+       reason||'Manual', notes||null, parseFloat(unit_cost)||0,
+       req.user.id, req.user.name||req.user.username]
+    );
+    res.json({ success: true, id: result.rows[0].id });
+  } catch(e) {
+    console.error('Stock log-only failed:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
