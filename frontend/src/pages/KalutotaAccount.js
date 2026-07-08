@@ -467,7 +467,28 @@ export default function KalutotaAccount() {
                 if(!cart.length)return;
                 setSaving(true);
                 for(const item of cart){
-                  await apiPost('/kalutota',{date:today(),direction:'out',category:item.category||'Frames',description:item.name,quantity:item.qty,unit_price:item.unit_price,payment_status:'pending',paid_amount:0,update_inventory:true,inventory_item_name:item.name,inventory_id:item.inventory_id,notes:'Cart transaction'});
+                  const txRes = await apiPost('/kalutota',{date:today(),direction:'out',category:item.category||'Frames',description:item.name,quantity:item.qty,unit_price:item.unit_price,payment_status:'pending',paid_amount:0,update_inventory:true,inventory_item_name:item.name,inventory_id:item.inventory_id,notes:'Cart transaction'});
+
+                  // Log stock movement directly (reliable, separate from main tx)
+                  if (item.inventory_id) {
+                    try {
+                      const BASE_ = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+                      const tok_  = localStorage.getItem('ko_token');
+                      // Get current stock before it was reduced
+                      await fetch(`${BASE_}/stock-adjustments`, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json', Authorization:`Bearer ${tok_}`},
+                        body: JSON.stringify({
+                          inventory_id:    item.inventory_id,
+                          change_type:     'remove',
+                          quantity_change: item.qty,
+                          reason:          'Kalutota Opticals',
+                          notes:           `Taken by Kalutota Opticals — ${item.qty} unit${item.qty!==1?'s':''}`,
+                          unit_cost:       item.unit_price || 0,
+                        }),
+                      });
+                    } catch(le) { /* non-critical — stock already reduced */ }
+                  }
                 }
                 setCart([]);
                 showToast(`✅ ${cart.length} item${cart.length!==1?'s':''} sent to Kalutota`);
