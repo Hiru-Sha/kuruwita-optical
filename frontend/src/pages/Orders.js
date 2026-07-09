@@ -480,11 +480,11 @@ export default function Orders() {
                 borderRadius:14, padding:'14px 16px', marginBottom:8, cursor:'pointer', transition:'border-color .15s',
                 display:'flex', gap:12, alignItems:'flex-start' }}>
 
-              {/* Row number */}
+              {/* Row number — chronological (1=oldest, N=newest) */}
               <div style={{ width:28, height:28, borderRadius:'50%', background:C.cream, border:`1px solid ${C.border}`,
                 display:'flex', alignItems:'center', justifyContent:'center',
                 fontSize:11, fontWeight:700, color:C.muted, flexShrink:0, marginTop:2 }}>
-                {idx + 1}
+                {filteredOrders.length - idx}
               </div>
 
               {/* Content */}
