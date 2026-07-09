@@ -15,7 +15,12 @@ router.get('/', auth, async (req, res) => {
       pool.query(`SELECT * FROM repairs ORDER BY id`).catch(()=>({rows:[]})),
       pool.query(`SELECT * FROM quick_sales ORDER BY id`).catch(()=>({rows:[]})),
       pool.query(`SELECT * FROM expenses ORDER BY id`).catch(()=>({rows:[]})),
-      pool.query(`SELECT id,name,category,brand,dealer,frame_type,frame_color,frame_shape,frame_material,frame_size,sg_type,sell_price,cost_price,buy_price,quantity,min_quantity,display_number,stock_number,location,created_at,updated_at FROM inventory ORDER BY id`).catch(()=>({rows:[]})),
+      pool.query(`SELECT id,name,category,brand,dealer,
+             frame_type,frame_color,frame_shape,frame_material,frame_size,
+             sg_type,rg_lens_type,rg_material,rg_power,item_name,
+             sell_price,cost_price,quantity,min_quantity,
+             created_at,updated_at
+             FROM inventory ORDER BY id`).catch(()=>({rows:[]})),
       pool.query(`SELECT * FROM kalutota_transactions ORDER BY id`).catch(()=>({rows:[]})),
       pool.query(`SELECT * FROM cash_deposits ORDER BY id`).catch(()=>({rows:[]})),
       pool.query(`SELECT * FROM stock_adjustments ORDER BY id LIMIT 5000`).catch(()=>({rows:[]})),
