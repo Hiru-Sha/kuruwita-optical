@@ -31,6 +31,7 @@ import ActivityView    from './pages/ActivityView';
 const LensCalculator = React.lazy(() => import('./pages/LensCalculator').catch(() => ({ default: () => <div>Calculator loading...</div> })));
 import EndOfDay        from './pages/EndOfDay';
 import Warranty        from './pages/Warranty';
+import BackupRestore   from './pages/BackupRestore';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -79,7 +80,9 @@ export default function App() {
             <Route path="calculator"        element={<Suspense fallback={<div>Loading...</div>}><LensCalculator /></Suspense>} />
             <Route path="end-of-day"      element={<EndOfDay />} />
             <Route path="warranty"         element={<Warranty />} />
+            <Route path="backup"           element={<BackupRestore />} />
             <Route path="warranty"         element={<Warranty />} />
+            <Route path="backup"           element={<BackupRestore />} />
             {/* Admin-only routes */}
             <Route path="grinding"  element={<AdminOnly><Grinding /></AdminOnly>} />
             <Route path="reports"   element={<AdminOnly><Reports  /></AdminOnly>} />
