@@ -100,7 +100,8 @@ router.get('/:id', auth, async (req, res) => {
         `SELECT id, sale_number, created_at, total, payment_method, items, customer_name
          FROM quick_sales
          WHERE customer_id = $1
-            OR (customer_name ILIKE $2 AND customer_phone = $3)
+            OR (customer_name ILIKE $2 AND REGEXP_REPLACE(customer_phone,'[^0-9]','','g') = REGEXP_REPLACE($3,'[^0-9]','','g'))
+            OR (customer_phone IS NOT NULL AND REGEXP_REPLACE(customer_phone,'[^0-9]','','g') = REGEXP_REPLACE($3,'[^0-9]','','g') AND COALESCE($2,'') != '')
          ORDER BY created_at DESC LIMIT 50`,
         [req.params.id, custRow.name || '', custRow.phone || '']
       );
@@ -115,7 +116,7 @@ router.get('/:id', auth, async (req, res) => {
         `SELECT id, repair_number, created_at, repair_type, description, charge, status, customer_name
          FROM repairs
          WHERE customer_id = $1
-            OR (customer_name ILIKE $2 AND phone = $3)
+            OR (REGEXP_REPLACE(phone,'[^0-9]','','g') = REGEXP_REPLACE($3,'[^0-9]','','g') AND COALESCE($3,'') != '')
          ORDER BY created_at DESC LIMIT 50`,
         [req.params.id, custRow.name || '', custRow.phone || '']
       );

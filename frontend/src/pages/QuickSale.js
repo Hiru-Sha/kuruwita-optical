@@ -4,6 +4,7 @@ import { buildQuickSaleBill, openPrint } from '../components/PrintReceipt';
 //  QuickSale.js — Mobile-friendly version
 //  On mobile: single column, sticky total bar at bottom
 // ============================================================
+import { QRScanner } from '../components/QRStickers';
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getInventory } from '../api';
@@ -561,7 +562,14 @@ export default function QuickSale() {
             <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'16px 18px',marginBottom:14}}>
               <div style={{fontSize:14,fontWeight:700,color:C.navy,marginBottom:10}}>🔍 Add Items</div>
               <div style={{position:'relative'}}>
-                <input value={query} onChange={e=>search(e.target.value)} placeholder="Search frames, sunglasses, boxes, chains, ear tips..." style={{...INP,fontSize:14}} autoFocus/>
+                {showScanner && <QRScanner title="Scan Frame QR" onScan={handleQRScan} onClose={()=>setShowScanner(false)}/>}
+                <div style={{display:'flex', gap:8}}>
+                  <input value={query} onChange={e=>search(e.target.value)} placeholder="Search frames, sunglasses, boxes, chains, ear tips..." style={{...INP,fontSize:14,flex:1}} autoFocus/>
+                  <button onClick={()=>setShowScanner(true)} title="Scan QR Code"
+                    style={{padding:'10px 14px',background:C.navy,color:'white',border:'none',borderRadius:9,cursor:'pointer',fontSize:16,flexShrink:0}}>
+                    📷
+                  </button>
+                </div>
                 {results.length>0&&(
                   <div style={{position:'absolute',top:'100%',left:0,right:0,background:'white',border:`1px solid ${C.border}`,borderRadius:10,boxShadow:'0 4px 20px rgba(0,0,0,.12)',zIndex:50,overflow:'hidden',marginTop:4}}>
                     {results.map(item=>(
