@@ -104,24 +104,142 @@ function buildReportHTML(data, from, to) {
     completed: j.completed   ?? j.orders_with_bill ?? j.delivered      ?? 0,
   }));
 
-  // Mini bar chart SVG for daily revenue
-  const daily = data.daily || [];
-  const maxDay = Math.max(...daily.map(d=>parseFloat(d.order_revenue||0)+parseFloat(d.qs_revenue||0)+parseFloat(d.repair_revenue||0)),1);
-  const dayBars = daily.map((d,i) => {
-    const total = parseFloat(d.order_revenue||0)+parseFloat(d.qs_revenue||0)+parseFloat(d.repair_revenue||0);
-    const h = Math.max(2, Math.round(total/maxDay*64));
-    const x = 4 + i * (550/Math.max(daily.length,1));
-    const w = Math.max(2, 550/Math.max(daily.length,1)-2);
-    return `<rect x="${x}" y="${68-h}" width="${w}" height="${h}" fill="#0f1f3d" rx="2" opacity="0.85"/>`;
-  }).join('');
+  // ── Chart generators ────────────────────────────────────────
+  const monthly = data.monthly || [];
 
-  const chartSVG = daily.length > 1 ? `
-    <svg viewBox="0 0 560 80" style="width:100%;height:80px;display:block;">
-      <rect x="0" y="0" width="560" height="70" fill="#fafafa" rx="6"/>
-      <line x1="0" y1="70" x2="560" y2="70" stroke="#e5e7eb" stroke-width="1"/>
-      <line x1="0" y1="40" x2="560" y2="40" stroke="#f3f4f6" stroke-width="0.5" stroke-dasharray="4,4"/>
-      ${dayBars}
-    </svg>` : '';
+  // 1. Revenue vs Expenses multi-bar chart (6 months)
+  const revenueBarChart = (() => {
+    if (!monthly.length) return '';
+    const W=560, H=140, PAD=36, BAR_W=30, GAP=12;
+    const maxVal = Math.max(...monthly.map(m => Math.max(
+      parseFloat(m.revenue||0), parseFloat(m.expenses||0), parseFloat(m.net_profit||0)
+    )), 1);
+    const cols = monthly.slice(-6); // last 6 months
+    const slotW = (W - PAD*2) / Math.max(cols.length, 1);
+    const bars = cols.map((m, i) => {
+      const rev  = parseFloat(m.revenue||0);
+      const exp  = parseFloat(m.expenses||0);
+      const net  = parseFloat(m.net_profit||0);
+      const cx   = PAD + i * slotW + slotW/2;
+      const hR   = Math.max(2, Math.round(rev/maxVal*(H-PAD-10)));
+      const hE   = Math.max(2, Math.round(exp/maxVal*(H-PAD-10)));
+      const hN   = Math.max(2, Math.round(Math.abs(net)/maxVal*(H-PAD-10)));
+      const base = H - PAD;
+      const lbl  = (m.month||'').slice(5,7)+'/'+((m.month||'').slice(2,4)||'');
+      return `
+        <rect x="${cx-BAR_W-GAP}" y="${base-hR}" width="${BAR_W}" height="${hR}" fill="#0f1f3d" rx="2" opacity="0.85"/>
+        <rect x="${cx}" y="${base-hE}" width="${BAR_W}" height="${hE}" fill="#f97316" rx="2" opacity="0.85"/>
+        <rect x="${cx+BAR_W+GAP}" y="${net>=0?base-hN:base}" width="${BAR_W}" height="${hN}" fill="${net>=0?'#16a34a':'#dc2626'}" rx="2" opacity="0.85"/>
+        <text x="${cx+BAR_W/2}" y="${H-2}" text-anchor="middle" font-size="8" fill="#9ca3af">${lbl}</text>`;
+    }).join('');
+    const legend = `
+      <rect x="${PAD}" y="8" width="10" height="10" fill="#0f1f3d" rx="1"/>
+      <text x="${PAD+14}" y="17" font-size="8" fill="#6b7280">Revenue</text>
+      <rect x="${PAD+70}" y="8" width="10" height="10" fill="#f97316" rx="1"/>
+      <text x="${PAD+84}" y="17" font-size="8" fill="#6b7280">Expenses</text>
+      <rect x="${PAD+150}" y="8" width="10" height="10" fill="#16a34a" rx="1"/>
+      <text x="${PAD+164}" y="17" font-size="8" fill="#6b7280">Net Profit</text>`;
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;">
+      <rect x="0" y="0" width="${W}" height="${H}" fill="#fafafa" rx="6"/>
+      <line x1="${PAD}" y1="${H-PAD}" x2="${W-PAD}" y2="${H-PAD}" stroke="#e5e7eb" stroke-width="1"/>
+      ${[1,2,3].map(t=>`<line x1="${PAD}" y1="${H-PAD-(H-PAD-10)*t/4}" x2="${W-PAD}" y2="${H-PAD-(H-PAD-10)*t/4}" stroke="#f3f4f6" stroke-width="0.5" stroke-dasharray="4,4"/>`).join('')}
+      ${legend}${bars}
+    </svg>`;
+  })();
+
+  // 2. Revenue Source Stacked Bar (orders / QS / repairs per month)
+  const revenueStackChart = (() => {
+    if (!monthly.length) return '';
+    const W=560, H=120, PAD=36, COL_W=40;
+    const maxVal = Math.max(...monthly.map(m => parseFloat(m.revenue||0)), 1);
+    const cols = monthly.slice(-6);
+    const slotW = (W - PAD*2) / Math.max(cols.length, 1);
+    const bars = cols.map((m, i) => {
+      const ord = parseFloat(m.order_revenue||0);
+      const qs  = parseFloat(m.qs_revenue||0);
+      const rep = parseFloat(m.repair_revenue||0);
+      const tot = ord + qs + rep || 1;
+      const cx  = PAD + i * slotW + slotW/2 - COL_W/2;
+      const base = H - PAD;
+      const hTot = Math.max(2, Math.round(tot/maxVal*(H-PAD-10)));
+      const hOrd = Math.round(ord/tot*hTot);
+      const hQS  = Math.round(qs/tot*hTot);
+      const hRep = hTot - hOrd - hQS;
+      const lbl  = (m.month||'').slice(5,7)+'/'+((m.month||'').slice(2,4)||'');
+      return `
+        <rect x="${cx}" y="${base-hOrd}" width="${COL_W}" height="${hOrd}" fill="#0f1f3d" rx="0"/>
+        <rect x="${cx}" y="${base-hOrd-hQS}" width="${COL_W}" height="${hQS}" fill="#0891b2" rx="0"/>
+        <rect x="${cx}" y="${base-hOrd-hQS-hRep}" width="${COL_W}" height="${Math.max(hRep,0)}" fill="#7c3aed" rx="0"/>
+        <text x="${cx+COL_W/2}" y="${H-2}" text-anchor="middle" font-size="8" fill="#9ca3af">${lbl}</text>`;
+    }).join('');
+    const legend = `
+      <rect x="${PAD}" y="6" width="10" height="10" fill="#0f1f3d" rx="1"/>
+      <text x="${PAD+14}" y="15" font-size="8" fill="#6b7280">Orders</text>
+      <rect x="${PAD+60}" y="6" width="10" height="10" fill="#0891b2" rx="1"/>
+      <text x="${PAD+74}" y="15" font-size="8" fill="#6b7280">Quick Sales</text>
+      <rect x="${PAD+140}" y="6" width="10" height="10" fill="#7c3aed" rx="1"/>
+      <text x="${PAD+154}" y="15" font-size="8" fill="#6b7280">Repairs</text>`;
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;">
+      <rect x="0" y="0" width="${W}" height="${H}" fill="#fafafa" rx="6"/>
+      <line x1="${PAD}" y1="${H-PAD}" x2="${W-PAD}" y2="${H-PAD}" stroke="#e5e7eb" stroke-width="1"/>
+      ${legend}${bars}
+    </svg>`;
+  })();
+
+  // 3. Margin % trend — line chart
+  const marginLineChart = (() => {
+    if (monthly.length < 2) return '';
+    const W=560, H=100, PAD=36;
+    const cols = monthly.slice(-6);
+    const margins = cols.map(m => Math.max(-50, Math.min(100, parseFloat(m.net_margin||0))));
+    const maxM = Math.max(...margins, 30);
+    const pts = cols.map((m,i) => {
+      const x = PAD + i/(Math.max(cols.length-1,1)) * (W-2*PAD);
+      const y = H-PAD - (margins[i]+10)/(maxM+20) * (H-2*PAD);
+      return `${x},${y}`;
+    }).join(' ');
+    const dots = cols.map((m,i) => {
+      const x = PAD + i/(Math.max(cols.length-1,1)) * (W-2*PAD);
+      const y = H-PAD - (margins[i]+10)/(maxM+20) * (H-2*PAD);
+      const lbl = (m.month||'').slice(5,7)+'/'+((m.month||'').slice(2,4)||'');
+      return `<circle cx="${x}" cy="${y}" r="3" fill="${margins[i]>=0?'#16a34a':'#dc2626'}"/>
+              <text x="${x}" y="${y-6}" text-anchor="middle" font-size="7" fill="#374151" font-weight="600">${Math.round(margins[i])}%</text>
+              <text x="${x}" y="${H-2}" text-anchor="middle" font-size="7" fill="#9ca3af">${lbl}</text>`;
+    }).join('');
+    const zeroY = H-PAD - (0+10)/(maxM+20) * (H-2*PAD);
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;">
+      <rect x="0" y="0" width="${W}" height="${H}" fill="#fafafa" rx="6"/>
+      <line x1="${PAD}" y1="${zeroY}" x2="${W-PAD}" y2="${zeroY}" stroke="#dc262644" stroke-width="1" stroke-dasharray="4,4"/>
+      <polyline points="${pts}" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <text x="${PAD}" y="${H-2}" font-size="7" fill="#9ca3af">← oldest</text>
+      <text x="${W-PAD}" y="${H-2}" text-anchor="end" font-size="7" fill="#9ca3af">latest →</text>
+      ${dots}
+    </svg>`;
+  })();
+
+  // 4. Expense breakdown donut (CSS-based horizontal bar)
+  const expenseDonut = (() => {
+    const cats = data.expensesByCategory || [];
+    if (!cats.length) return '';
+    const total = cats.reduce((s,c)=>s+parseFloat(c.total||0),0)||1;
+    const colors = ['#0f1f3d','#0891b2','#7c3aed','#f97316','#16a34a','#dc2626','#c9a84c','#6b7280'];
+    const rows = cats.slice(0,8).map((cat,i) => {
+      const pct = Math.round(parseFloat(cat.total||0)/total*100);
+      const w   = Math.max(2, Math.round(pct/100*300));
+      return `<tr>
+        <td style="padding:3px 8px;font-size:10px;width:100px;color:#374151;">${(cat.category||'').slice(0,16)}</td>
+        <td style="padding:3px 8px;">
+          <svg viewBox="0 0 300 12" style="width:200px;height:12px;display:block;">
+            <rect x="0" y="0" width="300" height="12" fill="#f3f4f6" rx="6"/>
+            <rect x="0" y="0" width="${w}" height="12" fill="${colors[i%colors.length]}" rx="6"/>
+          </svg>
+        </td>
+        <td style="padding:3px 8px;font-size:10px;font-weight:700;color:${colors[i%colors.length]};text-align:right;">${pct}%</td>
+        <td style="padding:3px 8px;font-size:10px;color:#6b7280;text-align:right;">Rs. ${parseFloat(cat.total||0).toLocaleString()}</td>
+      </tr>`;
+    }).join('');
+    return `<table style="width:100%;border-collapse:collapse;">${rows}</table>`;
+  })();
 
   // Expense category rows
   const expCatRows = expCats.map(e=>`
@@ -393,11 +511,29 @@ function buildReportHTML(data, from, to) {
   <div class="kpi"><span class="kpi-icon">✅</span><div class="kpi-label">Collected</div><div class="kpi-value" style="color:#16a34a">${fmtR(o.collected)}</div><div class="kpi-sub">${fmtR(o.outstanding)} still owed</div></div>
 </div>
 
-<!-- ══ DAILY REVENUE CHART ════════════════════════════════ -->
-${daily.length > 1 ? `
-<h2>Daily Revenue Trend</h2>
-${chartSVG}
-<div style="font-size:10px;color:#6b7280;margin-top:4px;margin-bottom:12px;">${fmtDate(from)} to ${fmtDate(to)} — each bar = one day's total revenue</div>` : ''}
+<!-- ══ CHARTS ════════════════════════════════════════════ -->
+${monthly.length > 0 ? `
+<h2 style="page-break-before:auto">📊 Performance Charts</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+  <div style="background:white;border:1px solid #e0ddd6;border-radius:10px;padding:14px;">
+    <div style="font-size:11px;font-weight:700;color:#0f1f3d;margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Revenue vs Expenses vs Net Profit</div>
+    ${revenueBarChart}
+  </div>
+  <div style="background:white;border:1px solid #e0ddd6;border-radius:10px;padding:14px;">
+    <div style="font-size:11px;font-weight:700;color:#0f1f3d;margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Revenue Mix (Orders / QS / Repairs)</div>
+    ${revenueStackChart}
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+  <div style="background:white;border:1px solid #e0ddd6;border-radius:10px;padding:14px;">
+    <div style="font-size:11px;font-weight:700;color:#0f1f3d;margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Net Margin % Trend</div>
+    ${marginLineChart}
+  </div>
+  <div style="background:white;border:1px solid #e0ddd6;border-radius:10px;padding:14px;">
+    <div style="font-size:11px;font-weight:700;color:#0f1f3d;margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Expense Breakdown</div>
+    ${expenseDonut}
+  </div>
+</div>` : ''}
 
 <!-- ══ ORDERS SECTION ════════════════════════════════════ -->
 <h2>Orders Summary</h2>
