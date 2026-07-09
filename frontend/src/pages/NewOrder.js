@@ -575,6 +575,27 @@ export default function NewOrder() {
         } catch(e2) { /* silently ignore — don't block order save */ }
       }
 
+      // Log frame stock movement to history (non-blocking)
+      try {
+        if (frameDetails.inventoryId && !customerOwnFrame) {
+          const BASE_  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+          const token_ = localStorage.getItem('ko_token');
+          await fetch(`${BASE_}/stock-adjustments/log`, {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token_}` },
+            body: JSON.stringify({
+              inventory_id:    frameDetails.inventoryId,
+              item_name:       frameDetails.name || frameDetails.brand || 'Frame',
+              change_type:     'remove',
+              quantity_change: -1,
+              reason:          'Order',
+              notes:           'New order placed',
+              unit_cost:       frameDetails.buyPrice || 0,
+            }),
+          });
+        }
+      } catch(le) { /* non-critical */ }
+
       navigate('/orders');
     } catch(e) {
       setError(e.response?.data?.error||'Failed to save order. Please try again.');

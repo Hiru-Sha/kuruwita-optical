@@ -141,10 +141,11 @@ router.post('/', auth, async (req, res) => {
         // Log to stock_adjustments
         await pool.query(`INSERT INTO stock_adjustments
           (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, unit_cost, adjusted_by)
-          VALUES ($1,$2,'remove',$3,$4,$5,'Quick Sale','Sale: '||$6,$7,$8)`,
+          VALUES ($1,$2,'remove',$3,$4,$5,'Quick Sale',$6,$7,$8)`,
           [invId, before.rows[0]?.name || item.name || 'Item',
            -qty, qtyBefore, Math.max(0, qtyBefore - qty),
            saleNum,
+           'Sale: ' + saleNum,
            parseFloat(item.cost_price || item.unit_price || 0),
            req.user.id]
         ).catch(e => console.warn('Stock log failed:', e.message));

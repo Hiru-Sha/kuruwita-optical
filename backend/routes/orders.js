@@ -217,13 +217,15 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
           adjusted_by INTEGER, adjusted_by_name VARCHAR(100), created_at TIMESTAMP DEFAULT NOW()
         )
       `).catch(()=>{});
-      await pool.query(`
-        INSERT INTO stock_adjustments
+      await pool.query(
+        `INSERT INTO stock_adjustments
           (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, unit_cost, adjusted_by)
-        VALUES ($1,$2,'remove',-1,$3,$4,'Order','Order: '||$5,$6,$7)`,
-        [frameInvId, fBefore.rows[0]?.name || req.body.frame,
-         fQtyBefore, Math.max(0, fQtyBefore - 1),
-         orderNum,
+         VALUES ($1,$2,'remove',-1,$3,$4,'Order',$5,$6,$7)`,
+        [frameInvId,
+         fBefore.rows[0]?.name || req.body.frame,
+         fQtyBefore,
+         Math.max(0, fQtyBefore - 1),
+         'Order: ' + orderNum,          // JS concat avoids SQL || issue
          parseFloat(req.body.frame_buy_price) || 0,
          req.user.id]
       ).catch(e => console.warn('Stock log failed:', e.message));
@@ -327,9 +329,9 @@ router.delete('/:id', auth, async (req, res) => {
 
       await pool.query(`INSERT INTO stock_adjustments
         (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, adjusted_by)
-        VALUES ($1,$2,'add',1,$3,$4,'Order Cancelled','Returned: order '||$5,$6)`,
+        VALUES ($1,$2,'add',1,$3,$4,'Order Cancelled',$5,$6)`,
         [ord.rows[0].frame_inventory_id, rBefore.rows[0]?.name || ord.rows[0].frame,
-         rQtyB, rQtyB + 1, ord.rows[0].order_number, req.user.id]
+         rQtyB, rQtyB + 1, 'Returned: order ' + ord.rows[0].order_number, req.user.id]
       ).catch(() => {});
     }
     await pool.query('DELETE FROM cash_deposits WHERE order_id = $1', [req.params.id]).catch(() => {});

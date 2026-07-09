@@ -137,8 +137,10 @@ function Receipt({ sale, items }) {
 export default function QuickSale() {
   const [query,    setQuery]   = useState('');
   const [results,  setResults] = useState([]);
-  const [cart,          setCart]          = useState([]);
-  const [warrantyPeriod, setWarrantyPeriod] = useState('');
+  const [cart,       setCart]      = useState([]);
+  const [linkedCust, setLinkedCust]= useState(null);
+  const [custSearch, setCustSearch]= useState('');
+  const [custDrop,   setCustDrop]  = useState([]);
   const [custName, setCustName]= useState('');
   const [custPhone,setCustPhone]=useState('');
   const [overDisc, setOverDisc]= useState('');
@@ -245,6 +247,19 @@ export default function QuickSale() {
     setQuery(''); setResults([]);
   };
 
+  const searchCust = async q => {
+    setCustSearch(q);
+    if (q.length < 2) { setCustDrop([]); return; }
+    try {
+      const BASE=process.env.REACT_APP_API_URL||'http://localhost:5000/api';
+      const token=localStorage.getItem('ko_token');
+      const res=await fetch(`${BASE}/customers?search=${encodeURIComponent(q)}&limit=5`,{headers:{Authorization:`Bearer ${token}`}});
+      const data=await res.json();
+      setCustDrop(Array.isArray(data)?data:(data.data||[]));
+    } catch { setCustDrop([]); }
+  };
+  const pickCust = c => { setLinkedCust(c); setCustSearch(''); setCustDrop([]); };
+
   const upd = (id,f,v) => setCart(c=>c.map(x=>x.inventory_id===id?{...x,[f]:v}:x));
   const rem = (id)      => setCart(c=>c.filter(x=>x.inventory_id!==id));
 
@@ -264,12 +279,36 @@ export default function QuickSale() {
       const res   = await fetch(`${BASE}/quick-sales`,{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-        body:JSON.stringify({customer_name:custName.trim()||null,customer_phone:custPhone.trim()||null,items:cart,subtotal,discount:discAmt,total,payment_method:payMethod,amount_paid:paid,change_given:change,warranty:warrantyPeriod||null,import_date:pastMode&&saleDate?saleDate:null})
+        body:JSON.stringify({customer_name:custName.trim()||null,customer_phone:custPhone.trim()||null,customer_id:linkedCust?.id||null,items:cart,subtotal,discount:discAmt,total,payment_method:payMethod,amount_paid:paid,change_given:change,import_date:pastMode&&saleDate?saleDate:null})
       });
       if (!res.ok){const d=await res.json();throw new Error(d.error||'Failed');}
       const data=await res.json();
       setDoneItems([...cart]);
       setDone(data);
+
+      // Log each sold item to stock history (non-blocking)
+      try {
+        const logBase  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const logToken = localStorage.getItem('ko_token');
+        for (const itm of cart) {
+          const invId = itm.inventory_id || itm.id;
+          if (!invId) continue;
+          await fetch(`${logBase}/stock-adjustments/log`, {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json', Authorization:`Bearer ${logToken}` },
+            body: JSON.stringify({
+              inventory_id:    invId,
+              item_name:       itm.name || 'Item',
+              change_type:     'remove',
+              quantity_change: -(parseInt(itm.qty || itm.quantity)||1),
+              reason:          'Quick Sale',
+              notes:           'Quick sale — ' + (data.sale_number||''),
+              unit_cost:       itm.cost_price || itm.buy_price || 0,
+            }),
+          });
+        }
+      } catch(le) { /* non-critical */ }
+
     } catch(e){setError(e.message);}
     finally{setSaving(false);}
   };
@@ -341,6 +380,31 @@ export default function QuickSale() {
         <div>
           {/* Search */}
           <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:'14px',marginBottom:12}}>
+            {/* Customer link */}
+            {linkedCust ? (
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px', marginBottom:10, background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:9 }}>
+                <span style={{ fontSize:16 }}>👤</span>
+                <span style={{ fontSize:13, fontWeight:600, color:'#15803d', flex:1 }}>{linkedCust.name} · {linkedCust.phone}</span>
+                <button onClick={()=>setLinkedCust(null)} style={{ background:'none', border:'none', color:'#dc2626', cursor:'pointer', fontSize:16 }}>✕</button>
+              </div>
+            ) : (
+              <div style={{ position:'relative', marginBottom:10 }}>
+                <input value={custSearch} onChange={e=>searchCust(e.target.value)}
+                  placeholder="🔗 Link to customer (optional)" style={{ ...INP, fontSize:13 }}
+                  onBlur={()=>setTimeout(()=>setCustDrop([]),200)}/>
+                {custDrop.length>0 && (
+                  <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white', border:`1px solid ${C.border}`, borderRadius:9, zIndex:100, boxShadow:'0 4px 16px rgba(0,0,0,.12)', marginTop:2 }}>
+                    {custDrop.map(cu=>(
+                      <div key={cu.id} onMouseDown={()=>pickCust(cu)}
+                        style={{ padding:'10px 14px', cursor:'pointer', fontSize:13, borderBottom:`1px solid ${C.cream}` }}>
+                        <b style={{ color:C.navy }}>{cu.name}</b>
+                        <span style={{ color:C.muted, marginLeft:8 }}>{cu.phone}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{fontSize:14,fontWeight:700,color:C.navy,marginBottom:10}}>🔍 Add Items</div>
             <div style={{position:'relative'}}>
               <input value={query} onChange={e=>search(e.target.value)} placeholder="Search frames, accessories..." style={{...INP,fontSize:16}} autoFocus/>
@@ -430,37 +494,7 @@ export default function QuickSale() {
               </div>
               <div style={{padding:'16px 18px'}}>
                 {/* Payment method */}
-{/* Warranty for frames/sunglasses */}
-                <div style={{marginBottom:14,background:'#f0fdf4',border:'1.5px solid #86efac',borderRadius:10,padding:'12px 14px'}}>
-                    <div style={{fontSize:12,fontWeight:700,color:'#15803d',marginBottom:8,textTransform:'uppercase',letterSpacing:'.8px'}}>🛡️ Warranty (optional)</div>
-                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                      {[{v:'',l:'No Warranty'},{v:'3 months',l:'3 Months'},{v:'6 months',l:'6 Months'},{v:'1 year',l:'1 Year'},{v:'2 years',l:'2 Years'}].map(w=>(
-                        <button key={w.v||'none'} onClick={()=>setWarrantyPeriod(w.v)}
-                          style={{padding:'7px 12px',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',
-                            border:'none',background:warrantyPeriod===w.v?(w.v?'#15803d':'#6b7280'):'white',
-                            color:warrantyPeriod===w.v?'white':'#374151',boxShadow:'0 1px 3px rgba(0,0,0,.1)'}}>
-                          {w.v?'🛡️ '+w.l:'❌ '+w.l}
-                        </button>
-                      ))}
-                    </div>
-                    {warrantyPeriod&&<div style={{marginTop:8,fontSize:12,fontWeight:600,color:'#15803d'}}>✅ {warrantyPeriod} warranty on receipt</div>}
-                  </div>
-                                {/* Warranty option — desktop */}
-              <div style={{marginBottom:14,background:'#f0fdf4',border:'1.5px solid #86efac',borderRadius:10,padding:'12px 14px'}}>
-                <div style={{fontSize:12,fontWeight:700,color:'#15803d',marginBottom:8,textTransform:'uppercase',letterSpacing:'.8px'}}>🛡️ Warranty (optional)</div>
-                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                  {[{v:'',l:'No Warranty'},{v:'3 months',l:'3 Months'},{v:'6 months',l:'6 Months'},{v:'1 year',l:'1 Year'},{v:'2 years',l:'2 Years'}].map(w=>(
-                    <button key={w.v||'nowar2'} onClick={()=>setWarrantyPeriod(w.v)}
-                      style={{padding:'7px 12px',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',
-                        border:'none',background:warrantyPeriod===w.v?(w.v?'#15803d':'#6b7280'):'white',
-                        color:warrantyPeriod===w.v?'white':'#374151',boxShadow:'0 1px 3px rgba(0,0,0,.1)'}}>
-                      {w.v?'🛡️ '+w.l:'❌ '+w.l}
-                    </button>
-                  ))}
-                </div>
-                {warrantyPeriod&&<div style={{marginTop:8,fontSize:12,fontWeight:600,color:'#15803d'}}>✅ {warrantyPeriod} warranty on receipt</div>}
-              </div>
-              <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:10}}>Payment Method</div>
+                <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:10}}>Payment Method</div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:16}}>
                   {[['cash','💵 Cash'],['bank','🏦 Bank'],['card','💳 Card']].map(([v,l])=>(
                     <button key={v} onClick={()=>setPayMethod(v)} style={{
