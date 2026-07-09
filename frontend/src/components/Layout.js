@@ -73,6 +73,7 @@ const NAV = [
   { to:'/report-pdf',     icon:'rx',         label:'PDF Report',     section:'finance',  roles:['admin'] },
   { to:'/bulk-import',    icon:'import',     label:'Bulk Import',    section:'account',  roles:['admin'] },
   { to:'/settings',       icon:'settings',   label:'Settings',       section:'account'   },
+  { to:'/backup',         icon:'backup',     label:'Backup Data',    section:'account',  roles:['admin'] },
 ];
 const SECTIONS = { main:null, inventory:'Inventory', finance:'Finance & Reports', account:'Account' };
 const BOTTOM_NAV = [

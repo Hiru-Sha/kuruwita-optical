@@ -81,8 +81,6 @@ export default function App() {
             <Route path="end-of-day"      element={<EndOfDay />} />
             <Route path="warranty"         element={<Warranty />} />
             <Route path="backup"           element={<BackupRestore />} />
-            <Route path="warranty"         element={<Warranty />} />
-            <Route path="backup"           element={<BackupRestore />} />
             {/* Admin-only routes */}
             <Route path="grinding"  element={<AdminOnly><Grinding /></AdminOnly>} />
             <Route path="reports"   element={<AdminOnly><Reports  /></AdminOnly>} />
