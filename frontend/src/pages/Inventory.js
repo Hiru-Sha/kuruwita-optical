@@ -237,7 +237,31 @@ function ItemCard({ item, onClick, onSticker }) {
         <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:2, lineHeight:1.3 }}>{item.name}</div>
         {sub&&<div style={{ fontSize:11, color:C.muted, marginBottom:6 }}>{sub}</div>}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:6 }}>
-          <div style={{ fontSize:14, fontWeight:700, color:'#1a1a2e' }}>Rs.{parseFloat(item.sell_price||0).toLocaleString()}</div>
+          <div>
+            <div style={{ fontSize:14, fontWeight:700, color:'#1a1a2e' }}>Rs.{parseFloat(item.sell_price||0).toLocaleString()}</div>
+            {/* Show cost price per batch if multiple batches exist */}
+            {(() => {
+              const batches = item.price_batches || [];
+              const withQty = batches.filter(b => b.qty > 0);
+              if (withQty.length < 2) return null;
+              const uniquePrices = [...new Set(withQty.map(b => b.buy_price))];
+              if (uniquePrices.length < 2) return null;
+              return (
+                <div style={{ marginTop:3 }}>
+                  {withQty.map((b, i) => (
+                    <div key={b.id} style={{ display:'flex', alignItems:'center', gap:4, marginTop:1 }}>
+                      <span style={{ fontSize:9, fontWeight:700, background: i===0?'#f3f4f6':'#dbeafe', color: i===0?'#6b7280':'#1d4ed8', padding:'1px 5px', borderRadius:10 }}>
+                        {i===0 ? 'Old' : 'New'}
+                      </span>
+                      <span style={{ fontSize:10, fontWeight:700, color:'#374151' }}>
+                        {b.qty} × Rs.{parseFloat(b.buy_price||0).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
           <div style={{ textAlign:'right' }}>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               {item.notes && item.notes.includes('[NEW STOCK') && (
@@ -257,7 +281,9 @@ function ItemCard({ item, onClick, onSticker }) {
               )}
               <div style={{ fontSize:18, fontWeight:700, color:isOut?'#9ca3af':isLow?C.danger:C.success }}>{item.quantity}</div>
             </div>
-            <div style={{ fontSize:10, color:'#9ca3af' }}>in stock</div>
+            <div style={{ fontSize:10, color:'#9ca3af' }}>
+              {(item.price_batches||[]).filter(b=>b.qty>0).length > 1 ? 'total stock' : 'in stock'}
+            </div>
             {item.updated_at && (
               <div style={{ fontSize:9, color:'#9ca3af', marginTop:1 }}>
                 {new Date(item.updated_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
@@ -973,6 +999,23 @@ export default function Inventory() {
   const [panelTab,     setPanelTab]    = useState('details');
   const [stockHistory, setStockHistory] = useState([]);
   const [histLoading,  setHistLoading]  = useState(false);
+
+  // Load history for the History tab in main panel
+  const loadHistory = async (id) => {
+    if (!id) return;
+    setHistLoading(true);
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      // Try inventory/:id/history first, fall back to stock-adjustments
+      const res = await fetch(`${BASE}/stock-adjustments?inventory_id=${id}&limit=100`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setStockHistory(Array.isArray(data) ? data : (data.history || []));
+    } catch { setStockHistory([]); }
+    finally { setHistLoading(false); }
+  };
   const [showAdd,      setShowAdd]     = useState(false);
 
   const [addStep,      setAddStep]     = useState('category'); // 'category' | 'form'

@@ -18,7 +18,12 @@ const C = {
   out: 'var(--danger)',
 };
 const fmt     = (n) => 'Rs. '+parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0,maximumFractionDigits:0});
-const fmtDate = (d) => { if(!d) return '—'; return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); };
+const fmtDate = (d) => {
+  if (!d) return '—';
+  // Handle both date string 'YYYY-MM-DD' and ISO timestamp
+  const dt = String(d).includes('T') ? new Date(d) : new Date(d + 'T00:00:00');
+  return isNaN(dt) ? '—' : dt.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+};
 const today   = () => new Date().toISOString().split('T')[0];
 const toB64   = (file) => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
 
