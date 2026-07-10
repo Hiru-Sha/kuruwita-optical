@@ -1666,7 +1666,7 @@ export default function Inventory() {
                         background: isActive ? 'rgba(255,255,255,0.3)' : '#f3f4f6',
                         color: isActive ? (cat.dark?'white':cat.c) : C.navy,
                         borderRadius:10, padding:'0 6px', fontSize:10, fontWeight:700,
-                      }}>{cat.qty}</span>
+                      }}>{cat.count}</span>
                     </button>
                   );
                 })}
