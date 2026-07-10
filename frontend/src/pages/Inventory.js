@@ -1960,41 +1960,58 @@ export default function Inventory() {
       <div style={{ marginBottom:14, display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Search items, brand, dealer..." style={{ ...INP, maxWidth:340 }}/>
 
-        {/* Dealer filter dropdown */}
+        {/* Dealer filter — type to search with live suggestions */}
         <div style={{ position:'relative' }}>
-          <button onClick={()=>setShowDealerDrop(d=>!d)}
-            style={{ padding:'10px 16px', borderRadius:10, border:`1.5px solid ${dealerFilter?C.gold:C.border}`,
-              background:dealerFilter?`${C.gold}18`:'white', color:dealerFilter?C.navy:C.muted,
-              fontSize:13, fontWeight:dealerFilter?700:500, cursor:'pointer', fontFamily:'inherit',
-              display:'flex', alignItems:'center', gap:8, whiteSpace:'nowrap' }}>
-            🏪 {dealerFilter || 'Filter by Dealer'}
-            {dealerFilter && <span onClick={e=>{e.stopPropagation();setDealerFilter('');setShowDealerDrop(false);}}
-              style={{ marginLeft:4, fontWeight:900, color:C.danger, fontSize:14 }}>×</span>}
-          </button>
+          <input
+            value={dealerFilter}
+            onChange={e=>{ setDealerFilter(e.target.value); setShowDealerDrop(true); }}
+            onFocus={()=>setShowDealerDrop(true)}
+            onBlur={()=>setTimeout(()=>setShowDealerDrop(false), 180)}
+            placeholder="🏪 Filter by dealer..."
+            style={{ ...INP, minWidth:200, borderColor: dealerFilter ? C.gold : C.border,
+              background: dealerFilter ? `${C.gold}10` : 'white',
+              fontWeight: dealerFilter ? 600 : 400 }}
+          />
+          {dealerFilter && (
+            <button onClick={()=>setDealerFilter('')}
+              style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)',
+                background:'none', border:'none', cursor:'pointer', fontSize:16, color:C.muted, lineHeight:1 }}>
+              ×
+            </button>
+          )}
 
-          {showDealerDrop && (
-            <div style={{ position:'absolute', top:'calc(100% + 6px)', left:0, minWidth:220, maxWidth:320,
-              background:'white', border:`1px solid ${C.border}`, borderRadius:12, boxShadow:'0 4px 20px rgba(0,0,0,.12)',
-              zIndex:300, maxHeight:280, overflowY:'auto' }}
-              onMouseLeave={()=>setShowDealerDrop(false)}>
-              <div style={{ padding:'8px 12px', fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase',
-                letterSpacing:'1px', borderBottom:`1px solid ${C.border}`, background:C.cream }}>
-                {dealers.length} dealers · click to filter
-              </div>
-              {dealers.map(d=>(
-                <div key={d.dealer} onClick={()=>{setDealerFilter(d.dealer);setShowDealerDrop(false);}}
-                  style={{ padding:'10px 14px', cursor:'pointer', display:'flex', justifyContent:'space-between',
-                    alignItems:'center', borderBottom:`1px solid #f9f7f2`,
-                    background:dealerFilter===d.dealer?`${C.gold}18`:'white',
-                    fontWeight:dealerFilter===d.dealer?700:400 }}
-                  onMouseEnter={e=>e.currentTarget.style.background=`${C.gold}10`}
-                  onMouseLeave={e=>e.currentTarget.style.background=dealerFilter===d.dealer?`${C.gold}18`:'white'}>
-                  <span style={{ fontSize:13, color:C.navy }}>🏪 {d.dealer}</span>
-                  <span style={{ fontSize:11, color:C.muted, background:'#f3f4f6', borderRadius:10, padding:'1px 8px', fontWeight:600 }}>
-                    {d.item_count} items
-                  </span>
-                </div>
-              ))}
+          {/* Suggestions dropdown */}
+          {showDealerDrop && dealers.filter(d =>
+              !dealerFilter || d.dealer.toLowerCase().includes(dealerFilter.toLowerCase())
+            ).length > 0 && (
+            <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, right:0, minWidth:240,
+              background:'white', border:`1px solid ${C.border}`, borderRadius:12,
+              boxShadow:'0 6px 24px rgba(0,0,0,.12)', zIndex:400, maxHeight:260, overflowY:'auto' }}>
+              {dealers
+                .filter(d => !dealerFilter || d.dealer.toLowerCase().includes(dealerFilter.toLowerCase()))
+                .map(d => (
+                  <div key={d.dealer}
+                    onMouseDown={()=>{ setDealerFilter(d.dealer); setShowDealerDrop(false); }}
+                    style={{ padding:'10px 14px', cursor:'pointer', display:'flex',
+                      justifyContent:'space-between', alignItems:'center',
+                      borderBottom:`1px solid #f9f7f2`,
+                      background: dealerFilter===d.dealer ? `${C.gold}18` : 'white' }}
+                    onMouseEnter={e=>e.currentTarget.style.background=`${C.gold}10`}
+                    onMouseLeave={e=>e.currentTarget.style.background=dealerFilter===d.dealer?`${C.gold}18`:'white'}>
+                    <div style={{ fontSize:13, color:C.navy, fontWeight:500 }}>
+                      🏪 {/* Highlight matching part */}
+                      {dealerFilter ? d.dealer.split(new RegExp(`(${dealerFilter})`, 'gi')).map((part,i) =>
+                        part.toLowerCase()===dealerFilter.toLowerCase()
+                          ? <mark key={i} style={{ background:`${C.gold}44`, borderRadius:3, padding:'0 2px', fontWeight:700 }}>{part}</mark>
+                          : part
+                      ) : d.dealer}
+                    </div>
+                    <span style={{ fontSize:11, color:C.muted, background:'#f3f4f6',
+                      borderRadius:10, padding:'1px 8px', fontWeight:600, flexShrink:0 }}>
+                      {d.item_count}
+                    </span>
+                  </div>
+                ))}
             </div>
           )}
         </div>
