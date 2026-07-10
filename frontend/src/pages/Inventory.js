@@ -992,6 +992,9 @@ function MobilePhoneUploader() {
 export default function Inventory() {
   const [items,        setItems]       = useState([]);
   const [activeCat,    setActiveCat]   = useState('All');
+  const [dealerFilter, setDealerFilter] = useState('');    // filter by dealer name
+  const [dealers,      setDealers]      = useState([]);    // all unique dealers
+  const [showDealerDrop, setShowDealerDrop] = useState(false);
   const [stockFilter,  setStockFilter]  = useState('all'); // 'all' | 'low' | 'out'
   const [subFilter,    setSubFilter]   = useState('');
   const [search,       setSearch]      = useState('');
@@ -1057,6 +1060,7 @@ export default function Inventory() {
     const params = new URLSearchParams({ limit:'5000', no_images:'1' });
     if (search)                   params.set('search', search);
     if (activeCat !== 'All')      params.set('category', activeCat);
+    if (dealerFilter)             params.set('dealer', dealerFilter);
     fetch(`${BASE}/inventory?${params}`, { headers:{ Authorization:`Bearer ${token}` } })
       .then(r=>r.json())
       .then(r=>{
@@ -1078,9 +1082,18 @@ export default function Inventory() {
       })
       .catch(()=>setItems([]))
       .finally(()=>setLoading(false));
-  },[search,activeCat]);
+  },[search,activeCat,dealerFilter]);
 
   useEffect(()=>{ load(); },[load]);
+
+  // Load unique dealer names for filter dropdown
+  useEffect(()=>{
+    const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    const token = localStorage.getItem('ko_token');
+    fetch(`${BASE}/inventory/dealers`, { headers:{ Authorization:`Bearer ${token}` } })
+      .then(r=>r.json()).then(rows=>setDealers(Array.isArray(rows)?rows:[]))
+      .catch(()=>{});
+  },[]);
 
   // Handle ?scan=ID from global QR scanner
   const location  = useLocation();
@@ -1943,9 +1956,55 @@ export default function Inventory() {
         ))}
       </div>
 
-      {/* Search */}
-      <div style={{ marginBottom:14 }}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Search items..." style={{ ...INP, maxWidth:380 }}/>
+      {/* Search + Dealer Filter */}
+      <div style={{ marginBottom:14, display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Search items, brand, dealer..." style={{ ...INP, maxWidth:340 }}/>
+
+        {/* Dealer filter dropdown */}
+        <div style={{ position:'relative' }}>
+          <button onClick={()=>setShowDealerDrop(d=>!d)}
+            style={{ padding:'10px 16px', borderRadius:10, border:`1.5px solid ${dealerFilter?C.gold:C.border}`,
+              background:dealerFilter?`${C.gold}18`:'white', color:dealerFilter?C.navy:C.muted,
+              fontSize:13, fontWeight:dealerFilter?700:500, cursor:'pointer', fontFamily:'inherit',
+              display:'flex', alignItems:'center', gap:8, whiteSpace:'nowrap' }}>
+            🏪 {dealerFilter || 'Filter by Dealer'}
+            {dealerFilter && <span onClick={e=>{e.stopPropagation();setDealerFilter('');setShowDealerDrop(false);}}
+              style={{ marginLeft:4, fontWeight:900, color:C.danger, fontSize:14 }}>×</span>}
+          </button>
+
+          {showDealerDrop && (
+            <div style={{ position:'absolute', top:'calc(100% + 6px)', left:0, minWidth:220, maxWidth:320,
+              background:'white', border:`1px solid ${C.border}`, borderRadius:12, boxShadow:'0 4px 20px rgba(0,0,0,.12)',
+              zIndex:300, maxHeight:280, overflowY:'auto' }}
+              onMouseLeave={()=>setShowDealerDrop(false)}>
+              <div style={{ padding:'8px 12px', fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase',
+                letterSpacing:'1px', borderBottom:`1px solid ${C.border}`, background:C.cream }}>
+                {dealers.length} dealers · click to filter
+              </div>
+              {dealers.map(d=>(
+                <div key={d.dealer} onClick={()=>{setDealerFilter(d.dealer);setShowDealerDrop(false);}}
+                  style={{ padding:'10px 14px', cursor:'pointer', display:'flex', justifyContent:'space-between',
+                    alignItems:'center', borderBottom:`1px solid #f9f7f2`,
+                    background:dealerFilter===d.dealer?`${C.gold}18`:'white',
+                    fontWeight:dealerFilter===d.dealer?700:400 }}
+                  onMouseEnter={e=>e.currentTarget.style.background=`${C.gold}10`}
+                  onMouseLeave={e=>e.currentTarget.style.background=dealerFilter===d.dealer?`${C.gold}18`:'white'}>
+                  <span style={{ fontSize:13, color:C.navy }}>🏪 {d.dealer}</span>
+                  <span style={{ fontSize:11, color:C.muted, background:'#f3f4f6', borderRadius:10, padding:'1px 8px', fontWeight:600 }}>
+                    {d.item_count} items
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {dealerFilter && (
+          <div style={{ fontSize:12, color:C.gold, fontWeight:700, background:`${C.gold}12`,
+            border:`1px solid ${C.gold}44`, borderRadius:20, padding:'4px 12px' }}>
+            Showing: {dealerFilter}
+          </div>
+        )}
       </div>
 
       {/* Bulk reorder banner — shows when low/out stock items exist */}

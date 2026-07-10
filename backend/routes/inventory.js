@@ -7,7 +7,7 @@ const auth   = require('../middleware/auth');
 
 // GET /api/inventory
 router.get('/', auth, async (req, res) => {
-  const { search, category, limit = 5000, no_images } = req.query;
+  const { search, category, dealer: dealerFilter, limit = 5000, no_images } = req.query;
 
   // Skip image_url in list for speed — images loaded individually when needed
   const imageCol = no_images === '1' ? 'NULL::text AS image_url' : 'image_url';
@@ -35,6 +35,7 @@ router.get('/', auth, async (req, res) => {
           frame_name  ILIKE $${n} OR
           item_name   ILIKE $${n} OR
           rg_power    ILIKE $${n} OR
+          dealer      ILIKE $${n} OR
           REPLACE(name, '-', ' ') ILIKE $${n}
         )`;
       });
@@ -44,6 +45,7 @@ router.get('/', auth, async (req, res) => {
       sql += ` AND category = $${params.length}`;
     }
     params.push(parseInt(limit));
+    if (dealerFilter) { params.push(`%${dealerFilter}%`); sql += ` AND dealer ILIKE $${params.length}`; }
     sql += ` ORDER BY category ASC, name ASC LIMIT $${params.length}`;
 
     const result = await pool.query(sql, params);
@@ -193,6 +195,20 @@ router.get('/:id/history', auth, async (req, res) => {
     console.error('History error:', err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// GET /api/inventory/dealers — list all unique dealer names
+router.get('/dealers', require('../middleware/auth'), async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT DISTINCT dealer, COUNT(*) AS item_count
+      FROM inventory
+      WHERE dealer IS NOT NULL AND dealer != ''
+      GROUP BY dealer
+      ORDER BY dealer ASC
+    `);
+    res.json(result.rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 module.exports = router;
