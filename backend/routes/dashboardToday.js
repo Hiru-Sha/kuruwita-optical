@@ -26,6 +26,7 @@ router.get('/', auth, async (req, res) => {
       lensJobsOut,       // 8
       reminders,         // 9
       todayBalPayments,  // 10 — balance payments from older orders collected today
+      invValue,          // 11 — total inventory value
     ] = await Promise.all([
 
       // 0: Month revenue
@@ -118,6 +119,16 @@ router.get('/', auth, async (req, res) => {
           AND created_at::date != $1
           AND last_payment_amount > 0
       `, [today]).catch(() => ({ rows: [] })),
+
+      // 11: Total inventory value (qty × cost_price)
+      pool.query(`
+        SELECT
+          COALESCE(SUM(quantity * COALESCE(cost_price, buy_price, 0)), 0) AS stock_value,
+          COALESCE(SUM(quantity * COALESCE(sell_price, 0)), 0)             AS retail_value,
+          SUM(quantity)                                                     AS total_units
+        FROM inventory
+        WHERE quantity > 0
+      `).catch(() => ({ rows: [{ stock_value:0, retail_value:0, total_units:0 }] })),
     ]);
 
     const mr = monthRevenue.rows[0];
@@ -195,6 +206,9 @@ router.get('/', auth, async (req, res) => {
       daily_cash: {
         orderIncome, orderCash, orderBank,
         balCash, balBank, balTotal: balCash+balBank,
+        inventoryValue: parseFloat(invValue.rows[0]?.stock_value||0),
+        inventoryRetail: parseFloat(invValue.rows[0]?.retail_value||0),
+        inventoryUnits: parseInt(invValue.rows[0]?.total_units||0),
         qsIncome, repairIncome, totalIncome,
         totalExp, totalDep, cashInHand,
         allTimeCash, allTimeDeposits, bankToday,
