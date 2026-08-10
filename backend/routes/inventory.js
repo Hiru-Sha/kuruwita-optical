@@ -1,15 +1,18 @@
 // ============================================================
 //  Inventory Routes — /api/inventory
+//  Fixed:
+//    Bug #7 — PATCH now allows clearing fields to null.
+//    Instead of COALESCE (which ignores null), we only update
+//    fields that are explicitly present in the request body.
+//    Sending null for a field will now clear it in the DB.
 // ============================================================
-const router    = require('express').Router();
+const router = require('express').Router();
 const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 
 // GET /api/inventory
 router.get('/', auth, async (req, res) => {
   const { search, category, dealer: dealerFilter, limit = 5000, no_images } = req.query;
-
-  // Skip image_url in list for speed — images loaded individually when needed
   const imageCol = no_images === '1' ? 'NULL::text AS image_url' : 'image_url';
 
   try {
@@ -24,7 +27,6 @@ router.get('/', auth, async (req, res) => {
     `;
     const params = [];
     if (search) {
-      // Search across name, brand, frame_name, item_name, rg_power — any word match
       const terms = search.trim().split(/\s+/).filter(Boolean);
       terms.forEach(term => {
         params.push(`%${term}%`);
@@ -54,6 +56,20 @@ router.get('/', auth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Failed' });
   }
+});
+
+// GET /api/inventory/dealers — must be BEFORE /:id
+router.get('/dealers', auth, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT DISTINCT dealer, COUNT(*) AS item_count
+      FROM inventory
+      WHERE dealer IS NOT NULL AND dealer != ''
+      GROUP BY dealer
+      ORDER BY dealer ASC
+    `);
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // GET /api/inventory/:id — single item WITH image
@@ -97,50 +113,56 @@ router.post('/', auth, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
 
-// PATCH /api/inventory/:id
+// ── PATCH /api/inventory/:id ──────────────────────────────────
+// Bug #7 Fix: Build SET clause dynamically from only the fields
+// present in req.body. This means:
+//   - Omitting a field → keeps the old DB value (no change)
+//   - Sending a value  → updates to that value
+//   - Sending null     → clears the field to NULL in the DB
+// Previously COALESCE prevented null from ever being saved.
 router.patch('/:id', auth, async (req, res) => {
-  const {
-    name, brand, dealer, category,
-    frame_color, frame_type, frame_shape, frame_material, frame_size,
-    sg_type, rg_power, item_name,
-    sell_price, cost_price, quantity, min_quantity, image_url,
-    display_number, stock_number, location, notes,
-  } = req.body;
+  const allowed = [
+    'name', 'brand', 'dealer', 'category',
+    'frame_color', 'frame_type', 'frame_shape', 'frame_material', 'frame_size',
+    'sg_type', 'rg_lens_type', 'rg_material', 'rg_power', 'item_name',
+    'sell_price', 'cost_price', 'quantity', 'min_quantity', 'image_url',
+    'display_number', 'stock_number', 'location', 'notes',
+  ];
+
+  const fields = [];
+  const values = [];
+
+  allowed.forEach(f => {
+    if (Object.prototype.hasOwnProperty.call(req.body, f)) {
+      fields.push(`${f} = $${fields.length + 1}`);
+      // Keep null as null so fields can be cleared;
+      // coerce numeric types, leave text as-is
+      if (f === 'sell_price' || f === 'cost_price') {
+        values.push(req.body[f] === null || req.body[f] === '' ? null : parseFloat(req.body[f]));
+      } else if (f === 'quantity' || f === 'min_quantity') {
+        values.push(req.body[f] === null || req.body[f] === '' ? null : parseInt(req.body[f]));
+      } else {
+        values.push(req.body[f] === '' ? null : req.body[f]);
+      }
+    }
+  });
+
+  if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
+
+  fields.push('updated_at = NOW()');
+  values.push(req.params.id);
+
   try {
-    const result = await pool.query(`
-      UPDATE inventory SET
-        name           = COALESCE($1,  name),
-        brand          = COALESCE($2,  brand),
-        dealer         = COALESCE($3,  dealer),
-        category       = COALESCE($4,  category),
-        frame_color    = COALESCE($5,  frame_color),
-        frame_type     = COALESCE($6,  frame_type),
-        frame_shape    = COALESCE($7,  frame_shape),
-        frame_material = COALESCE($8,  frame_material),
-        frame_size     = COALESCE($9,  frame_size),
-        sg_type        = COALESCE($10, sg_type),
-        rg_power       = COALESCE($11, rg_power),
-        item_name      = COALESCE($12, item_name),
-        sell_price     = COALESCE($13, sell_price),
-        cost_price     = COALESCE($14, cost_price),
-        quantity       = COALESCE($15, quantity),
-        min_quantity   = COALESCE($16, min_quantity),
-        image_url      = COALESCE($17, image_url),
-        display_number = COALESCE($18, display_number),
-        stock_number   = COALESCE($19, stock_number),
-        location       = COALESCE($20, location),
-        notes          = COALESCE($21, notes),
-        updated_at     = NOW()
-      WHERE id = $22 RETURNING *`,
-      [name, brand, dealer, category,
-       frame_color, frame_type, frame_shape, frame_material, frame_size,
-       sg_type, rg_power, item_name,
-       sell_price, cost_price, quantity, min_quantity, image_url,
-       display_number||null, stock_number||null, location||null, notes||null,
-       req.params.id]
+    const result = await pool.query(
+      `UPDATE inventory SET ${fields.join(', ')} WHERE id = $${values.length} RETURNING *`,
+      values
     );
+    if (!result.rows.length) return res.status(404).json({ error: 'Item not found' });
     res.json(result.rows[0]);
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed' });
+  }
 });
 
 // DELETE /api/inventory/:id
@@ -151,27 +173,9 @@ router.delete('/:id', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
 });
 
-// ── GET /api/inventory/:id/history — stock movement log ──────
+// GET /api/inventory/:id/history — stock movement log
 router.get('/:id/history', auth, async (req, res) => {
   try {
-    // Auto-create stock_adjustments if not yet created
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS stock_adjustments (
-        id              SERIAL PRIMARY KEY,
-        inventory_id    INTEGER,
-        item_name       VARCHAR(200),
-        change_type     VARCHAR(20),
-        quantity_change INTEGER,
-        quantity_before INTEGER,
-        quantity_after  INTEGER,
-        reason          VARCHAR(100),
-        notes           TEXT,
-        adjusted_by     INTEGER,
-        adjusted_by_name VARCHAR(100),
-        created_at      TIMESTAMP DEFAULT NOW()
-      )
-    `).catch(()=>{});
-
     const limit = parseInt(req.query.limit) || 50;
     const rows = await pool.query(`
       SELECT sa.*,
@@ -183,32 +187,19 @@ router.get('/:id/history', auth, async (req, res) => {
       LIMIT $2
     `, [req.params.id, limit]);
 
-    // Also get current item info
-    const item = await pool.query('SELECT id, name, quantity FROM inventory WHERE id=$1', [req.params.id]);
+    const item = await pool.query(
+      'SELECT id, name, quantity FROM inventory WHERE id=$1', [req.params.id]
+    );
 
     res.json({
-      item:     item.rows[0] || null,
-      history:  rows.rows,
-      total:    rows.rowCount,
+      item:    item.rows[0] || null,
+      history: rows.rows,
+      total:   rows.rowCount,
     });
-  } catch(err) {
+  } catch (err) {
     console.error('History error:', err.message);
     res.status(500).json({ error: err.message });
   }
-});
-
-// GET /api/inventory/dealers — list all unique dealer names
-router.get('/dealers', require('../middleware/auth'), async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT DISTINCT dealer, COUNT(*) AS item_count
-      FROM inventory
-      WHERE dealer IS NOT NULL AND dealer != ''
-      GROUP BY dealer
-      ORDER BY dealer ASC
-    `);
-    res.json(result.rows);
-  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 module.exports = router;

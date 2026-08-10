@@ -3,6 +3,7 @@
 //  Fixed:
 //    1. GET /stats moved BEFORE GET /:id (route shadowing bug)
 //    2. Race condition in nextSaleNumber → advisory lock
+//    3. Bug #6 — DELETE now logs stock reversal to stock_adjustments
 // ============================================================
 const router = require('express').Router();
 const pool   = require('../db/pool');
@@ -40,7 +41,6 @@ router.get('/', auth, async (req, res) => {
 });
 
 // ── GET /api/quick-sales/stats — MUST be before /:id ─────────
-// Fixed: was defined after GET /:id so Express never reached it
 router.get('/stats', auth, async (req, res) => {
   try {
     const [today, month] = await Promise.all([
@@ -72,7 +72,6 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // ── POST /api/quick-sales ────────────────────────────────────
-// Fixed: uses advisory lock to prevent duplicate sale numbers
 router.post('/', auth, async (req, res) => {
   const { customer_name, customer_phone, items, subtotal, discount, total,
           payment_method, amount_paid, change_given, notes } = req.body;
@@ -82,7 +81,6 @@ router.post('/', auth, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Advisory lock prevents race condition on sale number generation
     await client.query('SELECT pg_advisory_xact_lock(1002)');
     const lastRes = await client.query(
       "SELECT sale_number FROM quick_sales ORDER BY id DESC LIMIT 1"
@@ -102,12 +100,12 @@ router.post('/', auth, async (req, res) => {
        RETURNING *`,
       [
         saleNum, customer_name || null, customer_phone || null, JSON.stringify(items),
-        parseFloat(subtotal)    || 0,
-        parseFloat(discount)    || 0,
-        parseFloat(total)       || 0,
+        parseFloat(subtotal)     || 0,
+        parseFloat(discount)     || 0,
+        parseFloat(total)        || 0,
         payment_method || 'cash',
-        parseFloat(amount_paid) || 0,
-        parseFloat(change_given)|| 0,
+        parseFloat(amount_paid)  || 0,
+        parseFloat(change_given) || 0,
         notes || null, req.user.id, import_date || null,
       ]
     );
@@ -116,21 +114,13 @@ router.post('/', auth, async (req, res) => {
       ? items
       : (typeof items === 'string' ? JSON.parse(items) : []);
 
-    // Ensure stock_adjustments table exists (once per sale)
-    await pool.query(`CREATE TABLE IF NOT EXISTS stock_adjustments (
-      id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
-      change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
-      quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
-      adjusted_by INTEGER, adjusted_by_name VARCHAR(100), created_at TIMESTAMP DEFAULT NOW()
-    )`).catch(()=>{});
-
     for (const item of itemsArr) {
       const invId = item.inventory_id || item.inventoryId || item.id;
       const qty   = parseInt(item.qty) || parseInt(item.quantity) || 1;
       if (invId) {
-        // Get qty before deduction for history log
-        const before = await pool.query('SELECT quantity, name FROM inventory WHERE id=$1', [invId])
-          .catch(()=>({rows:[{quantity:0,name:item.name||'Item'}]}));
+        const before = await client.query(
+          'SELECT quantity, name FROM inventory WHERE id=$1', [invId]
+        ).catch(() => ({ rows: [{ quantity: 0, name: item.name || 'Item' }] }));
         const qtyBefore = parseInt(before.rows[0]?.quantity || 0);
 
         await client.query(
@@ -138,16 +128,19 @@ router.post('/', auth, async (req, res) => {
           [qty, invId]
         );
 
-        // Log to stock_adjustments
-        await pool.query(`INSERT INTO stock_adjustments
-          (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, unit_cost, adjusted_by)
-          VALUES ($1,$2,'remove',$3,$4,$5,'Quick Sale',$6,$7,$8)`,
-          [invId, before.rows[0]?.name || item.name || 'Item',
-           -qty, qtyBefore, Math.max(0, qtyBefore - qty),
-           saleNum,
-           'Sale: ' + saleNum,
-           parseFloat(item.cost_price || item.unit_price || 0),
-           req.user.id]
+        await client.query(
+          `INSERT INTO stock_adjustments
+            (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, unit_cost, adjusted_by)
+           VALUES ($1,$2,'remove',$3,$4,$5,'Quick Sale',$6,$7,$8)`,
+          [
+            invId,
+            before.rows[0]?.name || item.name || 'Item',
+            -qty, qtyBefore, Math.max(0, qtyBefore - qty),
+            saleNum,
+            'Sale: ' + saleNum,
+            parseFloat(item.cost_price || item.unit_price || 0),
+            req.user.id,
+          ]
         ).catch(e => console.warn('Stock log failed:', e.message));
       }
     }
@@ -183,12 +176,15 @@ router.post('/', auth, async (req, res) => {
 });
 
 // ── DELETE /api/quick-sales/:id ──────────────────────────────
+// Bug #6 Fix: Now logs stock reversal to stock_adjustments so
+// the audit history shows the inventory being returned.
 router.delete('/:id', auth, async (req, res) => {
   try {
     const sale = await pool.query('SELECT * FROM quick_sales WHERE id=$1', [req.params.id]);
     if (!sale.rows.length) return res.status(404).json({ error: 'Not found' });
     const s = sale.rows[0];
 
+    // Remove auto-created bank receipt if non-cash payment
     if (s.payment_method && s.payment_method !== 'cash') {
       await pool.query(
         `DELETE FROM cash_deposits WHERE notes ILIKE $1 AND amount = $2`,
@@ -196,19 +192,40 @@ router.delete('/:id', auth, async (req, res) => {
       ).catch(() => {});
     }
 
+    // Restore inventory and log the reversal to stock_adjustments
     try {
       const saleItems = typeof s.items === 'string' ? JSON.parse(s.items) : s.items || [];
       for (const item of saleItems) {
         const invId = item.inventory_id || item.inventoryId;
         const qty   = parseInt(item.qty) || parseInt(item.quantity) || 1;
         if (invId) {
+          // Get current qty before restoration
+          const before = await pool.query(
+            'SELECT quantity, name FROM inventory WHERE id=$1', [invId]
+          ).catch(() => ({ rows: [{ quantity: 0, name: item.name || 'Item' }] }));
+          const qtyBefore = parseInt(before.rows[0]?.quantity || 0);
+
           await pool.query(
             'UPDATE inventory SET quantity = quantity + $1, updated_at = NOW() WHERE id = $2',
             [qty, invId]
           );
+
+          // ── Bug #6 Fix: log the reversal ──────────────────────
+          await pool.query(
+            `INSERT INTO stock_adjustments
+              (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, adjusted_by)
+             VALUES ($1,$2,'add',$3,$4,$5,'Sale Deleted',$6,$7)`,
+            [
+              invId,
+              before.rows[0]?.name || item.name || 'Item',
+              qty, qtyBefore, qtyBefore + qty,
+              'Returned: sale ' + s.sale_number + ' deleted',
+              req.user.id,
+            ]
+          ).catch(e => console.warn('Stock reversal log failed:', e.message));
         }
       }
-    } catch (e) { /* non-critical */ }
+    } catch (e) { console.warn('Inventory restore failed:', e.message); }
 
     await pool.query('DELETE FROM quick_sales WHERE id=$1', [req.params.id]);
     res.json({ message: 'Sale deleted' });

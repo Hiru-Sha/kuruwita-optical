@@ -39,8 +39,14 @@ async function nextOrderNumber(client, dateStr) {
   return 'KO-' + String(last + 1).padStart(4, '0');
 }
 
-// Auto-mark overdue orders (runs on GET to keep statuses fresh)
+// Auto-mark overdue orders
+// Bug #16 Fix: debounced — runs at most once every 5 minutes
+// instead of on every single GET /api/orders request.
+let lastOverdueCheck = 0;
 async function markOverdueOrders() {
+  const now = Date.now();
+  if (now - lastOverdueCheck < 5 * 60 * 1000) return;
+  lastOverdueCheck = now;
   try {
     await pool.query(`
       UPDATE orders SET status = 'overdue'
@@ -459,6 +465,9 @@ router.delete('/:id', auth, async (req, res) => {
       ).catch(() => {});
     }
     await pool.query('DELETE FROM cash_deposits WHERE order_id = $1', [req.params.id]).catch(() => {});
+    // Bug #15 Fix: clean up orphan child records so DB stays tidy
+    await pool.query('DELETE FROM refractions WHERE order_id = $1', [req.params.id]).catch(() => {});
+    await pool.query('DELETE FROM call_logs   WHERE order_id = $1', [req.params.id]).catch(() => {});
     await pool.query('DELETE FROM orders WHERE id = $1', [req.params.id]);
     res.json({ message: 'Order deleted' });
   } catch (err) {

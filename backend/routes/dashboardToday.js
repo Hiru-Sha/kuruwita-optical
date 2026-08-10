@@ -1,17 +1,43 @@
 // ============================================================
 //  Dashboard Today Route — /api/dashboard-today
 //  Fixed:
-//    1. Promise.all order mismatch (placeholder was at index 7,
-//       shifting activeOrders → NaN, reminders → wrong data)
-//    2. Reminders query now JOINs customers for name & phone
-//    3. Bug #4 — Month revenue query now excludes cancelled orders
-//       (previously SUM included cancelled orders, inflating totals)
+//    1. Promise.all order mismatch resolved
+//    2. Reminders query JOINs customers for name & phone
+//    3. Month revenue excludes cancelled orders
+//    4. Bug #5 — mr.collected no longer double-counts QS/Repairs.
+//       A new field mr.order_collected holds order advances only.
+//       mr.collected now = order advances + QS + repairs (grand collected).
+//       Frontend should use mr.order_collected for "orders advance"
+//       and mr.collected for "total cash collected this month".
+//    5. Bug #16 — markOverdueOrders debounced: runs at most once
+//       every 5 minutes instead of on every GET request.
 // ============================================================
 const router = require('express').Router();
 const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 
+// ── Bug #16 Fix: Debounced overdue check ─────────────────────
+// Runs the UPDATE at most once per 5 minutes across all requests.
+let lastOverdueCheck = 0;
+async function markOverdueOrders() {
+  const now = Date.now();
+  if (now - lastOverdueCheck < 5 * 60 * 1000) return; // skip if < 5 min ago
+  lastOverdueCheck = now;
+  try {
+    await pool.query(`
+      UPDATE orders SET status = 'overdue'
+      WHERE deliver_date < CURRENT_DATE
+        AND status IN ('created','called')
+        AND deliver_date IS NOT NULL
+    `);
+  } catch (e) {
+    console.error('markOverdueOrders error:', e.message);
+  }
+}
+
 router.get('/', auth, async (req, res) => {
+  await markOverdueOrders().catch(() => {});
+
   const today = new Date().toISOString().split('T')[0];
   const month = today.slice(0, 7);
 
@@ -27,11 +53,11 @@ router.get('/', auth, async (req, res) => {
       activeOrders,      // 7
       lensJobsOut,       // 8
       reminders,         // 9
-      todayBalPayments,  // 10 — balance payments from older orders collected today
-      invValue,          // 11 — total inventory value
+      todayBalPayments,  // 10
+      invValue,          // 11
     ] = await Promise.all([
 
-      // 0: Month revenue — FIX #4: exclude cancelled orders
+      // 0: Month revenue — excludes cancelled orders
       pool.query(`
         SELECT
           COALESCE(SUM(total_amount),0)   AS total,
@@ -43,7 +69,7 @@ router.get('/', auth, async (req, res) => {
           AND status != 'cancelled'
       `, [month]),
 
-      // 1: Today's orders
+      // 1: Today's orders (non-cancelled)
       pool.query(`
         SELECT advance_amount, COALESCE(payment_method,'cash') AS payment_method
         FROM orders WHERE created_at::date = $1 AND status != 'cancelled'
@@ -98,7 +124,7 @@ router.get('/', auth, async (req, res) => {
         WHERE lens_step BETWEEN 1 AND 2
       `),
 
-      // 9: Balance reminders — JOINs customers for name & phone
+      // 9: Balance reminders
       pool.query(`
         SELECT o.id, o.order_number, o.deliver_date,
                o.balance_amount, c.name AS customer_name, c.phone,
@@ -123,20 +149,20 @@ router.get('/', auth, async (req, res) => {
           AND last_payment_amount > 0
       `, [today]).catch(() => ({ rows: [] })),
 
-      // 11: Total inventory value (qty × cost_price)
+      // 11: Total inventory value
       pool.query(`
         SELECT
-          COALESCE(SUM(quantity * COALESCE(cost_price, buy_price, 0)), 0) AS stock_value,
-          COALESCE(SUM(quantity * COALESCE(sell_price, 0)), 0)             AS retail_value,
-          SUM(quantity)                                                     AS total_units
+          COALESCE(SUM(quantity * COALESCE(cost_price, 0)), 0) AS stock_value,
+          COALESCE(SUM(quantity * COALESCE(sell_price, 0)), 0)  AS retail_value,
+          SUM(quantity)                                          AS total_units
         FROM inventory
         WHERE quantity > 0
-      `).catch(() => ({ rows: [{ stock_value:0, retail_value:0, total_units:0 }] })),
+      `).catch(() => ({ rows: [{ stock_value: 0, retail_value: 0, total_units: 0 }] })),
     ]);
 
     const mr = monthRevenue.rows[0];
 
-    // Month QS and repairs (safe fallback)
+    // Month QS and repairs
     let qs_month_total = 0, qs_month_count = 0;
     let rep_month_total = 0, rep_month_count = 0;
     try {
@@ -155,12 +181,19 @@ router.get('/', auth, async (req, res) => {
       rep_month_count = parseInt(repM.rows[0].c   || 0);
     } catch (e) { console.log('Repairs month skip:', e.message); }
 
-    mr.qs_total     = qs_month_total;
-    mr.qs_count     = qs_month_count;
-    mr.repair_total = rep_month_total;
-    mr.repair_count = rep_month_count;
-    mr.grand_total  = parseFloat(mr.total || 0) + qs_month_total + rep_month_total;
-    mr.collected    = parseFloat(mr.collected || 0) + qs_month_total + rep_month_total;
+    // ── Bug #5 Fix: separate order_collected from grand collected ─
+    // mr.collected from DB = SUM(advance_amount) on orders only.
+    // We preserve that as order_collected so the frontend can show
+    // "order advances" separately. Then grand collected adds QS + repairs.
+    const order_collected = parseFloat(mr.collected || 0);
+
+    mr.qs_total        = qs_month_total;
+    mr.qs_count        = qs_month_count;
+    mr.repair_total    = rep_month_total;
+    mr.repair_count    = rep_month_count;
+    mr.grand_total     = parseFloat(mr.total || 0) + qs_month_total + rep_month_total;
+    mr.order_collected = order_collected;   // order advances only — NEW field
+    mr.collected       = order_collected + qs_month_total + rep_month_total; // true grand total
 
     // Daily cash split
     const orderCash    = todayOrders.rows.filter(r => !r.payment_method || r.payment_method === 'cash').reduce((s, r) => s + parseFloat(r.advance_amount || 0), 0);
@@ -172,7 +205,6 @@ router.get('/', auth, async (req, res) => {
     const totalExp     = todayExpenses.rows.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
     const totalDep     = todayDeposits.rows.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
 
-    // Balance payments collected today from older orders
     const balRows = todayBalPayments?.rows || [];
     const balCash = balRows.filter(r => !r.method || r.method === 'cash').reduce((s, r) => s + parseFloat(r.amount || 0), 0);
     const balBank = balRows.filter(r => r.method && r.method !== 'cash').reduce((s, r) => s + parseFloat(r.amount || 0), 0);
@@ -181,11 +213,11 @@ router.get('/', auth, async (req, res) => {
     const cashInHand  = todayCashIn - totalExp - totalDep;
     const bankToday   = orderBank + balBank;
 
-    // All-time cash
+    // All-time cash (excludes cancelled orders)
     let allTimeCash = 0, allTimeDeposits = 0;
     try {
       const [atOrders, atQS, atRepairs, atExp, atDep] = await Promise.all([
-        pool.query('SELECT COALESCE(SUM(advance_amount),0) AS v FROM orders WHERE status != $1', ['cancelled']).catch(() => ({ rows: [{ v: '0' }] })),
+        pool.query(`SELECT COALESCE(SUM(advance_amount),0) AS v FROM orders WHERE status != 'cancelled'`).catch(() => ({ rows: [{ v: '0' }] })),
         pool.query('SELECT COALESCE(SUM(total),0) AS v FROM quick_sales').catch(() => ({ rows: [{ v: '0' }] })),
         pool.query('SELECT COALESCE(SUM(charge),0) AS v FROM repairs').catch(() => ({ rows: [{ v: '0' }] })),
         pool.query('SELECT COALESCE(SUM(amount),0) AS v FROM expenses').catch(() => ({ rows: [{ v: '0' }] })),

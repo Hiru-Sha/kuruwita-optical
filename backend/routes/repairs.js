@@ -1,5 +1,10 @@
 // ============================================================
 //  Repairs Routes — /api/repairs
+//  Fixed:
+//    Bug #8 — Frame inventory deduction now runs INSIDE the
+//    transaction (before COMMIT). Previously it ran after COMMIT
+//    via pool.query, so a failure left the repair saved but
+//    stock unchanged with no way to rollback.
 // ============================================================
 const router = require('express').Router();
 const pool   = require('../db/pool');
@@ -51,67 +56,107 @@ router.get('/summary', auth, async (req, res) => {
 });
 
 // POST /api/repairs — create repair
+// Bug #8 Fix: frame inventory deduction now inside the transaction.
 router.post('/', auth, async (req, res) => {
   const { customer_name, phone, repair_type, description, charge, payment_method, status, notes,
           frame_inventory_id, advance, due_date, frame_description } = req.body;
   if (!repair_type) return res.status(400).json({ error: 'repair_type required' });
+
   const client = await pool.connect();
   try {
-    await pool.query(`ALTER TABLE repairs ADD COLUMN IF NOT EXISTS customer_id INTEGER`).catch(()=>{});
+    await pool.query(`ALTER TABLE repairs ADD COLUMN IF NOT EXISTS customer_id INTEGER`).catch(() => {});
     await client.query('BEGIN');
+
     const repair_number = await nextRepairNumber(client);
-    const import_date = req.body.repair_date || req.body.import_date || null;
+    const import_date   = req.body.repair_date || req.body.import_date || null;
+
     const result = await client.query(`
       INSERT INTO repairs
-        (repair_number, customer_name, phone, repair_type, description, charge, payment_method, status, notes, added_by, completed_at, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12::timestamp, NOW())) RETURNING *`,
-      [repair_number,
-       customer_name?.trim()||null, phone?.trim()||null,
-       repair_type, description?.trim()||null,
-       parseFloat(charge)||0, payment_method||'cash',
-       status||'done', notes?.trim()||null, req.user.id,
-       (status||'done')==='done' ? new Date() : null,
-       import_date||null]
+        (repair_number, customer_name, phone, repair_type, description, charge,
+         payment_method, status, notes, added_by, completed_at, created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12::timestamp, NOW()))
+      RETURNING *`,
+      [
+        repair_number,
+        customer_name?.trim() || null,
+        phone?.trim()         || null,
+        repair_type,
+        description?.trim()   || null,
+        parseFloat(charge)    || 0,
+        payment_method        || 'cash',
+        status                || 'done',
+        notes?.trim()         || null,
+        req.user.id,
+        (status || 'done') === 'done' ? new Date() : null,
+        import_date           || null,
+      ]
     );
-    await client.query('COMMIT');
 
-    // Deduct frame from inventory if a frame was used from stock
+    // ── Bug #8 Fix: deduct frame INSIDE transaction ────────────
+    // Previously this ran after COMMIT via pool.query — if it
+    // failed, the repair was saved but stock was unchanged.
     if (frame_inventory_id) {
-      await pool.query(
+      const fBefore = await client.query(
+        'SELECT quantity, name FROM inventory WHERE id=$1', [frame_inventory_id]
+      ).catch(() => ({ rows: [{ quantity: 0, name: 'Frame' }] }));
+      const fQtyBefore = parseInt(fBefore.rows[0]?.quantity || 0);
+
+      await client.query(
         'UPDATE inventory SET quantity = GREATEST(0, quantity - 1), updated_at = NOW() WHERE id = $1',
         [frame_inventory_id]
-      ).catch(e => console.warn('Repair frame stock deduct failed:', e.message));
+      );
+
+      await client.query(
+        `INSERT INTO stock_adjustments
+          (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, adjusted_by)
+         VALUES ($1,$2,'remove',-1,$3,$4,'Repair',$5,$6)`,
+        [
+          frame_inventory_id,
+          fBefore.rows[0]?.name || frame_description || 'Frame',
+          fQtyBefore,
+          Math.max(0, fQtyBefore - 1),
+          'Used in repair: ' + repair_number,
+          req.user.id,
+        ]
+      ).catch(e => console.warn('Repair stock log failed:', e.message));
     }
-    const newRepair = result.rows[0];
 
     // Auto-create bank receipt if paid by bank or card
-    const pm_r  = (payment_method||'cash').toLowerCase();
-    const amt_r = parseFloat(charge)||0;
-    if ((pm_r==='bank'||pm_r==='card'||pm_r==='transfer') && amt_r > 0) {
-      try {
-        await pool.query(
-          `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
-          [new Date().toISOString().split('T')[0], amt_r, 'Pan Asia Bank',
-           pm_r==='card'?'card':'online',
-           'Auto: Repair ' + repair_number, req.user.id]
-        );
-      } catch(e) { console.warn('Repair bank receipt failed:', e.message); }
+    const pm_r  = (payment_method || 'cash').toLowerCase();
+    const amt_r = parseFloat(charge) || 0;
+    if ((pm_r === 'bank' || pm_r === 'card' || pm_r === 'transfer') && amt_r > 0) {
+      await client.query(
+        `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [
+          new Date().toISOString().split('T')[0],
+          amt_r,
+          'Pan Asia Bank',
+          pm_r === 'card' ? 'card' : 'online',
+          'Auto: Repair ' + repair_number,
+          req.user.id,
+        ]
+      ).catch(e => console.warn('Repair bank receipt failed:', e.message));
     }
 
-    res.status(201).json(newRepair);
+    await client.query('COMMIT');
+    res.status(201).json(result.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(err);
     res.status(500).json({ error: 'Failed: ' + err.message });
-  } finally { client.release(); }
+  } finally {
+    client.release();
+  }
 });
 
 // PATCH /api/repairs/:id — update status and any field
 router.patch('/:id', auth, async (req, res) => {
-  const allowed = ['status','notes','charge','repair_cost','payment_method','customer_name',
-                   'phone','repair_type','description','frame_description','customer_id',
-                   'due_date','advance','frame_inventory_id'];
+  const allowed = [
+    'status','notes','charge','repair_cost','payment_method','customer_name',
+    'phone','repair_type','description','frame_description','customer_id',
+    'due_date','advance','frame_inventory_id',
+  ];
   const fields = [], vals = [];
 
   allowed.forEach(f => {
@@ -123,7 +168,6 @@ router.patch('/:id', auth, async (req, res) => {
 
   if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
 
-  // Auto-set timestamps based on status
   if (req.body.status === 'done') {
     fields.push(`completed_at = NOW()`);
   }
@@ -149,7 +193,6 @@ router.patch('/:id', auth, async (req, res) => {
 // DELETE /api/repairs/:id
 router.delete('/:id', auth, async (req, res) => {
   try {
-    // Get repair details first so we can clean up deposits
     const rep = await pool.query('SELECT * FROM repairs WHERE id=$1', [req.params.id]);
     if (!rep.rows.length) return res.status(404).json({ error: 'Not found' });
     const repair = rep.rows[0];
@@ -159,20 +202,20 @@ router.delete('/:id', auth, async (req, res) => {
       await pool.query(
         'UPDATE inventory SET quantity = quantity + 1, updated_at = NOW() WHERE id = $1',
         [repair.frame_inventory_id]
-      ).catch(()=>{});
+      ).catch(() => {});
     }
 
-    // If bank/card payment — delete matching bank receipt
+    // Delete matching bank receipt if non-cash
     if (repair.payment_method && repair.payment_method !== 'cash') {
       await pool.query(
         `DELETE FROM cash_deposits
-         WHERE notes ILIKE $1
-           AND amount = $2
-           AND date = $3`,
-        [`%Repair ${repair.repair_number}%`,
-         parseFloat(repair.charge||0),
-         repair.created_at?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]]
-      ).catch(()=>{});
+         WHERE notes ILIKE $1 AND amount = $2 AND date = $3`,
+        [
+          `%Repair ${repair.repair_number}%`,
+          parseFloat(repair.charge || 0),
+          repair.created_at?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+        ]
+      ).catch(() => {});
     }
 
     await pool.query('DELETE FROM repairs WHERE id=$1', [req.params.id]);
@@ -180,8 +223,7 @@ router.delete('/:id', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed' }); }
 });
 
-// POST /api/repairs/:id/payment — record partial/full payment on a repair
-// Uses existing 'advance' column to track total paid (charge - advance = balance)
+// POST /api/repairs/:id/payment — record partial/full payment
 router.post('/:id/payment', auth, async (req, res) => {
   const { amount, method, pay_date } = req.body;
   const amt = parseFloat(amount);
@@ -189,35 +231,40 @@ router.post('/:id/payment', auth, async (req, res) => {
   try {
     const rep = await pool.query('SELECT * FROM repairs WHERE id=$1', [req.params.id]);
     if (!rep.rows.length) return res.status(404).json({ error: 'Repair not found' });
-    const repair    = rep.rows[0];
-    const newAdvance = parseFloat(repair.advance||0) + amt;
-    const charge     = parseFloat(repair.charge||0);
+    const repair     = rep.rows[0];
+    const newAdvance = parseFloat(repair.advance || 0) + amt;
+    const charge     = parseFloat(repair.charge  || 0);
     const dateStr    = pay_date || new Date().toISOString().split('T')[0];
     const fullyPaid  = newAdvance >= charge - 0.01;
 
-    // Update advance (total paid) and status if fully paid
     const result = await pool.query(
       `UPDATE repairs SET advance=$1, notes=COALESCE(notes,'')||$2,
        status=CASE WHEN $3 THEN 'collected' ELSE status END
        WHERE id=$4 RETURNING *`,
-      [newAdvance,
-       `
-Payment: Rs.${amt.toLocaleString()} on ${dateStr} (${method||'cash'})`,
-       fullyPaid, req.params.id]
+      [
+        newAdvance,
+        `\nPayment: Rs.${amt.toLocaleString()} on ${dateStr} (${method || 'cash'})`,
+        fullyPaid,
+        req.params.id,
+      ]
     );
 
-    // Auto-create cash deposit record so dashboard cash is updated
-    const pm = (method||'cash').toLowerCase();
+    const pm = (method || 'cash').toLowerCase();
     if (pm === 'bank' || pm === 'card' || pm === 'transfer') {
       await pool.query(
-        `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by) VALUES ($1,$2,$3,$4,$5,$6)`,
-        [dateStr, amt, 'Pan Asia Bank', pm==='card'?'card':'online',
-         'Repair payment: ' + repair.repair_number, req.user.id]
-      ).catch(()=>{});
+        `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [
+          dateStr, amt, 'Pan Asia Bank',
+          pm === 'card' ? 'card' : 'online',
+          'Repair payment: ' + repair.repair_number,
+          req.user.id,
+        ]
+      ).catch(() => {});
     }
 
     res.json(result.rows[0]);
-  } catch(err) {
+  } catch (err) {
     console.error('Repair payment error:', err.message);
     res.status(500).json({ error: err.message });
   }
