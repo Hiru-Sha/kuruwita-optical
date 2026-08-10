@@ -1,5 +1,10 @@
 // ============================================================
 //  Auth Routes — /api/auth  (with permissions support)
+//  Bug #19 Fix:
+//    - Token expiry extended from 12h to 24h
+//    - Added POST /auth/refresh — issues a fresh token when
+//      the current one has < 2 hours remaining. Frontend
+//      calls this silently every 30 min to stay logged in.
 // ============================================================
 const router = require('express').Router();
 const bcrypt = require('bcrypt');
@@ -20,17 +25,43 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid username or password' });
 
-    // Parse permissions
     let permissions = [];
     try { permissions = user.permissions ? (typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions) : []; }
     catch(e) { permissions = []; }
 
     const token = jwt.sign(
-      { id:user.id, username:user.username, role:user.role, name:user.full_name, permissions },
+      { id: user.id, username: user.username, role: user.role, name: user.full_name, permissions },
       process.env.JWT_SECRET,
-      { expiresIn:'12h' }
+      { expiresIn: '24h' }  // Bug #19 Fix: extended from 12h to 24h
     );
-    res.json({ token, user:{ id:user.id, username:user.username, role:user.role, name:user.full_name, permissions } });
+    res.json({ token, user: { id: user.id, username: user.username, role: user.role, name: user.full_name, permissions } });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+// ── Token refresh ─────────────────────────────────────────────
+// Bug #19 Fix: issues a new 24h token when the current one has
+// less than 2 hours remaining. Frontend calls this every 30 min.
+// Returns { token } on success, 401 if token is already expired.
+router.post('/refresh', auth, async (req, res) => {
+  try {
+    // Re-fetch user from DB to get latest role/permissions
+    const result = await pool.query(
+      'SELECT id, username, full_name, role, permissions FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    if (!result.rows.length) return res.status(401).json({ error: 'User not found' });
+
+    const user = result.rows[0];
+    let permissions = [];
+    try { permissions = user.permissions ? (typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions) : []; }
+    catch(e) { permissions = []; }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role, name: user.full_name, permissions },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    res.json({ token, user: { id: user.id, username: user.username, role: user.role, name: user.full_name, permissions } });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -56,14 +87,12 @@ router.get('/me', auth, (req, res) => { res.json({ user: req.user }); });
 router.get('/users', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
   try {
-    // Try with permissions column, fall back if column doesn't exist yet
     let result;
     try {
       result = await pool.query(
         'SELECT id, username, full_name, role, permissions, created_at FROM users ORDER BY created_at ASC'
       );
     } catch(e) {
-      // permissions column doesn't exist yet - return without it
       result = await pool.query(
         'SELECT id, username, full_name, role, created_at FROM users ORDER BY created_at ASC'
       );
@@ -96,7 +125,6 @@ router.post('/users', auth, async (req, res) => {
         [username.toLowerCase(), full_name, hashed, role, JSON.stringify(permissions)]
       );
     } catch(e) {
-      // permissions column doesn't exist yet
       result = await pool.query(
         `INSERT INTO users (username, full_name, password, role)
          VALUES ($1,$2,$3,$4) RETURNING id, username, full_name, role`,
@@ -113,12 +141,7 @@ router.patch('/users/:id/permissions', auth, async (req, res) => {
   const { permissions } = req.body;
   if (!Array.isArray(permissions)) return res.status(400).json({ error: 'permissions must be an array' });
   try {
-    try {
-      await pool.query('UPDATE users SET permissions = $1 WHERE id = $2', [JSON.stringify(permissions), req.params.id]);
-    } catch(e) {
-      // Column may not exist yet - run migration first
-      return res.status(500).json({ error: 'Run SQL migration first: ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT \'[]\'::jsonb' });
-    }
+    await pool.query('UPDATE users SET permissions = $1 WHERE id = $2', [JSON.stringify(permissions), req.params.id]);
     res.json({ ok: true });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });

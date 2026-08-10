@@ -5,6 +5,9 @@
 //  - Snapshots cost_price at time of adjustment (unit_cost column)
 //  - For 'Free gift' adjustments: updates order.gift_cost
 //    so Reports can include gift COGS accurately
+//
+//  Bug #17 Fix: All CREATE TABLE IF NOT EXISTS statements removed.
+//  Tables are guaranteed to exist by server.js startup migration.
 // ============================================================
 const router = require('express').Router();
 const pool   = require('../db/pool');
@@ -14,33 +17,6 @@ const auth   = require('../middleware/auth');
 router.get('/', auth, async (req, res) => {
   const { limit = 50, inventory_id } = req.query;
   try {
-    // Ensure table exists before querying
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS stock_batches (
-        id           SERIAL PRIMARY KEY,
-        inventory_id INTEGER NOT NULL,
-        item_name    VARCHAR(200),
-        qty_received INTEGER NOT NULL,
-        qty_remaining INTEGER NOT NULL,
-        buy_price    DECIMAL(10,2) NOT NULL,
-        sell_price   DECIMAL(10,2),
-        batch_date   DATE DEFAULT CURRENT_DATE,
-        notes        TEXT,
-        added_by     INTEGER,
-        created_at   TIMESTAMP DEFAULT NOW()
-      )
-    `).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_batches_inv ON stock_batches(inventory_id)`).catch(()=>{});
-    await pool.query(`
-    CREATE TABLE IF NOT EXISTS stock_adjustments (
-        id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
-        change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
-        quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
-        adjusted_by INTEGER, adjusted_by_name VARCHAR(100), order_id INTEGER,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `).catch(()=>{});
-
     let query  = `SELECT sa.*, i.sell_price, i.cost_price AS current_cost
                   FROM stock_adjustments sa
                   LEFT JOIN inventory i ON i.id = sa.inventory_id
@@ -59,42 +35,6 @@ router.get('/', auth, async (req, res) => {
 
 // POST /api/stock-adjustments — record adjustment + update inventory + snapshot cost
 router.post('/', auth, async (req, res) => {
-  // Auto-create table if not exists
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS stock_batches (
-        id           SERIAL PRIMARY KEY,
-        inventory_id INTEGER NOT NULL,
-        item_name    VARCHAR(200),
-        qty_received INTEGER NOT NULL,
-        qty_remaining INTEGER NOT NULL,
-        buy_price    DECIMAL(10,2) NOT NULL,
-        sell_price   DECIMAL(10,2),
-        batch_date   DATE DEFAULT CURRENT_DATE,
-        notes        TEXT,
-        added_by     INTEGER,
-        created_at   TIMESTAMP DEFAULT NOW()
-      )
-    `).catch(()=>{});
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_batches_inv ON stock_batches(inventory_id)`).catch(()=>{});
-    await pool.query(`
-    CREATE TABLE IF NOT EXISTS stock_adjustments (
-      id               SERIAL PRIMARY KEY,
-      inventory_id     INTEGER,
-      item_name        VARCHAR(200),
-      change_type      VARCHAR(20),
-      quantity_change  INTEGER,
-      quantity_before  INTEGER,
-      quantity_after   INTEGER,
-      reason           VARCHAR(100),
-      notes            TEXT,
-      adjusted_by      INTEGER,
-      adjusted_by_name VARCHAR(100),
-      unit_cost        DECIMAL(10,2),
-      order_id         INTEGER,
-      created_at       TIMESTAMP DEFAULT NOW()
-    )
-  `).catch(() => {});
-
   const { inventory_id, change_type, quantity_change, reason, notes, order_id } = req.body;
 
   if (!inventory_id || !change_type || !quantity_change || !reason) {
@@ -108,7 +48,6 @@ router.post('/', auth, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Get item including cost_price for snapshot
     const itemRes = await client.query(
       'SELECT id, name, quantity, cost_price FROM inventory WHERE id = $1',
       [inventory_id]
@@ -117,28 +56,20 @@ router.post('/', auth, async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Item not found' });
     }
-    const item = itemRes.rows[0];
-
-    // Snapshot the cost price at this moment
+    const item      = itemRes.rows[0];
     const unit_cost = parseFloat(item.cost_price || 0);
-
     const qty_change = change_type === 'remove'
       ? -Math.abs(parseInt(quantity_change))
       : Math.abs(parseInt(quantity_change));
 
-    // Fetch item name for batch record
-    const inv_item = await pool.query('SELECT name FROM inventory WHERE id=$1', [inventory_id]).catch(()=>({rows:[{}]}));
-
     const qty_before = parseInt(item.quantity);
     const qty_after  = Math.max(0, qty_before + qty_change);
 
-    // Update inventory quantity
     await client.query(
       'UPDATE inventory SET quantity = $1, updated_at = NOW() WHERE id = $2',
       [qty_after, inventory_id]
     );
 
-    // Log adjustment with snapshotted unit_cost
     const logRes = await client.query(`
       INSERT INTO stock_adjustments
         (inventory_id, item_name, change_type, quantity_change,
@@ -153,33 +84,23 @@ router.post('/', auth, async (req, res) => {
       ]
     );
 
-    // ── GIFT COST: if this is a free gift for an order, update order.gift_cost ──
-    // This allows Reports to accurately include gift COGS per order
+    // Update order.gift_cost if this is a free gift adjustment
     const isGift = reason && reason.toLowerCase().startsWith('free gift');
     if (isGift && change_type === 'remove') {
       const giftCostThisItem = Math.abs(qty_change) * unit_cost;
-
-      // Try to find the order by order_id (if passed) or by parsing the reason
       let orderId = order_id || null;
-
       if (!orderId) {
-        // Try to extract order number from reason like "Free gift with order KO-2506-001"
         const match = reason.match(/KO-[\d-]+/i);
         if (match) {
-          const orderNum = match[0];
           const orderRes = await client.query(
-            'SELECT id FROM orders WHERE order_number = $1 LIMIT 1',
-            [orderNum]
+            'SELECT id FROM orders WHERE order_number = $1 LIMIT 1', [match[0]]
           );
           if (orderRes.rows.length) orderId = orderRes.rows[0].id;
         }
       }
-
       if (orderId && giftCostThisItem > 0) {
         await client.query(
-          `UPDATE orders
-           SET gift_cost = COALESCE(gift_cost, 0) + $1
-           WHERE id = $2`,
+          `UPDATE orders SET gift_cost = COALESCE(gift_cost, 0) + $1 WHERE id = $2`,
           [giftCostThisItem, orderId]
         );
       }
@@ -187,8 +108,8 @@ router.post('/', auth, async (req, res) => {
 
     await client.query('COMMIT');
     res.status(201).json({
-      adjustment:   logRes.rows[0],
-      new_quantity: qty_after,
+      adjustment:         logRes.rows[0],
+      new_quantity:       qty_after,
       unit_cost_snapshot: unit_cost,
     });
   } catch (err) {
@@ -200,71 +121,21 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// GET /api/stock-adjustments/batches/:inventory_id — list price batches
-router.get('/batches/:inventory_id', require('../middleware/auth'), async (req, res) => {
+// GET /api/stock-adjustments/batches/:inventory_id
+router.get('/batches/:inventory_id', auth, async (req, res) => {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS stock_batches (
-        id SERIAL PRIMARY KEY, inventory_id INTEGER NOT NULL, item_name VARCHAR(200),
-        qty_received INTEGER NOT NULL, qty_remaining INTEGER NOT NULL,
-        buy_price DECIMAL(10,2) NOT NULL, sell_price DECIMAL(10,2),
-        batch_date DATE DEFAULT CURRENT_DATE, notes TEXT, added_by INTEGER,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `).catch(()=>{});
     const rows = await pool.query(`
       SELECT * FROM stock_batches
       WHERE inventory_id = $1
       ORDER BY created_at ASC
     `, [req.params.inventory_id]);
     res.json(rows.rows);
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // POST /api/stock-adjustments/log — log only, NO inventory update
-// Used by frontend after Kalutota/Order already changed stock
-router.post('/log', require('../middleware/auth'), async (req, res) => {
+router.post('/log', auth, async (req, res) => {
   try {
-    await pool.query(`CREATE TABLE IF NOT EXISTS stock_adjustments (
-      id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
-      change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
-      quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
-      adjusted_by INTEGER, adjusted_by_name VARCHAR(100), created_at TIMESTAMP DEFAULT NOW()
-    )`).catch(()=>{});
-
-    const { inventory_id, item_name, change_type, quantity_change,
-            quantity_before, quantity_after, reason, notes, unit_cost } = req.body;
-
-    const result = await pool.query(`
-      INSERT INTO stock_adjustments
-        (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after,
-         reason, notes, unit_cost, adjusted_by, adjusted_by_name)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
-      [inventory_id, item_name||'Item',
-       change_type||'remove', quantity_change||0,
-       quantity_before||0, quantity_after||0,
-       reason||'Manual', notes||null, unit_cost||0,
-       req.user.id, req.user.name||req.user.username]
-    );
-    res.json({ success: true, id: result.rows[0].id });
-  } catch(e) {
-    console.error('Log-only insert failed:', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-
-// POST /api/stock-adjustments/log — INSERT ONLY, no inventory update
-// Safe to call after another route already changed stock (Kalutota, etc.)
-router.post('/log', require('../middleware/auth'), async (req, res) => {
-  try {
-    await pool.query(`CREATE TABLE IF NOT EXISTS stock_adjustments (
-      id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
-      change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
-      quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
-      adjusted_by INTEGER, adjusted_by_name VARCHAR(100), created_at TIMESTAMP DEFAULT NOW()
-    )`).catch(()=>{});
-
     const { inventory_id, item_name, change_type, quantity_change,
             quantity_before, quantity_after, reason, notes, unit_cost } = req.body;
 
@@ -273,14 +144,22 @@ router.post('/log', require('../middleware/auth'), async (req, res) => {
         (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after,
          reason, notes, unit_cost, adjusted_by, adjusted_by_name)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
-      [inventory_id||null, item_name||'Item',
-       change_type||'remove', parseInt(quantity_change)||0,
-       parseInt(quantity_before)||0, parseInt(quantity_after)||0,
-       reason||'Manual', notes||null, parseFloat(unit_cost)||0,
-       req.user.id, req.user.name||req.user.username]
+      [
+        inventory_id || null,
+        item_name    || 'Item',
+        change_type  || 'remove',
+        parseInt(quantity_change) || 0,
+        parseInt(quantity_before) || 0,
+        parseInt(quantity_after)  || 0,
+        reason       || 'Manual',
+        notes        || null,
+        parseFloat(unit_cost) || 0,
+        req.user.id,
+        req.user.name || req.user.username,
+      ]
     );
     res.json({ success: true, id: result.rows[0].id });
-  } catch(e) {
+  } catch (e) {
     console.error('Stock log-only failed:', e.message);
     res.status(500).json({ error: e.message });
   }

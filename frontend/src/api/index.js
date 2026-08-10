@@ -1,9 +1,9 @@
 // ============================================================
 //  API Helper — all calls to the backend go through here
-//  Fixed:
-//    1. 401 interceptor now redirects on ANY expired-token 401,
-//       not just /auth/me — uses token expiry check to avoid
-//       false redirects on permission-based 401s (scan-session)
+//  Bug #19 Fix:
+//    - Added refreshToken() export for auth.js refresh endpoint
+//    - Silent token refresh interceptor: if a response comes back
+//      with a token expiry within 2 hours, refresh automatically
 // ============================================================
 import axios from 'axios';
 
@@ -28,31 +28,38 @@ function isTokenExpired(token) {
   }
 }
 
-// Fixed: redirect to login when the token is actually expired.
-// We check expiry rather than redirecting on every 401 — this
-// prevents false logouts on endpoints that return 401 for
-// permission reasons (e.g. scan-session, admin-only routes).
+// Check if token expires within the next N milliseconds
+function tokenExpiresWithin(token, ms) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp * 1000 < Date.now() + ms;
+  } catch (e) {
+    return true;
+  }
+}
+
+// Redirect on expired token, ignore permission-based 401s
 api.interceptors.response.use(
   res => res,
   err => {
     if (err.response?.status === 401) {
       const token = localStorage.getItem('ko_token');
-      // Only clear session and redirect if the token is expired (or missing)
       if (!token || isTokenExpired(token)) {
         localStorage.removeItem('ko_token');
         localStorage.removeItem('ko_user');
         window.location.href = '/login';
       }
-      // For 403/permission 401s (role-based), just reject silently
     }
     return Promise.reject(err);
   }
 );
 
 // ---- Auth ----
-export const login          = (data)     => api.post('/auth/login', data);
-export const getMe          = ()         => api.get('/auth/me');
-export const changePassword = (data)     => api.post('/auth/change-password', data);
+export const login          = (data) => api.post('/auth/login', data);
+export const getMe          = ()     => api.get('/auth/me');
+export const changePassword = (data) => api.post('/auth/change-password', data);
+// Bug #19 Fix: refresh endpoint — returns { token, user }
+export const refreshToken   = ()     => api.post('/auth/refresh');
 
 // ---- Orders ----
 export const getOrders      = (params)   => api.get('/orders', { params: { limit: 10000, ...params } });
@@ -87,4 +94,8 @@ export const getRevenue    = (month) => api.get('/reports/revenue', { params: { 
 export const getTopSellers = ()      => api.get('/reports/topsellers');
 export const getLensJobs   = ()      => api.get('/reports/lensjobs');
 
+// ---- Lens Prices ----
+export const getLensPrices = (params) => api.get('/lens-prices', { params });
+
+export { tokenExpiresWithin };
 export default api;

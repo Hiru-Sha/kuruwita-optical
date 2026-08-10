@@ -1,12 +1,14 @@
 // ============================================================
 //  AuthContext.js — Login state, persists across tab changes
-//  Fixed: JWT expiry is now checked on app load.
-//         If the token is expired the user is logged out
-//         immediately instead of appearing logged in until
-//         the first API call fails.
+//  Fixed:
+//    - JWT expiry checked on app load (existing fix)
+//    - Bug #19 Fix: auto-refresh timer — every 30 minutes the
+//      app silently calls POST /auth/refresh if the token will
+//      expire within 2 hours. This keeps staff logged in through
+//      full working days without an unexpected logout mid-session.
 // ============================================================
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { login as apiLogin } from '../api';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { login as apiLogin, refreshToken, tokenExpiresWithin } from '../api';
 
 const AuthContext = createContext();
 
@@ -14,16 +16,51 @@ const AuthContext = createContext();
 function isTokenExpired(token) {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
-    // payload.exp is in seconds; Date.now() is in milliseconds
     return payload.exp * 1000 < Date.now();
   } catch (e) {
-    return true; // If we can't parse the token, treat it as expired
+    return true;
   }
 }
+
+const TWO_HOURS_MS   = 2 * 60 * 60 * 1000;
+const REFRESH_INTERVAL_MS = 30 * 60 * 1000; // check every 30 minutes
 
 export function AuthProvider({ children }) {
   const [user,    setUser]    = useState(null);
   const [loading, setLoading] = useState(true);
+  const refreshTimer = useRef(null);
+
+  // ── Refresh logic ─────────────────────────────────────────
+  const tryRefresh = async () => {
+    const token = localStorage.getItem('ko_token');
+    if (!token || isTokenExpired(token)) return; // already expired — nothing to refresh
+    // Only refresh if token expires within the next 2 hours
+    if (!tokenExpiresWithin(token, TWO_HOURS_MS)) return;
+    try {
+      const res     = await refreshToken();
+      const newToken = res.data.token;
+      const newUser  = res.data.user;
+      localStorage.setItem('ko_token', newToken);
+      localStorage.setItem('ko_user',  JSON.stringify(newUser));
+      setUser(newUser);
+    } catch (e) {
+      // If refresh fails (server error etc.) just leave the existing token
+      console.warn('Token refresh failed silently:', e.message);
+    }
+  };
+
+  // ── Start the refresh timer ────────────────────────────────
+  const startRefreshTimer = () => {
+    if (refreshTimer.current) clearInterval(refreshTimer.current);
+    refreshTimer.current = setInterval(tryRefresh, REFRESH_INTERVAL_MS);
+  };
+
+  const stopRefreshTimer = () => {
+    if (refreshTimer.current) {
+      clearInterval(refreshTimer.current);
+      refreshTimer.current = null;
+    }
+  };
 
   // On app load — restore from localStorage and validate token
   useEffect(() => {
@@ -32,13 +69,12 @@ export function AuthProvider({ children }) {
       const token = localStorage.getItem('ko_token');
 
       if (saved && token) {
-        // Fixed: check token expiry before restoring session
         if (isTokenExpired(token)) {
-          // Token is expired — clear storage and force re-login
           localStorage.removeItem('ko_token');
           localStorage.removeItem('ko_user');
         } else {
           setUser(JSON.parse(saved));
+          startRefreshTimer();
         }
       }
     } catch (e) {
@@ -46,7 +82,9 @@ export function AuthProvider({ children }) {
       localStorage.removeItem('ko_token');
     }
     setLoading(false);
-  }, []);
+
+    return () => stopRefreshTimer();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = async (username, password) => {
     const res      = await apiLogin({ username, password });
@@ -55,6 +93,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('ko_token', token);
     localStorage.setItem('ko_user', JSON.stringify(userData));
     setUser(userData);
+    startRefreshTimer();
     return userData;
   };
 
@@ -62,6 +101,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('ko_token');
     localStorage.removeItem('ko_user');
     setUser(null);
+    stopRefreshTimer();
   };
 
   return (

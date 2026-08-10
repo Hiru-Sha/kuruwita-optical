@@ -1,8 +1,9 @@
 // ============================================================
 //  Kuruwita Optical — Express Server
 //  Fixed:
-//    Bug #2 — Added all missing warranty columns to orders table
-//    in startup migration so warranty check returns correct status
+//    Bug #2  — Added all missing warranty columns to orders table
+//    Bug #17 — All CREATE TABLE DDL moved here (startup migration)
+//              so route handlers don't run DDL on every request
 // ============================================================
 require('dotenv').config();
 const express   = require('express');
@@ -70,11 +71,15 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }
 
 const PORT = process.env.PORT || 5000;
 
-// ── Startup: auto-create tables and add missing columns ───────
+// ── Startup: all DDL migrations run ONCE here at boot ─────────
+// Bug #17 Fix: CREATE TABLE statements removed from individual
+// route handlers (orders.js, quickSales.js, stockAdjustments.js,
+// kalutota.js, inventory.js) and consolidated here so they only
+// run once on startup rather than on every API request.
 const pool = require('./db/pool');
 (async () => {
   try {
-    // stock_adjustments table
+    // ── stock_adjustments ─────────────────────────────────────
     await pool.query(`
       CREATE TABLE IF NOT EXISTS stock_adjustments (
         id               SERIAL PRIMARY KEY,
@@ -96,25 +101,51 @@ const pool = require('./db/pool');
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_stock_adj_inv  ON stock_adjustments(inventory_id)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_stock_adj_date ON stock_adjustments(created_at DESC)`);
 
-    // orders — existing columns
+    // ── stock_batches ─────────────────────────────────────────
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS stock_batches (
+        id            SERIAL PRIMARY KEY,
+        inventory_id  INTEGER NOT NULL,
+        item_name     VARCHAR(200),
+        qty_received  INTEGER NOT NULL,
+        qty_remaining INTEGER NOT NULL,
+        buy_price     DECIMAL(10,2) NOT NULL,
+        sell_price    DECIMAL(10,2),
+        batch_date    DATE DEFAULT CURRENT_DATE,
+        notes         TEXT,
+        added_by      INTEGER,
+        created_at    TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_batches_inv ON stock_batches(inventory_id)`);
+
+    // ── scan_sessions (DB-backed QR sessions) ─────────────────
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS scan_sessions (
+        user_id    INTEGER PRIMARY KEY,
+        item       JSONB        NOT NULL,
+        action     VARCHAR(50)  NOT NULL DEFAULT 'new_order',
+        created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // ── orders: existing + new warranty columns ───────────────
     await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_payment_amount DECIMAL(10,2) DEFAULT 0`);
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_frame VARCHAR(30)`);
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_lens  VARCHAR(30)`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_frame       VARCHAR(30)`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_lens        VARCHAR(30)`);
+    // Bug #2 Fix: warranty columns used by /api/warranties/check
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_enabled     BOOLEAN DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_months      INTEGER DEFAULT 0`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_start_date  DATE`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_expiry      DATE`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_coverage    TEXT`);
 
-    // ── FIX #2: Warranty columns used by /api/warranties/check ──
-    // These were missing, causing warrantyStatus to always be 'none'
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_enabled    BOOLEAN       DEFAULT FALSE`);
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_months     INTEGER       DEFAULT 0`);
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_start_date DATE`);
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_expiry     DATE`);
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_coverage   TEXT`);
-
-    // other tables
+    // ── other tables ─────────────────────────────────────────
     await pool.query(`ALTER TABLE quick_sales ADD COLUMN IF NOT EXISTS customer_id INTEGER`);
     await pool.query(`ALTER TABLE repairs     ADD COLUMN IF NOT EXISTS customer_id INTEGER`);
 
     console.log('✅ DB migrations complete');
-  } catch(e) { console.warn('Migration warning:', e.message); }
+  } catch (e) { console.warn('Migration warning:', e.message); }
 })();
 
 app.listen(PORT, () => console.log(`✅ Kuruwita Optical on port ${PORT}`));

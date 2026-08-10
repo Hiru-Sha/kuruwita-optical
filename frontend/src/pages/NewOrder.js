@@ -1,7 +1,7 @@
 /* eslint-disable */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { createCustomer, createOrder, getCustomers, getInventory } from '../api';
+import { createCustomer, createOrder, getCustomers, getInventory, getLensPrices } from '../api';
 import { QRScanner } from '../components/QRStickers';
 
 const C = {
@@ -49,122 +49,26 @@ const LENS_COMPANIES = ['Negombo Optical','Solex','Other'];
 const fmtMoney = (n) => 'Rs. '+parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 const pct = (a,b) => b>0 ? Math.round((a/b)*100) : 0;
 
-const SUPPLIER_PRICES = [
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'UC',              sell_price:1200 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'Multi Coded',     sell_price:1600 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.56', color:'Photo-Gray', coating:'HMC',             sell_price:2200 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'Blue Cut HMC',    sell_price:2200 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'Blue Cut PG HMC', sell_price:3500 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.56', color:'Polarize',   coating:'UC',              sell_price:4400 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.56', color:'Polarize',   coating:'HMC',             sell_price:4500 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.61', color:'White',      coating:'HMC',             sell_price:3300 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.61', color:'Photo-Gray', coating:'HMC',             sell_price:3700 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.61', color:'White',      coating:'Blue Cut HMC',    sell_price:5100 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.61', color:'White',      coating:'Blue Cut PG HMC', sell_price:8000 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.67', color:'White',      coating:'HMC',             sell_price:5750 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.67', color:'Photo-Gray', coating:'HMC',             sell_price:9250 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.67', color:'White',      coating:'Blue Cut HMC',    sell_price:6550 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.67', color:'White',      coating:'Blue Cut PG HMC', sell_price:10500 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.74', color:'White',      coating:'HMC',             sell_price:13500 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.74', color:'Photo-Gray', coating:'HMC',             sell_price:18000 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.74', color:'White',      coating:'Blue Cut HMC',    sell_price:15500 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'1.74', color:'White',      coating:'Blue Cut PG HMC', sell_price:20500 },
-  { supplier:'Lanka Optic', lens_type:'Progressive',   lens_index:'1.56', color:'White',      coating:'HMC',             sell_price:2300 },
-  { supplier:'Lanka Optic', lens_type:'Progressive',   lens_index:'1.56', color:'Photo-Gray', coating:'HMC',             sell_price:3000 },
-  { supplier:'Lanka Optic', lens_type:'Progressive',   lens_index:'1.56', color:'White',      coating:'Blue Cut HMC',    sell_price:2700 },
-  { supplier:'Lanka Optic', lens_type:'Progressive',   lens_index:'1.56', color:'White',      coating:'Blue Cut PG HMC', sell_price:4500 },
-  { supplier:'Lanka Optic', lens_type:'Progressive',   lens_index:'1.56', color:'Polarize',   coating:'HMC',             sell_price:6200 },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'CR39', color:'White',      coating:'UC',              sell_price:400  },
-  { supplier:'Lanka Optic', lens_type:'Single Vision', lens_index:'CR39', color:'White',      coating:'CR MC',           sell_price:600  },
-  { supplier:'MR Lens', lens_type:'Single Vision', lens_index:'1.6',  color:'White',      coating:'HMC',      sell_price:2500  },
-  { supplier:'MR Lens', lens_type:'Single Vision', lens_index:'1.6',  color:'White',      coating:'Blue Cut', sell_price:2800  },
-  { supplier:'MR Lens', lens_type:'Single Vision', lens_index:'1.6',  color:'Photo-Gray', coating:'HMC',      sell_price:7250  },
-  { supplier:'MR Lens', lens_type:'Single Vision', lens_index:'1.6',  color:'White',      coating:'BC PG',    sell_price:9000  },
-  { supplier:'MR Lens', lens_type:'Single Vision', lens_index:'1.67', color:'White',      coating:'HMC',      sell_price:4000  },
-  { supplier:'MR Lens', lens_type:'Single Vision', lens_index:'1.67', color:'White',      coating:'Blue Cut', sell_price:4550  },
-  { supplier:'MR Lens', lens_type:'Single Vision', lens_index:'1.67', color:'Photo-Gray', coating:'HMC',      sell_price:10250 },
-  { supplier:'MR Lens', lens_type:'Single Vision', lens_index:'1.67', color:'White',      coating:'BC PG',    sell_price:12750 },
-  { supplier:'MR Lens', lens_type:'Single Vision', lens_index:'1.74', color:'White',      coating:'HMC',      sell_price:11000 },
-  { supplier:'MR Lens', lens_type:'Single Vision', lens_index:'1.74', color:'White',      coating:'Blue Cut', sell_price:13000 },
-  { supplier:'MR Lens', lens_type:'Single Vision', lens_index:'1.74', color:'Photo-Gray', coating:'HMC',      sell_price:25500 },
-  { supplier:'MR Lens', lens_type:'Single Vision', lens_index:'1.74', color:'White',      coating:'BC PG',    sell_price:28750 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.56', color:'White',      coating:'HMC DSC',       sell_price:7000  },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.56', color:'Photo-Gray', coating:'Photo HMC DSC', sell_price:8500  },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.56', color:'White',      coating:'Blue Cut DSC',  sell_price:9000  },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.56', color:'White',      coating:'BC PG DSC',     sell_price:12000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.60', color:'White',      coating:'HMC DSC',       sell_price:19000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.60', color:'Photo-Gray', coating:'Photo HMC DSC', sell_price:36000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.60', color:'White',      coating:'Blue Cut DSC',  sell_price:22000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.60', color:'White',      coating:'BC PG DSC',     sell_price:40000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.60', color:'Polarize',   coating:'Polarized DSC', sell_price:31000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.67', color:'White',      coating:'HMC DSC',       sell_price:25000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.67', color:'Photo-Gray', coating:'Photo HMC DSC', sell_price:42000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.67', color:'White',      coating:'Blue Cut DSC',  sell_price:28000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.67', color:'White',      coating:'BC PG DSC',     sell_price:47000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.67', color:'Polarize',   coating:'Polarized DSC', sell_price:45000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.74', color:'White',      coating:'HMC DSC',       sell_price:39000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.74', color:'Photo-Gray', coating:'Photo HMC DSC', sell_price:84000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.74', color:'White',      coating:'Blue Cut DSC',  sell_price:44000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.74', color:'White',      coating:'BC PG DSC',     sell_price:89000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.59', color:'White',      coating:'HMC DSC',       sell_price:21000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.59', color:'Photo-Gray', coating:'Photo HMC DSC', sell_price:29000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.59', color:'White',      coating:'Blue Cut DSC',  sell_price:25000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.59', color:'White',      coating:'BC PG DSC',     sell_price:32000 },
-  { supplier:'Neo Vision', lens_type:'Progressive', lens_index:'1.59', color:'Polarize',   coating:'Polarized DSC', sell_price:52000 },
-  { supplier:'Neo Vision', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'HMC DSC',       sell_price:4000  },
-  { supplier:'Neo Vision', lens_type:'Single Vision', lens_index:'1.56', color:'Photo-Gray', coating:'Photo HMC DSC', sell_price:5500  },
-  { supplier:'Neo Vision', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'Blue Cut DSC',  sell_price:6000  },
-  { supplier:'Neo Vision', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'BC PG DSC',     sell_price:8000  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'UC',             sell_price:1500  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'HMC',            sell_price:2200  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.56', color:'Photo-Gray', coating:'HMC Grey',       sell_price:2800  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'Blue Cut (All)', sell_price:2700  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'BC PG',          sell_price:4000  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.56', color:'Polarize',   coating:'UC',             sell_price:4700  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.56', color:'Polarize',   coating:'HMC',            sell_price:4800  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.56', color:'White',      coating:'Mirror Coating', sell_price:7500  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.6',  color:'White',      coating:'HMC',            sell_price:6000  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.6',  color:'White',      coating:'Blue Cut',       sell_price:6500  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.6',  color:'White',      coating:'BC PG',          sell_price:9200  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.67', color:'White',      coating:'UC',             sell_price:9750  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.67', color:'White',      coating:'HMC',            sell_price:10250 },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.67', color:'Photo-Gray', coating:'HMC Grey',       sell_price:18000 },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.67', color:'White',      coating:'Blue Cut',       sell_price:9550  },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.67', color:'White',      coating:'BC PG',          sell_price:11100 },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.74', color:'White',      coating:'HMC',            sell_price:18000 },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.74', color:'White',      coating:'Blue Cut',       sell_price:20250 },
-  { supplier:'Omega', lens_type:'Single Vision', lens_index:'1.74', color:'White',      coating:'BC PG',          sell_price:26250 },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.56', color:'White',      coating:'UC',             sell_price:2000,  brand:'Omega Eyesphere' },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.56', color:'White',      coating:'HMC',            sell_price:2300,  brand:'Omega Eyesphere' },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.56', color:'Photo-Gray', coating:'HMC Grey',       sell_price:3000,  brand:'Omega Eyesphere' },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.56', color:'White',      coating:'BC PG',          sell_price:4500,  brand:'Omega Eyesphere' },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.67', color:'White',      coating:'HMC',            sell_price:10250, brand:'Omega Eyesphere' },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.74', color:'White',      coating:'HMC',            sell_price:23200, brand:'Omega Eyesphere' },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.56', color:'White',      coating:'UC',             sell_price:7500,  brand:'Omega Signature'  },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.56', color:'White',      coating:'HMC',            sell_price:8000,  brand:'Omega Signature'  },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.56', color:'White',      coating:'Blue Cut',       sell_price:8750,  brand:'Omega Signature'  },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.56', color:'White',      coating:'BC PG',          sell_price:11250, brand:'Omega Signature'  },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.67', color:'White',      coating:'HMC',            sell_price:15500, brand:'Omega Signature'  },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.56', color:'White',      coating:'UC',             sell_price:22000, brand:'Omega 8K Ultimate' },
-  { supplier:'Omega', lens_type:'Progressive', lens_index:'1.56', color:'White',      coating:'HMC',            sell_price:23250, brand:'Omega 8K Ultimate' },
-  { supplier:'Omega', lens_type:'Office Lens', lens_index:'1.56', color:'White',      coating:'UC',             sell_price:4500,  brand:'Omega Drive'      },
-  { supplier:'Omega', lens_type:'Office Lens', lens_index:'1.56', color:'White',      coating:'HMC',            sell_price:5500,  brand:'Omega Drive'      },
-  { supplier:'Omega', lens_type:'Office Lens', lens_index:'1.56', color:'White',      coating:'UC',             sell_price:30250, brand:'Omega Workspace'  },
-  { supplier:'Omega', lens_type:'Office Lens', lens_index:'1.56', color:'White',      coating:'HMC',            sell_price:31750, brand:'Omega Workspace'  },
-];
+// ── Bug #20 Fix: SUPPLIER_PRICES removed ─────────────────────
+// Lens reference prices are now fetched from /api/lens-prices
+// (the same data shown on the Lens Prices page) so they stay
+// in sync when prices are updated there.
+// supplierPricesRef holds the fetched data for findSupplierPrice.
+let supplierPricesCache = [];
 
 function findSupplierPrice(supplier, lens_type, lens_index, coating) {
   if (!supplier || ['Other','Murano','Generic'].includes(supplier)) return null;
   const norm = s => (s||'').toLowerCase().replace(/[\s\-_()]/g,'');
-  const pool = SUPPLIER_PRICES.filter(p =>
-    p.supplier  === supplier &&
+  // Map lens-prices DB fields to what the old array used
+  const pool = supplierPricesCache.filter(p =>
+    p.brand     === supplier  &&
     p.lens_type === lens_type &&
-    (!lens_index || lens_index==='Default' || p.lens_index===lens_index)
+    (!lens_index || lens_index === 'Default' || p.lens_index === lens_index)
   );
   if (!pool.length) return null;
-  let m = pool.find(p => norm(p.coating)===norm(coating));
+  let m = pool.find(p => norm(p.coating) === norm(coating));
   if (!m) m = pool[0];
-  return m ? m.sell_price : null;
+  return m ? parseFloat(m.sell_price || 0) : null;
 }
 
 function StepBar({ step }) {
@@ -250,6 +154,14 @@ export default function NewOrder() {
       document.head.appendChild(s);
     }
   },[]);
+
+  // ── Bug #20 Fix: load lens prices from DB instead of hardcoded array ──
+  // Populates supplierPricesCache used by findSupplierPrice() above.
+  useEffect(() => {
+    getLensPrices({ active: 'all', limit: 2000 })
+      .then(res => { supplierPricesCache = Array.isArray(res.data) ? res.data : []; })
+      .catch(() => {}); // silently fail — manual price entry still works
+  }, []);
   const [step,    setStep]   = useState(1);
   const location = useLocation();
   const [saving,  setSaving] = useState(false);
