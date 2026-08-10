@@ -1,5 +1,8 @@
 // ============================================================
 //  Kuruwita Optical — Express Server
+//  Fixed:
+//    Bug #2 — Added all missing warranty columns to orders table
+//    in startup migration so warranty check returns correct status
 // ============================================================
 require('dotenv').config();
 const express   = require('express');
@@ -57,7 +60,7 @@ app.use('/api/walkin-rx',         require('./routes/walkInRx'));
 app.use('/api/kalutota',          require('./routes/kalutota'));
 app.use('/api/dealer-purchases',  require('./routes/dealerPurchases'));
 app.use('/api/repairs',           require('./routes/repairs'));
-app.use('/api/backup',          require('./routes/backup'));
+app.use('/api/backup',            require('./routes/backup'));
 app.use('/api/warranties',        require('./routes/warranties'));
 app.use('/api/dashboard-today',   require('./routes/dashboardToday'));
 app.use('/api/full-report',       require('./routes/fullReport'));
@@ -67,10 +70,11 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }
 
 const PORT = process.env.PORT || 5000;
 
-// ── Startup: auto-create tables that may not exist yet ────────
+// ── Startup: auto-create tables and add missing columns ───────
 const pool = require('./db/pool');
 (async () => {
   try {
+    // stock_adjustments table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS stock_adjustments (
         id               SERIAL PRIMARY KEY,
@@ -89,14 +93,25 @@ const pool = require('./db/pool');
         created_at       TIMESTAMP DEFAULT NOW()
       )
     `);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_stock_adj_inv ON stock_adjustments(inventory_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_stock_adj_inv  ON stock_adjustments(inventory_id)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_stock_adj_date ON stock_adjustments(created_at DESC)`);
 
+    // orders — existing columns
     await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_payment_amount DECIMAL(10,2) DEFAULT 0`);
     await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_frame VARCHAR(30)`);
     await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_lens  VARCHAR(30)`);
+
+    // ── FIX #2: Warranty columns used by /api/warranties/check ──
+    // These were missing, causing warrantyStatus to always be 'none'
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_enabled    BOOLEAN       DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_months     INTEGER       DEFAULT 0`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_start_date DATE`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_expiry     DATE`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_coverage   TEXT`);
+
+    // other tables
     await pool.query(`ALTER TABLE quick_sales ADD COLUMN IF NOT EXISTS customer_id INTEGER`);
-    await pool.query(`ALTER TABLE repairs ADD COLUMN IF NOT EXISTS customer_id INTEGER`);
+    await pool.query(`ALTER TABLE repairs     ADD COLUMN IF NOT EXISTS customer_id INTEGER`);
 
     console.log('✅ DB migrations complete');
   } catch(e) { console.warn('Migration warning:', e.message); }

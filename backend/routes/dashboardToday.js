@@ -4,6 +4,8 @@
 //    1. Promise.all order mismatch (placeholder was at index 7,
 //       shifting activeOrders → NaN, reminders → wrong data)
 //    2. Reminders query now JOINs customers for name & phone
+//    3. Bug #4 — Month revenue query now excludes cancelled orders
+//       (previously SUM included cancelled orders, inflating totals)
 // ============================================================
 const router = require('express').Router();
 const pool   = require('../db/pool');
@@ -29,7 +31,7 @@ router.get('/', auth, async (req, res) => {
       invValue,          // 11 — total inventory value
     ] = await Promise.all([
 
-      // 0: Month revenue
+      // 0: Month revenue — FIX #4: exclude cancelled orders
       pool.query(`
         SELECT
           COALESCE(SUM(total_amount),0)   AS total,
@@ -38,6 +40,7 @@ router.get('/', auth, async (req, res) => {
           COUNT(id)                        AS order_count
         FROM orders
         WHERE TO_CHAR(created_at,'YYYY-MM') = $1
+          AND status != 'cancelled'
       `, [month]),
 
       // 1: Today's orders
@@ -95,7 +98,7 @@ router.get('/', auth, async (req, res) => {
         WHERE lens_step BETWEEN 1 AND 2
       `),
 
-      // 9: Balance reminders — Fixed: JOIN customers for name & phone
+      // 9: Balance reminders — JOINs customers for name & phone
       pool.query(`
         SELECT o.id, o.order_number, o.deliver_date,
                o.balance_amount, c.name AS customer_name, c.phone,
@@ -168,20 +171,21 @@ router.get('/', auth, async (req, res) => {
     const totalIncome  = orderIncome + qsIncome + repairIncome;
     const totalExp     = todayExpenses.rows.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
     const totalDep     = todayDeposits.rows.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
-    // Balance payments collected today from older orders
-    const balRows    = todayBalPayments?.rows || [];
-    const balCash    = balRows.filter(r => !r.method||r.method==='cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
-    const balBank    = balRows.filter(r => r.method&&r.method!=='cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
 
-    const todayCashIn  = orderCash + qsIncome + repairIncome + balCash + balBank;
-    const cashInHand   = todayCashIn - totalExp - totalDep;
-    const bankToday    = orderBank + balBank;
+    // Balance payments collected today from older orders
+    const balRows = todayBalPayments?.rows || [];
+    const balCash = balRows.filter(r => !r.method || r.method === 'cash').reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+    const balBank = balRows.filter(r => r.method && r.method !== 'cash').reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+
+    const todayCashIn = orderCash + qsIncome + repairIncome + balCash + balBank;
+    const cashInHand  = todayCashIn - totalExp - totalDep;
+    const bankToday   = orderBank + balBank;
 
     // All-time cash
     let allTimeCash = 0, allTimeDeposits = 0;
     try {
       const [atOrders, atQS, atRepairs, atExp, atDep] = await Promise.all([
-        pool.query('SELECT COALESCE(SUM(advance_amount),0) AS v FROM orders').catch(() => ({ rows: [{ v: '0' }] })),
+        pool.query('SELECT COALESCE(SUM(advance_amount),0) AS v FROM orders WHERE status != $1', ['cancelled']).catch(() => ({ rows: [{ v: '0' }] })),
         pool.query('SELECT COALESCE(SUM(total),0) AS v FROM quick_sales').catch(() => ({ rows: [{ v: '0' }] })),
         pool.query('SELECT COALESCE(SUM(charge),0) AS v FROM repairs').catch(() => ({ rows: [{ v: '0' }] })),
         pool.query('SELECT COALESCE(SUM(amount),0) AS v FROM expenses').catch(() => ({ rows: [{ v: '0' }] })),
@@ -205,10 +209,10 @@ router.get('/', auth, async (req, res) => {
 
       daily_cash: {
         orderIncome, orderCash, orderBank,
-        balCash, balBank, balTotal: balCash+balBank,
-        inventoryValue: parseFloat(invValue.rows[0]?.stock_value||0),
-        inventoryRetail: parseFloat(invValue.rows[0]?.retail_value||0),
-        inventoryUnits: parseInt(invValue.rows[0]?.total_units||0),
+        balCash, balBank, balTotal: balCash + balBank,
+        inventoryValue:  parseFloat(invValue.rows[0]?.stock_value  || 0),
+        inventoryRetail: parseFloat(invValue.rows[0]?.retail_value || 0),
+        inventoryUnits:  parseInt(invValue.rows[0]?.total_units    || 0),
         qsIncome, repairIncome, totalIncome,
         totalExp, totalDep, cashInHand,
         allTimeCash, allTimeDeposits, bankToday,

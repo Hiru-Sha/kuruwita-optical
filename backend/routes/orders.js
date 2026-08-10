@@ -4,6 +4,10 @@
 //    1. Race condition in nextOrderNumber → pg advisory lock
 //    2. Inventory deduction now runs INSIDE the transaction
 //    3. orderValidation middleware now applied to POST /
+//    4. Route ordering: /import and /fix-prices moved BEFORE
+//       /:id/calllogs so Express doesn't treat them as order IDs
+//    5. Frame qty read now uses client.query (inside transaction)
+//       so concurrent orders get accurate quantity_before values
 // ============================================================
 const router = require('express').Router();
 const pool   = require('../db/pool');
@@ -11,9 +15,6 @@ const auth   = require('../middleware/auth');
 const { orderValidation, validate } = require('../middleware/orderValidation');
 
 // ── Next order number (inside an open client transaction) ────
-// Uses pg_advisory_xact_lock(1001) to prevent race conditions.
-// Two concurrent requests will serialize at this lock — no
-// duplicate order numbers possible.
 async function nextOrderNumber(client, dateStr) {
   await client.query('SELECT pg_advisory_xact_lock(1001)');
 
@@ -109,7 +110,6 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // ── POST /api/orders ─────────────────────────────────────────
-// Fixed: orderValidation applied, inventory deduction inside transaction
 router.post('/', auth, orderValidation, validate, async (req, res) => {
   const {
     customer_id, frame, frame_type, frame_material,
@@ -129,7 +129,6 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // nextOrderNumber now takes the client so it uses the advisory lock
     const importTs = import_date ? new Date(import_date + 'T12:00:00') : null;
     const orderNum = await nextOrderNumber(client, import_date);
     const total    = parseFloat(total_amount)   || 0;
@@ -196,11 +195,15 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
       ]);
     }
 
-    // ── FIXED: Deduct frame inventory INSIDE the transaction ──
+    // ── Deduct frame inventory INSIDE the transaction ──────────
+    // FIX #3: Read uses client.query (inside transaction) so
+    // concurrent orders can't both see the same old quantity.
     const frameInvId = req.body.frame_inventory_id;
     if (frameInvId && !req.body.customer_own_frame) {
-      // Get quantity before deduction
-      const fBefore = await pool.query('SELECT quantity, name FROM inventory WHERE id=$1', [frameInvId]).catch(()=>({rows:[{quantity:0,name:'Frame'}]}));
+      const fBefore = await client.query(
+        'SELECT quantity, name FROM inventory WHERE id=$1',
+        [frameInvId]
+      ).catch(() => ({ rows: [{ quantity: 0, name: 'Frame' }] }));
       const fQtyBefore = parseInt(fBefore.rows[0]?.quantity || 0);
 
       await client.query(
@@ -208,26 +211,19 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
         [frameInvId]
       );
 
-      // Log to stock_adjustments
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS stock_adjustments (
-          id SERIAL PRIMARY KEY, inventory_id INTEGER, item_name VARCHAR(200),
-          change_type VARCHAR(20), quantity_change INTEGER, quantity_before INTEGER,
-          quantity_after INTEGER, reason VARCHAR(100), notes TEXT, unit_cost DECIMAL(10,2),
-          adjusted_by INTEGER, adjusted_by_name VARCHAR(100), created_at TIMESTAMP DEFAULT NOW()
-        )
-      `).catch(()=>{});
-      await pool.query(
+      await client.query(
         `INSERT INTO stock_adjustments
           (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, unit_cost, adjusted_by)
          VALUES ($1,$2,'remove',-1,$3,$4,'Order',$5,$6,$7)`,
-        [frameInvId,
-         fBefore.rows[0]?.name || req.body.frame,
-         fQtyBefore,
-         Math.max(0, fQtyBefore - 1),
-         'Order: ' + orderNum,          // JS concat avoids SQL || issue
-         parseFloat(req.body.frame_buy_price) || 0,
-         req.user.id]
+        [
+          frameInvId,
+          fBefore.rows[0]?.name || req.body.frame,
+          fQtyBefore,
+          Math.max(0, fQtyBefore - 1),
+          'Order: ' + orderNum,
+          parseFloat(req.body.frame_buy_price) || 0,
+          req.user.id,
+        ]
       ).catch(e => console.warn('Stock log failed:', e.message));
     }
 
@@ -266,98 +262,9 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
   }
 });
 
-// ── PATCH /api/orders/:id ────────────────────────────────────
-router.patch('/:id', auth, async (req, res) => {
-  // Auto-create last_payment_amount column if missing (needed for dashboard balance tracking)
-  await pool.query(
-    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_payment_amount DECIMAL(10,2) DEFAULT 0`
-  ).catch(() => {});
-  const allowed = [
-    'frame','frame_type','frame_color','frame_material','lens_type','lens_coating',
-    'lens_company','lens_step','lens_index',
-    'total_amount','advance_amount','balance_amount','deliver_date','status',
-    'has_rx','rx_hospital','rx_date','rx_doctor','rx_returned','notes',
-    'lab_bill_amount','lab_paid','lab_paid_date','lab_payment_method','lab_notes',
-    'last_payment_date','last_payment_method','last_payment_amount',
-    'frame_buy_price','frame_sell_price',
-    'lens_buy_price','lens_sell_price',
-    'order_type','customer_own_frame',
-    'seg_height_r','seg_height_l',
-    'discount_amount','discount_percent',
-  ];
-  const fields = [], values = [];
-  allowed.forEach(f => {
-    if (req.body[f] !== undefined) {
-      fields.push(`${f} = $${fields.length + 1}`);
-      values.push(req.body[f]);
-    }
-  });
-  if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
-  fields.push('updated_at = NOW()');
-  values.push(req.params.id);
-  try {
-    const result = await pool.query(
-      `UPDATE orders SET ${fields.join(', ')} WHERE id = $${values.length} RETURNING *`,
-      values
-    );
-    if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error('Update order error:', err.message);
-    if (err.message.includes('column') && err.message.includes('does not exist')) {
-      return res.status(500).json({
-        error: `DB column missing. Run migration in schema.sql to add missing columns.`,
-      });
-    }
-    res.status(500).json({ error: 'Failed to update order: ' + err.message });
-  }
-});
-
-// ── DELETE /api/orders/:id ───────────────────────────────────
-router.delete('/:id', auth, async (req, res) => {
-  try {
-    const ord = await pool.query('SELECT * FROM orders WHERE id=$1', [req.params.id]);
-    if (ord.rows.length && ord.rows[0].frame_inventory_id && !ord.rows[0].customer_own_frame) {
-      const rBefore = await pool.query('SELECT quantity, name FROM inventory WHERE id=$1',
-        [ord.rows[0].frame_inventory_id]).catch(()=>({rows:[{quantity:0,name:'Frame'}]}));
-      const rQtyB = parseInt(rBefore.rows[0]?.quantity || 0);
-
-      await pool.query(
-        'UPDATE inventory SET quantity = quantity + 1, updated_at = NOW() WHERE id = $1',
-        [ord.rows[0].frame_inventory_id]
-      ).catch(() => {});
-
-      await pool.query(`INSERT INTO stock_adjustments
-        (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, adjusted_by)
-        VALUES ($1,$2,'add',1,$3,$4,'Order Cancelled',$5,$6)`,
-        [ord.rows[0].frame_inventory_id, rBefore.rows[0]?.name || ord.rows[0].frame,
-         rQtyB, rQtyB + 1, 'Returned: order ' + ord.rows[0].order_number, req.user.id]
-      ).catch(() => {});
-    }
-    await pool.query('DELETE FROM cash_deposits WHERE order_id = $1', [req.params.id]).catch(() => {});
-    await pool.query('DELETE FROM orders WHERE id = $1', [req.params.id]);
-    res.json({ message: 'Order deleted' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to delete order' });
-  }
-});
-
-// ── POST /api/orders/:id/calllogs ────────────────────────────
-router.post('/:id/calllogs', auth, async (req, res) => {
-  const { note } = req.body;
-  if (!note) return res.status(400).json({ error: 'Note is required' });
-  try {
-    const result = await pool.query(
-      'INSERT INTO call_logs (order_id, note, logged_by) VALUES ($1,$2,$3) RETURNING *',
-      [req.params.id, note, req.user.id]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to add call log' });
-  }
-});
-
 // ── POST /api/orders/import — bulk import past orders ────────
+// FIX #1: Moved BEFORE /:id/calllogs — was being matched as
+// /:id = "import" by Express, hitting the wrong handler.
 router.post('/import', auth, async (req, res) => {
   const {
     customer_id, frame, frame_type, frame_material, frame_color,
@@ -442,6 +349,7 @@ router.post('/import', auth, async (req, res) => {
 });
 
 // ── POST /api/orders/fix-prices — backfill old order prices ──
+// FIX #1: Also moved BEFORE /:id/calllogs for same reason.
 router.post('/fix-prices', auth, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -465,6 +373,96 @@ router.post('/fix-prices', auth, async (req, res) => {
   } catch (err) {
     console.error('fix-prices error:', err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/orders/:id/calllogs ────────────────────────────
+router.post('/:id/calllogs', auth, async (req, res) => {
+  const { note } = req.body;
+  if (!note) return res.status(400).json({ error: 'Note is required' });
+  try {
+    const result = await pool.query(
+      'INSERT INTO call_logs (order_id, note, logged_by) VALUES ($1,$2,$3) RETURNING *',
+      [req.params.id, note, req.user.id]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add call log' });
+  }
+});
+
+// ── PATCH /api/orders/:id ────────────────────────────────────
+router.patch('/:id', auth, async (req, res) => {
+  await pool.query(
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_payment_amount DECIMAL(10,2) DEFAULT 0`
+  ).catch(() => {});
+  const allowed = [
+    'frame','frame_type','frame_color','frame_material','lens_type','lens_coating',
+    'lens_company','lens_step','lens_index',
+    'total_amount','advance_amount','balance_amount','deliver_date','status',
+    'has_rx','rx_hospital','rx_date','rx_doctor','rx_returned','notes',
+    'lab_bill_amount','lab_paid','lab_paid_date','lab_payment_method','lab_notes',
+    'last_payment_date','last_payment_method','last_payment_amount',
+    'frame_buy_price','frame_sell_price',
+    'lens_buy_price','lens_sell_price',
+    'order_type','customer_own_frame',
+    'seg_height_r','seg_height_l',
+    'discount_amount','discount_percent',
+  ];
+  const fields = [], values = [];
+  allowed.forEach(f => {
+    if (req.body[f] !== undefined) {
+      fields.push(`${f} = $${fields.length + 1}`);
+      values.push(req.body[f]);
+    }
+  });
+  if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
+  fields.push('updated_at = NOW()');
+  values.push(req.params.id);
+  try {
+    const result = await pool.query(
+      `UPDATE orders SET ${fields.join(', ')} WHERE id = $${values.length} RETURNING *`,
+      values
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Update order error:', err.message);
+    if (err.message.includes('column') && err.message.includes('does not exist')) {
+      return res.status(500).json({
+        error: `DB column missing. Run migration in schema.sql to add missing columns.`,
+      });
+    }
+    res.status(500).json({ error: 'Failed to update order: ' + err.message });
+  }
+});
+
+// ── DELETE /api/orders/:id ───────────────────────────────────
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const ord = await pool.query('SELECT * FROM orders WHERE id=$1', [req.params.id]);
+    if (ord.rows.length && ord.rows[0].frame_inventory_id && !ord.rows[0].customer_own_frame) {
+      const rBefore = await pool.query('SELECT quantity, name FROM inventory WHERE id=$1',
+        [ord.rows[0].frame_inventory_id]).catch(() => ({ rows: [{ quantity: 0, name: 'Frame' }] }));
+      const rQtyB = parseInt(rBefore.rows[0]?.quantity || 0);
+
+      await pool.query(
+        'UPDATE inventory SET quantity = quantity + 1, updated_at = NOW() WHERE id = $1',
+        [ord.rows[0].frame_inventory_id]
+      ).catch(() => {});
+
+      await pool.query(`INSERT INTO stock_adjustments
+        (inventory_id, item_name, change_type, quantity_change, quantity_before, quantity_after, reason, notes, adjusted_by)
+        VALUES ($1,$2,'add',1,$3,$4,'Order Cancelled',$5,$6)`,
+        [ord.rows[0].frame_inventory_id, rBefore.rows[0]?.name || ord.rows[0].frame,
+         rQtyB, rQtyB + 1, 'Returned: order ' + ord.rows[0].order_number, req.user.id]
+      ).catch(() => {});
+    }
+    await pool.query('DELETE FROM cash_deposits WHERE order_id = $1', [req.params.id]).catch(() => {});
+    await pool.query('DELETE FROM orders WHERE id = $1', [req.params.id]);
+    res.json({ message: 'Order deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete order' });
   }
 });
 
