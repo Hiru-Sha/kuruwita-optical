@@ -188,9 +188,49 @@ function EditOrderModal({ order, onClose, onSave }) {
     lab_bill_amount: order.lab_bill_amount || '',
     lab_notes:       order.lab_notes       || '',
   });
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState('');
-  const [tab,    setTab]    = useState('order'); // order | payment | notes
+  const [saving,        setSaving]        = useState(false);
+  const [error,         setError]         = useState('');
+  const [tab,           setTab]           = useState('order');
+  // Frame search with image suggestions
+  const [frameSearch,   setFrameSearch]   = useState(order.frame || '');
+  const [frameResults,  setFrameResults]  = useState([]);
+  const [selectedFrame, setSelectedFrame] = useState(null);
+  const [frameTimer,    setFrameTimer]    = useState(null);
+  const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const tok  = () => localStorage.getItem('ko_token');
+
+  const searchFrames = (v) => {
+    setFrameSearch(v);
+    set('frame', v);
+    setSelectedFrame(null);
+    clearTimeout(frameTimer);
+    if (v.length < 1) { setFrameResults([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const res  = await fetch(`${BASE}/inventory?search=${encodeURIComponent(v)}&limit=12`, { headers:{ Authorization:`Bearer ${tok()}` } });
+        const data = await res.json();
+        const rows = Array.isArray(data) ? data : (data.data || []);
+        setFrameResults(rows.filter(i => i.quantity > 0 && ['Frames','Sunglasses','Reading Glasses'].includes(i.category)).slice(0,10));
+      } catch(e) { setFrameResults([]); }
+    }, 300);
+    setFrameTimer(t);
+  };
+
+  const pickFrame = (item) => {
+    setSelectedFrame(item);
+    setFrameSearch(item.name);
+    setFrameResults([]);
+    setForm(f => ({
+      ...f,
+      frame:            item.name,
+      frame_type:       item.frame_type     || f.frame_type,
+      frame_material:   item.frame_material || f.frame_material,
+      frame_color:      item.frame_color    || f.frame_color,
+      frame_buy_price:  item.cost_price     || f.frame_buy_price,
+      frame_sell_price: item.sell_price     || f.frame_sell_price,
+      frame_inventory_id: item.id,
+    }));
+  };
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -211,7 +251,7 @@ function EditOrderModal({ order, onClose, onSave }) {
         'lens_company','lens_index','lens_sell_price','lens_buy_price',
         'total_amount','advance_amount','balance_amount','payment_method',
         'deliver_date','status','warranty_frame','warranty_lens',
-        'notes','lab_bill_amount','lab_notes'];
+        'notes','lab_bill_amount','lab_notes','frame_inventory_id'];
       fields.forEach(f => {
         const v = form[f];
         const orig = String(order[f] || '');
@@ -273,9 +313,85 @@ function EditOrderModal({ order, onClose, onSave }) {
           {tab==='order' && (
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div style={{ fontWeight:700, color:C.navy, fontSize:13, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>🖼️ Frame</div>
-              <div>
-                <label style={LBL}>Frame Name / Model</label>
-                <input value={form.frame} onChange={e=>set('frame',e.target.value)} placeholder="e.g. RayBan RB3025" style={INP}/>
+              <div style={{ position:'relative' }}>
+                <label style={LBL}>Frame Name / Model — type to search stock</label>
+                <input
+                  value={frameSearch}
+                  onChange={e => searchFrames(e.target.value)}
+                  placeholder="Type frame name or model number..."
+                  style={{ ...INP, borderColor: selectedFrame ? C.gold : C.border }}
+                />
+                {/* Dropdown results with images */}
+                {frameResults.length > 0 && (
+                  <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white',
+                    border:`1.5px solid ${C.gold}`, borderRadius:12, boxShadow:'0 8px 32px rgba(0,0,0,.18)',
+                    zIndex:600, overflow:'hidden', marginTop:4, maxHeight:320, overflowY:'auto' }}>
+                    <div style={{ padding:'6px 12px', background:C.cream, fontSize:10, fontWeight:700,
+                      textTransform:'uppercase', letterSpacing:'1px', color:C.muted, borderBottom:`1px solid ${C.border}` }}>
+                      {frameResults.length} frames found — tap to select
+                    </div>
+                    {frameResults.map(item => (
+                      <div key={item.id}
+                        onMouseDown={() => pickFrame(item)}
+                        style={{ padding:'10px 14px', cursor:'pointer', borderBottom:`1px solid ${C.cream}`,
+                          display:'flex', alignItems:'center', gap:10, background:'white' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f8f5ef'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                        {/* Frame image */}
+                        {item.image_url
+                          ? <img src={item.image_url} alt="" style={{ width:56, height:42,
+                              objectFit:'contain', borderRadius:6, border:`1px solid ${C.border}`,
+                              background:'#f9f9f9', flexShrink:0 }}/>
+                          : <div style={{ width:56, height:42, borderRadius:6, border:`1px solid ${C.border}`,
+                              background:C.cream, flexShrink:0, display:'flex', alignItems:'center',
+                              justifyContent:'center', fontSize:20 }}>👓</div>
+                        }
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:C.navy,
+                            overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            {item.name}
+                          </div>
+                          <div style={{ fontSize:11, color:C.muted, display:'flex', gap:8, flexWrap:'wrap', marginTop:2 }}>
+                            {item.frame_color && <span>{item.frame_color}</span>}
+                            {item.frame_type  && <span>{item.frame_type}</span>}
+                            <span style={{ fontWeight:700, color:C.success }}>
+                              {item.quantity} in stock
+                            </span>
+                            <span style={{ color:C.gold, fontWeight:700 }}>
+                              Rs. {parseFloat(item.sell_price||0).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                        {item.display_number && (
+                          <div style={{ fontSize:10, color:C.muted, flexShrink:0 }}>#{item.display_number}</div>
+                        )}
+                      </div>
+                    ))}
+                    <div onMouseDown={() => setFrameResults([])}
+                      style={{ padding:'9px 14px', cursor:'pointer', fontSize:12, color:C.muted,
+                        background:'#f8f5ef', borderTop:`1px solid ${C.border}` }}>
+                      ✏️ Use "<b>{frameSearch}</b>" as typed (no stock item)
+                    </div>
+                  </div>
+                )}
+                {/* Selected frame confirmation */}
+                {selectedFrame && (
+                  <div style={{ marginTop:8, background:'#dcfce7', border:`1px solid #86efac`,
+                    borderRadius:9, padding:'9px 14px', display:'flex', alignItems:'center', gap:10 }}>
+                    {selectedFrame.image_url && (
+                      <img src={selectedFrame.image_url} alt="" style={{ width:44, height:33,
+                        objectFit:'contain', borderRadius:5, border:`1px solid ${C.border}`, background:'#f9f9f9' }}/>
+                    )}
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:C.success }}>✓ {selectedFrame.name}</div>
+                      <div style={{ fontSize:11, color:C.muted }}>
+                        {selectedFrame.frame_color} · {selectedFrame.frame_type} · {selectedFrame.quantity} in stock
+                      </div>
+                    </div>
+                    <button onMouseDown={()=>{ setSelectedFrame(null); setFrameSearch(form.frame); }}
+                      style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, fontSize:16 }}>✕</button>
+                  </div>
+                )}
               </div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
                 <div>
@@ -893,7 +1009,13 @@ export default function Orders() {
                 <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:C.navy }}>{selected.customer_name}</div>
                 <div style={{ fontSize:13, color:C.muted }}>📞 {selected.phone} · Age {selected.age}</div>
               </div>
-              <button onClick={()=>setSelected(null)} style={{ background:C.cream, border:'none', borderRadius:8, padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted, fontWeight:600 }}>✕ Close</button>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={()=>{ setShowEdit(true); }}
+                  style={{ background:'#eff6ff', border:'1.5px solid #93c5fd', borderRadius:8, padding:'6px 14px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'#1e40af', fontWeight:700 }}>
+                  ✏️ Edit
+                </button>
+                <button onClick={()=>setSelected(null)} style={{ background:C.cream, border:'none', borderRadius:8, padding:'5px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted, fontWeight:600 }}>✕ Close</button>
+              </div>
             </div>
 
             {/* Status */}
