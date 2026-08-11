@@ -71,7 +71,11 @@ router.get('/', auth, async (req, res) => {
       WHERE 1=1
     `;
     const params = [];
-    if (status && status !== 'all') {
+    // Fix F: balance_due is a real server-side filter now
+    // Frontend no longer fetches all 10k orders just to filter client-side
+    if (status === 'balance_due') {
+      query += ` AND o.balance_amount > 0 AND o.status != 'cancelled'`;
+    } else if (status && status !== 'all') {
       params.push(status);
       query += ` AND o.status = $${params.length}`;
     }

@@ -29,8 +29,8 @@ router.get('/', auth, async (req, res) => {
         SELECT
           customer_id,
           COUNT(*)                          AS total_orders,
-          COALESCE(SUM(total_amount), 0) AS total_spent,
-          COALESCE(SUM(balance_amount), 0)  AS total_balance,
+          COALESCE(SUM(CASE WHEN status != 'cancelled' THEN total_amount ELSE 0 END), 0) AS total_spent,
+          COALESCE(SUM(CASE WHEN status != 'cancelled' THEN balance_amount ELSE 0 END), 0) AS total_balance,
           BOOL_OR(has_rx AND NOT COALESCE(rx_returned, false)) AS rx_held
         FROM orders
         GROUP BY customer_id

@@ -17,10 +17,18 @@ async function nextRepairNumber(client) {
 }
 
 // GET /api/repairs — list repairs
+// Fix P: SELECT only the columns the list view needs.
+// Heavy fields (notes, description) are fetched when a repair is opened.
+// Add ?full=1 to get all columns (e.g. for export/backup).
 router.get('/', auth, async (req, res) => {
-  const { month, status, limit = 100 } = req.query;
+  const { month, status, limit = 200, full } = req.query;
+  const cols = full === '1'
+    ? '*'
+    : `id, repair_number, customer_name, phone, repair_type,
+       charge, payment_method, status, created_at, completed_at,
+       customer_id, frame_inventory_id, advance`;
   try {
-    let query  = `SELECT * FROM repairs WHERE 1=1`;
+    let query  = `SELECT ${cols} FROM repairs WHERE 1=1`;
     const params = [];
     if (month) {
       params.push(month);

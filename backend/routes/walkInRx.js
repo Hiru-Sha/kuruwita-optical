@@ -21,7 +21,8 @@ router.get('/', auth, async (req, res) => {
     if (follow_up === 'true') {
       sql += ` AND follow_up = true AND followed_up = false`;
     }
-    sql += ` ORDER BY created_at DESC LIMIT 200`;
+    params.push(parseInt(req.query.limit) || 500);
+    sql += ` ORDER BY created_at DESC LIMIT $${params.length}`;
     const result = await pool.query(sql, params);
     res.json(result.rows);
   } catch(e) { res.status(500).json({ error: e.message }); }

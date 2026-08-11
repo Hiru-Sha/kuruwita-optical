@@ -103,13 +103,30 @@ router.get('/', auth, async (req, res) => {
       `, [from, to]),
 
       // ── Quick sale COGS (cost_price × qty for each item sold) ─
-      // Joins items JSON with inventory to get cost price at sale
+      // Fix R: replaced ::INT cast with a NULLIF+REGEXP guard so that
+      // empty strings, 'null', and non-numeric values don't throw a
+      // Postgres error and crash the entire full report.
       pool.query(`
         SELECT COALESCE(SUM(
-          (item_data->>'qty')::NUMERIC *
-          COALESCE((item_data->>'cost_price')::NUMERIC,
-                   (SELECT cost_price FROM inventory
-                    WHERE id = (item_data->>'inventory_id')::INT LIMIT 1), 0)
+          CASE
+            WHEN (item_data->>'inventory_id') IS NOT NULL
+             AND (item_data->>'inventory_id') ~ '^[0-9]+$'
+            THEN
+              (item_data->>'qty')::NUMERIC *
+              COALESCE(
+                (item_data->>'cost_price')::NUMERIC,
+                (SELECT cost_price FROM inventory
+                 WHERE id = (item_data->>'inventory_id')::INTEGER
+                 LIMIT 1),
+                0
+              )
+            WHEN (item_data->>'cost_price') IS NOT NULL
+             AND (item_data->>'cost_price') ~ '^[0-9.]+$'
+            THEN
+              (item_data->>'qty')::NUMERIC *
+              (item_data->>'cost_price')::NUMERIC
+            ELSE 0
+          END
         ), 0) AS qs_cogs
         FROM quick_sales,
              jsonb_array_elements(
@@ -117,8 +134,8 @@ router.get('/', auth, async (req, res) => {
                THEN items::jsonb ELSE '[]'::jsonb END
              ) AS item_data
         WHERE created_at::date BETWEEN $1 AND $2
-          AND (item_data->>'inventory_id') IS NOT NULL
-          AND (item_data->>'inventory_id') != ''
+          AND (item_data->>'qty') IS NOT NULL
+          AND (item_data->>'qty') ~ '^[0-9.]+$'
       `, [from, to]),
 
       // ── Repair summary ───────────────────────────────────────

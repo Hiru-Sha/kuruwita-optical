@@ -988,11 +988,32 @@ export default function Orders() {
             {/* Actions */}
             <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:16, paddingTop:16, borderTop:`1px solid ${C.border}` }}>
               <button onClick={()=>setShowPrint(true)} style={{ padding:'10px 16px', background:C.gold, color:C.navy, border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Print</button>
-              <a href={`https://wa.me/94${selected.phone?.replace(/^0/,'')}?text=${encodeURIComponent(`Hello ${selected.customer_name}, your order ${selected.order_number} is ready. Balance: ${fmtMoney(selected.balance_amount)}. Thank you!`)}`}
-                target="_blank" rel="noreferrer"
-                style={{ padding:'10px 16px', background:'#25D366', color:'white', borderRadius:9, fontSize:13, fontWeight:600, textDecoration:'none' }}>
-                WhatsApp
-              </a>
+              {/* Fix O: WhatsApp message is now context-aware based on order status.
+                  "is ready" is only sent when the order is delivered/done.
+                  In-progress orders get a follow-up message instead. */}
+              {(() => {
+                const st = selected.status;
+                const bal = parseFloat(selected.balance_amount || 0);
+                const isReady = st === 'delivered' || st === 'collected';
+                const hasBalance = bal > 0;
+                let msg;
+                if (isReady && hasBalance) {
+                  msg = `Hello ${selected.customer_name}, your order ${selected.order_number} is ready for collection. Balance due: ${fmtMoney(selected.balance_amount)}. Please visit us at your convenience. Thank you! — Wickramakalutota Opticals`;
+                } else if (isReady) {
+                  msg = `Hello ${selected.customer_name}, your order ${selected.order_number} is ready for collection. Thank you! — Wickramakalutota Opticals`;
+                } else if (hasBalance) {
+                  msg = `Hello ${selected.customer_name}, this is a reminder regarding your order ${selected.order_number}. Balance due: ${fmtMoney(selected.balance_amount)}. Please contact us when convenient. Thank you! — Wickramakalutota Opticals`;
+                } else {
+                  msg = `Hello ${selected.customer_name}, we wanted to follow up on your order ${selected.order_number}. Please contact us if you have any questions. Thank you! — Wickramakalutota Opticals`;
+                }
+                return (
+                  <a href={`https://wa.me/94${selected.phone?.replace(/^0/,'')}?text=${encodeURIComponent(msg)}`}
+                    target="_blank" rel="noreferrer"
+                    style={{ padding:'10px 16px', background:'#25D366', color:'white', borderRadius:9, fontSize:13, fontWeight:600, textDecoration:'none' }}>
+                    WhatsApp {isReady ? '✅' : hasBalance ? '💰' : '📞'}
+                  </a>
+                );
+              })()}
               <button onClick={handleDelete} style={{ padding:'10px 16px', background:'#fee2e2', color:C.danger, border:`1.5px solid #fca5a5`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>Delete</button>
             </div>
           </div>

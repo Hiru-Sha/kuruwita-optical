@@ -412,3 +412,75 @@ VALUES (
   'Shop Owner',
   'admin'
 ) ON CONFLICT (username) DO NOTHING;
+-- ============================================================
+--  Fix L — Warranty & misc columns missing from original schema
+--  Safe to run on existing DB (uses IF NOT EXISTS / ADD COLUMN IF NOT EXISTS)
+-- ============================================================
+
+-- Warranty columns on orders (needed by /api/warranties/check)
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_frame       VARCHAR(30);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_lens        VARCHAR(30);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_enabled     BOOLEAN       DEFAULT FALSE;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_months      INTEGER       DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_start_date  DATE;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_expiry      DATE;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS warranty_coverage    TEXT;
+
+-- Payment tracking columns on orders
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_payment_amount  DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_payment_date    DATE;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_payment_method  VARCHAR(20);
+
+-- Discount columns on orders
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount      DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_percent     DECIMAL(5,2)  DEFAULT 0;
+
+-- Gift cost tracking (for profit reports)
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_cost            DECIMAL(10,2) DEFAULT 0;
+
+-- Customer linkage on quick_sales and repairs
+ALTER TABLE quick_sales ADD COLUMN IF NOT EXISTS customer_id     INTEGER;
+ALTER TABLE repairs      ADD COLUMN IF NOT EXISTS customer_id     INTEGER;
+
+-- stock_adjustments and stock_batches tables
+CREATE TABLE IF NOT EXISTS stock_adjustments (
+  id               SERIAL PRIMARY KEY,
+  inventory_id     INTEGER,
+  item_name        VARCHAR(200),
+  change_type      VARCHAR(20),
+  quantity_change  INTEGER,
+  quantity_before  INTEGER,
+  quantity_after   INTEGER,
+  reason           VARCHAR(100),
+  notes            TEXT,
+  unit_cost        DECIMAL(10,2),
+  adjusted_by      INTEGER,
+  adjusted_by_name VARCHAR(100),
+  order_id         INTEGER,
+  created_at       TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_stock_adj_inv  ON stock_adjustments(inventory_id);
+CREATE INDEX IF NOT EXISTS idx_stock_adj_date ON stock_adjustments(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS stock_batches (
+  id            SERIAL PRIMARY KEY,
+  inventory_id  INTEGER NOT NULL,
+  item_name     VARCHAR(200),
+  qty_received  INTEGER NOT NULL,
+  qty_remaining INTEGER NOT NULL,
+  buy_price     DECIMAL(10,2) NOT NULL,
+  sell_price    DECIMAL(10,2),
+  batch_date    DATE DEFAULT CURRENT_DATE,
+  notes         TEXT,
+  added_by      INTEGER,
+  created_at    TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_batches_inv ON stock_batches(inventory_id);
+
+-- scan_sessions (DB-backed QR scan sessions)
+CREATE TABLE IF NOT EXISTS scan_sessions (
+  user_id    INTEGER PRIMARY KEY,
+  item       JSONB       NOT NULL,
+  action     VARCHAR(50) NOT NULL DEFAULT 'new_order',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

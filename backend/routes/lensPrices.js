@@ -25,7 +25,8 @@ router.get('/', auth, async (req, res) => {
       query += ` AND (lens_type ILIKE $${params.length} OR brand ILIKE $${params.length} OR coating ILIKE $${params.length} OR series ILIKE $${params.length} OR code ILIKE $${params.length})`;
     }
 
-    query += ' ORDER BY lens_type, brand, lens_index, color, series';
+    params.push(parseInt(req.query.limit) || 2000);
+    query += ` ORDER BY lens_type, brand, lens_index, color, series LIMIT $${params.length}`;
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {

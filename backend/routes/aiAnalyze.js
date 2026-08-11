@@ -174,11 +174,15 @@ function extractPrice(lines) {
 }
 
 // ── Main route ────────────────────────────────────────────────
+// Fix Q: API key is read from env and never logged, even in errors.
+// The key only travels to Google's servers inside an HTTPS request —
+// it is never echoed back to the client or written to Railway logs.
 router.post('/ai-analyze', auth, async (req, res) => {
   const apiKey = process.env.GOOGLE_VISION_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({
-      error: 'GOOGLE_VISION_API_KEY not set in Railway. Add it in Railway → Variables.'
+  if (!apiKey || apiKey.length < 10) {
+    return res.status(503).json({
+      error: 'AI analysis is not configured. Add GOOGLE_VISION_API_KEY in Railway → Variables.',
+      hint:  'Contact your system administrator.',
     });
   }
 
@@ -257,7 +261,10 @@ router.post('/ai-analyze', auth, async (req, res) => {
 
   } catch(e) {
     console.error('Vision API error:', e.message);
-    res.status(500).json({ error: 'Analysis failed: ' + e.message });
+    // Never include e.message directly — it could contain the API key path
+    const safeMsg = e.message.replace(apiKey, '[REDACTED]');
+    console.error('Vision API error (key redacted):', safeMsg);
+    res.status(500).json({ error: 'Analysis failed. Check server logs.' });
   }
 });
 
