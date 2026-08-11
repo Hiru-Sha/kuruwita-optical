@@ -84,7 +84,7 @@ export function AuthProvider({ children }) {
     setLoading(false);
 
     return () => stopRefreshTimer();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line
 
   const login = async (username, password) => {
     const res      = await apiLogin({ username, password });
