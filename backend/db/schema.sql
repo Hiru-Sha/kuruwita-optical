@@ -428,6 +428,8 @@ CREATE INDEX IF NOT EXISTS idx_customers_phone      ON customers(phone);
 CREATE INDEX IF NOT EXISTS idx_expenses_date        ON expenses(date);
 CREATE INDEX IF NOT EXISTS idx_quick_sales_created  ON quick_sales(created_at);
 CREATE INDEX IF NOT EXISTS idx_cash_deposits_date   ON cash_deposits(date);
+ALTER TABLE cash_deposits ADD COLUMN IF NOT EXISTS card_charge DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE cash_deposits ADD COLUMN IF NOT EXISTS net_amount  DECIMAL(10,2) DEFAULT 0;
 CREATE INDEX IF NOT EXISTS idx_repairs_created      ON repairs(created_at);
 CREATE INDEX IF NOT EXISTS idx_repairs_status       ON repairs(status);
 CREATE INDEX IF NOT EXISTS idx_stock_adj_inventory  ON stock_adjustments(inventory_id);

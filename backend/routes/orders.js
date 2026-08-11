@@ -238,22 +238,30 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
     }
 
     // Auto-create bank receipt if payment method is bank/card/transfer
+    // Card payments: 3% bank charge is deducted — net amount deposited is 97% of paid amount.
+    // Bank/transfer: no charge — full amount deposited.
     const pm     = (req.body.payment_method || 'cash').toLowerCase();
     const advAmt = parseFloat(req.body.advance_amount) || 0;
     if ((pm === 'bank' || pm === 'card' || pm === 'transfer') && advAmt > 0) {
       try {
+        const CARD_CHARGE_RATE = 0.03; // 3% bank card charge
+        const cardCharge = pm === 'card' ? Math.round(advAmt * CARD_CHARGE_RATE * 100) / 100 : 0;
+        const netAmount  = advAmt - cardCharge;
         await client.query(
           `INSERT INTO cash_deposits
-             (date, amount, bank_name, payment_type, notes, added_by, order_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+             (date, amount, bank_name, payment_type, notes, added_by, order_id, card_charge, net_amount)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
           [
             req.body.import_date || new Date().toISOString().split('T')[0],
-            advAmt,
+            advAmt,        // gross amount paid by customer
             'Pan Asia Bank',
             pm === 'card' ? 'card' : 'online',
-            'Auto: Order ' + orderNum + (req.body.frame ? ' — ' + req.body.frame : ''),
+            'Auto: Order ' + orderNum + (req.body.frame ? ' — ' + req.body.frame : '')
+              + (cardCharge > 0 ? ` (Card charge: Rs.${cardCharge})` : ''),
             req.user.id,
             orderId,
+            cardCharge,    // 3% bank fee (0 for bank/transfer)
+            netAmount,     // actual amount credited to account
           ]
         );
       } catch (e) {

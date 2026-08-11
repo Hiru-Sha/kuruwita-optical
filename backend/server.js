@@ -142,6 +142,9 @@ const pool = require('./db/pool');
 
     // ── other tables ─────────────────────────────────────────
     await pool.query(`ALTER TABLE quick_sales ADD COLUMN IF NOT EXISTS customer_id INTEGER`);
+    // Card charge tracking — 3% bank fee on card payments
+    await pool.query(`ALTER TABLE cash_deposits ADD COLUMN IF NOT EXISTS card_charge DECIMAL(10,2) DEFAULT 0`);
+    await pool.query(`ALTER TABLE cash_deposits ADD COLUMN IF NOT EXISTS net_amount  DECIMAL(10,2) DEFAULT 0`);
     await pool.query(`ALTER TABLE repairs     ADD COLUMN IF NOT EXISTS customer_id INTEGER`);
 
     console.log('✅ DB migrations complete');

@@ -150,15 +150,20 @@ router.post('/', auth, async (req, res) => {
     const amt = parseFloat(total) || 0;
     if ((pm === 'bank' || pm === 'card' || pm === 'transfer') && amt > 0) {
       try {
+        const CARD_CHARGE_RATE = 0.03;
+        const cardCharge = pm === 'card' ? Math.round(amt * CARD_CHARGE_RATE * 100) / 100 : 0;
+        const netAmount  = amt - cardCharge;
         await client.query(
-          `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
+          `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by,card_charge,net_amount)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
           [
             new Date().toISOString().split('T')[0],
             amt, 'Pan Asia Bank',
             pm === 'card' ? 'card' : 'online',
-            'Auto: Quick Sale ' + saleNum,
+            'Auto: Quick Sale ' + saleNum + (cardCharge > 0 ? ` (Card charge: Rs.${cardCharge})` : ''),
             req.user.id,
+            cardCharge,
+            netAmount,
           ]
         );
       } catch (e) { console.warn('QS bank receipt failed:', e.message); }

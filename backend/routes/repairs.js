@@ -133,16 +133,21 @@ router.post('/', auth, async (req, res) => {
     const pm_r  = (payment_method || 'cash').toLowerCase();
     const amt_r = parseFloat(charge) || 0;
     if ((pm_r === 'bank' || pm_r === 'card' || pm_r === 'transfer') && amt_r > 0) {
+      const CARD_CHARGE_RATE = 0.03;
+      const cardCharge_r = pm_r === 'card' ? Math.round(amt_r * CARD_CHARGE_RATE * 100) / 100 : 0;
+      const netAmount_r  = amt_r - cardCharge_r;
       await client.query(
-        `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by)
-         VALUES ($1,$2,$3,$4,$5,$6)`,
+        `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by,card_charge,net_amount)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
         [
           new Date().toISOString().split('T')[0],
           amt_r,
           'Pan Asia Bank',
           pm_r === 'card' ? 'card' : 'online',
-          'Auto: Repair ' + repair_number,
+          'Auto: Repair ' + repair_number + (cardCharge_r > 0 ? ` (Card charge: Rs.${cardCharge_r})` : ''),
           req.user.id,
+          cardCharge_r,
+          netAmount_r,
         ]
       ).catch(e => console.warn('Repair bank receipt failed:', e.message));
     }

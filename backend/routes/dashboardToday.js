@@ -196,8 +196,27 @@ router.get('/', auth, async (req, res) => {
     mr.collected       = order_collected + qs_month_total + rep_month_total; // true grand total
 
     // Daily cash split
-    const orderCash    = todayOrders.rows.filter(r => !r.payment_method || r.payment_method === 'cash').reduce((s, r) => s + parseFloat(r.advance_amount || 0), 0);
-    const orderBank    = todayOrders.rows.filter(r => r.payment_method && r.payment_method !== 'cash').reduce((s, r) => s + parseFloat(r.advance_amount || 0), 0);
+    // Card/bank payments go to the bank — NOT to cash in hand.
+    // Only cash payments stay in the till.
+    // Card payments also have a 3% bank charge deducted from net deposit.
+    const CARD_CHARGE_RATE = 0.03;
+
+    const orderCash  = todayOrders.rows
+      .filter(r => !r.payment_method || r.payment_method === 'cash')
+      .reduce((s, r) => s + parseFloat(r.advance_amount || 0), 0);
+
+    // Card vs bank/transfer — card has 3% charge, bank/transfer is full amount
+    const orderCard  = todayOrders.rows
+      .filter(r => r.payment_method === 'card')
+      .reduce((s, r) => s + parseFloat(r.advance_amount || 0), 0);
+    const orderBankTransfer = todayOrders.rows
+      .filter(r => r.payment_method && r.payment_method !== 'cash' && r.payment_method !== 'card')
+      .reduce((s, r) => s + parseFloat(r.advance_amount || 0), 0);
+    const orderCardCharge   = Math.round(orderCard * CARD_CHARGE_RATE * 100) / 100;
+    const orderCardNet      = orderCard - orderCardCharge;
+    const orderBank         = orderCard + orderBankTransfer; // total non-cash
+    const orderBankNet      = orderCardNet + orderBankTransfer; // net after card charge
+
     const orderIncome  = orderCash + orderBank;
     const qsIncome     = todayQS.rows.reduce((s, r) => s + parseFloat(r.total   || 0), 0);
     const repairIncome = todayRepairs.rows.reduce((s, r) => s + parseFloat(r.charge || 0), 0);
@@ -207,11 +226,22 @@ router.get('/', auth, async (req, res) => {
 
     const balRows = todayBalPayments?.rows || [];
     const balCash = balRows.filter(r => !r.method || r.method === 'cash').reduce((s, r) => s + parseFloat(r.amount || 0), 0);
-    const balBank = balRows.filter(r => r.method && r.method !== 'cash').reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+    const balCard = balRows.filter(r => r.method === 'card').reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+    const balBankTransfer = balRows.filter(r => r.method && r.method !== 'cash' && r.method !== 'card').reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+    const balCardCharge = Math.round(balCard * CARD_CHARGE_RATE * 100) / 100;
+    const balBank = balCard + balBankTransfer;
+    const balBankNet = (balCard - balCardCharge) + balBankTransfer;
 
-    const todayCashIn = orderCash + qsIncome + repairIncome + balCash + balBank;
+    const totalCardCharge = orderCardCharge + balCardCharge;
+
+    // Cash in hand = only cash payments (card/bank went to the bank account)
+    // Also subtract expenses paid in cash and cash deposited to bank
+    const todayCashIn = orderCash + qsIncome + repairIncome + balCash;
     const cashInHand  = todayCashIn - totalExp - totalDep;
-    const bankToday   = orderBank + balBank;
+
+    // Net amount actually credited to bank after card charges
+    const bankToday    = orderBank + balBank;
+    const bankTodayNet = orderBankNet + balBankNet; // after 3% card deduction
 
     // All-time cash (excludes cancelled orders)
     let allTimeCash = 0, allTimeDeposits = 0;
@@ -241,7 +271,10 @@ router.get('/', auth, async (req, res) => {
 
       daily_cash: {
         orderIncome, orderCash, orderBank,
-        balCash, balBank, balTotal: balCash + balBank,
+        orderCard, orderCardCharge, orderCardNet,
+        balCash, balBank, balCard, balCardCharge, balTotal: balCash + balBank,
+        totalCardCharge,
+        bankTodayNet,
         inventoryValue:  parseFloat(invValue.rows[0]?.stock_value  || 0),
         inventoryRetail: parseFloat(invValue.rows[0]?.retail_value || 0),
         inventoryUnits:  parseInt(invValue.rows[0]?.total_units    || 0),
