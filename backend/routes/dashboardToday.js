@@ -281,6 +281,8 @@ router.get('/', auth, async (req, res) => {
         inventoryRetail: parseFloat(invValue.rows[0]?.retail_value || 0),
         inventoryUnits:  parseInt(invValue.rows[0]?.total_units    || 0),
         qsIncome, repairIncome, totalIncome,
+        qsCash: qsIncome,          // alias for dashboard compatibility
+        repairCash: repairIncome,  // alias for dashboard compatibility
         totalExp, totalDep, cashInHand,
         allTimeCash, allTimeDeposits, bankToday,
         bankBalance: allTimeDeposits,
