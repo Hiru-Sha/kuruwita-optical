@@ -304,7 +304,9 @@ export default function Customers() {
 
   const [selected,    setSelected]    = useState(null);
   const [loadingCust, setLoadingCust] = useState(false);
-  const [editMode,   setEditMode]   = useState(false);
+  const [editMode,    setEditMode]    = useState(false);
+  const [showDelete,  setShowDelete]  = useState(false);
+  const [deleting,    setDeleting]    = useState(false);
   const [editForm,   setEditForm]   = useState({});
   const [savingEdit, setSavingEdit] = useState(false);
   const [tab,         setTab]         = useState('orders');
@@ -479,6 +481,60 @@ export default function Customers() {
       }
 
       {/* ══════════════ DETAIL PANEL ══════════════════════════ */}
+      {/* Delete confirmation modal */}
+      {showDelete && selected && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)', zIndex:400,
+          display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{ background:'white', borderRadius:16, padding:'28px 28px', maxWidth:380, width:'100%',
+            boxShadow:'0 24px 60px rgba(0,0,0,.3)', textAlign:'center' }}>
+            <div style={{ fontSize:48, marginBottom:12 }}>⚠️</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:'#0f1f3d', marginBottom:8 }}>
+              Delete Customer?
+            </div>
+            <div style={{ fontSize:13, color:'#6b7280', marginBottom:6, lineHeight:1.6 }}>
+              <b style={{ color:'#0f1f3d' }}>{selected.name}</b> and ALL their records will be permanently deleted:
+            </div>
+            <div style={{ background:'#fef2f2', borderRadius:10, padding:'10px 14px', marginBottom:20, fontSize:13, color:'#dc2626', textAlign:'left' }}>
+              • {selected.orders?.length || 0} orders + refractions + call logs<br/>
+              • All payment records linked to orders<br/>
+              • Walk-in Rx records<br/>
+              <b>This cannot be undone!</b>
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={()=>setShowDelete(false)} disabled={deleting}
+                style={{ flex:1, padding:'11px', background:'#f3f4f6', border:'none', borderRadius:10,
+                  fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#6b7280' }}>
+                Cancel
+              </button>
+              <button disabled={deleting} onClick={async()=>{
+                setDeleting(true);
+                try {
+                  const _BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+                  const _token = localStorage.getItem('ko_token');
+                  const res = await fetch(`${_BASE}/customers/${selected.id}`, {
+                    method:'DELETE', headers:{ Authorization:`Bearer ${_token}` }
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error || 'Failed');
+                  setShowDelete(false);
+                  setSelected(null);
+                  // Refresh list
+                  const listRes = await fetch(`${_BASE}/customers?limit=200`, { headers:{ Authorization:`Bearer ${_token}` } });
+                  const listData = await listRes.json();
+                  setCustomers(Array.isArray(listData) ? listData : (listData.data || []));
+                } catch(e) { alert('Delete failed: ' + e.message); }
+                finally { setDeleting(false); }
+              }}
+                style={{ flex:1, padding:'11px', background:'#dc2626', color:'white', border:'none',
+                  borderRadius:10, fontSize:14, fontWeight:700, cursor:deleting?'not-allowed':'pointer',
+                  fontFamily:'inherit', opacity:deleting?0.7:1 }}>
+                {deleting ? '⏳ Deleting...' : '🗑️ Yes, Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selected && (
         <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.45)', zIndex:200, display:'flex', alignItems:'flex-start', justifyContent:'flex-end' }}
           onClick={e=>{ if(e.target===e.currentTarget) setSelected(null); }}>
@@ -508,6 +564,10 @@ export default function Customers() {
                         style={{ padding:'8px 14px', background:'rgba(255,255,255,.15)', color:'white', border:'1px solid rgba(255,255,255,.3)', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none' }}>
                         📞 Call
                       </a>
+                      <button onClick={()=>setShowDelete(true)}
+                        style={{ padding:'8px 14px', background:'rgba(220,38,38,.25)', color:'#fca5a5', border:'1px solid rgba(220,38,38,.4)', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                        🗑️ Delete
+                      </button>
                     </div>
                   </>
               }

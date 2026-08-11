@@ -207,4 +207,38 @@ router.patch('/:id/order-measurements', auth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// DELETE /api/customers/:id — admin only
+// Also deletes all orders, refractions, call_logs for this customer
+router.delete('/:id', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Check customer exists
+    const cust = await client.query('SELECT * FROM customers WHERE id=$1', [req.params.id]);
+    if (!cust.rows.length) return res.status(404).json({ error: 'Customer not found' });
+
+    // Get all order IDs for cleanup
+    const orders = await client.query('SELECT id FROM orders WHERE customer_id=$1', [req.params.id]);
+    const orderIds = orders.rows.map(r => r.id);
+
+    // Clean up child records
+    if (orderIds.length) {
+      await client.query(`DELETE FROM refractions  WHERE order_id = ANY($1::int[])`, [orderIds]);
+      await client.query(`DELETE FROM call_logs    WHERE order_id = ANY($1::int[])`, [orderIds]);
+      await client.query(`DELETE FROM cash_deposits WHERE order_id = ANY($1::int[])`, [orderIds]);
+    }
+    await client.query('DELETE FROM orders       WHERE customer_id=$1', [req.params.id]);
+    await client.query('DELETE FROM quick_sales  WHERE customer_id=$1', [req.params.id]).catch(()=>{});
+    await client.query('DELETE FROM customers    WHERE id=$1',          [req.params.id]);
+
+    await client.query('COMMIT');
+    res.json({ message: `Customer "${cust.rows[0].name}" and all records deleted` });
+  } catch(err) {
+    await client.query('ROLLBACK');
+    console.error('Customer delete error:', err.message);
+    res.status(500).json({ error: 'Failed: ' + err.message });
+  } finally { client.release(); }
+});
+
 module.exports = router;
