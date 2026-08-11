@@ -66,6 +66,7 @@ app.use('/api/warranties',        require('./routes/warranties'));
 app.use('/api/dashboard-today',   require('./routes/dashboardToday'));
 app.use('/api/full-report',       require('./routes/fullReport'));
 app.use('/api/scan-session',      require('./routes/scanSession'));
+app.use('/api/store',        require('./routes/store'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 
