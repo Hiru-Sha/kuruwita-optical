@@ -16,19 +16,9 @@ const router = require('express').Router();
 const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 
-// ── Ensure scan_sessions table exists ────────────────────────
-// Created at first use so no schema migration needed.
-async function ensureTable() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS scan_sessions (
-      user_id    INTEGER PRIMARY KEY,
-      item       JSONB        NOT NULL,
-      action     VARCHAR(50)  NOT NULL DEFAULT 'new_order',
-      created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-    )
-  `).catch(() => {});
-}
-ensureTable();
+// scan_sessions table is created in server.js startup migration.
+// No DDL here — calling pool.query at module load caused Railway
+// to crash when DATABASE_URL was not yet available at boot time.
 
 // ── POST /api/scan-session — mobile posts scanned item ───────
 router.post('/', auth, async (req, res) => {

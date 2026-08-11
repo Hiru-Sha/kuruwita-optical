@@ -221,6 +221,59 @@ CREATE TABLE IF NOT EXISTS purchases (
 );
 
 -- ============================================================
+--  8b. DEALER PURCHASES
+--  Tracks every stock purchase from each dealer.
+--  Used by dealerPurchases.js and dealers.js routes.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS dealer_purchases (
+  id               SERIAL PRIMARY KEY,
+  dealer_name      VARCHAR(100) NOT NULL,
+  purchase_date    DATE         DEFAULT CURRENT_DATE,
+  invoice_no       VARCHAR(50),
+  category         VARCHAR(50),
+  description      TEXT         NOT NULL,
+  quantity         INTEGER      DEFAULT 1,
+  unit_cost        DECIMAL(10,2) DEFAULT 0,
+  total_cost       DECIMAL(10,2) DEFAULT 0,
+  payment_method   VARCHAR(20)  DEFAULT 'cash',
+  payment_status   VARCHAR(20)  DEFAULT 'paid',
+  notes            TEXT,
+  cheque_no        VARCHAR(50),
+  cheque_date      DATE,
+  cheque_bank      VARCHAR(100),
+  bill_image       TEXT,
+  added_by         INTEGER REFERENCES users(id),
+  created_at       TIMESTAMP    DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_dealer_purchases_dealer ON dealer_purchases(dealer_name);
+CREATE INDEX IF NOT EXISTS idx_dealer_purchases_date   ON dealer_purchases(purchase_date DESC);
+
+-- ============================================================
+--  8c. KALUTOTA TRANSACTIONS
+--  Trade account with Kalutota Opticals dealer.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS kalutota_transactions (
+  id               SERIAL PRIMARY KEY,
+  date             DATE         DEFAULT CURRENT_DATE,
+  direction        VARCHAR(10)  NOT NULL,  -- 'in' | 'out'
+  category         VARCHAR(50),
+  description      TEXT         NOT NULL,
+  quantity         INTEGER      DEFAULT 1,
+  unit_price       DECIMAL(10,2) DEFAULT 0,
+  total_amount     DECIMAL(10,2) DEFAULT 0,
+  payment_status   VARCHAR(20)  DEFAULT 'pending',
+  paid_amount      DECIMAL(10,2) DEFAULT 0,
+  paid_date        DATE,
+  payment_method   VARCHAR(20)  DEFAULT 'cash',
+  notes            TEXT,
+  image_url        TEXT,
+  inventory_id     INTEGER,
+  added_by         INTEGER REFERENCES users(id),
+  created_at       TIMESTAMP    DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_kalutota_date ON kalutota_transactions(date DESC);
+
+-- ============================================================
 --  9. COMMUNICATION LOGS (per customer)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS comm_logs (
@@ -360,26 +413,6 @@ CREATE TABLE IF NOT EXISTS lens_prices (
 
 -- ============================================================
 --  16. KALUTOTA TRADE ACCOUNT
--- ============================================================
-CREATE TABLE IF NOT EXISTS kalutota_transactions (
-  id             SERIAL PRIMARY KEY,
-  date           DATE DEFAULT CURRENT_DATE,
-  direction      VARCHAR(10) NOT NULL,   -- 'in' | 'out'
-  category       VARCHAR(100),
-  description    TEXT NOT NULL,
-  quantity       INTEGER DEFAULT 1,
-  unit_price     DECIMAL(10,2) DEFAULT 0,
-  total_amount   DECIMAL(10,2) DEFAULT 0,
-  payment_status VARCHAR(20) DEFAULT 'pending',  -- pending|paid
-  paid_amount    DECIMAL(10,2) DEFAULT 0,
-  paid_date      DATE,
-  payment_method VARCHAR(20) DEFAULT 'cash',
-  notes          TEXT,
-  image_url      TEXT,
-  added_by       INTEGER REFERENCES users(id),
-  created_at     TIMESTAMP DEFAULT NOW()
-);
-
 -- ============================================================
 --  INDEXES
 -- ============================================================
