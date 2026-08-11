@@ -4,7 +4,7 @@
 //  Add to existing Railway backend: app.use('/api/store', require('./routes/store'))
 // ============================================================
 const router = require('express').Router();
-const pool   = require('./db/pool'); // same pool as management system
+const pool   = require('../db/pool'); // same pool as management system
 
 // ── GET /api/store/products ──────────────────────────────────
 // Public product list — only items with stock and image
