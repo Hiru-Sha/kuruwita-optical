@@ -86,15 +86,17 @@ router.get('/', auth, async (req, res) => {
         SELECT amount FROM expenses WHERE date = $1
       `, [today]).catch(() => ({ rows: [] })),
 
-      // 4: Today's deposits
+      // 4: Today's MANUAL cash deposits (cash physically taken to bank)
+      // Auto-created card/online deposits linked to orders are EXCLUDED —
+      // those are bank-to-bank and never passed through the cash till.
+      // Only cash payment_type deposits (manual) reduce cash in hand.
       pool.query(`
         SELECT cd.amount FROM cash_deposits cd
         WHERE cd.date = $1
-          AND (cd.order_id IS NULL OR EXISTS (
-            SELECT 1 FROM orders o WHERE o.id = cd.order_id
-          ))
+          AND cd.order_id IS NULL
+          AND COALESCE(cd.payment_type,'cash') = 'cash'
       `, [today]).catch(() => pool.query(
-        'SELECT amount FROM cash_deposits WHERE date = $1', [today]
+        `SELECT amount FROM cash_deposits WHERE date = $1 AND order_id IS NULL`, [today]
       )).catch(() => ({ rows: [] })),
 
       // 5: Today's repairs
