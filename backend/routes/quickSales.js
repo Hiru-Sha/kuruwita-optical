@@ -86,8 +86,9 @@ router.post('/', auth, async (req, res) => {
       "SELECT sale_number FROM quick_sales ORDER BY id DESC LIMIT 1"
     );
     let saleNum = 'QS-0001';
-    if (lastRes.rows.length) {
-      const last = parseInt(lastRes.rows[0].sale_number.split('-')[1]) || 0;
+    if (lastRes.rows.length && lastRes.rows[0].sale_number) {
+      const parts = lastRes.rows[0].sale_number.split('-');
+      const last  = parseInt(parts[parts.length - 1]) || 0;
       saleNum = 'QS-' + String(last + 1).padStart(4, '0');
     }
 
@@ -153,19 +154,33 @@ router.post('/', auth, async (req, res) => {
         const CARD_CHARGE_RATE = 0.03;
         const cardCharge = pm === 'card' ? Math.round(amt * CARD_CHARGE_RATE * 100) / 100 : 0;
         const netAmount  = amt - cardCharge;
-        await client.query(
-          `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by,card_charge,net_amount)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-          [
-            new Date().toISOString().split('T')[0],
-            amt, 'Pan Asia Bank',
-            pm === 'card' ? 'card' : 'online',
-            'Auto: Quick Sale ' + saleNum + (cardCharge > 0 ? ` (Card charge: Rs.${cardCharge})` : ''),
-            req.user.id,
-            cardCharge,
-            netAmount,
-          ]
-        );
+        // Try with card_charge columns first, fall back if columns don't exist yet
+        try {
+          await client.query(
+            `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by,card_charge,net_amount)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+            [
+              new Date().toISOString().split('T')[0],
+              amt, 'Pan Asia Bank',
+              pm === 'card' ? 'card' : 'online',
+              'Auto: Quick Sale ' + saleNum + (cardCharge > 0 ? ` (Card charge: Rs.${cardCharge})` : ''),
+              req.user.id, cardCharge, netAmount,
+            ]
+          );
+        } catch(colErr) {
+          // Fallback: insert without card_charge columns
+          await client.query(
+            `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by)
+             VALUES ($1,$2,$3,$4,$5,$6)`,
+            [
+              new Date().toISOString().split('T')[0],
+              amt, 'Pan Asia Bank',
+              pm === 'card' ? 'card' : 'online',
+              'Auto: Quick Sale ' + saleNum,
+              req.user.id,
+            ]
+          );
+        }
       } catch (e) { console.warn('QS bank receipt failed:', e.message); }
     }
 

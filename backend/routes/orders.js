@@ -247,23 +247,34 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
         const CARD_CHARGE_RATE = 0.03; // 3% bank card charge
         const cardCharge = pm === 'card' ? Math.round(advAmt * CARD_CHARGE_RATE * 100) / 100 : 0;
         const netAmount  = advAmt - cardCharge;
-        await client.query(
-          `INSERT INTO cash_deposits
-             (date, amount, bank_name, payment_type, notes, added_by, order_id, card_charge, net_amount)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-          [
-            req.body.import_date || new Date().toISOString().split('T')[0],
-            advAmt,        // gross amount paid by customer
-            'Pan Asia Bank',
-            pm === 'card' ? 'card' : 'online',
-            'Auto: Order ' + orderNum + (req.body.frame ? ' — ' + req.body.frame : '')
-              + (cardCharge > 0 ? ` (Card charge: Rs.${cardCharge})` : ''),
-            req.user.id,
-            orderId,
-            cardCharge,    // 3% bank fee (0 for bank/transfer)
-            netAmount,     // actual amount credited to account
-          ]
-        );
+        // Try with card_charge columns, fall back if not yet migrated
+        try {
+          await client.query(
+            `INSERT INTO cash_deposits
+               (date, amount, bank_name, payment_type, notes, added_by, order_id, card_charge, net_amount)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+            [
+              req.body.import_date || new Date().toISOString().split('T')[0],
+              advAmt, 'Pan Asia Bank',
+              pm === 'card' ? 'card' : 'online',
+              'Auto: Order ' + orderNum + (req.body.frame ? ' — ' + req.body.frame : '')
+                + (cardCharge > 0 ? ` (Card charge: Rs.${cardCharge})` : ''),
+              req.user.id, orderId, cardCharge, netAmount,
+            ]
+          );
+        } catch(colErr) {
+          await client.query(
+            `INSERT INTO cash_deposits (date, amount, bank_name, payment_type, notes, added_by, order_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+            [
+              req.body.import_date || new Date().toISOString().split('T')[0],
+              advAmt, 'Pan Asia Bank',
+              pm === 'card' ? 'card' : 'online',
+              'Auto: Order ' + orderNum,
+              req.user.id, orderId,
+            ]
+          );
+        }
       } catch (e) {
         console.warn('Auto bank receipt failed:', e.message);
       }
