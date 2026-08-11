@@ -64,6 +64,7 @@ const NAV = [
   { to:'/lab-receivings', icon:'lab',        label:'Lab Receivings', section:'main',     roles:['admin'] },
   { to:'/inventory',      icon:'inventory',  label:'Inventory',      section:'inventory' },
   { to:'/lens-prices',    icon:'lens',       label:'Lens Prices',    section:'inventory' },
+  { to:'/price-check',    icon:'expenses',   label:'Price Check',    section:'inventory' },
   { to:'/calculator',     icon:'calculator', label:'Calculator',     section:'inventory' },
   { to:'/dealers',        icon:'purchase',   label:'Purchases',      section:'inventory' },
   { to:'/kalutota',       icon:'balance',    label:'Kalutota A/C',   section:'inventory' },

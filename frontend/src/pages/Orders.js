@@ -5,6 +5,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getOrders, getOrder, updateOrder, deleteOrder, addCallLog } from '../api';
+import { LensPriceCheckerPopup } from './LensPriceChecker';
+import { LensPriceCheckerPopup } from './LensPriceChecker';
 import PrintReceipt from '../components/PrintReceipt';
 
 const C = {
@@ -642,9 +644,10 @@ export default function Orders() {
   const [giftItems,    setGiftItems]    = useState([]);
   const [savingGifts,  setSavingGifts]  = useState(false);
   const [toast,        setToast]        = useState('');
-  const [showEdit,     setShowEdit]     = useState(false);
-  const [editForm,     setEditForm]     = useState({});
-  const [savingEdit,   setSavingEdit]   = useState(false);
+  const [showEdit,       setShowEdit]       = useState(false);
+  const [editForm,       setEditForm]       = useState({});
+  const [savingEdit,     setSavingEdit]     = useState(false);
+  const [showPriceCheck, setShowPriceCheck] = useState(false);
   const navigate = useNavigate();
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(''), 3500); };
@@ -851,10 +854,18 @@ export default function Orders() {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
         <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:C.navy, margin:'0 0 4px' }}>Orders</h1>
         <p style={{ fontSize:13, color:C.muted, margin:0 }}>Manage customer orders and lens jobs</p>
-        <button onClick={()=>navigate('/orders/new')}
-          style={{ padding:'9px 20px', background:C.gold, color:C.navy, border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-          + New Order
-        </button>
+        <div style={{ display:'flex', gap:10 }}>
+          <button onClick={()=>setShowPriceCheck(true)}
+            style={{ padding:'9px 18px', background:C.cream, color:C.navy,
+              border:`1.5px solid ${C.gold}`, borderRadius:9, fontSize:13,
+              fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            💰 Price Check
+          </button>
+          <button onClick={()=>navigate('/orders/new')}
+            style={{ padding:'9px 20px', background:C.gold, color:C.navy, border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            + New Order
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -1497,6 +1508,19 @@ export default function Orders() {
       )}
 
       {showPrint && selected && <PrintReceipt order={selected} onClose={()=>setShowPrint(false)}/>}
+      {showPriceCheck && (
+        <LensPriceCheckerPopup
+          onClose={() => setShowPriceCheck(false)}
+          onSelectPrice={(price) => {
+            // If an order is open in the edit modal, don't auto-fill — just show price
+            // User can reference the price and type it manually
+            setShowPriceCheck(false);
+          }}
+        />
+      )}
+      {showPriceCheck && (
+        <LensPriceCheckerPopup onClose={()=>setShowPriceCheck(false)} />
+      )}
       {showEdit && selected && (
         <EditOrderModal
           order={selected}
