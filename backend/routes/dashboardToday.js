@@ -283,6 +283,8 @@ router.get('/', auth, async (req, res) => {
         qsIncome, repairIncome, totalIncome,
         totalExp, totalDep, cashInHand,
         allTimeCash, allTimeDeposits, bankToday,
+        bankBalance: allTimeDeposits,
+        totalMoney:  allTimeCash + allTimeDeposits,
         orderCount:  todayOrders.rows.length,
         qsCount:     todayQS.rows.length,
         repairCount: todayRepairs.rows.length,

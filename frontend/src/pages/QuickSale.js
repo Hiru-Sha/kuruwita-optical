@@ -302,28 +302,8 @@ export default function QuickSale() {
       setDoneItems([...cart]);
       setDone(data);
 
-      // Log each sold item to stock history (non-blocking)
-      try {
-        const logBase  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-        const logToken = localStorage.getItem('ko_token');
-        for (const itm of cart) {
-          const invId = itm.inventory_id || itm.id;
-          if (!invId) continue;
-          await fetch(`${logBase}/stock-adjustments/log`, {
-            method: 'POST',
-            headers: { 'Content-Type':'application/json', Authorization:`Bearer ${logToken}` },
-            body: JSON.stringify({
-              inventory_id:    invId,
-              item_name:       itm.name || 'Item',
-              change_type:     'remove',
-              quantity_change: -(parseInt(itm.qty || itm.quantity)||1),
-              reason:          'Quick Sale',
-              notes:           'Quick sale — ' + (data.sale_number||''),
-              unit_cost:       itm.cost_price || itm.buy_price || 0,
-            }),
-          });
-        }
-      } catch(le) { /* non-critical */ }
+      // Stock deduction and audit log handled by backend POST /quick-sales
+      // No duplicate call needed here
 
     } catch(e){setError(e.message);}
     finally{setSaving(false);}
