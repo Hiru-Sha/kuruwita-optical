@@ -6,7 +6,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getOrders, getOrder, updateOrder, deleteOrder, addCallLog } from '../api';
 import { LensPriceCheckerPopup } from './LensPriceChecker';
-import { LensPriceCheckerPopup } from './LensPriceChecker';
 import PrintReceipt from '../components/PrintReceipt';
 
 const C = {
@@ -1508,16 +1507,6 @@ export default function Orders() {
       )}
 
       {showPrint && selected && <PrintReceipt order={selected} onClose={()=>setShowPrint(false)}/>}
-      {showPriceCheck && (
-        <LensPriceCheckerPopup
-          onClose={() => setShowPriceCheck(false)}
-          onSelectPrice={(price) => {
-            // If an order is open in the edit modal, don't auto-fill — just show price
-            // User can reference the price and type it manually
-            setShowPriceCheck(false);
-          }}
-        />
-      )}
       {showPriceCheck && (
         <LensPriceCheckerPopup onClose={()=>setShowPriceCheck(false)} />
       )}
