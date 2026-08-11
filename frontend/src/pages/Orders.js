@@ -142,6 +142,353 @@ function PaymentModal({ order, onClose, onSave }) {
   );
 }
 
+
+// ── Edit Order Modal ─────────────────────────────────────────
+function EditOrderModal({ order, onClose, onSave }) {
+  const FRAME_TYPES  = ['Full rim','Half rim','Rimless','Sunglass'];
+  const FRAME_MATS   = ['Plastic','Metal','TR90','Titanium','Acetate','Mixed'];
+  const FRAME_COLORS = ['Black','Gold','Silver','Brown','Gunmetal','Blue','Red','Pink','Tortoise','Crystal','Other'];
+  const LENS_TYPES   = ['Single Vision','Progressive','Bifocal','Office Lens','Reading (ready)'];
+  const LENS_COATINGS= ['CR White','Blue Cut','Photo Gray','HMC','Blue Cut + Photo Gray','Blue Cut + HMC','Photo Gray + HMC','Blue Cut + Photo Gray + HMC'];
+  const LENS_INDEXES = ['CR39','1.49','1.56','1.59','1.6','1.61','1.67','1.74','Poly'];
+  const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280', danger:'#c0392b', success:'#2d7a4f' };
+  const INP = { padding:'9px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
+  const SEL = { ...INP, cursor:'pointer' };
+  const LBL = { fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, display:'block', marginBottom:4 };
+
+  const [form, setForm] = useState({
+    // Frame
+    frame:           order.frame           || '',
+    frame_type:      order.frame_type      || 'Full rim',
+    frame_material:  order.frame_material  || 'Plastic',
+    frame_color:     order.frame_color     || 'Black',
+    frame_sell_price:order.frame_sell_price|| '',
+    frame_buy_price: order.frame_buy_price || '',
+    // Lens
+    lens_type:       order.lens_type       || 'Single Vision',
+    lens_coating:    order.lens_coating    || 'CR White',
+    lens_company:    order.lens_company    || '',
+    lens_index:      order.lens_index      || '',
+    lens_sell_price: order.lens_sell_price || '',
+    lens_buy_price:  order.lens_buy_price  || '',
+    // Payment
+    total_amount:    order.total_amount    || '',
+    advance_amount:  order.advance_amount  || '',
+    balance_amount:  order.balance_amount  || '',
+    payment_method:  order.payment_method  || 'cash',
+    // Delivery & status
+    deliver_date:    order.deliver_date    ? order.deliver_date.slice(0,10) : '',
+    status:          order.status          || 'created',
+    // Warranty
+    warranty_frame:  order.warranty_frame  || '',
+    warranty_lens:   order.warranty_lens   || '',
+    // Notes
+    notes:           order.notes           || '',
+    // Lab
+    lab_bill_amount: order.lab_bill_amount || '',
+    lab_notes:       order.lab_notes       || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState('');
+  const [tab,    setTab]    = useState('order'); // order | payment | notes
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  // Recalculate balance when total or advance changes
+  const recalcBalance = (total, advance) => {
+    const t = parseFloat(total) || 0;
+    const a = parseFloat(advance) || 0;
+    set('balance_amount', Math.max(0, t - a).toFixed(2));
+  };
+
+  const handleSave = async () => {
+    setSaving(true); setError('');
+    try {
+      const updates = {};
+      // Only send changed fields
+      const fields = ['frame','frame_type','frame_material','frame_color',
+        'frame_sell_price','frame_buy_price','lens_type','lens_coating',
+        'lens_company','lens_index','lens_sell_price','lens_buy_price',
+        'total_amount','advance_amount','balance_amount','payment_method',
+        'deliver_date','status','warranty_frame','warranty_lens',
+        'notes','lab_bill_amount','lab_notes'];
+      fields.forEach(f => {
+        const v = form[f];
+        const orig = String(order[f] || '');
+        if (String(v) !== orig) {
+          if (['frame_sell_price','frame_buy_price','lens_sell_price','lens_buy_price',
+               'total_amount','advance_amount','balance_amount','lab_bill_amount'].includes(f)) {
+            updates[f] = parseFloat(v) || 0;
+          } else {
+            updates[f] = v || null;
+          }
+        }
+      });
+      if (!Object.keys(updates).length) { onClose(); return; }
+      await onSave(updates);
+    } catch(e) { setError('Failed to save. Please try again.'); }
+    finally { setSaving(false); }
+  };
+
+  const tabStyle = (t) => ({
+    padding:'8px 18px', borderRadius:8, fontSize:12, fontWeight:700,
+    cursor:'pointer', fontFamily:'inherit', border:'none',
+    background: tab===t ? C.navy : 'transparent',
+    color:      tab===t ? 'white' : C.muted,
+  });
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.6)', zIndex:400,
+      display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+      onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div style={{ background:'white', borderRadius:20, width:'100%', maxWidth:560,
+        maxHeight:'90vh', overflowY:'auto', boxShadow:'0 24px 80px rgba(0,0,0,.3)' }}>
+
+        {/* Header */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
+          padding:'20px 24px 0', borderBottom:`1.5px solid ${C.cream}`, paddingBottom:16 }}>
+          <div>
+            <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:'1px', textTransform:'uppercase' }}>Editing</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:C.navy }}>
+              {order.order_number} — {order.customer_name}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background:C.cream, border:'none', borderRadius:8,
+            padding:'6px 14px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:C.muted, fontWeight:600 }}>
+            ✕ Close
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display:'flex', gap:4, padding:'12px 24px', background:C.cream, borderBottom:`1px solid ${C.border}` }}>
+          {[['order','🕶️ Frame & Lens'],['payment','💳 Payment'],['notes','📝 Notes & Warranty']].map(([t,l])=>(
+            <button key={t} onClick={()=>setTab(t)} style={tabStyle(t)}>{l}</button>
+          ))}
+        </div>
+
+        <div style={{ padding:'20px 24px' }}>
+          {error && <div style={{ background:'#fef2f2', color:C.danger, borderRadius:8, padding:'9px 14px', fontSize:13, marginBottom:14 }}>{error}</div>}
+
+          {/* ── TAB: Frame & Lens ── */}
+          {tab==='order' && (
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              <div style={{ fontWeight:700, color:C.navy, fontSize:13, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>🖼️ Frame</div>
+              <div>
+                <label style={LBL}>Frame Name / Model</label>
+                <input value={form.frame} onChange={e=>set('frame',e.target.value)} placeholder="e.g. RayBan RB3025" style={INP}/>
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+                <div>
+                  <label style={LBL}>Type</label>
+                  <select value={form.frame_type} onChange={e=>set('frame_type',e.target.value)} style={SEL}>
+                    {FRAME_TYPES.map(t=><option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={LBL}>Material</label>
+                  <select value={form.frame_material} onChange={e=>set('frame_material',e.target.value)} style={SEL}>
+                    {FRAME_MATS.map(m=><option key={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={LBL}>Color</label>
+                  <select value={form.frame_color} onChange={e=>set('frame_color',e.target.value)} style={SEL}>
+                    {FRAME_COLORS.map(c=><option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={LBL}>Buy Price (Rs.)</label>
+                  <input type="number" value={form.frame_buy_price} onChange={e=>set('frame_buy_price',e.target.value)} style={INP}/>
+                </div>
+                <div>
+                  <label style={LBL}>Sell Price (Rs.)</label>
+                  <input type="number" value={form.frame_sell_price} onChange={e=>set('frame_sell_price',e.target.value)} style={INP}/>
+                </div>
+              </div>
+
+              <div style={{ fontWeight:700, color:C.navy, fontSize:13, paddingBottom:6, borderBottom:`1px solid ${C.cream}`, marginTop:4 }}>🔬 Lens</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                <div>
+                  <label style={LBL}>Lens Type</label>
+                  <select value={form.lens_type} onChange={e=>set('lens_type',e.target.value)} style={SEL}>
+                    {LENS_TYPES.map(t=><option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={LBL}>Coating</label>
+                  <select value={form.lens_coating} onChange={e=>set('lens_coating',e.target.value)} style={SEL}>
+                    {LENS_COATINGS.map(c=><option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={LBL}>Index</label>
+                  <select value={form.lens_index} onChange={e=>set('lens_index',e.target.value)} style={SEL}>
+                    <option value="">— Any —</option>
+                    {LENS_INDEXES.map(i=><option key={i}>{i}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={LBL}>Supplier / Lab</label>
+                  <input value={form.lens_company} onChange={e=>set('lens_company',e.target.value)} placeholder="e.g. Negombo Optical" style={INP}/>
+                </div>
+                <div>
+                  <label style={LBL}>Buy Price (Rs.)</label>
+                  <input type="number" value={form.lens_buy_price} onChange={e=>set('lens_buy_price',e.target.value)} style={INP}/>
+                </div>
+                <div>
+                  <label style={LBL}>Sell Price (Rs.)</label>
+                  <input type="number" value={form.lens_sell_price} onChange={e=>set('lens_sell_price',e.target.value)} style={INP}/>
+                </div>
+              </div>
+
+              <div>
+                <label style={LBL}>Lab Bill Amount (Rs.)</label>
+                <input type="number" value={form.lab_bill_amount} onChange={e=>set('lab_bill_amount',e.target.value)}
+                  placeholder="Lab invoice amount" style={INP}/>
+                <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>Used for profit calculations</div>
+              </div>
+
+              <div>
+                <label style={LBL}>Delivery Date</label>
+                <input type="date" value={form.deliver_date} onChange={e=>set('deliver_date',e.target.value)} style={INP}/>
+              </div>
+
+              <div>
+                <label style={LBL}>Status</label>
+                <div style={{ display:'flex', gap:8 }}>
+                  {['created','called','delivered','cancelled'].map(s=>(
+                    <button key={s} onClick={()=>set('status',s)}
+                      style={{ flex:1, padding:'9px', borderRadius:8, fontSize:12, fontWeight:600,
+                        cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${form.status===s?C.navy:C.border}`,
+                        background:form.status===s?C.navy:'white', color:form.status===s?'white':C.muted }}>
+                      {s.charAt(0).toUpperCase()+s.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── TAB: Payment ── */}
+          {tab==='payment' && (
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              <div>
+                <label style={LBL}>Total Amount (Rs.)</label>
+                <input type="number" value={form.total_amount}
+                  onChange={e=>{ set('total_amount',e.target.value); recalcBalance(e.target.value, form.advance_amount); }}
+                  style={{ ...INP, fontSize:18, fontWeight:700 }}/>
+              </div>
+              <div>
+                <label style={LBL}>Advance Paid (Rs.)</label>
+                <input type="number" value={form.advance_amount}
+                  onChange={e=>{ set('advance_amount',e.target.value); recalcBalance(form.total_amount, e.target.value); }}
+                  style={{ ...INP, fontSize:18, fontWeight:700 }}/>
+              </div>
+              <div style={{ background:parseFloat(form.balance_amount)>0?'#fee2e2':'#dcfce7',
+                borderRadius:10, padding:'14px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div>
+                  <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:parseFloat(form.balance_amount)>0?C.danger:C.success, marginBottom:3 }}>Balance Due</div>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700,
+                    color:parseFloat(form.balance_amount)>0?C.danger:C.success }}>
+                    Rs. {parseFloat(form.balance_amount||0).toLocaleString('en-LK')}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ ...LBL, textAlign:'right' }}>Override Balance</label>
+                  <input type="number" value={form.balance_amount}
+                    onChange={e=>set('balance_amount',e.target.value)}
+                    style={{ ...INP, width:130, fontSize:15, fontWeight:700, textAlign:'right' }}/>
+                </div>
+              </div>
+              <div>
+                <label style={LBL}>Payment Method</label>
+                <div style={{ display:'flex', gap:8 }}>
+                  {[['cash','💵 Cash'],['bank','🏦 Bank'],['card','💳 Card']].map(([v,l])=>(
+                    <button key={v} onClick={()=>set('payment_method',v)}
+                      style={{ flex:1, padding:'11px', borderRadius:9, fontSize:13, fontWeight:600,
+                        cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${form.payment_method===v?C.navy:C.border}`,
+                        background:form.payment_method===v?C.navy:'white', color:form.payment_method===v?'white':C.muted }}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── TAB: Notes & Warranty ── */}
+          {tab==='notes' && (
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              <div>
+                <label style={LBL}>Internal Notes</label>
+                <textarea value={form.notes} onChange={e=>set('notes',e.target.value)}
+                  placeholder="Any notes about this order..."
+                  rows={4}
+                  style={{ ...INP, resize:'vertical', lineHeight:1.6 }}/>
+              </div>
+              <div>
+                <label style={LBL}>Lab Notes</label>
+                <textarea value={form.lab_notes} onChange={e=>set('lab_notes',e.target.value)}
+                  placeholder="Notes for the lab..."
+                  rows={2}
+                  style={{ ...INP, resize:'vertical', lineHeight:1.6 }}/>
+              </div>
+              <div style={{ fontWeight:700, color:C.navy, fontSize:13, paddingBottom:6, borderBottom:`1px solid ${C.cream}` }}>🛡️ Warranty</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <div>
+                  <label style={LBL}>Frame Warranty</label>
+                  <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                    {['','3 months','6 months','1 year','2 years'].map(w=>(
+                      <button key={w||'none'} onClick={()=>set('warranty_frame',w)}
+                        style={{ padding:'8px 12px', borderRadius:8, fontSize:12, fontWeight:600,
+                          cursor:'pointer', fontFamily:'inherit', textAlign:'left',
+                          border:`1.5px solid ${form.warranty_frame===w?C.navy:C.border}`,
+                          background:form.warranty_frame===w?C.navy:'white',
+                          color:form.warranty_frame===w?'white':w===''?C.muted:C.navy }}>
+                        {w===''?'❌ No Warranty':'🛡️ '+w}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label style={LBL}>Lens Warranty</label>
+                  <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                    {['','3 months','6 months','1 year','2 years'].map(w=>(
+                      <button key={w||'none'} onClick={()=>set('warranty_lens',w)}
+                        style={{ padding:'8px 12px', borderRadius:8, fontSize:12, fontWeight:600,
+                          cursor:'pointer', fontFamily:'inherit', textAlign:'left',
+                          border:`1.5px solid ${form.warranty_lens===w?C.navy:C.border}`,
+                          background:form.warranty_lens===w?C.navy:'white',
+                          color:form.warranty_lens===w?'white':w===''?C.muted:C.navy }}>
+                        {w===''?'❌ No Warranty':'🛡️ '+w}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Save button */}
+          <div style={{ display:'flex', gap:10, marginTop:20, paddingTop:16, borderTop:`1px solid ${C.cream}` }}>
+            <button onClick={onClose}
+              style={{ padding:'11px 22px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:10,
+                fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+              Cancel
+            </button>
+            <button onClick={handleSave} disabled={saving}
+              style={{ flex:1, padding:'12px', background:saving?C.muted:C.navy, color:'white',
+                border:'none', borderRadius:10, fontSize:14, fontWeight:700,
+                cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+              {saving ? '⏳ Saving...' : '💾 Save Changes'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Orders component ────────────────────────────────────
 export default function Orders() {
   const [orders,    setOrders]    = useState([]);
@@ -179,6 +526,9 @@ export default function Orders() {
   const [giftItems,    setGiftItems]    = useState([]);
   const [savingGifts,  setSavingGifts]  = useState(false);
   const [toast,        setToast]        = useState('');
+  const [showEdit,     setShowEdit]     = useState(false);
+  const [editForm,     setEditForm]     = useState({});
+  const [savingEdit,   setSavingEdit]   = useState(false);
   const navigate = useNavigate();
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(''), 3500); };
@@ -988,6 +1338,10 @@ export default function Orders() {
             {/* Actions */}
             <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:16, paddingTop:16, borderTop:`1px solid ${C.border}` }}>
               <button onClick={()=>setShowPrint(true)} style={{ padding:'10px 16px', background:C.gold, color:C.navy, border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Print</button>
+              <button onClick={()=>{ setEditForm(selected); setShowEdit(true); }}
+                style={{ padding:'10px 16px', background:'#eff6ff', color:'#1e40af', border:'1.5px solid #93c5fd', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                ✏️ Edit Order
+              </button>
               {/* Fix O: WhatsApp message is now context-aware based on order status.
                   "is ready" is only sent when the order is delivered/done.
                   In-progress orders get a follow-up message instead. */}
@@ -1021,6 +1375,20 @@ export default function Orders() {
       )}
 
       {showPrint && selected && <PrintReceipt order={selected} onClose={()=>setShowPrint(false)}/>}
+      {showEdit && selected && (
+        <EditOrderModal
+          order={selected}
+          onClose={()=>setShowEdit(false)}
+          onSave={async (updates) => {
+            await updateOrder(selected.id, updates);
+            showToast('Order updated ✓');
+            setShowEdit(false);
+            const r = await getOrder(selected.id);
+            setSelected(r.data);
+            load();
+          }}
+        />
+      )}
       {showPay   && selected && <PaymentModal  order={selected} onClose={()=>setShowPay(false)} onSave={handlePaymentSaved}/>}
     </div>
   );
