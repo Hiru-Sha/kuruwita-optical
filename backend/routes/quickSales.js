@@ -113,24 +113,18 @@ router.post('/', auth, async (req, res) => {
       const CARD_CHARGE_RATE = 0.03;
       const cardCharge = pm === 'card' ? Math.round(amt * CARD_CHARGE_RATE * 100) / 100 : 0;
       const netAmount  = amt - cardCharge;
-      const noteText   = 'Auto: Quick Sale ' + saleNum + (cardCharge > 0 ? ` (Card charge: Rs.${cardCharge} deducted by bank)` : '');
-      // Try with card_charge columns (added in latest migration)
-      try {
-        await pool.query(
-          `INSERT INTO cash_deposits (date, amount, bank_name, payment_type, notes, added_by, card_charge, net_amount)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-          [new Date().toISOString().split('T')[0], amt, 'Pan Asia Bank',
-           pm === 'card' ? 'card' : 'online', noteText, req.user.id, cardCharge, netAmount]
-        );
-      } catch(e) {
-        // Fallback: columns not yet added to DB
-        await pool.query(
-          `INSERT INTO cash_deposits (date, amount, bank_name, payment_type, notes, added_by)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
-          [new Date().toISOString().split('T')[0], amt, 'Pan Asia Bank',
-           pm === 'card' ? 'card' : 'online', noteText, req.user.id]
-        ).catch(e2 => console.warn('Deposit failed:', e2.message));
-      }
+      // Store NET amount (after 3% card charge) as deposit amount
+      const noteText = 'Auto: Quick Sale ' + saleNum +
+        (cardCharge > 0 ? ` (Charged: Rs.${amt} | Bank fee 3%: Rs.${cardCharge} | Net: Rs.${netAmount})` : '');
+      await pool.query(
+        `INSERT INTO cash_deposits (date, amount, bank_name, payment_type, notes, added_by)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [new Date().toISOString().split('T')[0],
+         netAmount,   // ← NET amount after card charge
+         'Pan Asia Bank',
+         pm === 'card' ? 'card' : 'online',
+         noteText, req.user.id]
+      ).catch(e => console.warn('Deposit failed:', e.message));
     }
 
     res.status(201).json({ ...savedSale, sale_number: saleNum });

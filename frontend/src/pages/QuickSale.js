@@ -318,11 +318,24 @@ export default function QuickSale() {
         <div style={{fontSize:44,marginBottom:6}}>✅</div>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:C.navy}}>Sale Complete!</div>
         <div style={{fontSize:13,color:C.muted,marginTop:3}}>{done.sale_number} · {fmtM(done.total)}</div>
-        {done.payment_method && done.payment_method !== 'cash' && (
-          <div style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:8,background:'#eff6ff',border:'1px solid #bae6fd',borderRadius:20,padding:'5px 14px',fontSize:12,fontWeight:600,color:'#1e40af'}}>
-            🏦 Bank receipt auto-recorded · {fmtM(done.total)}
-          </div>
-        )}
+        {done.payment_method && done.payment_method !== 'cash' && (() => {
+          const gross  = parseFloat(done.total || 0);
+          const charge = done.payment_method === 'card' ? Math.round(gross * 0.03 * 100) / 100 : 0;
+          const net    = gross - charge;
+          return (
+            <div style={{marginTop:8,background:'#eff6ff',border:'1px solid #bae6fd',borderRadius:12,padding:'10px 16px',textAlign:'left'}}>
+              <div style={{fontSize:12,fontWeight:700,color:'#1e40af',marginBottom:charge>0?5:0}}>
+                🏦 Bank receipt auto-recorded · {fmtM(gross)}
+              </div>
+              {charge > 0 && (
+                <div style={{fontSize:12,display:'flex',flexDirection:'column',gap:2}}>
+                  <div style={{color:'#dc2626'}}>💳 Bank deducts 3% = {fmtM(charge)}</div>
+                  <div style={{color:'#15803d',fontWeight:700}}>✅ Net to your account: {fmtM(net)}</div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
       <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,padding:mob?16:24,marginBottom:14}}>
         <Receipt sale={done} items={doneItems}/>

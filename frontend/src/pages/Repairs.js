@@ -421,11 +421,23 @@ export default function Repairs() {
             <div style={{ fontSize:14, color:C.success, fontWeight:600 }}>
               <b>{lastDone.repair_number}</b> recorded — {lastDone.customer_name||'walk-in'}
             </div>
-            {lastDone.payment_method && lastDone.payment_method !== 'cash' && (
-              <div style={{ fontSize:12, color:'#1e40af', marginTop:4, display:'flex', alignItems:'center', gap:5 }}>
-                🏦 Bank receipt auto-recorded · Rs.{parseFloat(lastDone.charge||0).toLocaleString()}
-              </div>
-            )}
+            {lastDone.payment_method && lastDone.payment_method !== 'cash' && (() => {
+              const gross  = parseFloat(lastDone.charge || 0);
+              const charge = lastDone.payment_method === 'card' ? Math.round(gross * 0.03 * 100) / 100 : 0;
+              const net    = gross - charge;
+              return (
+                <div style={{ marginTop:6, background:'#eff6ff', border:'1.5px solid #93c5fd', borderRadius:9, padding:'8px 12px' }}>
+                  <div style={{ fontSize:12, color:'#1e40af', fontWeight:600, marginBottom:charge>0?4:0 }}>
+                    🏦 Bank receipt auto-recorded · Rs.{gross.toLocaleString()}
+                  </div>
+                  {charge > 0 && (
+                    <div style={{ fontSize:12, color:'#dc2626' }}>
+                      💳 Bank deducts 3% = Rs.{charge.toLocaleString()} → <b style={{color:'#15803d'}}>Net: Rs.{net.toLocaleString()}</b>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           <div style={{ display:'flex', gap:8 }}>
             <button onClick={()=>{ printRepairJobCard(lastDone); setLastDone(null); }}

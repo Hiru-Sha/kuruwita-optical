@@ -137,31 +137,22 @@ router.post('/', auth, async (req, res) => {
       const cardCharge_r = pm_r === 'card' ? Math.round(amt_r * CARD_CHARGE_RATE * 100) / 100 : 0;
       const netAmount_r  = amt_r - cardCharge_r;
       // Try with card_charge columns, fall back if not yet migrated
-      try {
-        await client.query(
-          `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by,card_charge,net_amount)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-          [
-            new Date().toISOString().split('T')[0],
-            amt_r, 'Pan Asia Bank',
-            pm_r === 'card' ? 'card' : 'online',
-            'Auto: Repair ' + repair_number + (cardCharge_r > 0 ? ` (Card charge: Rs.${cardCharge_r})` : ''),
-            req.user.id, cardCharge_r, netAmount_r,
-          ]
-        );
-      } catch(colErr) {
-        await client.query(
-          `INSERT INTO cash_deposits (date,amount,bank_name,payment_type,notes,added_by)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
-          [
-            new Date().toISOString().split('T')[0],
-            amt_r, 'Pan Asia Bank',
-            pm_r === 'card' ? 'card' : 'online',
-            'Auto: Repair ' + repair_number,
-            req.user.id,
-          ]
-        ).catch(e => console.warn('Repair bank receipt failed:', e.message));
-      }
+      // Store net_amount (after 3% card charge) as the deposit amount
+      // so bank totals are always accurate regardless of column existence
+      const depositNote = 'Auto: Repair ' + repair_number +
+        (cardCharge_r > 0 ? ` (Charged: Rs.${amt_r} | Bank fee 3%: Rs.${cardCharge_r} | Net: Rs.${netAmount_r})` : '');
+      await client.query(
+        `INSERT INTO cash_deposits (date, amount, bank_name, payment_type, notes, added_by)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [
+          new Date().toISOString().split('T')[0],
+          netAmount_r,   // ← NET amount after card charge
+          'Pan Asia Bank',
+          pm_r === 'card' ? 'card' : 'online',
+          depositNote,
+          req.user.id,
+        ]
+      ).catch(e => console.warn('Repair bank receipt failed:', e.message));
     }
 
     await client.query('COMMIT');

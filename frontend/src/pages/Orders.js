@@ -1081,6 +1081,26 @@ export default function Orders() {
                   </div>
                 ))}
               </div>
+              {/* Card payment 3% charge breakdown */}
+              {selected.payment_method === 'card' && parseFloat(selected.advance_amount) > 0 && (() => {
+                const gross  = parseFloat(selected.advance_amount || 0);
+                const charge = Math.round(gross * 0.03 * 100) / 100;
+                const net    = gross - charge;
+                return (
+                  <div style={{ background:'#eff6ff', border:'1.5px solid #93c5fd', borderRadius:10, padding:'10px 14px', marginBottom:10 }}>
+                    <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'#1e40af', marginBottom:6 }}>💳 Card Payment Breakdown</div>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#1e40af', marginBottom:3 }}>
+                      <span>Customer paid</span><span style={{ fontWeight:700 }}>{fmtMoney(gross)}</span>
+                    </div>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#dc2626', marginBottom:3 }}>
+                      <span>Bank deducts (3%)</span><span style={{ fontWeight:700 }}>− {fmtMoney(charge)}</span>
+                    </div>
+                    <div style={{ borderTop:'1px dashed #93c5fd', marginTop:5, paddingTop:5, display:'flex', justifyContent:'space-between', fontSize:13, color:'#15803d' }}>
+                      <span style={{ fontWeight:700 }}>Net to your account</span><span style={{ fontWeight:700 }}>{fmtMoney(net)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
               <div style={{ background:parseFloat(selected.balance_amount)>0?'#fee2e2':'#dcfce7', borderRadius:10, padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                 <div>
                   <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:parseFloat(selected.balance_amount)>0?C.danger:C.success, marginBottom:3 }}>Balance Due</div>
