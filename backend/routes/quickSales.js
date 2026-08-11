@@ -106,20 +106,31 @@ router.post('/', auth, async (req, res) => {
     }
 
     // Auto bank deposit for non-cash payments
+    // Card payments: 3% bank charge deducted — net amount goes to account
     const pm  = (payment_method || 'cash').toLowerCase();
     const amt = parseFloat(total) || 0;
     if ((pm === 'bank' || pm === 'card' || pm === 'transfer') && amt > 0) {
-      await pool.query(
-        `INSERT INTO cash_deposits (date, amount, bank_name, payment_type, notes, added_by)
-         VALUES ($1,$2,$3,$4,$5,$6)`,
-        [
-          new Date().toISOString().split('T')[0],
-          amt, 'Pan Asia Bank',
-          pm === 'card' ? 'card' : 'online',
-          'Auto: Quick Sale ' + saleNum,
-          req.user.id,
-        ]
-      ).catch(e => console.warn('Deposit failed:', e.message));
+      const CARD_CHARGE_RATE = 0.03;
+      const cardCharge = pm === 'card' ? Math.round(amt * CARD_CHARGE_RATE * 100) / 100 : 0;
+      const netAmount  = amt - cardCharge;
+      const noteText   = 'Auto: Quick Sale ' + saleNum + (cardCharge > 0 ? ` (Card charge: Rs.${cardCharge} deducted by bank)` : '');
+      // Try with card_charge columns (added in latest migration)
+      try {
+        await pool.query(
+          `INSERT INTO cash_deposits (date, amount, bank_name, payment_type, notes, added_by, card_charge, net_amount)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [new Date().toISOString().split('T')[0], amt, 'Pan Asia Bank',
+           pm === 'card' ? 'card' : 'online', noteText, req.user.id, cardCharge, netAmount]
+        );
+      } catch(e) {
+        // Fallback: columns not yet added to DB
+        await pool.query(
+          `INSERT INTO cash_deposits (date, amount, bank_name, payment_type, notes, added_by)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [new Date().toISOString().split('T')[0], amt, 'Pan Asia Bank',
+           pm === 'card' ? 'card' : 'online', noteText, req.user.id]
+        ).catch(e2 => console.warn('Deposit failed:', e2.message));
+      }
     }
 
     res.status(201).json({ ...savedSale, sale_number: saleNum });
