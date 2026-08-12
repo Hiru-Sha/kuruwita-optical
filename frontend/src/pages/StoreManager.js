@@ -34,33 +34,45 @@ function ProductsTab() {
   const [form,     setForm]     = useState({});
   const [saving,   setSaving]   = useState(false);
   const [toast,    setToast]    = useState('');
-  const PER = 30;
-  const searchTimer = useRef(null);
+  const PER          = 20;
+  const searchTimer  = useRef(null);
+  const filterRef    = useRef('all');
+  const searchRef    = useRef('');
+  const pageRef      = useRef(0);
 
-  useEffect(() => { load(0); }, [filter]);
+  useEffect(() => { fetchPage(0, 'all', ''); }, []);
 
-  useEffect(() => {
-    clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => load(0), 400);
-    return () => clearTimeout(searchTimer.current);
-  }, [search]);
-
-  const load = async (pg = page) => {
+  const fetchPage = async (pg, flt, srch) => {
     setLoading(true);
     try {
       const q = new URLSearchParams({ limit: PER, offset: pg * PER });
-      if (search.trim()) q.set('search', search.trim());
-      if (filter !== 'all') q.set('filter', filter);
+      if (srch.trim()) q.set('search', srch.trim());
+      if (flt !== 'all') q.set('filter', flt);
       const res  = await fetch(`${BASE()}/store/admin/products?${q}`, { headers: headers() });
       const data = await res.json();
       setProducts(data.products || []);
-      setTotal(data.total  || 0);
-      setShown(data.shown  || 0);
+      setTotal(data.total || 0);
+      setShown(data.shown || 0);
       setPage(pg);
+      pageRef.current  = pg;
     } catch(e) {} finally { setLoading(false); }
   };
 
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
+  const handleSearch = (val) => {
+    setSearch(val);
+    searchRef.current = val;
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => fetchPage(0, filterRef.current, val), 500);
+  };
+
+  const handleFilter = (val) => {
+    setFilter(val);
+    filterRef.current = val;
+    setEditing(null);
+    fetchPage(0, val, searchRef.current);
+  };
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2000); };
 
   const startEdit = (p) => {
     setEditing(p.id);
@@ -71,7 +83,7 @@ function ProductsTab() {
       discount_label: p.discount_label || '',
       description:    p.description    || '',
       extra_images:   p.extra_images   || [],
-      tags:           (p.tags || []).join(', '),
+      tags:           Array.isArray(p.tags) ? p.tags.join(', ') : '',
       sort_order:     p.sort_order     || 0,
     });
   };
@@ -86,35 +98,38 @@ function ProductsTab() {
         sort_order:   parseInt(form.sort_order)   || 0,
         tags:         form.tags ? form.tags.split(',').map(t=>t.trim()).filter(Boolean) : [],
       };
-      await fetch(`${BASE()}/store/admin/products/${id}`, { method:'PATCH', headers: headers(), body: JSON.stringify(body) });
-      // Update locally — no full reload needed
+      await fetch(`${BASE()}/store/admin/products/${id}`, {
+        method:'PATCH', headers: headers(), body: JSON.stringify(body)
+      });
+      // Update row locally — no reload
       setProducts(ps => ps.map(p => p.id === id ? { ...p, ...body } : p));
-      if (body.show_on_store !== undefined) setShown(s => body.show_on_store ? s + 1 : s - 1);
       showToast('✓ Saved!');
       setEditing(null);
     } catch(e) { alert('Failed to save'); }
     finally { setSaving(false); }
   };
 
-  // Quick toggle — updates state locally, no full reload
+  // Instant toggle — optimistic, no reload
   const quickToggle = async (p) => {
     const newVal = !p.show_on_store;
-    // Optimistic update
     setProducts(ps => ps.map(x => x.id === p.id ? { ...x, show_on_store: newVal } : x));
-    setShown(s => newVal ? s + 1 : s - 1);
+    setShown(s => newVal ? s + 1 : Math.max(0, s - 1));
     try {
       await fetch(`${BASE()}/store/admin/products/${p.id}`, {
         method:'PATCH', headers: headers(),
         body: JSON.stringify({
-          show_on_store: newVal, store_price: p.store_price||null,
-          discount_pct: p.discount_pct||0, discount_label: p.discount_label||'',
-          description: p.description||'', extra_images: p.extra_images||[],
-          tags: p.tags||[], sort_order: p.sort_order||0,
+          show_on_store:  newVal,
+          store_price:    p.store_price    || null,
+          discount_pct:   p.discount_pct   || 0,
+          discount_label: p.discount_label || '',
+          description:    p.description    || '',
+          extra_images:   p.extra_images   || [],
+          tags:           p.tags           || [],
+          sort_order:     p.sort_order     || 0,
         }),
       });
-      showToast(newVal ? '✓ Now visible on store' : '✓ Hidden from store');
+      showToast(newVal ? '✓ Visible on store' : '✓ Hidden from store');
     } catch(e) {
-      // Revert on error
       setProducts(ps => ps.map(x => x.id === p.id ? { ...x, show_on_store: !newVal } : x));
       setShown(s => newVal ? s - 1 : s + 1);
     }
@@ -124,192 +139,246 @@ function ProductsTab() {
     const url = prompt('Enter image URL:');
     if (url) setForm(f => ({ ...f, extra_images: [...(f.extra_images||[]), url] }));
   };
-
   const removeExtraImage = (idx) => {
     setForm(f => ({ ...f, extra_images: f.extra_images.filter((_,i) => i !== idx) }));
   };
 
-  const filtered = products; // filtering done on backend
   const hidden = total - shown;
-
   const INP = { padding:'8px 11px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
 
   return (
     <div>
-      {toast && <div style={{ position:'fixed', top:80, right:20, background:C.success, color:'white', padding:'10px 20px', borderRadius:10, zIndex:999, fontWeight:700, fontSize:13 }}>{toast}</div>}
+      {toast && (
+        <div style={{ position:'fixed', top:80, right:20, background:C.success, color:'white', padding:'10px 20px', borderRadius:10, zIndex:999, fontWeight:700, fontSize:13, boxShadow:'0 4px 16px rgba(0,0,0,.2)' }}>
+          {toast}
+        </div>
+      )}
 
       {/* Stats */}
       <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
-        {[['Total Items', total, C.navy], ['Shown on Store', shown, C.success], ['Hidden', hidden, C.muted]].map(([l,v,c]) => (
-          <div key={l} style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 20px', flex:1, minWidth:120 }}>
+        {[['Total', total, C.navy], ['On Store', shown, C.success], ['Hidden', hidden, C.muted]].map(([l,v,c]) => (
+          <div key={l} style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 20px', flex:1, minWidth:100 }}>
             <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted }}>{l}</div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, color:c, fontWeight:700 }}>{v}</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:c, fontWeight:700 }}>{v}</div>
           </div>
         ))}
       </div>
 
-      {/* Filters */}
-      <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search products..." style={{ ...INP, flex:1, minWidth:180 }}/>
-        <div style={{ display:'flex', gap:6 }}>
+      {/* Search + Filter */}
+      <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
+        <input
+          value={search}
+          onChange={e => handleSearch(e.target.value)}
+          placeholder="Search by name, brand, color..."
+          style={{ ...INP, flex:1, minWidth:180 }}
+        />
+        <div style={{ display:'flex', gap:4 }}>
           {[['all','All'],['shown','Shown'],['hidden','Hidden']].map(([v,l]) => (
-            <button key={v} onClick={() => setFilter(v)}
-              style={{ padding:'8px 16px', borderRadius:8, border:`1.5px solid ${filter===v?C.navy:C.border}`, background:filter===v?C.navy:'white', color:filter===v?'white':C.muted, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+            <button key={v} onClick={() => handleFilter(v)}
+              style={{ padding:'8px 14px', borderRadius:8, border:`1.5px solid ${filter===v?C.navy:C.border}`,
+                background:filter===v?C.navy:'white', color:filter===v?'white':C.muted,
+                fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
               {l}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Product list */}
-      {loading ? <div style={{ textAlign:'center', padding:40, color:C.muted }}>Loading...</div> : (
-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          {filtered.map(p => (
+      {/* List */}
+      {loading ? (
+        <div style={{ textAlign:'center', padding:'40px', color:C.muted, fontSize:13 }}>
+          ⏳ Loading...
+        </div>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+          {products.map(p => (
             <div key={p.id}>
-              {/* Product row */}
-              <div style={{ background:'white', border:`1.5px solid ${editing===p.id?C.gold:C.border}`, borderRadius:12, padding:'14px 16px', display:'flex', alignItems:'center', gap:14 }}>
-                {/* Image */}
-                <div style={{ width:56, height:44, borderRadius:8, overflow:'hidden', background:C.cream, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  {p.image_url ? <img src={p.image_url} alt="" style={{ width:'100%', height:'100%', objectFit:'contain' }}/> : <span style={{ fontSize:20 }}>🕶️</span>}
+              {/* Row — NO image in list to keep it fast */}
+              <div style={{
+                background:'white',
+                border:`1.5px solid ${editing===p.id ? C.gold : C.border}`,
+                borderRadius:editing===p.id ? '12px 12px 0 0' : 12,
+                padding:'12px 16px',
+                display:'flex', alignItems:'center', gap:12
+              }}>
+                {/* Lazy loaded image — browser loads only when scrolled into view */}
+                <div style={{ width:52, height:40, borderRadius:7, overflow:'hidden', background:C.cream, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {p.image_url
+                    ? <img src={p.image_url} alt="" loading="lazy" style={{ width:'100%', height:'100%', objectFit:'contain' }}/>
+                    : <span style={{ fontSize:18 }}>🕶️</span>
+                  }
                 </div>
+
                 {/* Info */}
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:C.navy, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</div>
-                  <div style={{ fontSize:11, color:C.muted, display:'flex', gap:8, marginTop:2, flexWrap:'wrap' }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:C.navy, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize:11, color:C.muted, display:'flex', gap:8, marginTop:1, flexWrap:'wrap' }}>
                     <span>{p.category}</span>
                     {p.brand && <span>· {p.brand}</span>}
-                    <span>· Stock: {p.quantity}</span>
-                    <span style={{ color:C.gold }}>· {fmt(p.sell_price)}</span>
-                    {p.store_price && <span style={{ color:C.success }}>→ Store: {fmt(p.store_price)}</span>}
-                    {p.discount_pct > 0 && <span style={{ background:'#fee2e2', color:C.danger, padding:'1px 6px', borderRadius:20, fontWeight:700 }}>{p.discount_pct}% OFF</span>}
+                    {p.frame_color && <span>· {p.frame_color}</span>}
+                    <span style={{ color:C.gold }}>· {fmt(p.store_price || p.sell_price)}</span>
+                    {p.discount_pct > 0 && (
+                      <span style={{ background:'#fee2e2', color:C.danger, padding:'1px 6px', borderRadius:20, fontWeight:700 }}>
+                        {p.discount_pct}% OFF
+                      </span>
+                    )}
                   </div>
                 </div>
+
                 {/* Actions */}
-                <div style={{ display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
+                <div style={{ display:'flex', gap:6, alignItems:'center', flexShrink:0 }}>
                   <button onClick={() => quickToggle(p)}
-                    style={{ padding:'6px 14px', borderRadius:20, border:'none', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-                      background:p.show_on_store?'#dcfce7':'#fee2e2', color:p.show_on_store?C.success:C.danger }}>
-                    {p.show_on_store ? '✓ Shown' : '✗ Hidden'}
+                    style={{ padding:'5px 12px', borderRadius:20, border:'none', fontSize:11, fontWeight:700,
+                      cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap',
+                      background: p.show_on_store ? '#dcfce7' : '#fee2e2',
+                      color:      p.show_on_store ? C.success  : C.danger }}>
+                    {p.show_on_store ? '✓ On' : '✗ Off'}
                   </button>
                   <button onClick={() => editing===p.id ? setEditing(null) : startEdit(p)}
-                    style={{ padding:'6px 14px', borderRadius:8, border:`1.5px solid ${C.border}`, background:'white', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>
-                    {editing===p.id ? 'Close' : '✏️ Edit'}
+                    style={{ padding:'5px 12px', borderRadius:8, border:`1.5px solid ${C.border}`,
+                      background:'white', fontSize:11, fontWeight:600, cursor:'pointer',
+                      fontFamily:'inherit', color:C.navy }}>
+                    {editing===p.id ? 'Close ✕' : '✏️ Edit'}
                   </button>
                 </div>
               </div>
 
-              {/* Edit panel */}
+              {/* Edit panel — image loads only when opened */}
               {editing === p.id && (
-                <div style={{ background:C.cream, border:`1.5px solid ${C.gold}`, borderTop:'none', borderRadius:'0 0 12px 12px', padding:'20px 20px 20px' }}>
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:14, marginBottom:16 }}>
+                <div style={{ background:C.cream, border:`1.5px solid ${C.gold}`, borderTop:'none', borderRadius:'0 0 12px 12px', padding:'18px 18px 20px' }}>
+                  {/* Image shown only in edit panel */}
+                  {p.image_url && (
+                    <div style={{ marginBottom:14, display:'flex', alignItems:'center', gap:12 }}>
+                      <img src={p.image_url} alt="" style={{ width:80, height:60, objectFit:'contain', borderRadius:8, border:`1px solid ${C.border}`, background:'white', padding:4 }}/>
+                      <div style={{ fontSize:12, color:C.muted }}>Main photo from inventory</div>
+                    </div>
+                  )}
+
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:12, marginBottom:14 }}>
                     <div>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:5 }}>Show on Store</label>
-                      <div style={{ display:'flex', gap:8 }}>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Show on Store</label>
+                      <div style={{ display:'flex', gap:6 }}>
                         {[true, false].map(v => (
-                          <button key={String(v)} onClick={() => setForm(f=>({...f,show_on_store:v}))}
-                            style={{ flex:1, padding:'9px', border:`1.5px solid ${form.show_on_store===v?C.navy:C.border}`, borderRadius:8, background:form.show_on_store===v?C.navy:'white', color:form.show_on_store===v?'white':C.muted, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                          <button key={String(v)} onClick={() => setForm(f=>({...f, show_on_store:v}))}
+                            style={{ flex:1, padding:'8px', border:`1.5px solid ${form.show_on_store===v?C.navy:C.border}`,
+                              borderRadius:8, background:form.show_on_store===v?C.navy:'white',
+                              color:form.show_on_store===v?'white':C.muted,
+                              fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                             {v ? '✓ Show' : '✗ Hide'}
                           </button>
                         ))}
                       </div>
                     </div>
                     <div>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:5 }}>Store Price (Rs.) <span style={{ color:C.muted, fontWeight:400 }}>blank = use inventory price</span></label>
-                      <input type="number" value={form.store_price} onChange={e=>setForm(f=>({...f,store_price:e.target.value}))} placeholder={`Inventory: ${fmt(p.sell_price)}`} style={INP}/>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>
+                        Store Price <span style={{ fontWeight:300, textTransform:'none' }}>(blank = inventory price)</span>
+                      </label>
+                      <input type="number" value={form.store_price} onChange={e=>setForm(f=>({...f,store_price:e.target.value}))}
+                        placeholder={`Current: ${fmt(p.sell_price)}`} style={INP}/>
                     </div>
                     <div>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:5 }}>Discount %</label>
-                      <input type="number" min="0" max="90" value={form.discount_pct} onChange={e=>setForm(f=>({...f,discount_pct:e.target.value}))} placeholder="0" style={INP}/>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Discount %</label>
+                      <input type="number" min="0" max="90" value={form.discount_pct}
+                        onChange={e=>setForm(f=>({...f,discount_pct:e.target.value}))} placeholder="0" style={INP}/>
                     </div>
                     <div>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:5 }}>Discount Label</label>
-                      <input value={form.discount_label} onChange={e=>setForm(f=>({...f,discount_label:e.target.value}))} placeholder="e.g. Sale, Hot Deal" style={INP}/>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Discount Label</label>
+                      <input value={form.discount_label} onChange={e=>setForm(f=>({...f,discount_label:e.target.value}))}
+                        placeholder="e.g. Sale, Hot Deal" style={INP}/>
                     </div>
                     <div>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:5 }}>Sort Order (lower = first)</label>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Sort Order</label>
                       <input type="number" value={form.sort_order} onChange={e=>setForm(f=>({...f,sort_order:e.target.value}))} placeholder="0" style={INP}/>
                     </div>
                     <div>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:5 }}>Tags (comma separated)</label>
-                      <input value={form.tags} onChange={e=>setForm(f=>({...f,tags:e.target.value}))} placeholder="blue cut, UV400, polarized" style={INP}/>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Tags</label>
+                      <input value={form.tags} onChange={e=>setForm(f=>({...f,tags:e.target.value}))}
+                        placeholder="blue cut, UV400, polarized" style={INP}/>
                     </div>
                   </div>
-                  <div style={{ marginBottom:14 }}>
-                    <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:5 }}>Product Description (shown on store)</label>
+
+                  <div style={{ marginBottom:12 }}>
+                    <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Store Description</label>
                     <textarea value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}
-                      placeholder="Describe this product for online customers — material, features, UV protection, suitable for..." rows={3}
+                      placeholder="Describe for online customers..." rows={3}
                       style={{ ...INP, resize:'vertical', lineHeight:1.6 }}/>
                   </div>
+
                   {/* Extra images */}
-                  <div style={{ marginBottom:16 }}>
+                  <div style={{ marginBottom:14 }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted }}>Extra Photos (additional angles)</label>
-                      <button onClick={addExtraImage} style={{ padding:'5px 12px', background:C.navy, color:'white', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>+ Add URL</button>
+                      <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted }}>Extra Photos</label>
+                      <button onClick={addExtraImage}
+                        style={{ padding:'4px 12px', background:C.navy, color:'white', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                        + Add URL
+                      </button>
                     </div>
-                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                      {/* Main image (from inventory) */}
-                      {p.image_url && (
-                        <div style={{ position:'relative' }}>
-                          <img src={p.image_url} alt="" style={{ width:70, height:70, objectFit:'contain', borderRadius:8, border:`2px solid ${C.gold}`, background:'white' }}/>
-                          <div style={{ position:'absolute', top:-6, left:-6, background:C.gold, color:C.navy, borderRadius:'50%', width:18, height:18, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:800 }}>1</div>
+                    {(form.extra_images||[]).length === 0
+                      ? <div style={{ fontSize:12, color:C.muted }}>No extra photos. Click "+ Add URL" to add more angles.</div>
+                      : <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                          {(form.extra_images||[]).map((url, i) => (
+                            <div key={i} style={{ position:'relative' }}>
+                              <img src={url} alt="" style={{ width:64, height:48, objectFit:'contain', borderRadius:6, border:`1px solid ${C.border}`, background:'white' }}
+                                onError={e => e.target.style.opacity='.3'}/>
+                              <button onClick={() => removeExtraImage(i)}
+                                style={{ position:'absolute', top:-6, right:-6, background:C.danger, color:'white', border:'none', borderRadius:'50%', width:16, height:16, fontSize:9, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>✕</button>
+                            </div>
+                          ))}
                         </div>
-                      )}
-                      {(form.extra_images||[]).map((url, i) => (
-                        <div key={i} style={{ position:'relative' }}>
-                          <img src={url} alt="" style={{ width:70, height:70, objectFit:'contain', borderRadius:8, border:`1.5px solid ${C.border}`, background:'white' }}
-                            onError={e => e.target.style.display='none'}/>
-                          <button onClick={()=>removeExtraImage(i)} style={{ position:'absolute', top:-6, right:-6, background:C.danger, color:'white', border:'none', borderRadius:'50%', width:18, height:18, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, cursor:'pointer', padding:0 }}>✕</button>
-                        </div>
-                      ))}
-                      {!(form.extra_images||[]).length && !p.image_url && (
-                        <div style={{ fontSize:12, color:C.muted }}>No extra photos yet. Click "+ Add URL" to add more angles.</div>
-                      )}
-                    </div>
+                    }
                   </div>
 
                   {/* Price preview */}
                   {(form.store_price || form.discount_pct > 0) && (
-                    <div style={{ background:'white', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', gap:20, alignItems:'center', flexWrap:'wrap' }}>
-                      <div style={{ fontSize:11, color:C.muted }}>Price preview:</div>
-                      <div style={{ fontWeight:700, color:C.navy }}>{fmt(form.store_price || p.sell_price)}</div>
-                      {form.discount_pct > 0 && <>
-                        <div style={{ fontSize:11, color:C.muted }}>After {form.discount_pct}% off:</div>
-                        <div style={{ fontWeight:700, color:C.success, fontSize:15 }}>
-                          {fmt(Math.round((form.store_price||p.sell_price)*(1-form.discount_pct/100)*100)/100)}
-                        </div>
-                      </>}
+                    <div style={{ background:'white', borderRadius:8, padding:'10px 14px', marginBottom:12, display:'flex', gap:16, alignItems:'center', flexWrap:'wrap', fontSize:13 }}>
+                      <span style={{ color:C.muted }}>Preview:</span>
+                      <span style={{ fontWeight:700, color:C.navy }}>{fmt(form.store_price || p.sell_price)}</span>
+                      {parseInt(form.discount_pct) > 0 && (
+                        <>
+                          <span style={{ color:C.muted }}>→ after {form.discount_pct}% off:</span>
+                          <span style={{ fontWeight:700, color:C.success, fontSize:15 }}>
+                            {fmt(Math.round((parseFloat(form.store_price||p.sell_price))*(1-form.discount_pct/100)*100)/100)}
+                          </span>
+                        </>
+                      )}
                     </div>
                   )}
 
-                  <div style={{ display:'flex', gap:10 }}>
-                    <button onClick={() => setEditing(null)} style={{ padding:'10px 20px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>Cancel</button>
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button onClick={() => setEditing(null)}
+                      style={{ padding:'9px 18px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+                      Cancel
+                    </button>
                     <button onClick={() => save(p.id)} disabled={saving}
-                      style={{ flex:1, padding:'10px', background:saving?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:14, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
-                      {saving ? '⏳ Saving...' : '💾 Save Store Settings'}
+                      style={{ flex:1, padding:'9px', background:saving?C.muted:C.navy, color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                      {saving ? '⏳ Saving...' : '💾 Save'}
                     </button>
                   </div>
                 </div>
               )}
             </div>
           ))}
-          {filtered.length === 0 && !loading && (
+
+          {products.length === 0 && (
             <div style={{ textAlign:'center', padding:40, color:C.muted }}>No products found</div>
           )}
         </div>
       )}
 
       {/* Pagination */}
-      {total > PER && !loading && (
-        <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:12, marginTop:20 }}>
-          <button onClick={() => load(page - 1)} disabled={page === 0}
-            style={{ padding:'8px 20px', background:page===0?C.cream:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:page===0?'not-allowed':'pointer', fontFamily:'inherit', color:page===0?C.muted:C.navy }}>
+      {total > PER && (
+        <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:12, marginTop:20, paddingTop:16, borderTop:`1px solid ${C.border}` }}>
+          <button onClick={() => fetchPage(page-1, filterRef.current, searchRef.current)} disabled={page===0}
+            style={{ padding:'8px 18px', background:page===0?C.cream:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:page===0?'not-allowed':'pointer', fontFamily:'inherit', color:page===0?C.muted:C.navy }}>
             ← Prev
           </button>
-          <span style={{ fontSize:13, color:C.muted }}>
-            {page * PER + 1}–{Math.min((page + 1) * PER, total)} of {total}
+          <span style={{ fontSize:12, color:C.muted }}>
+            {page*PER+1}–{Math.min((page+1)*PER, total)} of {total} items
           </span>
-          <button onClick={() => load(page + 1)} disabled={(page + 1) * PER >= total}
-            style={{ padding:'8px 20px', background:(page+1)*PER>=total?C.cream:C.navy, border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:(page+1)*PER>=total?'not-allowed':'pointer', fontFamily:'inherit', color:(page+1)*PER>=total?C.muted:'white' }}>
+          <button onClick={() => fetchPage(page+1, filterRef.current, searchRef.current)} disabled={(page+1)*PER>=total}
+            style={{ padding:'8px 18px', background:(page+1)*PER>=total?C.cream:C.navy, border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:(page+1)*PER>=total?'not-allowed':'pointer', fontFamily:'inherit', color:(page+1)*PER>=total?C.muted:'white' }}>
             Next →
           </button>
         </div>
