@@ -13,8 +13,10 @@ const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 
 // ── GET /api/store/products ──────────────────────────────────
+// Shows ALL inventory items that have images — LEFT JOIN store_products
+// for optional store-specific settings (price override, discount, description)
 router.get('/products', async (req, res) => {
-  const { category, search, sort = 'sort_order', min_price, max_price, limit = 60, offset = 0 } = req.query;
+  const { category, search, sort = 'name', min_price, max_price, limit = 60, offset = 0 } = req.query;
   try {
     let sql = `
       SELECT
@@ -24,14 +26,19 @@ router.get('/products', async (req, res) => {
         COALESCE(sp.store_price, i.sell_price) AS price,
         i.sell_price AS original_price,
         COALESCE(sp.discount_pct, 0) AS discount_pct,
-        sp.discount_label, sp.description, sp.extra_images, sp.tags, sp.sort_order,
+        sp.discount_label, sp.description, sp.extra_images, sp.tags,
         CASE WHEN COALESCE(sp.discount_pct,0) > 0
           THEN ROUND(COALESCE(sp.store_price, i.sell_price) * (1 - COALESCE(sp.discount_pct,0)::DECIMAL/100), 2)
           ELSE COALESCE(sp.store_price, i.sell_price)
-        END AS final_price
+        END AS final_price,
+        CASE WHEN sp.show_on_store = FALSE THEN FALSE ELSE TRUE END AS visible
       FROM inventory i
-      JOIN store_products sp ON sp.inventory_id = i.id
-      WHERE sp.show_on_store = TRUE
+      LEFT JOIN store_products sp ON sp.inventory_id = i.id
+      WHERE i.image_url IS NOT NULL
+        AND i.image_url != ''
+        AND i.sell_price > 0
+        AND i.category IN ('Frames','Sunglasses','Reading Glasses','Contact Lenses','Accessories')
+        AND COALESCE(sp.show_on_store, TRUE) = TRUE
     `;
     const params = [];
 
@@ -59,7 +66,12 @@ router.get('/products', async (req, res) => {
     sql += ` ORDER BY ${orderMap[sort] || 'sp.sort_order ASC, i.name ASC'}`;
 
     // Count query
-    let countSql = `SELECT COUNT(*) AS total FROM inventory i JOIN store_products sp ON sp.inventory_id = i.id WHERE sp.show_on_store = TRUE`;
+    let countSql = `SELECT COUNT(*) AS total FROM inventory i
+      LEFT JOIN store_products sp ON sp.inventory_id = i.id
+      WHERE i.image_url IS NOT NULL AND i.image_url != ''
+        AND i.sell_price > 0
+        AND i.category IN ('Frames','Sunglasses','Reading Glasses','Contact Lenses','Accessories')
+        AND COALESCE(sp.show_on_store, TRUE) = TRUE`;
     const countParams = [];
     if (category && category !== 'All') { countParams.push(category); countSql += ` AND i.category = $${countParams.length}`; }
     if (search) { countParams.push(`%${search}%`); countSql += ` AND (i.name ILIKE $${countParams.length} OR i.brand ILIKE $${countParams.length})`; }
@@ -91,7 +103,7 @@ router.get('/products/:id', async (req, res) => {
              i.quantity AS stock
       FROM inventory i
       JOIN store_products sp ON sp.inventory_id = i.id
-      WHERE i.id = $1 AND sp.show_on_store = TRUE
+      WHERE i.id = $1 AND COALESCE(sp.show_on_store, TRUE) = TRUE
     `, [req.params.id]);
 
     if (!result.rows.length) return res.status(404).json({ error: 'Product not found' });
@@ -103,7 +115,7 @@ router.get('/products/:id', async (req, res) => {
                sp.discount_pct
         FROM inventory i JOIN store_products sp ON sp.inventory_id = i.id
         WHERE i.category = $1 AND i.id != $2
-          AND sp.show_on_store = TRUE
+          AND COALESCE(sp.show_on_store, TRUE) = TRUE
         ORDER BY RANDOM() LIMIT 4
       `, [result.rows[0].category, req.params.id]),
       pool.query(`
@@ -136,8 +148,9 @@ router.get('/featured', async (req, res) => {
              END AS final_price
       FROM inventory i
       JOIN store_products sp ON sp.inventory_id = i.id
-      WHERE sp.show_on_store = TRUE
-        AND i.image_url IS NOT NULL
+      WHERE i.image_url IS NOT NULL AND i.image_url != ''
+        AND i.sell_price > 0
+        AND COALESCE(sp.show_on_store, TRUE) = TRUE
       ORDER BY sp.sort_order ASC, i.created_at DESC
       LIMIT 8
     `);
