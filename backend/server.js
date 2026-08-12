@@ -166,6 +166,17 @@ const pool = require('./db/pool');
       )
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_store_products_inv  ON store_products(inventory_id)`);
+    // Ensure unique constraint exists for inventory_id
+    await pool.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'store_products_inventory_id_key'
+        ) THEN
+          ALTER TABLE store_products ADD CONSTRAINT store_products_inventory_id_key UNIQUE (inventory_id);
+        END IF;
+      END $$;
+    `).catch(() => {});
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_store_products_show ON store_products(show_on_store)`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS store_reviews (

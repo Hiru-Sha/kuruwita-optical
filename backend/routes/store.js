@@ -344,41 +344,53 @@ router.get('/admin/products', auth, async (req, res) => {
       LIMIT $${params.length - 1} OFFSET $${params.length}
     `, params);
 
+    // Run counts in parallel
+    const [shownRes] = await Promise.all([
+      pool.query(`SELECT COUNT(*) AS c FROM store_products WHERE show_on_store = TRUE`),
+    ]);
     res.json({
       products: result.rows,
       total:    parseInt(countRes.rows[0].total),
-      shown:    await pool.query(`SELECT COUNT(*) AS c FROM store_products WHERE show_on_store = TRUE`).then(r=>parseInt(r.rows[0].c)),
+      shown:    parseInt(shownRes.rows[0].c),
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ── PATCH /api/store/admin/products/:id ─────────────────────
-// Update store settings for an inventory item
 router.patch('/admin/products/:id', auth, async (req, res) => {
   const { show_on_store, store_price, discount_pct, discount_label,
           description, extra_images, tags, sort_order } = req.body;
   try {
-    // Upsert into store_products
-    const result = await pool.query(`
-      INSERT INTO store_products
-        (inventory_id, show_on_store, store_price, discount_pct, discount_label,
-         description, extra_images, tags, sort_order, updated_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
-      ON CONFLICT (inventory_id) DO UPDATE SET
-        show_on_store  = EXCLUDED.show_on_store,
-        store_price    = EXCLUDED.store_price,
-        discount_pct   = EXCLUDED.discount_pct,
-        discount_label = EXCLUDED.discount_label,
-        description    = EXCLUDED.description,
-        extra_images   = EXCLUDED.extra_images,
-        tags           = EXCLUDED.tags,
-        sort_order     = EXCLUDED.sort_order,
-        updated_at     = NOW()
-      RETURNING *`,
-      [req.params.id, show_on_store ?? false, store_price || null,
-       discount_pct || 0, discount_label || null, description || null,
-       JSON.stringify(extra_images || []), tags || [], sort_order || 0]
+    // Check if row exists first - safer than ON CONFLICT (avoids unique constraint issues)
+    const existing = await pool.query(
+      'SELECT id FROM store_products WHERE inventory_id = $1', [req.params.id]
     );
+    const vals = [
+      req.params.id,
+      show_on_store ?? false,
+      store_price   || null,
+      parseInt(discount_pct)  || 0,
+      discount_label          || null,
+      description             || null,
+      JSON.stringify(extra_images || []),
+      tags || [],
+      parseInt(sort_order) || 0,
+    ];
+    let result;
+    if (existing.rows.length) {
+      result = await pool.query(`
+        UPDATE store_products SET
+          show_on_store  = $2, store_price = $3, discount_pct = $4,
+          discount_label = $5, description = $6, extra_images = $7,
+          tags = $8, sort_order = $9, updated_at = NOW()
+        WHERE inventory_id = $1 RETURNING *`, vals);
+    } else {
+      result = await pool.query(`
+        INSERT INTO store_products
+          (inventory_id, show_on_store, store_price, discount_pct, discount_label,
+           description, extra_images, tags, sort_order)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`, vals);
+    }
     res.json(result.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
