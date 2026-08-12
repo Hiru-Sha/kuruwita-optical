@@ -14,6 +14,7 @@ import Customers  from './pages/Customers';
 import Inventory  from './pages/Inventory';
 import LensPrices from './pages/LensPrices';
 import LensPriceCheckerPage from './pages/LensPriceChecker';
+import StoreManager from './pages/StoreManager';
 import QuickSale  from './pages/QuickSale';
 import Grinding   from './pages/Grinding';
 import Reports    from './pages/Reports';
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="inventory"       element={<Inventory />} />
             <Route path="lens-prices"     element={<LensPrices />} />
             <Route path="price-check"     element={<LensPriceCheckerPage />} />
+            <Route path="store-manager"    element={<StoreManager />} />
             <Route path="quick-sale"      element={<QuickSale />} />
             <Route path="settings"        element={<Settings />} />
             <Route path="balance"         element={<BalanceFollowUp />} />

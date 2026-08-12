@@ -519,3 +519,61 @@ CREATE TABLE IF NOT EXISTS scan_sessions (
   action     VARCHAR(50) NOT NULL DEFAULT 'new_order',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ============================================================
+--  STORE EXTENSIONS — E-commerce specific data
+--  Extends inventory without modifying it
+-- ============================================================
+
+-- store_products: per-item store settings
+CREATE TABLE IF NOT EXISTS store_products (
+  id               SERIAL PRIMARY KEY,
+  inventory_id     INTEGER UNIQUE REFERENCES inventory(id) ON DELETE CASCADE,
+  show_on_store    BOOLEAN      DEFAULT FALSE,  -- toggle visibility
+  store_price      DECIMAL(10,2),               -- override price (NULL = use inventory sell_price)
+  discount_pct     INTEGER      DEFAULT 0,      -- % discount shown on store (0 = no discount)
+  discount_label   VARCHAR(50),                 -- e.g. "Sale", "Hot Deal"
+  description      TEXT,                        -- rich product description for store
+  extra_images     JSONB        DEFAULT '[]',   -- additional image URLs array
+  tags             TEXT[],                      -- searchable tags e.g. ['blue cut', 'UV400']
+  sort_order       INTEGER      DEFAULT 0,      -- manual sort on store
+  created_at       TIMESTAMP    DEFAULT NOW(),
+  updated_at       TIMESTAMP    DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_store_products_inv   ON store_products(inventory_id);
+CREATE INDEX IF NOT EXISTS idx_store_products_show  ON store_products(show_on_store);
+
+-- store_reviews: customer product reviews
+CREATE TABLE IF NOT EXISTS store_reviews (
+  id               SERIAL PRIMARY KEY,
+  inventory_id     INTEGER REFERENCES inventory(id) ON DELETE CASCADE,
+  customer_name    VARCHAR(100) NOT NULL,
+  customer_phone   VARCHAR(20),
+  rating           INTEGER      NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  review_text      TEXT,
+  verified         BOOLEAN      DEFAULT FALSE,
+  approved         BOOLEAN      DEFAULT FALSE,  -- admin approves before showing
+  created_at       TIMESTAMP    DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_reviews_inv ON store_reviews(inventory_id);
+
+-- promo_codes: discount codes
+CREATE TABLE IF NOT EXISTS promo_codes (
+  id               SERIAL PRIMARY KEY,
+  code             VARCHAR(30)  UNIQUE NOT NULL,
+  description      VARCHAR(100),
+  discount_type    VARCHAR(10)  DEFAULT 'pct',  -- 'pct' | 'fixed'
+  discount_value   DECIMAL(10,2) NOT NULL,
+  min_order_amount DECIMAL(10,2) DEFAULT 0,
+  max_uses         INTEGER,
+  used_count       INTEGER      DEFAULT 0,
+  active           BOOLEAN      DEFAULT TRUE,
+  expires_at       TIMESTAMP,
+  created_at       TIMESTAMP    DEFAULT NOW()
+);
+
+-- store_orders already created by store.js on first order
+-- Add columns if missing
+ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS promo_code      VARCHAR(30);
+ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS wa_notified     BOOLEAN DEFAULT FALSE;

@@ -148,6 +148,67 @@ const pool = require('./db/pool');
     await pool.query(`ALTER TABLE cash_deposits ADD COLUMN IF NOT EXISTS net_amount  DECIMAL(10,2) DEFAULT 0`);
     await pool.query(`ALTER TABLE repairs     ADD COLUMN IF NOT EXISTS customer_id INTEGER`);
 
+    // Store extension tables
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS store_products (
+        id            SERIAL PRIMARY KEY,
+        inventory_id  INTEGER UNIQUE REFERENCES inventory(id) ON DELETE CASCADE,
+        show_on_store BOOLEAN      DEFAULT FALSE,
+        store_price   DECIMAL(10,2),
+        discount_pct  INTEGER      DEFAULT 0,
+        discount_label VARCHAR(50),
+        description   TEXT,
+        extra_images  JSONB        DEFAULT '[]',
+        tags          TEXT[],
+        sort_order    INTEGER      DEFAULT 0,
+        created_at    TIMESTAMP    DEFAULT NOW(),
+        updated_at    TIMESTAMP    DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_store_products_inv  ON store_products(inventory_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_store_products_show ON store_products(show_on_store)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS store_reviews (
+        id            SERIAL PRIMARY KEY,
+        inventory_id  INTEGER REFERENCES inventory(id) ON DELETE CASCADE,
+        customer_name VARCHAR(100) NOT NULL,
+        customer_phone VARCHAR(20),
+        rating        INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+        review_text   TEXT,
+        verified      BOOLEAN DEFAULT FALSE,
+        approved      BOOLEAN DEFAULT FALSE,
+        created_at    TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS promo_codes (
+        id               SERIAL PRIMARY KEY,
+        code             VARCHAR(30) UNIQUE NOT NULL,
+        description      VARCHAR(100),
+        discount_type    VARCHAR(10) DEFAULT 'pct',
+        discount_value   DECIMAL(10,2) NOT NULL,
+        min_order_amount DECIMAL(10,2) DEFAULT 0,
+        max_uses         INTEGER,
+        used_count       INTEGER DEFAULT 0,
+        active           BOOLEAN DEFAULT TRUE,
+        expires_at       TIMESTAMP,
+        created_at       TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE TABLE IF NOT EXISTS store_orders (
+      id SERIAL PRIMARY KEY, order_number VARCHAR(30) UNIQUE,
+      customer_id INTEGER, customer_name VARCHAR(100), customer_phone VARCHAR(20),
+      customer_email VARCHAR(100), customer_address TEXT, items JSONB,
+      total_amount DECIMAL(10,2), payment_method VARCHAR(30) DEFAULT 'cod',
+      payment_ref VARCHAR(100), payment_status VARCHAR(20) DEFAULT 'pending',
+      delivery_type VARCHAR(20) DEFAULT 'pickup', order_status VARCHAR(20) DEFAULT 'new',
+      notes TEXT, promo_code VARCHAR(30), discount_amount DECIMAL(10,2) DEFAULT 0,
+      wa_notified BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await pool.query(`ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS promo_code VARCHAR(30)`);
+    await pool.query(`ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(10,2) DEFAULT 0`);
+    await pool.query(`ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS wa_notified BOOLEAN DEFAULT FALSE`);
+
     console.log('✅ DB migrations complete');
   } catch (e) { console.warn('Migration warning:', e.message); }
 })();
