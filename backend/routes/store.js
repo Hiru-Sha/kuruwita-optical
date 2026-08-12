@@ -13,35 +13,25 @@ const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 
 // ── GET /api/store/products ──────────────────────────────────
-// Public — only items marked show_on_store = true
 router.get('/products', async (req, res) => {
-  const { category, search, sort = 'sort_order', min_price, max_price, limit = 60, offset = 0, tags } = req.query;
+  const { category, search, sort = 'sort_order', min_price, max_price, limit = 60, offset = 0 } = req.query;
   try {
     let sql = `
       SELECT
         i.id, i.name, i.category, i.brand, i.frame_type, i.frame_color,
         i.frame_shape, i.frame_material, i.frame_size, i.quantity AS stock,
         i.image_url,
-        COALESCE(sp.store_price, i.sell_price)            AS price,
-        i.sell_price                                       AS original_price,
-        sp.discount_pct, sp.discount_label, sp.description,
-        sp.extra_images, sp.tags, sp.sort_order,
-        CASE WHEN sp.discount_pct > 0
-          THEN ROUND(COALESCE(sp.store_price, i.sell_price) * (1 - sp.discount_pct::DECIMAL/100), 2)
+        COALESCE(sp.store_price, i.sell_price) AS price,
+        i.sell_price AS original_price,
+        COALESCE(sp.discount_pct, 0) AS discount_pct,
+        sp.discount_label, sp.description, sp.extra_images, sp.tags, sp.sort_order,
+        CASE WHEN COALESCE(sp.discount_pct,0) > 0
+          THEN ROUND(COALESCE(sp.store_price, i.sell_price) * (1 - COALESCE(sp.discount_pct,0)::DECIMAL/100), 2)
           ELSE COALESCE(sp.store_price, i.sell_price)
-        END AS final_price,
-        COALESCE(
-          (SELECT ROUND(AVG(rating),1) FROM store_reviews
-           WHERE inventory_id = i.id AND approved = TRUE), 0
-        ) AS avg_rating,
-        COALESCE(
-          (SELECT COUNT(*) FROM store_reviews
-           WHERE inventory_id = i.id AND approved = TRUE), 0
-        ) AS review_count
+        END AS final_price
       FROM inventory i
       JOIN store_products sp ON sp.inventory_id = i.id
       WHERE sp.show_on_store = TRUE
-        AND i.quantity > 0
     `;
     const params = [];
 
@@ -69,7 +59,7 @@ router.get('/products', async (req, res) => {
     sql += ` ORDER BY ${orderMap[sort] || 'sp.sort_order ASC, i.name ASC'}`;
 
     // Count query
-    let countSql = `SELECT COUNT(*) AS total FROM inventory i JOIN store_products sp ON sp.inventory_id = i.id WHERE sp.show_on_store = TRUE AND i.quantity > 0`;
+    let countSql = `SELECT COUNT(*) AS total FROM inventory i JOIN store_products sp ON sp.inventory_id = i.id WHERE sp.show_on_store = TRUE`;
     const countParams = [];
     if (category && category !== 'All') { countParams.push(category); countSql += ` AND i.category = $${countParams.length}`; }
     if (search) { countParams.push(`%${search}%`); countSql += ` AND (i.name ILIKE $${countParams.length} OR i.brand ILIKE $${countParams.length})`; }
@@ -101,7 +91,7 @@ router.get('/products/:id', async (req, res) => {
              i.quantity AS stock
       FROM inventory i
       JOIN store_products sp ON sp.inventory_id = i.id
-      WHERE i.id = $1 AND sp.show_on_store = TRUE AND i.quantity > 0
+      WHERE i.id = $1 AND sp.show_on_store = TRUE
     `, [req.params.id]);
 
     if (!result.rows.length) return res.status(404).json({ error: 'Product not found' });
@@ -113,7 +103,7 @@ router.get('/products/:id', async (req, res) => {
                sp.discount_pct
         FROM inventory i JOIN store_products sp ON sp.inventory_id = i.id
         WHERE i.category = $1 AND i.id != $2
-          AND sp.show_on_store = TRUE AND i.quantity > 0
+          AND sp.show_on_store = TRUE
         ORDER BY RANDOM() LIMIT 4
       `, [result.rows[0].category, req.params.id]),
       pool.query(`
@@ -146,7 +136,7 @@ router.get('/featured', async (req, res) => {
              END AS final_price
       FROM inventory i
       JOIN store_products sp ON sp.inventory_id = i.id
-      WHERE sp.show_on_store = TRUE AND i.quantity > 0
+      WHERE sp.show_on_store = TRUE
         AND i.image_url IS NOT NULL
       ORDER BY sp.sort_order ASC, i.created_at DESC
       LIMIT 8
@@ -163,7 +153,7 @@ router.get('/categories', async (req, res) => {
              MIN(COALESCE(sp.store_price, i.sell_price)) AS min_price,
              MAX(COALESCE(sp.store_price, i.sell_price)) AS max_price
       FROM inventory i JOIN store_products sp ON sp.inventory_id = i.id
-      WHERE sp.show_on_store = TRUE AND i.quantity > 0
+      WHERE sp.show_on_store = TRUE
       GROUP BY i.category ORDER BY product_count DESC
     `);
     res.json(result.rows);
