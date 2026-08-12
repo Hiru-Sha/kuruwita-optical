@@ -24,23 +24,39 @@ const STATUS_COLORS = {
 // ── Tab: Products ────────────────────────────────────────────
 function ProductsTab() {
   const [products, setProducts] = useState([]);
+  const [total,    setTotal]    = useState(0);
+  const [shown,    setShown]    = useState(0);
   const [loading,  setLoading]  = useState(true);
   const [search,   setSearch]   = useState('');
-  const [filter,   setFilter]   = useState('all'); // all | shown | hidden
-  const [editing,  setEditing]  = useState(null);  // inventory_id being edited
+  const [filter,   setFilter]   = useState('all');
+  const [page,     setPage]     = useState(0);
+  const [editing,  setEditing]  = useState(null);
   const [form,     setForm]     = useState({});
   const [saving,   setSaving]   = useState(false);
   const [toast,    setToast]    = useState('');
-  const imgRef = useRef();
+  const PER = 30;
+  const searchTimer = useRef(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(0); }, [filter]);
 
-  const load = async () => {
+  useEffect(() => {
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => load(0), 400);
+    return () => clearTimeout(searchTimer.current);
+  }, [search]);
+
+  const load = async (pg = page) => {
     setLoading(true);
     try {
-      const res  = await fetch(`${BASE()}/store/admin/products`, { headers: headers() });
+      const q = new URLSearchParams({ limit: PER, offset: pg * PER });
+      if (search.trim()) q.set('search', search.trim());
+      if (filter !== 'all') q.set('filter', filter);
+      const res  = await fetch(`${BASE()}/store/admin/products?${q}`, { headers: headers() });
       const data = await res.json();
-      setProducts(Array.isArray(data) ? data : []);
+      setProducts(data.products || []);
+      setTotal(data.total  || 0);
+      setShown(data.shown  || 0);
+      setPage(pg);
     } catch(e) {} finally { setLoading(false); }
   };
 
@@ -71,16 +87,21 @@ function ProductsTab() {
         tags:         form.tags ? form.tags.split(',').map(t=>t.trim()).filter(Boolean) : [],
       };
       await fetch(`${BASE()}/store/admin/products/${id}`, { method:'PATCH', headers: headers(), body: JSON.stringify(body) });
+      // Update locally — no full reload needed
+      setProducts(ps => ps.map(p => p.id === id ? { ...p, ...body } : p));
+      if (body.show_on_store !== undefined) setShown(s => body.show_on_store ? s + 1 : s - 1);
       showToast('✓ Saved!');
       setEditing(null);
-      load();
     } catch(e) { alert('Failed to save'); }
     finally { setSaving(false); }
   };
 
-  // Quick toggle show/hide without opening editor
+  // Quick toggle — updates state locally, no full reload
   const quickToggle = async (p) => {
     const newVal = !p.show_on_store;
+    // Optimistic update
+    setProducts(ps => ps.map(x => x.id === p.id ? { ...x, show_on_store: newVal } : x));
+    setShown(s => newVal ? s + 1 : s - 1);
     try {
       await fetch(`${BASE()}/store/admin/products/${p.id}`, {
         method:'PATCH', headers: headers(),
@@ -92,8 +113,11 @@ function ProductsTab() {
         }),
       });
       showToast(newVal ? '✓ Now visible on store' : '✓ Hidden from store');
-      load();
-    } catch(e) {}
+    } catch(e) {
+      // Revert on error
+      setProducts(ps => ps.map(x => x.id === p.id ? { ...x, show_on_store: !newVal } : x));
+      setShown(s => newVal ? s - 1 : s + 1);
+    }
   };
 
   const addExtraImage = () => {
@@ -105,14 +129,8 @@ function ProductsTab() {
     setForm(f => ({ ...f, extra_images: f.extra_images.filter((_,i) => i !== idx) }));
   };
 
-  const filtered = products.filter(p => {
-    if (filter === 'shown')  return p.show_on_store;
-    if (filter === 'hidden') return !p.show_on_store;
-    return true;
-  }).filter(p => !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.brand?.toLowerCase().includes(search.toLowerCase()));
-
-  const shown  = products.filter(p => p.show_on_store).length;
-  const hidden = products.length - shown;
+  const filtered = products; // filtering done on backend
+  const hidden = total - shown;
 
   const INP = { padding:'8px 11px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
 
@@ -122,7 +140,7 @@ function ProductsTab() {
 
       {/* Stats */}
       <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
-        {[['Total Items', products.length, C.navy], ['Shown on Store', shown, C.success], ['Hidden', hidden, C.muted]].map(([l,v,c]) => (
+        {[['Total Items', total, C.navy], ['Shown on Store', shown, C.success], ['Hidden', hidden, C.muted]].map(([l,v,c]) => (
           <div key={l} style={{ background:'white', border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 20px', flex:1, minWidth:120 }}>
             <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted }}>{l}</div>
             <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, color:c, fontWeight:700 }}>{v}</div>
@@ -277,6 +295,23 @@ function ProductsTab() {
           {filtered.length === 0 && !loading && (
             <div style={{ textAlign:'center', padding:40, color:C.muted }}>No products found</div>
           )}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {total > PER && !loading && (
+        <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:12, marginTop:20 }}>
+          <button onClick={() => load(page - 1)} disabled={page === 0}
+            style={{ padding:'8px 20px', background:page===0?C.cream:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:page===0?'not-allowed':'pointer', fontFamily:'inherit', color:page===0?C.muted:C.navy }}>
+            ← Prev
+          </button>
+          <span style={{ fontSize:13, color:C.muted }}>
+            {page * PER + 1}–{Math.min((page + 1) * PER, total)} of {total}
+          </span>
+          <button onClick={() => load(page + 1)} disabled={(page + 1) * PER >= total}
+            style={{ padding:'8px 20px', background:(page+1)*PER>=total?C.cream:C.navy, border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:(page+1)*PER>=total?'not-allowed':'pointer', fontFamily:'inherit', color:(page+1)*PER>=total?C.muted:'white' }}>
+            Next →
+          </button>
         </div>
       )}
     </div>

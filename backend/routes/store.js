@@ -312,21 +312,43 @@ router.post('/payhere/notify', async (req, res) => {
 // ════════════════════════════════════════════════════════════
 
 // ── GET /api/store/admin/products ───────────────────────────
-// All inventory items with their store settings
+// Paginated with search — no more loading 792 items at once
 router.get('/admin/products', auth, async (req, res) => {
+  const { search, filter, limit = 30, offset = 0 } = req.query;
   try {
+    let where = `WHERE i.category IN ('Frames','Sunglasses','Reading Glasses','Contact Lenses','Accessories')`;
+    const params = [];
+
+    if (search) {
+      params.push(`%${search}%`);
+      where += ` AND (i.name ILIKE $${params.length} OR i.brand ILIKE $${params.length} OR i.frame_color ILIKE $${params.length})`;
+    }
+    if (filter === 'shown')  where += ` AND sp.show_on_store = TRUE`;
+    if (filter === 'hidden') where += ` AND (sp.show_on_store IS NULL OR sp.show_on_store = FALSE)`;
+
+    const countRes = await pool.query(
+      `SELECT COUNT(*) AS total FROM inventory i
+       LEFT JOIN store_products sp ON sp.inventory_id = i.id ${where}`, params
+    );
+
+    params.push(parseInt(limit), parseInt(offset));
     const result = await pool.query(`
       SELECT i.id, i.name, i.category, i.brand, i.frame_color, i.image_url,
-             i.sell_price, i.quantity, i.created_at,
-             sp.id AS store_id,
+             i.sell_price, i.quantity,
              sp.show_on_store, sp.store_price, sp.discount_pct, sp.discount_label,
              sp.description, sp.extra_images, sp.tags, sp.sort_order
       FROM inventory i
       LEFT JOIN store_products sp ON sp.inventory_id = i.id
-      WHERE i.category IN ('Frames','Sunglasses','Reading Glasses','Contact Lenses','Accessories')
+      ${where}
       ORDER BY COALESCE(sp.show_on_store, FALSE) DESC, i.category, i.name
-    `);
-    res.json(result.rows);
+      LIMIT $${params.length - 1} OFFSET $${params.length}
+    `, params);
+
+    res.json({
+      products: result.rows,
+      total:    parseInt(countRes.rows[0].total),
+      shown:    await pool.query(`SELECT COUNT(*) AS c FROM store_products WHERE show_on_store = TRUE`).then(r=>parseInt(r.rows[0].c)),
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
