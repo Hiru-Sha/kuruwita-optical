@@ -55,11 +55,14 @@ export default function Grinding() {
     try {
       await api(`/orders/${orderId}`, 'PATCH', {
         lens_company: lab,
-        lens_step: lab === 'In-Shop' ? 0 : 0,
+        lens_step: 0,
       });
       showToast(`Assigned to ${lab} ✓`);
+      // Update state locally — no page reload
+      setUnassigned(prev => prev.filter(o => o.id !== orderId));
+      const moved = unassigned.find(o => o.id === orderId);
+      if (moved) setAssigned(prev => [{ ...moved, lens_company: lab, lens_step: 0 }, ...prev]);
       setAssigning(a => { const n={...a}; delete n[orderId]; return n; });
-      load();
     } catch(e) { console.error(e); }
     finally { setSaving(null); }
   };
@@ -68,7 +71,10 @@ export default function Grinding() {
     try {
       await api(`/orders/${orderId}`, 'PATCH', { lens_step: step });
       showToast(`Updated to: ${STEPS[step]}`);
-      load();
+      // Update state locally — no page reload
+      setAssigned(prev => prev.map(o =>
+        o.id === orderId ? { ...o, lens_step: step } : o
+      ));
     } catch(e) { console.error(e); }
   };
 

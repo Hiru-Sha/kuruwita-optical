@@ -15,8 +15,16 @@ const auth   = require('../middleware/auth');
 router.get('/', auth, async (req, res) => {
   const { month, date } = req.query;
   try {
-    let query  = `SELECT d.*, u.full_name AS added_by_name
-                  FROM cash_deposits d LEFT JOIN users u ON d.added_by = u.id
+    let query  = `SELECT d.*,
+                    u.full_name AS added_by_name,
+                    o.order_number, o.customer_id,
+                    c.name AS customer_name,
+                    COALESCE(d.card_charge, 0) AS card_charge,
+                    COALESCE(d.net_amount, d.amount) AS net_amount
+                  FROM cash_deposits d
+                  LEFT JOIN users u ON d.added_by = u.id
+                  LEFT JOIN orders o ON o.id = d.order_id
+                  LEFT JOIN customers c ON c.id = o.customer_id
                   WHERE 1=1`;
     const params = [];
     if (month) { params.push(month); query += ` AND TO_CHAR(d.date,'YYYY-MM') = $${params.length}`; }

@@ -616,15 +616,30 @@ export default function Orders() {
   const [search,       setSearch]       = useState('');
   const [missingCosts, setMissingCosts] = useState(false);
 
-  // Read URL params from dashboard KPI clicks
+  // Read URL params from dashboard KPI clicks and Warranty page
   useEffect(() => {
     const p = new URLSearchParams(location.search);
-    const f = p.get('filter');
-    const m = p.get('month');
+    const f    = p.get('filter');
+    const m    = p.get('month');
+    const open = p.get('open'); // order_number to auto-open from Warranty page
     if (f === 'balance')   { setFilter('balance_due'); }
     if (f === 'active')    { setFilter('created'); }
     if (f === 'collected') { setFilter('delivered'); }
     if (m)                 { setDateFilter('month'); }
+    if (open) {
+      // Wait for orders to load then open matching order
+      const tryOpen = () => {
+        setOrders(prev => {
+          const match = prev.find(o => o.order_number === open);
+          if (match) {
+            setSelected(match);
+            setSearch(open);
+          }
+          return prev;
+        });
+      };
+      setTimeout(tryOpen, 800);
+    }
   }, [location.search]);
   const [loading,   setLoading]   = useState(true);
   const [selected,  setSelected]  = useState(null);
@@ -696,9 +711,14 @@ export default function Orders() {
   };
 
   const handleStatus = async (id, status) => {
-    await updateOrder(id, { status });
+    // When marking as delivered, save the actual delivered date
+    const updates = { status };
+    if (status === 'delivered') {
+      updates.deliver_date = new Date().toISOString().split('T')[0];
+    }
+    await updateOrder(id, updates);
     load();
-    setSelected(s => s ? { ...s, status } : s);
+    setSelected(s => s ? { ...s, ...updates } : s);
   };
 
   const handleLensStep = async (id, lens_step) => {
@@ -840,7 +860,7 @@ export default function Orders() {
   const INP = { padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:13, fontFamily:'inherit', outline:'none', background:C.surface, color:'var(--text,#111827)', transition:'border-color .15s' };
 
   return (
-    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1400 }}>
+    <div style={{ fontFamily:"'Inter','DM Sans',sans-serif", maxWidth:1400, padding:'0 4px' }}>
 
       {/* Toast */}
       {toast && (
@@ -850,10 +870,12 @@ export default function Orders() {
       )}
 
       {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
-        <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:C.navy, margin:'0 0 4px' }}>Orders</h1>
-        <p style={{ fontSize:13, color:C.muted, margin:0 }}>Manage customer orders and lens jobs</p>
-        <div style={{ display:'flex', gap:10 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16, flexWrap:'wrap', gap:10 }}>
+        <div>
+          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:C.navy, margin:'0 0 4px' }}>Orders</h1>
+          <p style={{ fontSize:13, color:C.muted, margin:0 }}>Manage customer orders and lens jobs</p>
+        </div>
+        <div style={{ display:'flex', gap:10, flexShrink:0 }}>
           <button onClick={()=>setShowPriceCheck(true)}
             style={{ padding:'9px 18px', background:C.cream, color:C.navy,
               border:`1.5px solid ${C.gold}`, borderRadius:9, fontSize:13,
@@ -1087,16 +1109,21 @@ export default function Orders() {
                 const charge = Math.round(gross * 0.03 * 100) / 100;
                 const net    = gross - charge;
                 return (
-                  <div style={{ background:'#eff6ff', border:'1.5px solid #93c5fd', borderRadius:10, padding:'10px 14px', marginBottom:10 }}>
-                    <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'#1e40af', marginBottom:6 }}>💳 Card Payment Breakdown</div>
-                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#1e40af', marginBottom:3 }}>
-                      <span>Customer paid</span><span style={{ fontWeight:700 }}>{fmtMoney(gross)}</span>
+                  <div style={{ background:'#eff6ff', border:'1.5px solid #93c5fd', borderRadius:10, padding:'12px 14px', marginBottom:10 }}>
+                    <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:'#1e40af', marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
+                      💳 Card Payment — 3% Bank Charge Applied
                     </div>
-                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#dc2626', marginBottom:3 }}>
-                      <span>Bank deducts (3%)</span><span style={{ fontWeight:700 }}>− {fmtMoney(charge)}</span>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:4, fontSize:13 }}>
+                      <span style={{ color:'#374151' }}>Customer paid (gross)</span>
+                      <span style={{ fontWeight:700, color:'#1e40af', textAlign:'right' }}>{fmtMoney(gross)}</span>
+                      <span style={{ color:'#dc2626' }}>Bank deducts 3%</span>
+                      <span style={{ fontWeight:700, color:'#dc2626', textAlign:'right' }}>− {fmtMoney(charge)}</span>
+                      <div style={{ gridColumn:'1/-1', borderTop:'1px dashed #93c5fd', margin:'4px 0' }}/>
+                      <span style={{ fontWeight:700, color:'#15803d' }}>Net credited to bank account</span>
+                      <span style={{ fontWeight:700, color:'#15803d', textAlign:'right' }}>{fmtMoney(net)}</span>
                     </div>
-                    <div style={{ borderTop:'1px dashed #93c5fd', marginTop:5, paddingTop:5, display:'flex', justifyContent:'space-between', fontSize:13, color:'#15803d' }}>
-                      <span style={{ fontWeight:700 }}>Net to your account</span><span style={{ fontWeight:700 }}>{fmtMoney(net)}</span>
+                    <div style={{ fontSize:11, color:'#6b7280', marginTop:8, background:'rgba(147,197,253,.15)', padding:'6px 10px', borderRadius:6 }}>
+                      ✓ Deposit recorded in Bank Deposits with card charge note
                     </div>
                   </div>
                 );

@@ -992,11 +992,19 @@ function MobilePhoneUploader() {
 export default function Inventory() {
   const [items,        setItems]       = useState([]);
   const [activeCat,    setActiveCat]   = useState('All');
-  const [dealerFilter, setDealerFilter] = useState('');    // filter by dealer name
-  const [dealers,      setDealers]      = useState([]);    // all unique dealers
-  const [showDealerDrop, setShowDealerDrop] = useState(false);
-  const [stockFilter,  setStockFilter]  = useState('all'); // 'all' | 'low' | 'out'
-  const [subFilter,    setSubFilter]   = useState('');
+  const [dealerFilter,  setDealerFilter]  = useState('');
+  const [dealers,       setDealers]       = useState([]);
+  const [showDealerDrop,setShowDealerDrop]= useState(false);
+  const [stockFilter,   setStockFilter]   = useState('all');
+  const [subFilter,     setSubFilter]     = useState('');
+  // Advanced filters
+  const [filterMaterial, setFilterMaterial] = useState('');
+  const [filterShape,    setFilterShape]    = useState('');
+  const [filterSize,     setFilterSize]     = useState('');
+  const [filterColor,    setFilterColor]    = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo,   setFilterDateTo]   = useState('');
+  const [showAdvanced,   setShowAdvanced]   = useState(false);
   const [search,       setSearch]      = useState('');
   const [selected,     setSelected]    = useState(null);
   const [panelTab,     setPanelTab]    = useState('details');
@@ -2023,6 +2031,86 @@ export default function Inventory() {
           </div>
         )}
       </div>
+
+      {/* Advanced Filters Toggle */}
+      <div style={{ marginBottom: 10 }}>
+        <button onClick={() => setShowAdvanced(s => !s)}
+          style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600,
+            cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${showAdvanced?C.navy:C.border}`,
+            background: showAdvanced ? C.navy : 'white',
+            color: showAdvanced ? 'white' : C.muted }}>
+          🔧 {showAdvanced ? 'Hide' : 'More'} Filters
+          {(filterMaterial||filterShape||filterSize||filterColor||filterDateFrom||filterDateTo) && (
+            <span style={{ background:C.gold, color:C.navy, borderRadius:'50%', width:16, height:16, display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:800, marginLeft:6 }}>
+              {[filterMaterial,filterShape,filterSize,filterColor,filterDateFrom,filterDateTo].filter(Boolean).length}
+            </span>
+          )}
+        </button>
+        {(filterMaterial||filterShape||filterSize||filterColor||filterDateFrom||filterDateTo) && (
+          <button onClick={() => { setFilterMaterial(''); setFilterShape(''); setFilterSize(''); setFilterColor(''); setFilterDateFrom(''); setFilterDateTo(''); }}
+            style={{ marginLeft:8, padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${C.danger}`, background:'#fee2e2', color:C.danger }}>
+            ✕ Clear Filters
+          </button>
+        )}
+      </div>
+
+      {/* Advanced Filter Panel */}
+      {showAdvanced && (() => {
+        // Get unique values from current items
+        const mats    = [...new Set(items.map(i=>i.frame_material).filter(Boolean))].sort();
+        const shapes  = [...new Set(items.map(i=>i.frame_shape).filter(Boolean))].sort();
+        const sizes   = [...new Set(items.map(i=>i.frame_size).filter(Boolean))].sort();
+        const colors  = [...new Set(items.map(i=>i.frame_color).filter(Boolean))].sort();
+        const dealerList = [...new Set(items.map(i=>i.dealer).filter(Boolean))].sort();
+
+        const ChipGroup = ({ label, options, value, onChange }) => (
+          <div style={{ marginBottom:14 }}>
+            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:8 }}>{label}</div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+              <button onClick={() => onChange('')}
+                style={{ padding:'5px 12px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${!value?C.navy:C.border}`, background:!value?C.navy:'white', color:!value?'white':C.muted }}>
+                All
+              </button>
+              {options.map(o => (
+                <button key={o} onClick={() => onChange(value===o?'':o)}
+                  style={{ padding:'5px 12px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${value===o?C.gold:C.border}`, background:value===o?'#fef9f0':'white', color:value===o?'#92400e':C.muted }}>
+                  {o}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+        return (
+          <div style={{ background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:14, padding:'18px 20px', marginBottom:14 }}>
+            <ChipGroup label="Material"  options={mats}   value={filterMaterial} onChange={setFilterMaterial}/>
+            <ChipGroup label="Shape"     options={shapes}  value={filterShape}    onChange={setFilterShape}/>
+            <ChipGroup label="Size"      options={sizes}   value={filterSize}     onChange={setFilterSize}/>
+            <ChipGroup label="Color"     options={colors}  value={filterColor}    onChange={setFilterColor}/>
+            <div>
+              <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:8 }}>Date Added</div>
+              <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <span style={{ fontSize:12, color:C.muted }}>From</span>
+                  <input type="date" value={filterDateFrom} onChange={e=>setFilterDateFrom(e.target.value)}
+                    style={{ padding:'6px 10px', border:`1.5px solid ${filterDateFrom?C.gold:C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:'white' }}/>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <span style={{ fontSize:12, color:C.muted }}>To</span>
+                  <input type="date" value={filterDateTo} onChange={e=>setFilterDateTo(e.target.value)}
+                    style={{ padding:'6px 10px', border:`1.5px solid ${filterDateTo?C.gold:C.border}`, borderRadius:8, fontSize:13, fontFamily:'inherit', outline:'none', background:'white' }}/>
+                </div>
+                {(filterDateFrom||filterDateTo) && (
+                  <button onClick={()=>{ setFilterDateFrom(''); setFilterDateTo(''); }}
+                    style={{ padding:'5px 12px', borderRadius:20, fontSize:12, cursor:'pointer', fontFamily:'inherit', border:`1px solid ${C.border}`, background:'white', color:C.muted }}>
+                    Clear dates
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Bulk reorder banner — shows when low/out stock items exist */}
       {!loading && items.filter(i=>i.quantity<=i.min_quantity).length > 0 && (

@@ -55,7 +55,7 @@ function PayModal({ orders, title, skipExpense, onClose, onDone }) {
           notes:notes||`Orders: ${d.nums.join(', ')}`,
         })));
       }
-      onDone(`✅ ${orders.length} orders marked paid${skipExpense?'':' · expense recorded'}`);
+      onDone(`✅ ${orders.length} orders marked paid${skipExpense?'':' · expense recorded'}`, orders.map(o=>o.id));
     } catch(e){ alert('Failed: '+e.message); }
     finally { setSaving(false); }
   };
@@ -154,13 +154,15 @@ function OrderRow({ order, selected, onToggle, onSaved, quickMode, rowIndex, tot
     if (!bill || bill <= 0) { setEditing(false); return; }
     setSaving(true);
     try {
-      await apiPatch(`/orders/${order.id}`, {
+      const updates = {
         lab_bill_amount: bill,
         lens_company:    labVal,
         lens_step:       Math.max(order.lens_step||0, 2),
         ...(markPaid ? { lab_paid:true, lab_paid_date:today(), lab_payment_method:'cash' } : {}),
-      });
-      onSaved();
+      };
+      await apiPatch(`/orders/${order.id}`, updates);
+      // Pass updated fields back so parent updates state without reload
+      onSaved(updates);
       setEditing(false);
     } catch(e){ alert('Save failed'); }
     finally { setSaving(false); }
@@ -371,7 +373,21 @@ export default function LabReceivings() {
           title={payModal.title}
           skipExpense={payModal.skipExpense}
           onClose={()=>setPayModal(null)}
-          onDone={msg=>{ showToast(msg); setPayModal(null); load(); }}
+          onDone={(msg, paidIds) => {
+            showToast(msg);
+            setPayModal(null);
+            // Update paid orders in state — no full reload
+            if (paidIds && paidIds.length) {
+              const paidDate = today();
+              setOrders(prev => prev.map(o =>
+                paidIds.includes(o.id)
+                  ? { ...o, lab_paid: true, lab_paid_date: paidDate }
+                  : o
+              ));
+            } else {
+              load(); // fallback
+            }
+          }}
         />
       )}
 
@@ -494,7 +510,13 @@ export default function LabReceivings() {
                 <OrderRow key={o.id} order={o}
                   selected={selectedIds.has(o.id)}
                   onToggle={()=>toggleSel(o.id)}
-                  onSaved={load}
+                  onSaved={(updatedFields) => {
+                    // Update just this order in state — no full page reload
+                    setOrders(prev => prev.map(o =>
+                      o.id === order.id ? { ...o, ...updatedFields } : o
+                    ));
+                    showToast('✓ Bill saved');
+                  }}
                   quickMode={quickMode && !o.lab_paid && !parseFloat(o.lab_bill_amount||0)}
                   rowIndex={i}
                   totalRows={filtered.length}

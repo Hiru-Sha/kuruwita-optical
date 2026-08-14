@@ -521,7 +521,7 @@ export default function Customers() {
                   // Refresh list
                   const listRes = await fetch(`${_BASE}/customers?limit=200`, { headers:{ Authorization:`Bearer ${_token}` } });
                   const listData = await listRes.json();
-                  setCustomers(Array.isArray(listData) ? listData : (listData.data || []));
+                  setCusts(Array.isArray(listData) ? listData : (listData.data || []));
                 } catch(e) { alert('Delete failed: ' + e.message); }
                 finally { setDeleting(false); }
               }}

@@ -225,7 +225,7 @@ export default function Warranty() {
                       📋 File Claim
                     </button>
                   )}
-                  <button onClick={()=>navigate('/orders?search='+o.order_number)}
+                  <button onClick={()=>navigate('/orders?open='+o.order_number)}
                     style={{ padding:'6px 10px', background:C.cream, color:C.navy, border:`1px solid ${C.border}`, borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                     View Order →
                   </button>
