@@ -78,7 +78,7 @@ const NAV = [
   { to:'/settings',       icon:'settings',   label:'Settings',       section:'account'   },
   { to:'/backup',         icon:'backup',     label:'Backup Data',    section:'account',  roles:['admin'] },
 ];
-const SECTIONS = { main:null, inventory:'Inventory', finance:'Finance & Reports', account:'Account' };
+const SECTIONS = { main:null, inventory:'Inventory', finance:'Finance & Reports', history:'Old Records', account:'Account' };
 const BOTTOM_NAV = [
   {to:'/dashboard',icon:'dashboard',label:'Home'},
   {to:'/orders',icon:'orders',label:'Orders'},
