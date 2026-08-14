@@ -1028,6 +1028,10 @@ export default function Inventory() {
     finally { setHistLoading(false); }
   };
   const [showAdd,      setShowAdd]     = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false); // quick add from existing item
+  const [quickBase,    setQuickBase]    = useState(null);  // base item to copy from
+  const [quickForm,    setQuickForm]    = useState({});    // editable fields
+  const [quickSaving,  setQuickSaving]  = useState(false);
 
   const [addStep,      setAddStep]     = useState('category'); // 'category' | 'form'
   const [suggestions,  setSuggestions] = useState({ dealers:[], brands:[], names:[], models:[], colors:[], frame_types:[], sg_types:[], materials:[], sizes:[] });
@@ -2373,6 +2377,7 @@ export default function Inventory() {
                     <button onClick={()=>{ setStickerItems([selected]); setShowStickers(true); }} style={{ padding:'10px 16px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>🏷️ Sticker</button>
                     <button onClick={()=>{ setPriceUpdateItems([selected]); setShowPriceUpdate(true); }} style={{ padding:'10px 16px', background:'#fef9c3', border:`1.5px solid #fde68a`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#92400e' }}>💰 Price Label</button>
                     <button onClick={()=>setPanelTab('adjust')} style={{ padding:'10px 16px', background:'#eff6ff', border:`1.5px solid #bae6fd`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#0369a1' }}>📦 Adjust Stock</button>
+                    <button onClick={()=>{ setQuickBase(selected); setQuickForm({ dealer:'', sell_price:selected.sell_price||'' }); setShowQuickAdd(true); }} style={{ padding:'10px 16px', background:'#dcfce7', border:`1.5px solid #86efac`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.success }}>➕ New Stock</button>
                     <button onClick={()=>handleDelete(selected.id)} style={{ padding:'10px 14px', background:'#fee2e2', color:C.danger, border:`1.5px solid #fca5a5`, borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>🗑️</button>
                   </div>
                 </>
@@ -2671,6 +2676,144 @@ export default function Inventory() {
       {showStickers && (
         <StickerModal items={stickerItems} onClose={()=>setShowStickers(false)}/>
       )}
+
+      {/* ── Quick Add New Stock Modal (copy from existing item) ── */}
+      {showQuickAdd && quickBase && (() => {
+        const INP_Q = { padding:'9px 12px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13,
+          fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
+        const [qSaving, setQSaving] = React.useState(false);
+        const [qQty,    setQQty]    = React.useState('1');
+        const [qDealer, setQDealer] = React.useState(quickBase.dealer||'');
+        const [qBuy,    setQBuy]    = React.useState('');
+        const [qSell,   setQSell]   = React.useState(quickBase.sell_price||'');
+        const [qNotes,  setQNotes]  = React.useState('');
+
+        const handleQuickSave = async () => {
+          if (!qQty || parseInt(qQty) < 1) return alert('Enter quantity');
+          setQSaving(true);
+          try {
+            const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+            const token = localStorage.getItem('ko_token');
+            // Add stock to existing item via stock adjustment
+            const res = await fetch(`${BASE}/inventory/${quickBase.id}/add-stock`, {
+              method: 'POST',
+              headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+              body: JSON.stringify({
+                quantity:   parseInt(qQty),
+                cost_price: parseFloat(qBuy) || quickBase.cost_price || 0,
+                sell_price: parseFloat(qSell) || quickBase.sell_price || 0,
+                dealer:     qDealer || quickBase.dealer,
+                notes:      qNotes || `New stock from ${qDealer||quickBase.dealer}`,
+              }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed');
+            // Update item in local state
+            setItems(prev => prev.map(i => i.id === quickBase.id
+              ? { ...i, quantity: (parseInt(i.quantity)||0) + parseInt(qQty),
+                  dealer: qDealer||i.dealer,
+                  cost_price: parseFloat(qBuy)||i.cost_price,
+                  sell_price: parseFloat(qSell)||i.sell_price }
+              : i
+            ));
+            setShowQuickAdd(false);
+            alert(`✓ Added ${qQty} units of "${quickBase.name}"`);
+          } catch(e) { alert('Failed: ' + e.message); }
+          finally { setQSaving(false); }
+        };
+
+        return (
+          <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.6)', zIndex:500,
+            display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+            onClick={e => { if(e.target===e.currentTarget) setShowQuickAdd(false); }}>
+            <div style={{ background:'white', borderRadius:20, padding:28, width:'100%', maxWidth:500,
+              boxShadow:'0 24px 60px rgba(0,0,0,.3)' }}>
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:4 }}>
+                ➕ Add New Stock
+              </div>
+              <div style={{ fontSize:13, color:C.muted, marginBottom:20 }}>
+                Copying details from <b style={{color:C.navy}}>{quickBase.name}</b>
+              </div>
+
+              {/* Show base item info */}
+              <div style={{ background:C.cream, borderRadius:12, padding:'12px 16px', marginBottom:20,
+                display:'flex', gap:12, alignItems:'center' }}>
+                {quickBase.image_url && (
+                  <img src={quickBase.image_url} alt="" style={{ width:56, height:44, objectFit:'contain', borderRadius:8, background:'white' }}/>
+                )}
+                <div>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{quickBase.name}</div>
+                  <div style={{ fontSize:11, color:C.muted }}>
+                    {[quickBase.category, quickBase.frame_color, quickBase.frame_material, quickBase.frame_size].filter(Boolean).join(' · ')}
+                  </div>
+                  <div style={{ fontSize:12, color:C.gold, fontWeight:600, marginTop:2 }}>
+                    Current stock: {quickBase.quantity} · Dealer: {quickBase.dealer||'—'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 }}>
+                <div>
+                  <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:5 }}>
+                    Quantity to Add *
+                  </label>
+                  <input type="number" min="1" value={qQty} onChange={e=>setQQty(e.target.value)}
+                    placeholder="e.g. 5" style={{ ...INP_Q, fontSize:16, fontWeight:700 }} autoFocus/>
+                </div>
+                <div>
+                  <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:5 }}>
+                    Dealer / Supplier
+                  </label>
+                  <input value={qDealer} onChange={e=>setQDealer(e.target.value)}
+                    placeholder={quickBase.dealer||'Dealer name'} style={INP_Q}/>
+                </div>
+                <div>
+                  <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:5 }}>
+                    Buy Price (Rs.) <span style={{fontWeight:300}}>per unit</span>
+                  </label>
+                  <input type="number" value={qBuy} onChange={e=>setQBuy(e.target.value)}
+                    placeholder={`Previous: ${quickBase.cost_price||'—'}`} style={INP_Q}/>
+                </div>
+                <div>
+                  <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:5 }}>
+                    Sell Price (Rs.) <span style={{fontWeight:300}}>blank = keep current</span>
+                  </label>
+                  <input type="number" value={qSell} onChange={e=>setQSell(e.target.value)}
+                    placeholder={`Current: ${quickBase.sell_price||'—'}`} style={INP_Q}/>
+                </div>
+                <div style={{ gridColumn:'1/-1' }}>
+                  <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, display:'block', marginBottom:5 }}>
+                    Notes (optional)
+                  </label>
+                  <input value={qNotes} onChange={e=>setQNotes(e.target.value)}
+                    placeholder="e.g. Bought from Colombo fair 2026" style={INP_Q}/>
+                </div>
+              </div>
+
+              {/* Preview */}
+              {qQty && parseInt(qQty) > 0 && (
+                <div style={{ background:'#dcfce7', border:'1px solid #86efac', borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:13 }}>
+                  ✓ Will add <b>{qQty} units</b> to existing stock →
+                  Total becomes <b style={{color:C.success}}>{(parseInt(quickBase.quantity)||0) + parseInt(qQty||0)} units</b>
+                  {qBuy && <span> · Buy: Rs.{parseFloat(qBuy).toLocaleString()}</span>}
+                  {qSell && <span> · Sell: Rs.{parseFloat(qSell).toLocaleString()}</span>}
+                </div>
+              )}
+
+              <div style={{ display:'flex', gap:10 }}>
+                <button onClick={() => setShowQuickAdd(false)}
+                  style={{ flex:1, padding:'11px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+                  Cancel
+                </button>
+                <button onClick={handleQuickSave} disabled={qSaving}
+                  style={{ flex:2, padding:'11px', background:qSaving?C.muted:C.success, color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:qSaving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                  {qSaving ? '⏳ Saving...' : `✓ Add ${qQty||0} Units`}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

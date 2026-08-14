@@ -202,4 +202,57 @@ router.get('/:id/history', auth, async (req, res) => {
   }
 });
 
+// POST /api/inventory/:id/add-stock — add new batch of stock to existing item
+router.post('/:id/add-stock', auth, async (req, res) => {
+  const { quantity, cost_price, sell_price, dealer, notes } = req.body;
+  const qty = parseInt(quantity);
+  if (!qty || qty < 1) return res.status(400).json({ error: 'Invalid quantity' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Get current item
+    const item = await client.query('SELECT * FROM inventory WHERE id=$1', [req.params.id]);
+    if (!item.rows.length) return res.status(404).json({ error: 'Item not found' });
+    const it = item.rows[0];
+
+    // Update quantity, optionally update dealer/sell_price
+    const updates = { quantity: (parseInt(it.quantity)||0) + qty };
+    if (dealer)     updates.dealer     = dealer;
+    if (sell_price) updates.sell_price = parseFloat(sell_price);
+    if (cost_price) updates.cost_price = parseFloat(cost_price);
+
+    const setClauses = Object.keys(updates).map((k,i) => `${k}=$${i+2}`).join(', ');
+    const vals = [req.params.id, ...Object.values(updates)];
+    const updated = await client.query(
+      `UPDATE inventory SET ${setClauses}, updated_at=NOW() WHERE id=$1 RETURNING *`, vals
+    );
+
+    // Log to stock_adjustments
+    await client.query(
+      `INSERT INTO stock_adjustments
+         (inventory_id, item_name, change_type, quantity_change, reason, notes, adjusted_by)
+       VALUES ($1,$2,'add',$3,'New Stock',$4,$5)`,
+      [req.params.id, it.name, qty, notes || `New stock — ${dealer||it.dealer||'unknown dealer'}`, req.user.id]
+    ).catch(() => {});
+
+    // Record dealer purchase expense if cost price provided
+    if (cost_price && parseFloat(cost_price) > 0) {
+      const totalCost = parseFloat(cost_price) * qty;
+      await client.query(
+        `INSERT INTO dealer_purchases (inventory_id, item_name, dealer, quantity, cost_price, total_cost, purchase_date, added_by)
+         VALUES ($1,$2,$3,$4,$5,$6,NOW(),$7)`,
+        [req.params.id, it.name, dealer||it.dealer||'Unknown', qty, parseFloat(cost_price), totalCost, req.user.id]
+      ).catch(() => {});
+    }
+
+    await client.query('COMMIT');
+    res.json({ ...updated.rows[0], message: `Added ${qty} units to ${it.name}` });
+  } catch(err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally { client.release(); }
+});
+
 module.exports = router;

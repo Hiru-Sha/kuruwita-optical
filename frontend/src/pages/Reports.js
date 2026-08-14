@@ -269,7 +269,8 @@ export default function Reports() {
   const [lensJobs,  setLensJobs] = useState(null);
   const [profit,    setProfit]   = useState(null);
   const [loading,   setLoading]  = useState(true);
-  const [compare,   setCompare]  = useState(null); // monthly comparison data
+  const [compare,   setCompare]  = useState(null);
+  const [patterns,  setPatterns] = useState(null); // buying pattern trends
 
   useEffect(()=>{
     setLoading(true);
@@ -279,7 +280,8 @@ export default function Reports() {
       api('/reports/lensjobs'),
       api('/reports/profit'),
       api(`/reports/comparison?month=${month}`),
-    ]).then(([rev,top,jobs,prof,cmp])=>{ setRevenue(rev); setTop(top); setLensJobs(jobs); setProfit(prof); setCompare(cmp); })
+      api('/reports/patterns?months=6'),
+    ]).then(([rev,top,jobs,prof,cmp,pat])=>{ setRevenue(rev); setTop(top); setLensJobs(jobs); setProfit(prof); setCompare(cmp); setPatterns(pat); })
     .catch(console.error).finally(()=>setLoading(false));
   },[month]);
 
@@ -289,6 +291,7 @@ export default function Reports() {
     { key:'compare',    label:'Compare',        icon:'📊' },
     { key:'lensjobs',   label:'Lens Jobs',      icon:'🔬' },
     { key:'topsellers', label:'Top Sellers',    icon:'🏆' },
+    { key:'patterns',   label:'Patterns',       icon:'📅' },
   ];
 
   const totals = profit?.totals || {};
@@ -581,17 +584,22 @@ export default function Reports() {
                     </div>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
                       {[
-                        {label:`This Month (${compare.thisMonth?.month||'—'})`, val:tm, highlight:true},
-                        {label:`Last Month (${compare.prevMonth?.month||'—'})`, val:pm},
+                        {label:`This (1–${compare.cutoffDay||'?'} ${compare.thisMonth?.month||'—'})`, val:tm, highlight:true},
+                        {label:`Prev (1–${compare.cutoffDay||'?'} ${compare.prevMonth?.month||'—'})`, val:pm},
                         {label:`Last Year (${compare.lastYearMonth?.month||'—'})`, val:ly},
                       ].map((col,ci)=>(
                         <div key={ci} style={{background:col.highlight?`${metric.color}12`:C.cream,borderRadius:10,padding:'12px 14px',
                           border:col.highlight?`2px solid ${metric.color}33`:`1px solid ${C.border}`}}>
                           <div style={{fontSize:10,color:C.muted,marginBottom:6,fontWeight:600}}>{col.label}</div>
                           <div style={{fontSize:20,fontWeight:800,color:col.highlight?metric.color:C.navy}}>{metric.fmt(col.val)}</div>
-                          {ci>0 && pm>0 && (
-                            <div style={{fontSize:10,color:tm>col.val?C.success:C.danger,marginTop:4,fontWeight:600}}>
-                              {tm>col.val?'▼ lower':'▲ higher'} this mo
+                          {ci>0 && (
+                            <div style={{marginTop:6}}>
+                              <div style={{fontSize:11,color:tm>col.val?C.success:C.danger,fontWeight:700}}>
+                                {tm>col.val?'▲':'▼'} {metric.fmt(Math.abs(tm-col.val))}
+                              </div>
+                              <div style={{fontSize:10,color:tm>col.val?C.success:C.danger}}>
+                                {tm>col.val?'+':''}{col.val>0?Math.round((tm-col.val)/col.val*100):0}% vs {ci===1?'last mo':'last yr'}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -814,6 +822,124 @@ export default function Reports() {
               }
             </SectionCard>
           </div>
+        </div>
+      )}
+
+      {/* ── PATTERNS TAB ── */}
+      {!loading && activeTab === 'patterns' && (
+        <div style={{display:'flex',flexDirection:'column',gap:20}}>
+          {!patterns
+            ? <div style={{textAlign:'center',padding:60,color:C.muted}}>Loading patterns...</div>
+            : <>
+              {/* Day of week */}
+              <SectionCard title="📅 Best Days to Sell" subtitle={`Day of week revenue trend — last ${patterns.months_analyzed} months`}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:8,marginBottom:12}}>
+                  {(patterns.day_of_week||[]).map(d=>{
+                    const pct = (patterns.max_rev_dow||1)>0?Math.round(d.revenue/(patterns.max_rev_dow||1)*100):0;
+                    const isBest = d.day===patterns.best_day?.day;
+                    return (
+                      <div key={d.day} style={{textAlign:'center'}}>
+                        <div style={{fontSize:11,fontWeight:700,color:isBest?C.gold:C.muted,marginBottom:6}}>{d.short}</div>
+                        <div style={{height:80,background:C.cream,borderRadius:6,display:'flex',alignItems:'flex-end',overflow:'hidden'}}>
+                          <div style={{width:'100%',background:isBest?C.gold:C.navy,borderRadius:'4px 4px 0 0',height:`${pct}%`,minHeight:pct>0?4:0}}/>
+                        </div>
+                        <div style={{fontSize:10,color:C.muted,marginTop:4}}>{d.order_count} ord</div>
+                        <div style={{fontSize:10,fontWeight:700,color:C.navy}}>Rs.{Math.round(d.revenue/1000)}K</div>
+                        {isBest&&<div style={{fontSize:9,color:C.gold,fontWeight:800}}>★ BEST</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{display:'flex',gap:16,flexWrap:'wrap',fontSize:13}}>
+                  <span>🏆 Best day: <b style={{color:C.success}}>{patterns.best_day?.day}</b></span>
+                  <span>📉 Slowest day: <b style={{color:C.muted}}>{patterns.worst_day?.day}</b></span>
+                  {patterns.best_dom && (
+                    <span>📅 Best date of month: <b style={{color:C.success}}>Day {patterns.best_dom?.day}</b></span>
+                  )}
+                  {patterns.worst_dom && (
+                    <span>📉 Slowest date: <b style={{color:C.muted}}>Day {patterns.worst_dom?.day}</b></span>
+                  )}
+                </div>
+              </SectionCard>
+
+              {/* Date of month groups */}
+              <SectionCard title="📆 Best Period of Month" subtitle="Which 10-day period customers buy most">
+                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
+                  {(patterns.date_of_month||[]).map((p)=>{
+                    const maxRev=Math.max(...(patterns.date_of_month||[]).map(x=>x.rev));
+                    const isMax=p.rev===maxRev;
+                    return (
+                      <div key={p.period} style={{background:isMax?`${C.gold}15`:C.cream,border:`1.5px solid ${isMax?C.gold:C.border}`,borderRadius:12,padding:'16px',textAlign:'center'}}>
+                        <div style={{fontSize:16,fontWeight:700,color:C.navy,marginBottom:4}}>📅 {p.period}</div>
+                        <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:isMax?C.gold:C.navy,fontWeight:700}}>{fmt(p.rev)}</div>
+                        <div style={{fontSize:12,color:C.muted,marginTop:4}}>{p.count} orders</div>
+                        {isMax&&<div style={{fontSize:11,color:C.gold,fontWeight:700,marginTop:6}}>★ Peak Period</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </SectionCard>
+
+              {/* Best & worst days */}
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+                <SectionCard title="🔥 Best Sales Days" subtitle="Top 10 highest revenue days">
+                  {(patterns.daily_best||[]).map((d,i)=>(
+                    <div key={d.sale_date} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:`1px solid ${C.cream}`,fontSize:13}}>
+                      <div>
+                        <span style={{background:i<3?C.gold:'#f3f4f6',color:i<3?C.navy:C.muted,borderRadius:'50%',width:20,height:20,display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,marginRight:8}}>{i+1}</span>
+                        <span style={{color:C.navy,fontWeight:600}}>{d.date_label}</span>
+                        <span style={{color:C.muted,fontSize:11,marginLeft:6}}>{(d.day_name||'').trim()}</span>
+                      </div>
+                      <div style={{textAlign:'right'}}>
+                        <div style={{fontWeight:700,color:C.success}}>{fmt(d.revenue)}</div>
+                        <div style={{fontSize:10,color:C.muted}}>{d.order_count} orders</div>
+                      </div>
+                    </div>
+                  ))}
+                </SectionCard>
+                <SectionCard title="❄️ Slowest Days" subtitle="5 lowest revenue days">
+                  {(patterns.daily_worst||[]).map((d,i)=>(
+                    <div key={d.sale_date} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:`1px solid ${C.cream}`,fontSize:13}}>
+                      <div>
+                        <span style={{color:C.navy,fontWeight:600}}>{d.date_label}</span>
+                        <span style={{color:C.muted,fontSize:11,marginLeft:6}}>{(d.day_name||'').trim()}</span>
+                      </div>
+                      <div style={{textAlign:'right'}}>
+                        <div style={{fontWeight:600,color:C.danger}}>{fmt(d.revenue)}</div>
+                        <div style={{fontSize:10,color:C.muted}}>{d.order_count} orders</div>
+                      </div>
+                    </div>
+                  ))}
+                </SectionCard>
+              </div>
+
+              {/* Monthly best/worst */}
+              <SectionCard title="📊 Monthly Best & Worst Day" subtitle="Which date had highest and lowest sales each month">
+                <div style={{overflowX:'auto'}}>
+                  <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                    <thead>
+                      <tr style={{background:C.cream}}>
+                        {['Month','Best Date','Revenue','Worst Date','Revenue'].map(h=>(
+                          <th key={h} style={{padding:'8px 12px',textAlign:'left',fontSize:11,fontWeight:700,color:C.muted,textTransform:'uppercase',letterSpacing:'1px'}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(patterns.monthly_days||[]).map(row=>(
+                        <tr key={row.month_key} style={{borderBottom:`1px solid ${C.cream}`}}>
+                          <td style={{padding:'8px 12px',fontWeight:700,color:C.navy}}>{row.month}</td>
+                          <td style={{padding:'8px 12px',color:C.success,fontWeight:600}}>{row.best_date}</td>
+                          <td style={{padding:'8px 12px',fontWeight:700,color:C.success}}>{fmt(row.best_day_revenue)}</td>
+                          <td style={{padding:'8px 12px',color:C.danger}}>{row.worst_date}</td>
+                          <td style={{padding:'8px 12px',color:C.danger}}>{fmt(row.worst_day_revenue)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </SectionCard>
+            </>
+          }
         </div>
       )}
     </div>

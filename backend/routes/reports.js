@@ -192,23 +192,26 @@ router.get('/profit', auth, async (req, res) => {
       GROUP BY TO_CHAR(date, 'YYYY-MM')
     `);
 
+    // Fixed: use frame_sell_price - frame_buy_price for frame margin only
+    // Exclude customer_own_frame orders + must have both buy and sell price
     const topMargin = await safeQuery(`
       SELECT
         frame,
-        COALESCE(AVG(
-          NULLIF(total_amount,0)
-          - COALESCE(NULLIF(frame_buy_price,0),0)
-          - COALESCE(NULLIF(lens_buy_price,0),0)
-        ), 0) AS avg_total_profit,
+        COALESCE(AVG(NULLIF(frame_sell_price,0) - NULLIF(frame_buy_price,0)), 0) AS avg_frame_profit,
+        COALESCE(AVG(NULLIF(frame_sell_price,0)), 0) AS avg_sell_price,
+        COALESCE(AVG(NULLIF(frame_buy_price,0)),  0) AS avg_buy_price,
         COUNT(*) AS orders
       FROM orders
       WHERE frame IS NOT NULL AND frame != ''
         AND created_at >= NOW() - INTERVAL '3 months'
         AND status != 'cancelled'
-        AND (frame_buy_price > 0 OR lens_buy_price > 0)
+        AND customer_own_frame IS NOT TRUE
+        AND frame_sell_price > 0
+        AND frame_buy_price  > 0
       GROUP BY frame
-      ORDER BY avg_total_profit DESC
-      LIMIT 8
+      HAVING COUNT(*) >= 1
+      ORDER BY avg_frame_profit DESC
+      LIMIT 10
     `);
 
     const qsMap   = {};
@@ -291,13 +294,18 @@ router.get('/lensjobs', auth, async (req, res) => {
 // ── GET /api/reports/topsellers ───────────────────────────────
 router.get('/topsellers', auth, async (req, res) => {
   try {
+    // Fixed: exclude customer_own_frame orders + use frame_sell_price not total_amount
     const frames = await pool.query(`
       SELECT frame, COUNT(*) AS units,
-        COALESCE(SUM(frame_sell_price),0) AS revenue,
-        COALESCE(AVG(NULLIF(frame_sell_price,0)),0) AS avg_price
+        COALESCE(SUM(NULLIF(frame_sell_price,0)),0) AS revenue,
+        COALESCE(AVG(NULLIF(frame_sell_price,0)),0) AS avg_price,
+        COALESCE(AVG(NULLIF(frame_buy_price,0)),0)  AS avg_cost,
+        COALESCE(AVG(NULLIF(frame_sell_price,0) - NULLIF(frame_buy_price,0)),0) AS avg_margin
       FROM orders
       WHERE frame IS NOT NULL AND frame != ''
         AND status != 'cancelled'
+        AND customer_own_frame IS NOT TRUE
+        AND frame_sell_price > 0
         AND created_at >= NOW() - INTERVAL '3 months'
       GROUP BY frame ORDER BY units DESC LIMIT 10
     `);
@@ -367,14 +375,32 @@ router.get('/topsellers', auth, async (req, res) => {
 });
 
 // ── GET /api/reports/comparison?month=YYYY-MM ─────────────────
+// Compares up to same date of previous month (not full month)
 router.get('/comparison', auth, async (req, res) => {
   try {
-    const month    = req.query.month || new Date().toISOString().slice(0, 7);
-    const [y, m]   = month.split('-').map(Number);
+    const month = req.query.month || new Date().toISOString().slice(0, 7);
+    const [y, m] = month.split('-').map(Number);
+
+    // Is this the current month? If so, compare up to today's date
+    const now       = new Date();
+    const isCurrentMonth = month === now.toISOString().slice(0,7);
+    const cutoffDay = isCurrentMonth ? now.getDate() : new Date(y, m, 0).getDate(); // last day of month if historical
+
     const lastM    = m === 1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
     const lastYear = `${y-1}-${String(m).padStart(2,'0')}`;
 
-    const periodData = async (mo) => {
+    // Build date range: from start of month up to cutoff day
+    const rangeWhere = (mo, upToDay) => {
+      const [my, mm] = mo.split('-').map(Number);
+      const fromDate = `${mo}-01`;
+      const lastDayOfMo = new Date(my, mm, 0).getDate();
+      const toDay    = Math.min(upToDay, lastDayOfMo);
+      const toDate   = `${mo}-${String(toDay).padStart(2,'0')}`;
+      return { fromDate, toDate };
+    };
+
+    const periodData = async (mo, upToDay) => {
+      const { fromDate, toDate } = rangeWhere(mo, upToDay);
       const [orders, qs, repairs, expenses] = await Promise.all([
         safeQuery(`SELECT
           COALESCE(SUM(total_amount),0)   AS revenue,
@@ -383,16 +409,16 @@ router.get('/comparison', auth, async (req, res) => {
           COALESCE(SUM(CASE WHEN customer_own_frame THEN 0 ELSE COALESCE(frame_buy_price,0) END),0) AS frame_cogs,
           COUNT(*) AS order_count
         FROM orders
-        WHERE TO_CHAR(created_at,'YYYY-MM')=$1
-          AND status != 'cancelled'`, [mo]),
+        WHERE created_at::date BETWEEN $1 AND $2
+          AND status != 'cancelled'`, [fromDate, toDate]),
         safeQuery(`SELECT COALESCE(SUM(total),0) AS qs_revenue, COUNT(*) AS qs_count
-          FROM quick_sales WHERE TO_CHAR(created_at,'YYYY-MM')=$1`, [mo]),
+          FROM quick_sales WHERE created_at::date BETWEEN $1 AND $2`, [fromDate, toDate]),
         safeQuery(`SELECT COALESCE(SUM(charge),0) AS repair_revenue, COUNT(*) AS repair_count
-          FROM repairs WHERE TO_CHAR(created_at,'YYYY-MM')=$1
-            AND status IN ('done','collected')`, [mo]),
+          FROM repairs WHERE created_at::date BETWEEN $1 AND $2
+            AND status IN ('done','collected')`, [fromDate, toDate]),
         safeQuery(`SELECT COALESCE(SUM(amount),0) AS total_expenses
-          FROM expenses WHERE TO_CHAR(date,'YYYY-MM')=$1
-            AND category != 'Lab Payment'`, [mo]),
+          FROM expenses WHERE date BETWEEN $1 AND $2
+            AND category != 'Lab Payment'`, [fromDate, toDate]),
       ]);
       const ord = orders.rows[0]||{};
       const q   = qs.rows[0]||{};
@@ -404,32 +430,198 @@ router.get('/comparison', auth, async (req, res) => {
       const gross_profit  = total_revenue - cogs;
       const net_profit    = gross_profit - expenses_amt;
       return {
-        month:          mo,
-        revenue:        total_revenue,
+        month: mo, from_date: fromDate, to_date: toDate,
+        up_to_day: upToDay,
+        revenue: total_revenue,
         order_revenue:  parseFloat(ord.revenue||0),
         qs_revenue:     parseFloat(q.qs_revenue||0),
         repair_revenue: parseFloat(r.repair_revenue||0),
-        expenses:       expenses_amt,
-        cogs,
-        gross_profit,
-        net_profit,
-        net_margin:     total_revenue > 0 ? Math.round(net_profit/total_revenue*100) : 0,
-        order_count:    parseInt(ord.order_count||0),
-        qs_count:       parseInt(q.qs_count||0),
-        repair_count:   parseInt(r.repair_count||0),
-        collected:      parseFloat(ord.collected||0),
-        owed:           parseFloat(ord.owed||0),
+        expenses: expenses_amt, cogs, gross_profit, net_profit,
+        net_margin: total_revenue > 0 ? Math.round(net_profit/total_revenue*100) : 0,
+        order_count:   parseInt(ord.order_count||0),
+        qs_count:      parseInt(q.qs_count||0),
+        repair_count:  parseInt(r.repair_count||0),
+        collected: parseFloat(ord.collected||0),
+        owed:      parseFloat(ord.owed||0),
       };
     };
 
-    const [thisMonth, prevMonth, lastYearMonth] = await Promise.all([
-      periodData(month),
-      periodData(lastM),
-      periodData(lastYear),
+    const [thisMonthData, prevMonthData, lastYearData] = await Promise.all([
+      periodData(month,  cutoffDay),
+      periodData(lastM,  cutoffDay),
+      periodData(lastYear, cutoffDay),
     ]);
 
-    res.json({ thisMonth, prevMonth, lastYearMonth });
+    // Calculate differences and percentages
+    const diff = (a, b) => ({ amount: a - b, pct: b > 0 ? Math.round((a-b)/b*100) : null });
+
+    res.json({
+      thisMonth:    thisMonthData,
+      prevMonth:    prevMonthData,
+      lastYearMonth:lastYearData,
+      cutoffDay,
+      isCurrentMonth,
+      diffs: {
+        revenue:    diff(thisMonthData.revenue,    prevMonthData.revenue),
+        net_profit: diff(thisMonthData.net_profit, prevMonthData.net_profit),
+        orders:     diff(thisMonthData.order_count,prevMonthData.order_count),
+      }
+    });
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
 module.exports = router;
+
+// ── GET /api/reports/patterns ────────────────────────────────
+// Daily sales patterns: most/least sale dates, day of week trends,
+// date-of-month patterns, most selling item types
+router.get('/patterns', auth, async (req, res) => {
+  const months = parseInt(req.query.months) || 6;
+  try {
+    const [
+      dailyBest,      // which dates had most/least sales in chosen month
+      dayOfWeek,      // Mon-Sun trend
+      dateOfMonth,    // 1-31 trend grouped into 1-10, 11-20, 21-31
+      itemTypes,      // sunglasses vs frames vs repairs etc
+      monthlyDays,    // per-month: best and worst day
+    ] = await Promise.all([
+
+      // Best/worst days in recent period
+      pool.query(`
+        SELECT
+          created_at::date AS sale_date,
+          TO_CHAR(created_at, 'DD Mon YYYY') AS date_label,
+          TO_CHAR(created_at, 'Day') AS day_name,
+          COUNT(*) AS order_count,
+          COALESCE(SUM(total_amount),0) AS revenue
+        FROM orders
+        WHERE created_at >= NOW() - INTERVAL '${months} months'
+          AND status != 'cancelled'
+        GROUP BY created_at::date
+        ORDER BY revenue DESC
+        LIMIT 20
+      `),
+
+      // Day of week pattern (0=Sun, 1=Mon...6=Sat)
+      pool.query(`
+        SELECT
+          EXTRACT(DOW FROM created_at) AS dow,
+          TO_CHAR(created_at, 'Day') AS day_name,
+          COUNT(*) AS order_count,
+          COALESCE(SUM(total_amount),0) AS revenue,
+          COALESCE(AVG(total_amount),0) AS avg_order_value
+        FROM orders
+        WHERE created_at >= NOW() - INTERVAL '${months} months'
+          AND status != 'cancelled'
+        GROUP BY EXTRACT(DOW FROM created_at), TO_CHAR(created_at, 'Day')
+        ORDER BY dow
+      `),
+
+      // Date of month pattern grouped: 1-10, 11-20, 21-31
+      pool.query(`
+        SELECT
+          EXTRACT(DAY FROM created_at) AS dom,
+          COUNT(*) AS order_count,
+          COALESCE(SUM(total_amount),0) AS revenue
+        FROM orders
+        WHERE created_at >= NOW() - INTERVAL '${months} months'
+          AND status != 'cancelled'
+        GROUP BY EXTRACT(DAY FROM created_at)
+        ORDER BY dom
+      `),
+
+      // Most selling item types (category breakdown)
+      pool.query(`
+        SELECT
+          CASE
+            WHEN category IN ('Sunglasses') THEN 'Sunglasses'
+            WHEN category IN ('Frames','Reading Glasses') THEN 'Frames / Rx'
+            WHEN category IN ('Contact Lenses') THEN 'Contact Lenses'
+            ELSE 'Accessories'
+          END AS item_type,
+          COUNT(*) AS units,
+          COALESCE(SUM(
+            CASE WHEN category = 'Sunglasses' THEN sell_price
+                 ELSE sell_price END
+          ),0) AS revenue
+        FROM inventory i
+        JOIN (
+          SELECT UNNEST(ARRAY[frame_inventory_id]) AS inv_id
+          FROM orders
+          WHERE created_at >= NOW() - INTERVAL '${months} months'
+            AND status != 'cancelled'
+            AND frame_inventory_id IS NOT NULL
+        ) sold ON sold.inv_id = i.id
+        GROUP BY item_type
+        ORDER BY units DESC
+      `).catch(() => ({ rows: [] })),
+
+      // Per month: best day and worst day
+      pool.query(`
+        SELECT
+          TO_CHAR(DATE_TRUNC('month', created_at), 'Mon YY') AS month,
+          TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month_key,
+          MAX(daily_rev) AS best_day_revenue,
+          MIN(daily_rev) AS worst_day_revenue,
+          (ARRAY_AGG(sale_date ORDER BY daily_rev DESC))[1] AS best_date,
+          (ARRAY_AGG(sale_date ORDER BY daily_rev ASC))[1]  AS worst_date
+        FROM (
+          SELECT
+            created_at::date AS sale_date,
+            DATE_TRUNC('month', created_at) AS month_start,
+            SUM(total_amount) AS daily_rev
+          FROM orders
+          WHERE created_at >= NOW() - INTERVAL '${months} months'
+            AND status != 'cancelled'
+          GROUP BY created_at::date
+        ) d
+        GROUP BY DATE_TRUNC('month', created_at)
+        ORDER BY DATE_TRUNC('month', created_at) DESC
+      `),
+    ]);
+
+    // Group date-of-month into 3 groups and also keep per-day data
+    const domGroups = { '1–10': {count:0,rev:0}, '11–20': {count:0,rev:0}, '21–31': {count:0,rev:0} };
+    const domPerDay = {};
+    dateOfMonth.rows.forEach(r => {
+      const d = parseInt(r.dom);
+      const g = d <= 10 ? '1–10' : d <= 20 ? '11–20' : '21–31';
+      domGroups[g].count += parseInt(r.order_count);
+      domGroups[g].rev   += parseFloat(r.revenue);
+      domPerDay[d] = { count: parseInt(r.order_count), rev: parseFloat(r.revenue) };
+    });
+    // Find best and worst day of month
+    const domEntries = Object.entries(domPerDay).map(([d,v])=>({day:parseInt(d),...v}));
+    const bestDom  = domEntries.sort((a,b)=>b.rev-a.rev)[0];
+    const worstDom = domEntries.filter(d=>d.count>0).sort((a,b)=>a.rev-b.rev)[0];
+
+    // Day of week — map to readable names, sort Mon-Sun
+    const DOW_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dowData = DOW_NAMES.map((name, i) => {
+      const found = dayOfWeek.rows.find(r => parseInt(r.dow) === i);
+      return { day: name, short: name.slice(0,3), order_count: parseInt(found?.order_count||0), revenue: parseFloat(found?.revenue||0), avg: parseFloat(found?.avg_order_value||0) };
+    });
+    const maxRevDow = Math.max(...dowData.map(d=>d.revenue));
+    const bestDay  = dowData.reduce((a,b) => b.revenue>a.revenue?b:a, dowData[0]);
+    const worstDay = dowData.filter(d=>d.order_count>0).reduce((a,b) => b.revenue<a.revenue?b:a, dowData[0]);
+
+    res.json({
+      daily_best:    dailyBest.rows.slice(0,10),
+      daily_worst:   [...dailyBest.rows].sort((a,b)=>a.revenue-b.revenue).slice(0,5),
+      day_of_week:   dowData,
+      max_rev_dow:   maxRevDow,
+      best_day:      bestDay,
+      worst_day:     worstDay,
+      date_of_month:     Object.entries(domGroups).map(([k,v])=>({ period:k, count:v.count, rev:v.rev })),
+      date_of_month_raw: domPerDay,
+      best_dom:          bestDom,
+      worst_dom:         worstDom,
+      item_types:    itemTypes.rows,
+      monthly_days:  monthlyDays.rows,
+      months_analyzed: months,
+    });
+  } catch (err) {
+    console.error('Patterns error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
