@@ -67,6 +67,7 @@ app.use('/api/dashboard-today',   require('./routes/dashboardToday'));
 app.use('/api/full-report',       require('./routes/fullReport'));
 app.use('/api/scan-session',      require('./routes/scanSession'));
 app.use('/api/store',             require('./routes/store'));
+app.use('/api/historical-records', require('./routes/historicalRecords'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 
@@ -220,6 +221,29 @@ const pool = require('./db/pool');
     await pool.query(`ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(10,2) DEFAULT 0`);
     await pool.query(`ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS wa_notified BOOLEAN DEFAULT FALSE`);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS historical_records (
+        id            SERIAL PRIMARY KEY,
+        visit_date    DATE         NOT NULL,
+        customer_name VARCHAR(100) NOT NULL,
+        phone         VARCHAR(20),
+        age           VARCHAR(10),
+        r_sph VARCHAR(10), r_cyl VARCHAR(10), r_axis VARCHAR(10),
+        l_sph VARCHAR(10), l_cyl VARCHAR(10), l_axis VARCHAR(10),
+        add_power     VARCHAR(10),
+        frame         VARCHAR(150),
+        lens_type     VARCHAR(80),
+        lens_coating  VARCHAR(80),
+        total_price   DECIMAL(10,2),
+        advance_paid  DECIMAL(10,2),
+        balance       DECIMAL(10,2),
+        notes         TEXT,
+        added_by      INTEGER REFERENCES users(id),
+        created_at    TIMESTAMP DEFAULT NOW()
+      )
+    `).catch(()=>{});
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_hist_name  ON historical_records(customer_name)`).catch(()=>{});
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_hist_phone ON historical_records(phone)`).catch(()=>{});
     console.log('✅ DB migrations complete');
   } catch (e) { console.warn('Migration warning:', e.message); }
 })();

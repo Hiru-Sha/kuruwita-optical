@@ -66,6 +66,7 @@ const NAV = [
   { to:'/lens-prices',    icon:'lens',       label:'Lens Prices',    section:'inventory' },
   { to:'/price-check',    icon:'expenses',   label:'Price Check',    section:'inventory' },
   { to:'/store-manager',  icon:'inventory',  label:'Online Store',   section:'inventory' },
+  { to:'/historical-records', icon:'customers', label:'📚 Old Records', section:'history' },
   { to:'/calculator',     icon:'calculator', label:'Calculator',     section:'inventory' },
   { to:'/dealers',        icon:'purchase',   label:'Purchases',      section:'inventory' },
   { to:'/kalutota',       icon:'balance',    label:'Kalutota A/C',   section:'inventory' },
