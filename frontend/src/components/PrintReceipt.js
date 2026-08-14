@@ -89,6 +89,15 @@ const PAGE_CSS = `
   .item-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dotted #e0ddd6; font-size: 9pt; }
   .item-row:last-child { border-bottom: none; }
 
+  /* FREE GIFTS BOX */
+  .gifts-box { background:#fff9f0; border:2px solid #c9a84c; border-radius:8px; padding:6px 10px; margin-bottom:3mm; }
+  .gifts-title { font-size:7pt; font-weight:800; color:#c9a84c; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px; }
+  .gift-row { display:flex; justify-content:space-between; align-items:center; padding:2.5px 0; border-bottom:1px dashed #f0e0c0; font-size:8.5pt; }
+  .gift-row:last-child { border-bottom:none; }
+  .gift-name { font-weight:600; color:#0f1f3d; }
+  .gift-tag { background:#c9a84c; color:white; font-size:6.5pt; font-weight:800; padding:1px 7px; border-radius:10px; letter-spacing:0.3px; }
+  .gift-price { color:#9ca3af; font-size:7.5pt; text-decoration:line-through; }
+
   /* FOOTER */
   .footer { background: #0f1f3d; padding: 3.5mm 7mm; display: flex; justify-content: space-between; align-items: center; }
   .footer-slogan { font-size: 7.5pt; font-weight: 700; color: #c9a84c; }
@@ -154,7 +163,8 @@ function buildAdvanceBill(order) {
   const lSell   = parseFloat(order.lens_sell_price  || 0);
   const discAmt = parseFloat(order.discount_amount  || 0);
   const discPct = parseFloat(order.discount_percent || 0);
-  const sub     = fSell + lSell;
+  const sub     = (fSell > 0 || lSell > 0) ? fSell + lSell : 0;
+  const gifts   = order.bill_gifts || [];
   const orderDate = order.created_at ? fmtD(order.created_at) : today();
   // Frame: only colour (no type/size labels like Medium/Small)
   const frameColor = order.frame_color || '';
@@ -205,18 +215,31 @@ function buildAdvanceBill(order) {
 
     <hr class="divider-dashed"/>
 
-    <!-- Payment table — always show prices clearly -->
+    <!-- Payment table -->
     <table class="price-table">
       ${fSell > 0 ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
       ${lSell > 0 ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
-      ${(fSell > 0 || lSell > 0) && (discAmt > 0 || discPct > 0) ? `
-        <tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>` : ''}
+      ${sub > 0 && (discAmt > 0 || discPct > 0) ? `<tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>` : ''}
       ${discAmt > 0 || discPct > 0 ? `
-        <tr class="row-disc"><td style="font-weight:700;">Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td style="font-size:10pt;font-weight:800;color:#dc2626;">- ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>
+        <tr class="row-disc"><td style="font-weight:700;">Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td>
+          <td style="font-size:10pt;font-weight:800;color:#dc2626;">- ${fmt(discAmt > 0 ? discAmt : Math.round((sub||total) * discPct / 100))}</td></tr>
         <tr class="total-row"><td>Net Payable</td><td>${fmt(total)}</td></tr>` :
-        `<tr class="total-row"><td>Total Amount</td><td>${fmt(total)}</td></tr>`}
+        `<tr class="total-row"><td>${sub > 0 ? 'Total' : 'Total Spectacle Price'}</td><td>${fmt(total)}</td></tr>`}
       <tr class="row-sub"><td>Advance Paid Now</td><td style="color:#15803d;font-weight:700;">- ${fmt(advance)}</td></tr>
     </table>
+    ${gifts.filter(g=>g.name).length > 0 ? `
+    <div class="gifts-box">
+      <div class="gifts-title">🎁 Complimentary Gifts Included</div>
+      ${gifts.filter(g=>g.name).map(g=>`
+        <div class="gift-row">
+          <span class="gift-name">${g.name}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${g.price ? `<span class="gift-price">${fmt(g.price)}</span>` : ''}
+            <span class="gift-tag">FREE GIFT</span>
+          </div>
+        </div>`).join('')}
+      <div style="font-size:7pt;color:#9ca3af;margin-top:3px;">Above items are complimentary gifts — no charge applied</div>
+    </div>` : ''}
 
     <div class="amt-box">
       <span class="lbl">Advance Paid</span>
@@ -253,7 +276,8 @@ function buildBalanceBill(order) {
   const lSell   = parseFloat(order.lens_sell_price  || 0);
   const discAmt = parseFloat(order.discount_amount  || 0);
   const discPct = parseFloat(order.discount_percent || 0);
-  const sub     = fSell + lSell;
+  const sub     = (fSell > 0 || lSell > 0) ? fSell + lSell : 0;
+  const gifts   = order.bill_gifts || [];
   const orderDate = order.created_at ? fmtD(order.created_at) : today();
   const frameColor  = order.frame_color  || '';
   const lensCoating = order.lens_coating || '';
@@ -304,14 +328,27 @@ function buildBalanceBill(order) {
     <table class="price-table">
       ${fSell > 0 ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
       ${lSell > 0 ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
-      ${(fSell > 0 || lSell > 0) && (discAmt > 0 || discPct > 0) ? `
-        <tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>` : ''}
+      ${sub > 0 && (discAmt > 0 || discPct > 0) ? `<tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>` : ''}
       ${discAmt > 0 || discPct > 0 ? `
-        <tr class="row-disc"><td style="font-weight:700;">Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td><td style="font-size:10pt;font-weight:800;color:#dc2626;">- ${fmt(discAmt || Math.round(sub * discPct / 100))}</td></tr>
+        <tr class="row-disc"><td style="font-weight:700;">Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td>
+          <td style="font-size:10pt;font-weight:800;color:#dc2626;">- ${fmt(discAmt > 0 ? discAmt : Math.round((sub||total) * discPct / 100))}</td></tr>
         <tr class="total-row"><td>Net Payable</td><td>${fmt(total)}</td></tr>` :
-        `<tr class="total-row"><td>Total Amount</td><td>${fmt(total)}</td></tr>`}
+        `<tr class="total-row"><td>${sub > 0 ? 'Total' : 'Total Spectacle Price'}</td><td>${fmt(total)}</td></tr>`}
       ${advance > 0 ? `<tr class="row-sub"><td>Advance Already Paid</td><td style="color:#15803d;font-weight:700;">- ${fmt(advance)}</td></tr>` : ''}
     </table>
+    ${gifts.filter(g=>g.name).length > 0 ? `
+    <div class="gifts-box">
+      <div class="gifts-title">🎁 Complimentary Gifts Included</div>
+      ${gifts.filter(g=>g.name).map(g=>`
+        <div class="gift-row">
+          <span class="gift-name">${g.name}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${g.price ? `<span class="gift-price">${fmt(g.price)}</span>` : ''}
+            <span class="gift-tag">FREE GIFT</span>
+          </div>
+        </div>`).join('')}
+      <div style="font-size:7pt;color:#9ca3af;margin-top:3px;">Above items are complimentary gifts — no charge applied</div>
+    </div>` : ''}
 
     <div class="amt-box">
       <span class="lbl">Balance Paid Today</span>
