@@ -40,122 +40,199 @@ function F({ value, onChange, onKeyDown, inputRef, type='text', options, placeho
     onKeyDown={onKeyDown} placeholder={placeholder} style={s}/>;
 }
 
-// ── Single entry row ──────────────────────────────────────────
-function EntryRow({ row, idx, onChange, onSave, onDelete, onAddNext, firstRef, isSaved }) {
-  const set = (k, v) => onChange(idx, k, v);
+// Axis options 0-180 in steps of 5
+const AXIS_OPTS = ['', ...Array.from({length:37}, (_,i) => String(i*5))];
+const ADD_OPTS  = ['','+0.75','+1.00','+1.25','+1.50','+1.75','+2.00','+2.25','+2.50','+2.75','+3.00','+3.25','+3.50'];
 
-  // Build field list for Tab navigation
+// ── Single entry row ──────────────────────────────────────────
+function EntryRow({ row, idx, onChange, onSave, onDelete, firstRef, isSaved }) {
+  const set = (k, v) => onChange(idx, k, v);
+  const [hasRx, setHasRx] = useState(false); // Patient Rx toggle — default OFF
+
+  // Copy RE → LE
+  const copyREtoLE = () => {
+    set('l_sph',  row.r_sph);
+    set('l_cyl',  row.r_cyl);
+    set('l_axis', row.r_axis);
+  };
+
   const fields = useRef([]);
   const reg = (i) => (el) => { fields.current[i] = el; };
-
   const handleKey = (fieldIdx) => (e) => {
     if (e.key === 'Tab') {
       e.preventDefault();
       const next = fields.current[fieldIdx + 1];
       if (next) next.focus();
-      else { onSave(idx); } // Tab on last field = save
+      else onSave(idx);
     }
     if (e.key === 'Enter') { e.preventDefault(); onSave(idx); }
   };
 
-  const bg = isSaved ? '#f0fdf4' : row._error ? '#fef2f2' : 'white';
-  const borderColor = isSaved ? '#86efac' : row._error ? '#fca5a5' : C.border;
+  const rowBg    = isSaved ? '#f0fdf4' : row._error ? '#fef2f2' : 'white';
+  const rowBord  = isSaved ? '#86efac' : row._error ? '#fca5a5' : C.border;
+  const selStyle = (w) => ({ padding:'4px 5px', border:`1px solid ${C.border}`, borderRadius:6, fontSize:12, fontFamily:'inherit', outline:'none', background:'white', color:C.navy, width:w, boxSizing:'border-box' });
+  const inpStyle = (w) => ({ ...selStyle(w) });
 
   return (
-    <tr style={{ background: bg, border:`1px solid ${borderColor}` }}>
-      <td style={{ padding:'3px 4px', textAlign:'center', fontSize:11, color:C.muted, width:30 }}>{idx+1}</td>
+    <tr style={{ background:rowBg, borderBottom:`1px solid ${rowBord}` }}>
+      {/* Row # */}
+      <td style={{ padding:'4px 4px', textAlign:'center', fontSize:11, color:C.muted, width:28, borderRight:`1px solid ${C.border}` }}>
+        {idx+1}
+      </td>
 
       {/* Date */}
-      <td style={{ padding:'3px 4px', width:110 }}>
-        <F value={row.visit_date} onChange={v=>set('visit_date',v)} type="date" inputRef={idx===0?firstRef:reg(0+(idx*20))} onKeyDown={handleKey(0+(idx*20))} width={100}/>
+      <td style={{ padding:'3px 4px', width:112 }}>
+        <input type="date" value={row.visit_date} onChange={e=>set('visit_date',e.target.value)}
+          onKeyDown={handleKey(0)} ref={idx===0?firstRef:reg(0)}
+          style={{ ...inpStyle(104) }}/>
       </td>
 
       {/* Name */}
       <td style={{ padding:'3px 4px', minWidth:120 }}>
-        <F value={row.customer_name} onChange={v=>set('customer_name',v)} placeholder="Full name" inputRef={reg(1+(idx*20))} onKeyDown={handleKey(1+(idx*20))}/>
+        <input value={row.customer_name} onChange={e=>set('customer_name',e.target.value)}
+          onKeyDown={handleKey(1)} ref={reg(1)} placeholder="Full name"
+          style={{ ...inpStyle('100%') }}/>
       </td>
 
       {/* Phone */}
-      <td style={{ padding:'3px 4px', width:95 }}>
-        <F value={row.phone} onChange={v=>set('phone',v)} placeholder="Phone" type="tel" inputRef={reg(2+(idx*20))} onKeyDown={handleKey(2+(idx*20))} width={90}/>
+      <td style={{ padding:'3px 4px', width:94 }}>
+        <input value={row.phone} onChange={e=>set('phone',e.target.value)}
+          onKeyDown={handleKey(2)} ref={reg(2)} placeholder="Phone" type="tel"
+          style={{ ...inpStyle(88) }}/>
       </td>
 
       {/* Age */}
-      <td style={{ padding:'3px 4px', width:50 }}>
-        <F value={row.age} onChange={v=>set('age',v)} placeholder="Age" type="number" inputRef={reg(3+(idx*20))} onKeyDown={handleKey(3+(idx*20))} width={44}/>
+      <td style={{ padding:'3px 4px', width:46 }}>
+        <input type="number" value={row.age} onChange={e=>set('age',e.target.value)}
+          onKeyDown={handleKey(3)} ref={reg(3)} placeholder="—"
+          style={{ ...inpStyle(40) }}/>
+      </td>
+
+      {/* Patient Rx toggle */}
+      <td style={{ padding:'3px 6px', width:52, textAlign:'center', borderLeft:`1px solid ${C.border}`, borderRight:`1px solid ${C.border}` }}>
+        <button onClick={()=>setHasRx(s=>!s)} title="Patient brought own Rx card"
+          style={{ padding:'3px 7px', borderRadius:20, border:`1px solid ${hasRx?C.gold:C.border}`,
+            background: hasRx?'#fef9f0':'#f9f9f9', color: hasRx?'#92400e':C.muted,
+            fontSize:9, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+            letterSpacing:'.5px', whiteSpace:'nowrap' }}>
+          {hasRx ? '📄 Rx' : 'No Rx'}
+        </button>
       </td>
 
       {/* RE Power */}
-      <td style={{ padding:'3px 4px', width:62 }}>
-        <F value={row.r_sph} onChange={v=>set('r_sph',v)} options={POWER_OPTS} inputRef={reg(4+(idx*20))} onKeyDown={handleKey(4+(idx*20))} width={56}/>
+      <td style={{ padding:'3px 4px', width:64, background:'rgba(219,234,254,.15)' }}>
+        <select value={row.r_sph} onChange={e=>set('r_sph',e.target.value)}
+          onKeyDown={handleKey(4)} ref={reg(4)} style={selStyle(58)}>
+          {POWER_OPTS.map(o=><option key={o} value={o}>{o||'—'}</option>)}
+        </select>
       </td>
-      <td style={{ padding:'3px 4px', width:62 }}>
-        <F value={row.r_cyl} onChange={v=>set('r_cyl',v)} options={POWER_OPTS} inputRef={reg(5+(idx*20))} onKeyDown={handleKey(5+(idx*20))} width={56}/>
+      <td style={{ padding:'3px 4px', width:64, background:'rgba(219,234,254,.15)' }}>
+        <select value={row.r_cyl} onChange={e=>set('r_cyl',e.target.value)}
+          onKeyDown={handleKey(5)} ref={reg(5)} style={selStyle(58)}>
+          {POWER_OPTS.map(o=><option key={o} value={o}>{o||'—'}</option>)}
+        </select>
       </td>
-      <td style={{ padding:'3px 4px', width:54 }}>
-        <F value={row.r_axis} onChange={v=>set('r_axis',v)} placeholder="Axis" type="number" inputRef={reg(6+(idx*20))} onKeyDown={handleKey(6+(idx*20))} width={48}/>
+      <td style={{ padding:'3px 4px', width:56, background:'rgba(219,234,254,.15)', borderRight:`1px solid ${C.border}` }}>
+        <select value={row.r_axis} onChange={e=>set('r_axis',e.target.value)}
+          onKeyDown={handleKey(6)} ref={reg(6)} style={selStyle(50)}>
+          {AXIS_OPTS.map(o=><option key={o} value={o}>{o||'—'}</option>)}
+        </select>
+      </td>
+
+      {/* Copy RE→LE button */}
+      <td style={{ padding:'2px 4px', width:40, textAlign:'center' }}>
+        <button onClick={copyREtoLE} title="Copy Right Eye to Left Eye"
+          style={{ padding:'4px 5px', background:C.gold, color:C.navy, border:'none',
+            borderRadius:5, fontSize:10, fontWeight:800, cursor:'pointer', whiteSpace:'nowrap' }}>
+          →L
+        </button>
       </td>
 
       {/* LE Power */}
-      <td style={{ padding:'3px 4px', width:62 }}>
-        <F value={row.l_sph} onChange={v=>set('l_sph',v)} options={POWER_OPTS} inputRef={reg(7+(idx*20))} onKeyDown={handleKey(7+(idx*20))} width={56}/>
+      <td style={{ padding:'3px 4px', width:64, background:'rgba(240,253,244,.3)' }}>
+        <select value={row.l_sph} onChange={e=>set('l_sph',e.target.value)}
+          onKeyDown={handleKey(7)} ref={reg(7)} style={selStyle(58)}>
+          {POWER_OPTS.map(o=><option key={o} value={o}>{o||'—'}</option>)}
+        </select>
       </td>
-      <td style={{ padding:'3px 4px', width:62 }}>
-        <F value={row.l_cyl} onChange={v=>set('l_cyl',v)} options={POWER_OPTS} inputRef={reg(8+(idx*20))} onKeyDown={handleKey(8+(idx*20))} width={56}/>
+      <td style={{ padding:'3px 4px', width:64, background:'rgba(240,253,244,.3)' }}>
+        <select value={row.l_cyl} onChange={e=>set('l_cyl',e.target.value)}
+          onKeyDown={handleKey(8)} ref={reg(8)} style={selStyle(58)}>
+          {POWER_OPTS.map(o=><option key={o} value={o}>{o||'—'}</option>)}
+        </select>
       </td>
-      <td style={{ padding:'3px 4px', width:54 }}>
-        <F value={row.l_axis} onChange={v=>set('l_axis',v)} placeholder="Axis" type="number" inputRef={reg(9+(idx*20))} onKeyDown={handleKey(9+(idx*20))} width={48}/>
+      <td style={{ padding:'3px 4px', width:56, background:'rgba(240,253,244,.3)', borderRight:`1px solid ${C.border}` }}>
+        <select value={row.l_axis} onChange={e=>set('l_axis',e.target.value)}
+          onKeyDown={handleKey(9)} ref={reg(9)} style={selStyle(50)}>
+          {AXIS_OPTS.map(o=><option key={o} value={o}>{o||'—'}</option>)}
+        </select>
       </td>
 
       {/* ADD */}
-      <td style={{ padding:'3px 4px', width:62 }}>
-        <F value={row.add_power} onChange={v=>set('add_power',v)} options={['+0.75','+1.00','+1.25','+1.50','+1.75','+2.00','+2.25','+2.50','+2.75','+3.00','']} inputRef={reg(10+(idx*20))} onKeyDown={handleKey(10+(idx*20))} width={56}/>
+      <td style={{ padding:'3px 4px', width:64, borderRight:`1px solid ${C.border}` }}>
+        <select value={row.add_power} onChange={e=>set('add_power',e.target.value)}
+          onKeyDown={handleKey(10)} ref={reg(10)} style={selStyle(58)}>
+          {ADD_OPTS.map(o=><option key={o} value={o}>{o||'—'}</option>)}
+        </select>
       </td>
 
       {/* Frame */}
       <td style={{ padding:'3px 4px', minWidth:110 }}>
-        <F value={row.frame} onChange={v=>set('frame',v)} placeholder="Frame name" inputRef={reg(11+(idx*20))} onKeyDown={handleKey(11+(idx*20))}/>
+        <input value={row.frame} onChange={e=>set('frame',e.target.value)}
+          onKeyDown={handleKey(11)} ref={reg(11)} placeholder="Frame name"
+          style={{ ...inpStyle('100%') }}/>
       </td>
 
       {/* Lens type */}
-      <td style={{ padding:'3px 4px', width:110 }}>
-        <F value={row.lens_type} onChange={v=>set('lens_type',v)} options={LENS_TYPES} inputRef={reg(12+(idx*20))} onKeyDown={handleKey(12+(idx*20))} width={104}/>
+      <td style={{ padding:'3px 4px', width:112 }}>
+        <select value={row.lens_type} onChange={e=>set('lens_type',e.target.value)}
+          onKeyDown={handleKey(12)} ref={reg(12)} style={selStyle(106)}>
+          {LENS_TYPES.map(o=><option key={o} value={o}>{o||'—'}</option>)}
+        </select>
       </td>
 
       {/* Coating */}
-      <td style={{ padding:'3px 4px', width:110 }}>
-        <F value={row.lens_coating} onChange={v=>set('lens_coating',v)} options={COATINGS} inputRef={reg(13+(idx*20))} onKeyDown={handleKey(13+(idx*20))} width={104}/>
+      <td style={{ padding:'3px 4px', width:112 }}>
+        <select value={row.lens_coating} onChange={e=>set('lens_coating',e.target.value)}
+          onKeyDown={handleKey(13)} ref={reg(13)} style={selStyle(106)}>
+          {COATINGS.map(o=><option key={o} value={o}>{o||'—'}</option>)}
+        </select>
       </td>
 
       {/* Price */}
       <td style={{ padding:'3px 4px', width:80 }}>
-        <F value={row.total_price} onChange={v=>set('total_price',v)} placeholder="Rs." type="number" inputRef={reg(14+(idx*20))} onKeyDown={handleKey(14+(idx*20))} width={74}/>
+        <input type="number" value={row.total_price} onChange={e=>set('total_price',e.target.value)}
+          onKeyDown={handleKey(14)} ref={reg(14)} placeholder="Rs."
+          style={{ ...inpStyle(74) }}/>
       </td>
 
-      {/* Notes */}
+      {/* Notes — includes Rx status */}
       <td style={{ padding:'3px 4px', minWidth:90 }}>
-        <F value={row.notes} onChange={v=>set('notes',v)} placeholder="Notes" inputRef={reg(15+(idx*20))} onKeyDown={handleKey(15+(idx*20))}/>
+        <input value={row.notes} onChange={e=>set('notes',e.target.value)}
+          onKeyDown={handleKey(15)} ref={reg(15)}
+          placeholder={hasRx ? '📄 Rx brought' : 'Notes'}
+          style={{ ...inpStyle('100%'), ...(hasRx?{borderColor:'#f59e0b',background:'#fffbeb'}:{}) }}/>
       </td>
 
       {/* Actions */}
-      <td style={{ padding:'3px 6px', textAlign:'center', width:70 }}>
+      <td style={{ padding:'3px 6px', textAlign:'center', width:66 }}>
         {isSaved ? (
-          <span style={{ color:C.success, fontSize:16 }}>✓</span>
+          <div style={{ color:C.success, fontSize:18, fontWeight:700 }}>✓</div>
         ) : row._saving ? (
-          <span style={{ color:C.muted, fontSize:11 }}>⏳</span>
+          <div style={{ color:C.muted, fontSize:11 }}>⏳</div>
         ) : (
-          <div style={{ display:'flex', gap:4 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
             <button onClick={()=>onSave(idx)} title="Save (Enter)"
-              style={{ padding:'4px 8px', background:C.navy, color:'white', border:'none', borderRadius:5, fontSize:11, fontWeight:700, cursor:'pointer' }}>
-              ✓
+              style={{ padding:'4px 10px', background:C.success, color:'white', border:'none', borderRadius:5, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              ✓ Save
             </button>
             <button onClick={()=>onDelete(idx)} title="Remove row"
-              style={{ padding:'4px 6px', background:'#fee2e2', color:C.danger, border:'none', borderRadius:5, fontSize:11, cursor:'pointer' }}>
-              ✕
+              style={{ padding:'3px', background:'#fee2e2', color:C.danger, border:'none', borderRadius:5, fontSize:10, cursor:'pointer' }}>
+              ✕ Remove
             </button>
           </div>
         )}
-        {row._error && <div style={{ fontSize:9, color:C.danger, marginTop:2 }}>{row._error}</div>}
+        {row._error && <div style={{ fontSize:8, color:C.danger, marginTop:2, maxWidth:64 }}>{row._error}</div>}
       </td>
     </tr>
   );
@@ -563,11 +640,13 @@ export default function HistoricalRecords() {
             <table style={{ borderCollapse:'collapse', width:'100%', minWidth:1200 }}>
               <thead>
                 <tr style={{ background:C.navy }}>
-                  {[['#','30px'],['Date','110px'],['Name','140px'],['Phone','95px'],['Age','50px'],
-                    ['RE SPH','62px'],['RE CYL','62px'],['RE Axis','54px'],
-                    ['LE SPH','62px'],['LE CYL','62px'],['LE Axis','54px'],
-                    ['ADD','62px'],['Frame','130px'],['Lens Type','110px'],['Coating','110px'],
-                    ['Price','80px'],['Notes','100px'],['','70px']
+                  {[['#','28px'],['Date','112px'],['Name','140px'],['Phone','94px'],['Age','46px'],
+                    ['Rx','52px'],
+                    ['RE SPH','64px'],['RE CYL','64px'],['Axis','56px'],
+                    ['→L','40px'],
+                    ['LE SPH','64px'],['LE CYL','64px'],['Axis','56px'],
+                    ['ADD','64px'],['Frame','130px'],['Lens Type','112px'],['Coating','112px'],
+                    ['Price','80px'],['Notes','100px'],['','66px']
                   ].map(([l,w])=>(
                     <th key={l} style={{ padding:'8px 4px', textAlign:'left', color:C.gold, fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', width:w, whiteSpace:'nowrap' }}>
                       {l}
