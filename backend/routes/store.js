@@ -13,13 +13,56 @@ const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 
 // ── GET /api/store/products ──────────────────────────────────
-// Shows ALL inventory items that have images — LEFT JOIN store_products
-// for optional store-specific settings (price override, discount, description)
+// Shows ALL inventory items with images by default
+// Items explicitly hidden in Store Manager (show_on_store=FALSE) are excluded
 router.get('/products', async (req, res) => {
   const { category, search, sort = 'name', min_price, max_price, limit = 60, offset = 0 } = req.query;
   try {
-    let sql = `
-      SELECT
+    const params = [];
+    let where = `
+      WHERE i.image_url IS NOT NULL
+        AND i.image_url != ''
+        AND i.sell_price > 0
+        AND i.category IN ('Frames','Sunglasses','Reading Glasses','Contact Lenses','Accessories')
+        AND COALESCE(sp.show_on_store, TRUE) = TRUE
+    `;
+
+    if (category && category !== 'All') {
+      params.push(category);
+      where += ` AND i.category = $${params.length}`;
+    }
+    if (search) {
+      params.push(`%${search}%`);
+      where += ` AND (i.name ILIKE $${params.length} OR i.brand ILIKE $${params.length} OR i.frame_color ILIKE $${params.length})`;
+    }
+    if (min_price) {
+      params.push(parseFloat(min_price));
+      where += ` AND COALESCE(sp.store_price, i.sell_price) >= $${params.length}`;
+    }
+    if (max_price) {
+      params.push(parseFloat(max_price));
+      where += ` AND COALESCE(sp.store_price, i.sell_price) <= $${params.length}`;
+    }
+
+    const orderMap = {
+      name:       'i.name ASC',
+      price_asc:  'COALESCE(sp.store_price, i.sell_price) ASC',
+      price_desc: 'COALESCE(sp.store_price, i.sell_price) DESC',
+      newest:     'i.created_at DESC',
+    };
+    const orderBy = orderMap[sort] || 'i.name ASC';
+
+    // Count
+    const countRes = await pool.query(
+      `SELECT COUNT(*) AS total FROM inventory i
+       LEFT JOIN store_products sp ON sp.inventory_id = i.id ${where}`,
+      params
+    );
+
+    // Products
+    params.push(parseInt(limit), parseInt(offset));
+    const result = await pool.query(
+      `SELECT
         i.id, i.name, i.category, i.brand, i.frame_type, i.frame_color,
         i.frame_shape, i.frame_material, i.frame_size, i.quantity AS stock,
         i.image_url,
@@ -30,61 +73,24 @@ router.get('/products', async (req, res) => {
         CASE WHEN COALESCE(sp.discount_pct,0) > 0
           THEN ROUND(COALESCE(sp.store_price, i.sell_price) * (1 - COALESCE(sp.discount_pct,0)::DECIMAL/100), 2)
           ELSE COALESCE(sp.store_price, i.sell_price)
-        END AS final_price,
-        CASE WHEN sp.show_on_store = FALSE THEN FALSE ELSE TRUE END AS visible
-      FROM inventory i
-      LEFT JOIN store_products sp ON sp.inventory_id = i.id
-      WHERE i.image_url IS NOT NULL
-        AND i.image_url != ''
-        AND i.sell_price > 0
-        AND i.category IN ('Frames','Sunglasses','Reading Glasses','Contact Lenses','Accessories')
-        AND COALESCE(sp.show_on_store, TRUE) = TRUE
-    `;
-    const params = [];
+        END AS final_price
+       FROM inventory i
+       LEFT JOIN store_products sp ON sp.inventory_id = i.id
+       ${where}
+       ORDER BY ${orderBy}
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
 
-    if (category && category !== 'All') {
-      params.push(category);
-      sql += ` AND i.category = $${params.length}`;
-    }
-    if (search) {
-      params.push(`%${search}%`);
-      sql += ` AND (i.name ILIKE $${params.length} OR i.brand ILIKE $${params.length} OR i.frame_color ILIKE $${params.length} OR sp.description ILIKE $${params.length})`;
-    }
-    if (min_price) { params.push(parseFloat(min_price)); sql += ` AND COALESCE(sp.store_price, i.sell_price) >= $${params.length}`; }
-    if (max_price) { params.push(parseFloat(max_price)); sql += ` AND COALESCE(sp.store_price, i.sell_price) <= $${params.length}`; }
-    if (tags)      { params.push(tags.split(',')); sql += ` AND sp.tags && $${params.length}`; }
-
-    const orderMap = {
-      sort_order:  'sp.sort_order ASC, i.name ASC',
-      name:        'i.name ASC',
-      price_asc:   'final_price ASC',
-      price_desc:  'final_price DESC',
-      newest:      'i.created_at DESC',
-      discount:    'sp.discount_pct DESC',
-      rating:      'avg_rating DESC',
-    };
-    sql += ` ORDER BY ${orderMap[sort] || 'sp.sort_order ASC, i.name ASC'}`;
-
-    // Count query
-    let countSql = `SELECT COUNT(*) AS total FROM inventory i
-      LEFT JOIN store_products sp ON sp.inventory_id = i.id
-      WHERE i.image_url IS NOT NULL AND i.image_url != ''
-        AND i.sell_price > 0
-        AND i.category IN ('Frames','Sunglasses','Reading Glasses','Contact Lenses','Accessories')
-        AND COALESCE(sp.show_on_store, TRUE) = TRUE`;
-    const countParams = [];
-    if (category && category !== 'All') { countParams.push(category); countSql += ` AND i.category = $${countParams.length}`; }
-    if (search) { countParams.push(`%${search}%`); countSql += ` AND (i.name ILIKE $${countParams.length} OR i.brand ILIKE $${countParams.length})`; }
-    const countRes = await pool.query(countSql, countParams);
-
-    params.push(parseInt(limit), parseInt(offset));
-    sql += ` LIMIT $${params.length - 1} OFFSET $${params.length}`;
-    const result = await pool.query(sql, params);
-
-    res.json({ products: result.rows, total: parseInt(countRes.rows[0].total), limit: parseInt(limit), offset: parseInt(offset) });
+    res.json({
+      products: result.rows,
+      total:    parseInt(countRes.rows[0].total),
+      limit:    parseInt(limit),
+      offset:   parseInt(offset),
+    });
   } catch (err) {
     console.error('Store products error:', err.message);
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: err.message });
   }
 });
 
