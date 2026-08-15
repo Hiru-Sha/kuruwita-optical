@@ -217,8 +217,8 @@ function buildAdvanceBill(order) {
 
     <!-- Payment table -->
     <table class="price-table">
-      ${fSell > 0 ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
-      ${lSell > 0 ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
+      ${(fSell > 0 && order.show_frame_price !== false) ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
+      ${(lSell > 0 && order.show_lens_price  !== false) ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
       ${sub > 0 && (discAmt > 0 || discPct > 0) ? `<tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>` : ''}
       ${discAmt > 0 || discPct > 0 ? `
         <tr class="row-disc"><td style="font-weight:700;">Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td>
@@ -326,8 +326,8 @@ function buildBalanceBill(order) {
 
     <!-- Payment table — full breakdown -->
     <table class="price-table">
-      ${fSell > 0 ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
-      ${lSell > 0 ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
+      ${(fSell > 0 && order.show_frame_price !== false) ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
+      ${(lSell > 0 && order.show_lens_price  !== false) ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
       ${sub > 0 && (discAmt > 0 || discPct > 0) ? `<tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>` : ''}
       ${discAmt > 0 || discPct > 0 ? `
         <tr class="row-disc"><td style="font-weight:700;">Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td>

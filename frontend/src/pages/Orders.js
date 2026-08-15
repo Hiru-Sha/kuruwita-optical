@@ -610,12 +610,65 @@ function EditOrderModal({ order, onClose, onSave }) {
 
 // ── Bill Options Modal — proper component (not IIFE) ─────────
 function BillOptionsModal({ selected, onClose, onPrint, C, fmtMoney }) {
-  const [cFramePrice, setCFramePrice] = useState(String(selected.frame_sell_price || ''));
-  const [cLensPrice,  setCLensPrice]  = useState(String(selected.lens_sell_price  || ''));
-  const [cDiscount,   setCDiscount]   = useState('');
-  const [cDiscType,   setCDiscType]   = useState('amount');
-  const [cUseCustom,  setCUseCustom]  = useState(false);
-  const [cGifts,      setCGifts]      = useState([]);
+  const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const token = localStorage.getItem('ko_token');
+  const hdr   = { Authorization: `Bearer ${token}` };
+
+  // Price display controls
+  const [showFramePrice, setShowFramePrice] = useState(true);
+  const [showLensPrice,  setShowLensPrice]  = useState(true);
+  const [cUseCustom,     setCUseCustom]     = useState(false);
+  const [cFramePrice,    setCFramePrice]    = useState(String(selected.frame_sell_price || ''));
+  const [cLensPrice,     setCLensPrice]     = useState(String(selected.lens_sell_price  || ''));
+
+  // Discount
+  const [cDiscount,  setCDiscount]  = useState('');
+  const [cDiscType,  setCDiscType]  = useState('amount');
+
+  // Gifts — pre-fill from order's existing gift notes
+  const [cGifts,     setCGifts]     = useState(() => {
+    // Try to parse existing gifts from order notes
+    const notesMatch = (selected.notes||'').match(/Gifts?:?\s*(.+)/i);
+    if (notesMatch) {
+      return notesMatch[1].split(',').map(g => ({ name: g.trim(), price: '', stock: null })).filter(g=>g.name);
+    }
+    return [];
+  });
+  const [giftSearch, setGiftSearch] = useState('');
+  const [giftDrop,   setGiftDrop]   = useState([]);
+  const [searching,  setSearching]  = useState(false);
+
+  // Search inventory for gift items
+  const searchGifts = async (q) => {
+    setGiftSearch(q);
+    if (!q.trim() || q.length < 2) { setGiftDrop([]); return; }
+    setSearching(true);
+    try {
+      const res  = await fetch(`${BASE}/inventory?search=${encodeURIComponent(q)}&limit=8`, { headers: hdr });
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : (data.data || []);
+      setGiftDrop(items.slice(0,8));
+    } catch(e) {} finally { setSearching(false); }
+  };
+
+  const addGiftFromInventory = (item) => {
+    if (!cGifts.find(g => g.name === item.name)) {
+      setCGifts(g => [...g, {
+        name:  item.name,
+        price: String(item.sell_price || ''),
+        stock: item.quantity,
+        id:    item.id,
+      }]);
+    }
+    setGiftSearch('');
+    setGiftDrop([]);
+  };
+
+  const addBlankGift = () => {
+    setCGifts(g => [...g, { name:'', price:'', stock:null }]);
+    setGiftSearch('');
+    setGiftDrop([]);
+  };
 
   const origTotal   = parseFloat(selected.total_amount   || 0);
   const origAdvance = parseFloat(selected.advance_amount || 0);
@@ -635,12 +688,20 @@ function BillOptionsModal({ selected, onClose, onPrint, C, fmtMoney }) {
 
   const handlePrint = () => {
     const overrides = {};
+
+    // Frame/Lens price visibility controls
+    overrides.show_frame_price = showFramePrice;
+    overrides.show_lens_price  = showLensPrice;
+
+    // Custom prices
     if (cUseCustom) {
       if (customFrame > 0) overrides.frame_sell_price = customFrame;
       if (customLens  > 0) overrides.lens_sell_price  = customLens;
       overrides.total_amount   = customTotal;
       overrides.balance_amount = customBalance;
     }
+
+    // Discount
     if (discAmt > 0) {
       overrides.discount_amount  = discAmt;
       overrides.discount_percent = cDiscType === 'pct' ? parseFloat(cDiscount) : 0;
@@ -649,72 +710,109 @@ function BillOptionsModal({ selected, onClose, onPrint, C, fmtMoney }) {
         overrides.balance_amount = Math.max(0, origTotal - discAmt - origAdvance);
       }
     }
-    if (cGifts.length > 0) overrides.bill_gifts = cGifts.filter(g => g.name);
+
+    // Gifts
+    const validGifts = cGifts.filter(g => g.name.trim());
+    if (validGifts.length > 0) overrides.bill_gifts = validGifts;
+
     onPrint(overrides);
   };
 
+  const fSell = parseFloat(selected.frame_sell_price || 0);
+  const lSell = parseFloat(selected.lens_sell_price  || 0);
+
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.6)', zIndex:500,
-      display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+    <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.7)', zIndex:500,
+      display:'flex', alignItems:'center', justifyContent:'center', padding:12 }}
       onClick={e => { if(e.target===e.currentTarget) onClose(); }}>
-      <div style={{ background:'white', borderRadius:20, padding:28, width:'100%', maxWidth:520,
-        boxShadow:'0 24px 60px rgba(0,0,0,.3)', maxHeight:'90vh', overflowY:'auto' }}>
-        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:4 }}>🖨️ Bill Options</div>
-        <div style={{ fontSize:13, color:C.muted, marginBottom:20 }}>
-          Order <b style={{color:C.navy}}>{selected.order_number}</b> · {selected.customer_name}
+      <div style={{ background:'white', borderRadius:20, padding:24, width:'100%', maxWidth:540,
+        boxShadow:'0 24px 60px rgba(0,0,0,.35)', maxHeight:'92vh', overflowY:'auto' }}>
+
+        {/* Header */}
+        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:C.navy, marginBottom:2 }}>🖨️ Bill Options</div>
+        <div style={{ fontSize:12, color:C.muted, marginBottom:18 }}>
+          <b style={{color:C.navy}}>{selected.order_number}</b> · {selected.customer_name}
         </div>
 
-        {/* Original prices */}
-        <div style={{ background:C.cream, borderRadius:10, padding:'12px 16px', marginBottom:16 }}>
-          <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:8 }}>Original Order Prices</div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, fontSize:13 }}>
-            <div><div style={{ color:C.muted, fontSize:10 }}>Frame</div><div style={{ fontWeight:700, color:C.navy }}>{selected.frame_sell_price > 0 ? 'Rs. '+parseFloat(selected.frame_sell_price).toLocaleString() : '—'}</div></div>
-            <div><div style={{ color:C.muted, fontSize:10 }}>Lens</div><div style={{ fontWeight:700, color:C.navy }}>{selected.lens_sell_price > 0 ? 'Rs. '+parseFloat(selected.lens_sell_price).toLocaleString() : '—'}</div></div>
-            <div><div style={{ color:C.muted, fontSize:10 }}>Total</div><div style={{ fontWeight:700, color:C.navy }}>Rs. {parseFloat(selected.total_amount).toLocaleString()}</div></div>
+        {/* ── Section 1: Price Visibility ── */}
+        <div style={{ background:C.cream, borderRadius:12, padding:'14px 16px', marginBottom:14 }}>
+          <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:12, letterSpacing:'1px' }}>
+            Show / Hide Prices on Bill
           </div>
-        </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+            {/* Frame price toggle */}
+            <div style={{ background:'white', borderRadius:10, padding:'10px 14px', border:`1.5px solid ${showFramePrice?C.navy:'#e5e7eb'}` }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                <span style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase' }}>Frame Price</span>
+                <button onClick={()=>setShowFramePrice(s=>!s)}
+                  style={{ padding:'3px 10px', borderRadius:20, border:'none', cursor:'pointer',
+                    background: showFramePrice ? '#dcfce7' : '#fee2e2',
+                    color:      showFramePrice ? C.success  : C.danger,
+                    fontSize:10, fontWeight:800, fontFamily:'inherit' }}>
+                  {showFramePrice ? '✓ Show' : '✗ Hide'}
+                </button>
+              </div>
+              <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>
+                {fSell > 0 ? `Rs. ${fSell.toLocaleString()}` : '—'}
+              </div>
+            </div>
+            {/* Lens price toggle */}
+            <div style={{ background:'white', borderRadius:10, padding:'10px 14px', border:`1.5px solid ${showLensPrice?C.navy:'#e5e7eb'}` }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                <span style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase' }}>Lens Price</span>
+                <button onClick={()=>setShowLensPrice(s=>!s)}
+                  style={{ padding:'3px 10px', borderRadius:20, border:'none', cursor:'pointer',
+                    background: showLensPrice ? '#dcfce7' : '#fee2e2',
+                    color:      showLensPrice ? C.success  : C.danger,
+                    fontSize:10, fontWeight:800, fontFamily:'inherit' }}>
+                  {showLensPrice ? '✓ Show' : '✗ Hide'}
+                </button>
+              </div>
+              <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>
+                {lSell > 0 ? `Rs. ${lSell.toLocaleString()}` : '—'}
+              </div>
+            </div>
+          </div>
 
-        {/* Custom prices toggle */}
-        <div style={{ marginBottom:16 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-            <button onClick={()=>setCUseCustom(s=>!s)}
-              style={{ padding:'7px 16px', borderRadius:8, border:`1.5px solid ${cUseCustom?C.navy:C.border}`,
-                background:cUseCustom?C.navy:'white', color:cUseCustom?'white':C.muted,
-                fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-              {cUseCustom ? '✓ Custom Prices ON' : 'Set Custom Frame / Lens Prices'}
-            </button>
-            <div style={{ fontSize:11, color:C.muted }}>(bill only — order not changed)</div>
-          </div>
+          {/* Custom price override */}
+          <button onClick={()=>setCUseCustom(s=>!s)}
+            style={{ width:'100%', padding:'8px', borderRadius:8, border:`1.5px solid ${cUseCustom?C.gold:C.border}`,
+              background: cUseCustom?'#fef9f0':'white', color: cUseCustom?'#92400e':C.muted,
+              fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}>
+            {cUseCustom ? '✓ Custom prices ON' : '✏️ Override prices for this bill (bill only, order unchanged)'}
+          </button>
           {cUseCustom && (
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:8 }}>
               <div>
-                <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Frame Price (Rs.)</label>
-                <input type="number" value={cFramePrice} onChange={e=>setCFramePrice(e.target.value)} placeholder={`Current: ${selected.frame_sell_price||'—'}`} style={INP_B}/>
+                <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4, textTransform:'uppercase' }}>Frame Price (Rs.)</div>
+                <input type="number" value={cFramePrice} onChange={e=>{setCFramePrice(e.target.value); setShowFramePrice(true);}}
+                  placeholder={fSell>0?`Original: ${fSell}`:'Enter price'} style={INP_B}/>
               </div>
               <div>
-                <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, display:'block', marginBottom:4 }}>Lens Price (Rs.)</label>
-                <input type="number" value={cLensPrice} onChange={e=>setCLensPrice(e.target.value)} placeholder={`Current: ${selected.lens_sell_price||'—'}`} style={INP_B}/>
+                <div style={{ fontSize:10, fontWeight:700, color:C.muted, marginBottom:4, textTransform:'uppercase' }}>Lens Price (Rs.)</div>
+                <input type="number" value={cLensPrice} onChange={e=>{setCLensPrice(e.target.value); setShowLensPrice(true);}}
+                  placeholder={lSell>0?`Original: ${lSell}`:'Enter price'} style={INP_B}/>
               </div>
             </div>
           )}
         </div>
 
-        {/* Discount */}
-        <div style={{ marginBottom:16 }}>
-          <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:8 }}>Discount on Bill</div>
+        {/* ── Section 2: Discount ── */}
+        <div style={{ marginBottom:14 }}>
+          <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:8, letterSpacing:'1px' }}>Discount on Bill</div>
           <div style={{ display:'flex', gap:8 }}>
-            <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+            <div style={{ display:'flex', gap:0, flexShrink:0, border:`1.5px solid ${C.border}`, borderRadius:8, overflow:'hidden' }}>
               {[['amount','Rs.'],['pct','%']].map(([v,l]) => (
                 <button key={v} onClick={()=>setCDiscType(v)}
-                  style={{ padding:'8px 14px', borderRadius:8, border:`1.5px solid ${cDiscType===v?C.gold:C.border}`,
-                    background:cDiscType===v?'#fef9f0':'white', color:cDiscType===v?'#92400e':C.muted,
+                  style={{ padding:'8px 14px', border:'none',
+                    background:cDiscType===v?C.navy:'white', color:cDiscType===v?'white':C.muted,
                     fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                   {l}
                 </button>
               ))}
             </div>
             <input type="number" value={cDiscount} onChange={e=>setCDiscount(e.target.value)}
-              placeholder={cDiscType==='pct'?'e.g. 10':'e.g. 500'} style={INP_B}/>
+              placeholder={cDiscType==='pct'?'e.g. 10':'e.g. 500'} style={{ ...INP_B, flex:1 }}/>
           </div>
           {discAmt > 0 && (
             <div style={{ fontSize:12, color:C.success, marginTop:6, fontWeight:600 }}>
@@ -723,46 +821,102 @@ function BillOptionsModal({ selected, onClose, onPrint, C, fmtMoney }) {
           )}
         </div>
 
-        {/* Free gifts */}
-        <div style={{ marginBottom:20 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-            <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', color:C.muted }}>🎁 Free Gifts</div>
-            <button onClick={()=>setCGifts(g=>[...g, {name:'', price:''}])}
-              style={{ padding:'4px 12px', background:C.navy, color:'white', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-              + Add Gift
-            </button>
-          </div>
-          {cGifts.length === 0
-            ? <div style={{ fontSize:12, color:C.muted }}>No gifts added. Click "+ Add Gift" to add.</div>
-            : cGifts.map((gift, i) => (
-              <div key={i} style={{ display:'flex', gap:8, marginBottom:6, alignItems:'center' }}>
-                <input value={gift.name} onChange={e=>setCGifts(g=>g.map((x,j)=>j===i?{...x,name:e.target.value}:x))}
-                  placeholder="Gift item name" style={{ ...INP_B, flex:2 }}/>
-                <input type="number" value={gift.price} onChange={e=>setCGifts(g=>g.map((x,j)=>j===i?{...x,price:e.target.value}:x))}
-                  placeholder="Value (Rs.)" style={{ ...INP_B, flex:1 }}/>
-                <button onClick={()=>setCGifts(g=>g.filter((_,j)=>j!==i))}
-                  style={{ padding:'8px', background:'#fee2e2', border:'none', borderRadius:7, color:C.danger, cursor:'pointer', fontSize:14, flexShrink:0 }}>✕</button>
-              </div>
-            ))
-          }
-        </div>
+        {/* ── Section 3: Free Gifts ── */}
+        <div style={{ marginBottom:18 }}>
+          <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', color:C.muted, marginBottom:8, letterSpacing:'1px' }}>🎁 Free Gifts on Bill</div>
 
-        {/* Preview */}
-        {(cUseCustom || discAmt > 0 || cGifts.length > 0) && (
-          <div style={{ background:'#eff6ff', border:'1px solid #93c5fd', borderRadius:10, padding:'12px 14px', marginBottom:16, fontSize:13 }}>
-            <div style={{ fontWeight:700, color:'#1e40af', marginBottom:6 }}>📋 Bill Preview</div>
-            {cUseCustom && customFrame > 0 && <div style={{ color:'#374151' }}>Frame: Rs. {customFrame.toLocaleString()}</div>}
-            {cUseCustom && customLens  > 0 && <div style={{ color:'#374151' }}>Lens: Rs. {customLens.toLocaleString()}</div>}
-            {discAmt > 0 && <div style={{ color:C.danger }}>Discount: − Rs. {discAmt.toLocaleString()}</div>}
-            <div style={{ fontWeight:700, color:C.navy, marginTop:4 }}>
-              Total on bill: Rs. {(cUseCustom || discAmt > 0 ? customTotal : origTotal).toLocaleString()}
-            </div>
-            {cGifts.filter(g=>g.name).length > 0 && (
-              <div style={{ color:'#15803d', marginTop:4 }}>🎁 {cGifts.filter(g=>g.name).length} gift(s) on bill</div>
+          {/* Gift search from inventory */}
+          <div style={{ position:'relative', marginBottom:8 }}>
+            <input
+              value={giftSearch}
+              onChange={e=>searchGifts(e.target.value)}
+              placeholder="Search inventory for gift item name..."
+              style={{ ...INP_B, background:'white' }}/>
+            {giftSearch && (
+              <button onClick={addBlankGift}
+                style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)',
+                  padding:'3px 10px', background:C.navy, color:'white', border:'none', borderRadius:6,
+                  fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                + Add Manually
+              </button>
+            )}
+            {/* Dropdown results */}
+            {giftDrop.length > 0 && (
+              <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white',
+                border:`1.5px solid ${C.border}`, borderRadius:10, zIndex:50, boxShadow:'0 8px 24px rgba(0,0,0,.12)', maxHeight:200, overflowY:'auto' }}>
+                {giftDrop.map(item => (
+                  <div key={item.id} onClick={()=>addGiftFromInventory(item)}
+                    style={{ padding:'9px 14px', cursor:'pointer', borderBottom:`1px solid ${C.cream}`,
+                      display:'flex', justifyContent:'space-between', alignItems:'center' }}
+                    onMouseEnter={e=>e.currentTarget.style.background=C.cream}
+                    onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{item.name}</div>
+                      <div style={{ fontSize:11, color:C.muted }}>{item.category} · Stock: {item.quantity}</div>
+                    </div>
+                    <div style={{ fontSize:13, fontWeight:700, color:C.gold }}>
+                      Rs. {parseFloat(item.sell_price||0).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-        )}
 
+          {/* Gift list */}
+          {cGifts.length === 0 ? (
+            <div style={{ fontSize:12, color:C.muted, padding:'8px 0' }}>
+              No gifts added. Search above or click "+ Add Manually".
+            </div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {cGifts.map((gift, i) => (
+                <div key={i} style={{ display:'flex', gap:8, alignItems:'center', background:C.cream, borderRadius:8, padding:'8px 12px' }}>
+                  <div style={{ flex:2 }}>
+                    <input value={gift.name} onChange={e=>setCGifts(g=>g.map((x,j)=>j===i?{...x,name:e.target.value}:x))}
+                      placeholder="Gift item name"
+                      style={{ ...INP_B, background:'white', padding:'6px 10px', fontSize:13 }}/>
+                    {gift.stock !== null && (
+                      <div style={{ fontSize:10, color:C.muted, marginTop:3 }}>
+                        Stock: {gift.stock} available
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <input type="number" value={gift.price}
+                      onChange={e=>setCGifts(g=>g.map((x,j)=>j===i?{...x,price:e.target.value}:x))}
+                      placeholder="Value Rs."
+                      style={{ ...INP_B, background:'white', padding:'6px 10px', fontSize:13 }}/>
+                    {gift.price && (
+                      <div style={{ fontSize:10, color:C.muted, marginTop:3 }}>shown crossed out</div>
+                    )}
+                  </div>
+                  <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                    <div style={{ fontSize:16 }}>🎁</div>
+                    <button onClick={()=>setCGifts(g=>g.filter((_,j)=>j!==i))}
+                      style={{ padding:'4px 8px', background:'#fee2e2', border:'none', borderRadius:6, color:C.danger, cursor:'pointer', fontSize:12 }}>✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Preview summary ── */}
+        <div style={{ background:'#f0f9ff', border:'1px solid #bae6fd', borderRadius:10, padding:'12px 14px', marginBottom:16, fontSize:12 }}>
+          <div style={{ fontWeight:700, color:'#0369a1', marginBottom:6 }}>📋 Bill Preview</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4, color:'#374151' }}>
+            <div>Frame price: <b>{showFramePrice ? (cUseCustom&&customFrame?`Rs.${customFrame.toLocaleString()}`:(fSell?`Rs.${fSell.toLocaleString()}`:'—')) : '🚫 Hidden'}</b></div>
+            <div>Lens price: <b>{showLensPrice ? (cUseCustom&&customLens?`Rs.${customLens.toLocaleString()}`:(lSell?`Rs.${lSell.toLocaleString()}`:'—')) : '🚫 Hidden'}</b></div>
+            {discAmt > 0 && <div style={{color:C.danger}}>Discount: <b>− Rs. {discAmt.toLocaleString()}</b></div>}
+            <div>Total: <b>Rs. {(cUseCustom||discAmt>0?customTotal:origTotal).toLocaleString()}</b></div>
+            {cGifts.filter(g=>g.name).length > 0 && (
+              <div style={{color:'#15803d', gridColumn:'1/-1'}}>🎁 {cGifts.filter(g=>g.name).length} free gift(s) highlighted on bill</div>
+            )}
+          </div>
+        </div>
+
+        {/* Buttons */}
         <div style={{ display:'flex', gap:10 }}>
           <button onClick={onClose}
             style={{ flex:1, padding:'11px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
