@@ -512,8 +512,9 @@ export default function LabReceivings() {
                   onToggle={()=>toggleSel(o.id)}
                   onSaved={(updatedFields) => {
                     // Update just this order in state — no full page reload
-                    setOrders(prev => prev.map(o =>
-                      o.id === order.id ? { ...o, ...updatedFields } : o
+                    const orderId = o.id;
+                    setOrders(prev => prev.map(row =>
+                      row.id === orderId ? { ...row, ...updatedFields } : row
                     ));
                     showToast('✓ Bill saved');
                   }}
