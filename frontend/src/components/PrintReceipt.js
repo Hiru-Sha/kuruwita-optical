@@ -17,8 +17,10 @@ const PAGE_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap');
   @page { size: 148mm 210mm portrait; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', Arial, sans-serif; background: white; color: #1a1a2e; width: 148mm; }
-  .page { width: 148mm; min-height: 210mm; display: flex; flex-direction: column; transform-origin: top left; }
+  body { font-family: 'Inter', Arial, sans-serif; background: white; color: #1a1a2e; width: 148mm; height: 210mm; overflow: hidden; position: relative; }
+  .page { width: 148mm; height: 210mm; position: relative; display: flex; flex-direction: column; }
+  .page-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .content-inner { flex: 1; overflow: hidden; }
 
   /* HEADER — no pseudo-element circles */
   .hdr { background: #0f1f3d; padding: 5mm 6mm 4mm; color: white; }
@@ -78,7 +80,7 @@ const PAGE_CSS = `
   .note-box { background:#fffbeb; border-left:3px solid #c9a84c; border-radius:0 5px 5px 0; padding:3px 7px; font-size:7pt; color:#92400e; line-height:1.5; margin-bottom:3mm; }
 
   /* STAMP + SIG — pushed to bottom with margin-top:auto */
-  .stamp-sig { display:flex; gap:4mm; align-items:flex-end; margin-top:auto; padding-top:3mm; }
+  .stamp-sig { display:flex; gap:4mm; align-items:flex-end; margin-top:2mm; padding-top:2mm; }
   .stamp-box { flex:1; height:18mm; border:1px dashed #d1cdc4; border-radius:7px; display:flex; align-items:center; justify-content:center; }
   .stamp-txt { font-size:6.5pt; color:#c4bfb5; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; }
   .sig-line { flex:1; text-align:center; padding-bottom:2px; }
@@ -98,8 +100,8 @@ const PAGE_CSS = `
   .gift-tag { background:#c9a84c; color:white; font-size:6pt; font-weight:800; padding:1px 5px; border-radius:8px; letter-spacing:0.3px; }
   .gift-price { color:#9ca3af; font-size:7pt; text-decoration:line-through; }
 
-  /* FOOTER */
-  .footer { background: #0f1f3d; padding: 2.5mm 6mm; display: flex; justify-content: space-between; align-items: center; }
+  /* FOOTER — always pinned to bottom */
+  .footer { background: #0f1f3d; padding: 2.5mm 6mm; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .footer-slogan { font-size: 7.5pt; font-weight: 700; color: #c9a84c; }
   .footer-sub { font-size: 6.5pt; color: rgba(237,233,224,.6); }
 
@@ -115,7 +117,7 @@ const PAGE_CSS = `
 
 function hdr(billType, billNo, dateStr) {
   return `
-  <div class="hdr">
+  <div class="hdr" id="header">
     <div class="hdr-inner">
       <div>
         <div class="shop-name">Wickramakalutota Opticals</div>
@@ -134,7 +136,7 @@ function hdr(billType, billNo, dateStr) {
 
 function ftr() {
   return `
-  <div class="footer">
+  <div class="footer" id="footer">
     <div class="footer-slogan">Thank you for choosing Wickramakalutota Opticals 🙏</div>
     <div class="footer-sub">Printed: ${today()}</div>
   </div>`;
@@ -147,22 +149,30 @@ function wrap(bodyHTML, billType, billNo, dateStr) {
 </head><body>
 <div class="page" id="page">
 ${hdr(billType, billNo, dateStr)}
+<div id="content-inner" style="flex:1;overflow:hidden;">
 ${bodyHTML}
+</div>
 ${ftr()}
 </div>
 <script>
 window.onload = function() {
-  var page = document.getElementById('page');
-  var mmToPx = window.devicePixelRatio > 1 ? 3.7795 * window.devicePixelRatio : 3.7795;
-  var maxH = 210 * mmToPx;
-  var actualH = page.scrollHeight;
-  if (actualH > maxH) {
-    // Use CSS zoom — works in Chrome/Edge for print
-    var scale = maxH / actualH;
-    page.style.zoom = scale;
-    // Fallback: reduce font sizes progressively
-    var baseSize = parseFloat(document.body.style.fontSize || 10);
-    document.body.style.fontSize = (baseSize * scale) + 'pt';
+  // Measure content between header and footer
+  var inner = document.getElementById('content-inner');
+  var footer = document.getElementById('footer');
+  var header = document.getElementById('header');
+  if (!inner) { window.print(); return; }
+
+  // Available height = 210mm - header height - footer height (in px)
+  var mmPx = 96 / 25.4;
+  var totalH = 210 * mmPx;
+  var hdrH   = header ? header.offsetHeight : 0;
+  var ftrH   = footer ? footer.offsetHeight : 0;
+  var avail  = totalH - hdrH - ftrH - (4 * mmPx); // 4mm buffer
+
+  var innerH = inner.scrollHeight;
+  if (innerH > avail) {
+    var scale = avail / innerH;
+    inner.style.zoom = Math.max(0.65, scale); // never below 65%
   }
   setTimeout(function() {
     window.print();
