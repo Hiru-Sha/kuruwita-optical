@@ -1743,5 +1743,6 @@ export default function Orders() {
           onPrint={(overrides)=>{ setBillCustom(overrides); setShowBillOpts(false); setShowPrint(true); }}
         />
       )}
-
-      }
+    </div>
+  );
+}
