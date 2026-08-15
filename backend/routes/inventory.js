@@ -46,8 +46,8 @@ router.get('/', auth, async (req, res) => {
       params.push(category);
       sql += ` AND category = $${params.length}`;
     }
-    params.push(parseInt(limit));
     if (dealerFilter) { params.push(`%${dealerFilter}%`); sql += ` AND dealer ILIKE $${params.length}`; }
+    params.push(parseInt(limit));
     sql += ` ORDER BY category ASC, name ASC LIMIT $${params.length}`;
 
     const result = await pool.query(sql, params);

@@ -2298,14 +2298,7 @@ export default function Inventory() {
                 if (filterColor    && !(item.frame_color||'').toLowerCase().includes(filterColor.toLowerCase()))   return false;
                 if (filterDateFrom && new Date(item.created_at) < new Date(filterDateFrom)) return false;
                 if (filterDateTo   && new Date(item.created_at) > new Date(filterDateTo + 'T23:59:59')) return false;
-                // Dealer filter
-                if (dealerFilter   && !(item.dealer||'').toLowerCase().includes(dealerFilter.toLowerCase())) return false;
-                // Search filter
-                if (search && !( (item.name||'').toLowerCase().includes(search.toLowerCase()) ||
-                                 (item.brand||'').toLowerCase().includes(search.toLowerCase()) ||
-                                 (item.frame_color||'').toLowerCase().includes(search.toLowerCase()) ||
-                                 (item.display_number||'').toLowerCase().includes(search.toLowerCase()) ))
-                  return false;
+
                 return true;
               }).map(item=>(
                 <ItemCard key={item.id} item={item}
