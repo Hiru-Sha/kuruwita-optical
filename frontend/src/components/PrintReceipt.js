@@ -17,37 +17,37 @@ const PAGE_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap');
   @page { size: 148mm 210mm portrait; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', Arial, sans-serif; background: white; color: #1a1a2e; width: 148mm; min-height: 210mm; }
-  .page { width: 148mm; min-height: 210mm; max-height: 210mm; display: flex; flex-direction: column; overflow: hidden; }
+  body { font-family: 'Inter', Arial, sans-serif; background: white; color: #1a1a2e; width: 148mm; }
+  .page { width: 148mm; min-height: 210mm; display: flex; flex-direction: column; transform-origin: top left; }
 
   /* HEADER — no pseudo-element circles */
-  .hdr { background: #0f1f3d; padding: 7mm 7mm 5mm; color: white; }
+  .hdr { background: #0f1f3d; padding: 5mm 6mm 4mm; color: white; }
   .hdr-inner { display: flex; justify-content: space-between; align-items: flex-start; }
-  .shop-name { font-family:'Playfair Display',serif; font-size: 16pt; font-weight: 900; color: white; line-height: 1.1; letter-spacing:-0.3px; }
+  .shop-name { font-family:'Playfair Display',serif; font-size: 14pt; font-weight: 900; color: white; line-height: 1.1; letter-spacing:-0.3px; }
   .shop-tagline { font-size: 6pt; color: #c9a84c; letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; font-weight:600; }
   .shop-addr { font-size: 7.5pt; color: white; margin-top: 4px; line-height: 1.6; font-weight:600; letter-spacing:0.2px; }
   .bill-badge { background: #c9a84c; color: #0f1f3d; font-size: 6.5pt; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 1px; text-transform: uppercase; display: inline-block; margin-bottom: 3px; }
-  .bill-no { font-family:'Playfair Display',serif; font-size: 17pt; font-weight: 900; color: white; line-height: 1; letter-spacing:-0.5px; }
+  .bill-no { font-family:'Playfair Display',serif; font-size: 15pt; font-weight: 900; color: white; line-height: 1; letter-spacing:-0.5px; }
   .bill-date { font-size: 7pt; color: rgba(237,233,224,.7); margin-top: 2px; }
   .gold-bar { height: 3px; background: linear-gradient(90deg, #c9a84c 0%, #e8d48e 50%, transparent 100%); }
 
   /* BODY — flex column, fills remaining height */
-  .body { padding: 5mm 7mm 4mm; flex: 1; display:flex; flex-direction:column; }
+  .body { padding: 3.5mm 6mm 3mm; flex: 1; display:flex; flex-direction:column; }
 
   /* CUSTOMER BLOCK — full width single column */
-  .cust-block { background:#f8f7f4; border-radius:7px; padding:6px 10px; margin-bottom:3.5mm; display:flex; justify-content:space-between; align-items:center; gap:4mm; }
+  .cust-block { background:#f8f7f4; border-radius:6px; padding:4px 9px; margin-bottom:2.5mm; display:flex; justify-content:space-between; align-items:center; gap:4mm; }
   .sec-title { font-size: 6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #9ca3af; margin-bottom: 3px; }
   .kv { margin-bottom: 2px; }
   .kv .k { font-size: 6.5pt; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; font-weight:600; }
-  .kv .v { font-size: 10pt; font-weight: 700; color: #0f1f3d; line-height:1.3; }
-  .kv .v-lg { font-size: 11.5pt; font-weight: 800; color: #0f1f3d; line-height:1.2; }
+  .kv .v { font-size: 9pt; font-weight: 700; color: #0f1f3d; line-height:1.3; }
+  .kv .v-lg { font-size: 10pt; font-weight: 800; color: #0f1f3d; line-height:1.2; }
 
   /* FRAME / LENS PILL BARS */
-  .pill-bar { border-radius:7px; padding:5px 9px; margin-bottom:3mm; display:flex; justify-content:space-between; align-items:center; }
+  .pill-bar { border-radius:6px; padding:3px 8px; margin-bottom:2mm; display:flex; justify-content:space-between; align-items:center; }
   .pill-bar-frame { background:#0f1f3d; }
   .pill-bar-lens  { background:#1e3a5f; }
   .pill-label { font-size:6pt; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:1px; color:#c9a84c; }
-  .pill-value { font-size:10pt; font-weight:700; color:white; }
+  .pill-value { font-size:9pt; font-weight:700; color:white; }
   .pill-sub   { font-size:7.5pt; color:rgba(237,233,224,.7); text-align:right; }
 
   /* DIVIDERS */
@@ -55,19 +55,19 @@ const PAGE_CSS = `
 
   /* PRICE TABLE */
   .price-table { width:100%; border-collapse:collapse; margin-bottom:3mm; }
-  .price-table td { padding: 2.5px 0; font-size:9pt; vertical-align:middle; }
+  .price-table td { padding: 1.5px 0; font-size:8pt; vertical-align:middle; }
   .price-table td:last-child { text-align:right; font-weight:700; }
   .price-table .row-sub td { color:#9ca3af; font-size:8pt; }
   .price-table .row-disc td { color:#dc2626; font-weight:700; font-size:9.5pt; }
-  .price-table .total-row td { font-size:12pt; font-weight:900; color:#0f1f3d; border-top:2px solid #0f1f3d; padding-top:6px; margin-top:2px; }
+  .price-table .total-row td { font-size:10.5pt; font-weight:900; color:#0f1f3d; border-top:2px solid #0f1f3d; padding-top:6px; margin-top:2px; }
 
   /* AMOUNT BOXES */
-  .amt-box { background:#0f1f3d; border-radius:8px; padding:7px 12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5mm; }
+  .amt-box { background:#0f1f3d; border-radius:7px; padding:5px 10px; display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5mm; }
   .amt-box .lbl { font-size:7pt; color:#c9a84c; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
-  .amt-box .val { font-family:'Playfair Display',serif; font-size:15pt; font-weight:900; color:white; }
-  .bal-box { border:2px solid #dc2626; border-radius:8px; padding:5px 12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5mm; }
+  .amt-box .val { font-family:'Playfair Display',serif; font-size:13pt; font-weight:900; color:white; }
+  .bal-box { border:2px solid #dc2626; border-radius:7px; padding:4px 10px; display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5mm; }
   .bal-box .lbl { font-size:7pt; color:#dc2626; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
-  .bal-box .val { font-family:'Playfair Display',serif; font-size:13pt; font-weight:900; color:#dc2626; }
+  .bal-box .val { font-family:'Playfair Display',serif; font-size:11pt; font-weight:900; color:#dc2626; }
 
   /* BADGES */
   .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:7.5pt; font-weight:700; letter-spacing:0.3px; }
@@ -75,11 +75,11 @@ const PAGE_CSS = `
   .badge-paid    { background:#f0fdf4; color:#15803d; border:1.5px solid #86efac; }
 
   /* NOTE */
-  .note-box { background:#fffbeb; border-left:3px solid #c9a84c; border-radius:0 6px 6px 0; padding:5px 8px; font-size:7.5pt; color:#92400e; line-height:1.5; margin-bottom:3mm; }
+  .note-box { background:#fffbeb; border-left:3px solid #c9a84c; border-radius:0 5px 5px 0; padding:3px 7px; font-size:7pt; color:#92400e; line-height:1.5; margin-bottom:3mm; }
 
   /* STAMP + SIG — pushed to bottom with margin-top:auto */
-  .stamp-sig { display:flex; gap:5mm; align-items:flex-end; margin-top:auto; padding-top:4mm; }
-  .stamp-box { flex:1; height:22mm; border:1px dashed #d1cdc4; border-radius:7px; display:flex; align-items:center; justify-content:center; }
+  .stamp-sig { display:flex; gap:4mm; align-items:flex-end; margin-top:auto; padding-top:3mm; }
+  .stamp-box { flex:1; height:18mm; border:1px dashed #d1cdc4; border-radius:7px; display:flex; align-items:center; justify-content:center; }
   .stamp-txt { font-size:6.5pt; color:#c4bfb5; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; }
   .sig-line { flex:1; text-align:center; padding-bottom:2px; }
   .sig-line hr { border:none; border-top:1.5px solid #0f1f3d; margin-bottom:4px; }
@@ -99,7 +99,7 @@ const PAGE_CSS = `
   .gift-price { color:#9ca3af; font-size:7pt; text-decoration:line-through; }
 
   /* FOOTER */
-  .footer { background: #0f1f3d; padding: 3.5mm 7mm; display: flex; justify-content: space-between; align-items: center; }
+  .footer { background: #0f1f3d; padding: 2.5mm 6mm; display: flex; justify-content: space-between; align-items: center; }
   .footer-slogan { font-size: 7.5pt; font-weight: 700; color: #c9a84c; }
   .footer-sub { font-size: 6.5pt; color: rgba(237,233,224,.6); }
 
@@ -145,12 +145,31 @@ function wrap(bodyHTML, billType, billNo, dateStr) {
 <title>${billNo}</title>
 <style>${PAGE_CSS}</style>
 </head><body>
-<div class="page">
+<div class="page" id="page">
 ${hdr(billType, billNo, dateStr)}
 ${bodyHTML}
 ${ftr()}
 </div>
-<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
+<script>
+window.onload = function() {
+  var page = document.getElementById('page');
+  var mmToPx = window.devicePixelRatio > 1 ? 3.7795 * window.devicePixelRatio : 3.7795;
+  var maxH = 210 * mmToPx;
+  var actualH = page.scrollHeight;
+  if (actualH > maxH) {
+    // Use CSS zoom — works in Chrome/Edge for print
+    var scale = maxH / actualH;
+    page.style.zoom = scale;
+    // Fallback: reduce font sizes progressively
+    var baseSize = parseFloat(document.body.style.fontSize || 10);
+    document.body.style.fontSize = (baseSize * scale) + 'pt';
+  }
+  setTimeout(function() {
+    window.print();
+    window.onafterprint = function() { window.close(); };
+  }, 400);
+};
+<\/script>
 </body></html>`;
 }
 
