@@ -2278,18 +2278,34 @@ export default function Inventory() {
                 // Stock filter
                 if (stockFilter==='low') return item.quantity>0 && item.quantity<=item.min_quantity;
                 if (stockFilter==='out') return item.quantity===0;
-                // Hide Old Stock in All tab — only show when Old Stock tab is active
+                // Hide Old Stock in All tab
                 if (activeCat==='All' && item.category==='Old Stock') return false;
-                if (!subFilter) return true;
-                if (activeCat==='Sunglasses') {
-                  if (subFilter==='RayBan') return (item.brand||'').toLowerCase().includes('rayban');
-                  return item.sg_type===subFilter;
+                // Category / sub filter
+                if (subFilter) {
+                  if (activeCat==='Sunglasses') {
+                    if (subFilter==='RayBan') { if (!(item.brand||'').toLowerCase().includes('rayban')) return false; }
+                    else { if (item.sg_type!==subFilter) return false; }
+                  } else if (activeCat==='Frames') {
+                    if (item.frame_type!==subFilter) return false;
+                  } else if (activeCat==='Reading Glasses') {
+                    if (!(item.rg_lens_type||'').toLowerCase().includes(subFilter.toLowerCase())) return false;
+                  }
                 }
-                if (activeCat==='Frames') return item.frame_type===subFilter;
-                if (activeCat==='Reading Glasses') {
-                  if (!subFilter) return true;
-                  return (item.rg_lens_type||'').toLowerCase().includes(subFilter.toLowerCase());
-                }
+                // ── Advanced filters ──
+                if (filterMaterial && !(item.frame_material||'').toLowerCase().includes(filterMaterial.toLowerCase())) return false;
+                if (filterShape    && !(item.frame_shape||'').toLowerCase().includes(filterShape.toLowerCase()))    return false;
+                if (filterSize     && !(item.frame_size||'').toLowerCase().includes(filterSize.toLowerCase()))     return false;
+                if (filterColor    && !(item.frame_color||'').toLowerCase().includes(filterColor.toLowerCase()))   return false;
+                if (filterDateFrom && new Date(item.created_at) < new Date(filterDateFrom)) return false;
+                if (filterDateTo   && new Date(item.created_at) > new Date(filterDateTo + 'T23:59:59')) return false;
+                // Dealer filter
+                if (dealerFilter   && !(item.dealer||'').toLowerCase().includes(dealerFilter.toLowerCase())) return false;
+                // Search filter
+                if (search && !( (item.name||'').toLowerCase().includes(search.toLowerCase()) ||
+                                 (item.brand||'').toLowerCase().includes(search.toLowerCase()) ||
+                                 (item.frame_color||'').toLowerCase().includes(search.toLowerCase()) ||
+                                 (item.display_number||'').toLowerCase().includes(search.toLowerCase()) ))
+                  return false;
                 return true;
               }).map(item=>(
                 <ItemCard key={item.id} item={item}
