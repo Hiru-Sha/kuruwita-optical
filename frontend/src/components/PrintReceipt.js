@@ -17,8 +17,8 @@ const PAGE_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap');
   @page { size: 148mm 210mm portrait; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', Arial, sans-serif; background: white; color: #1a1a2e; width: 148mm; height: 210mm; }
-  .page { width: 148mm; height: 210mm; display: flex; flex-direction: column; }
+  body { font-family: 'Inter', Arial, sans-serif; background: white; color: #1a1a2e; width: 148mm; min-height: 210mm; }
+  .page { width: 148mm; min-height: 210mm; max-height: 210mm; display: flex; flex-direction: column; overflow: hidden; }
 
   /* HEADER — no pseudo-element circles */
   .hdr { background: #0f1f3d; padding: 7mm 7mm 5mm; color: white; }
@@ -90,13 +90,13 @@ const PAGE_CSS = `
   .item-row:last-child { border-bottom: none; }
 
   /* FREE GIFTS BOX */
-  .gifts-box { background:#fff9f0; border:2px solid #c9a84c; border-radius:8px; padding:6px 10px; margin-bottom:3mm; }
-  .gifts-title { font-size:7pt; font-weight:800; color:#c9a84c; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px; }
-  .gift-row { display:flex; justify-content:space-between; align-items:center; padding:2.5px 0; border-bottom:1px dashed #f0e0c0; font-size:8.5pt; }
+  .gifts-box { background:#fff9f0; border:1.5px solid #c9a84c; border-radius:5px; padding:4px 8px; margin-bottom:2mm; }
+  .gifts-title { font-size:6.5pt; font-weight:800; color:#c9a84c; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
+  .gift-row { display:flex; justify-content:space-between; align-items:center; padding:1.5px 0; border-bottom:1px dashed #f0e0c0; font-size:7.5pt; }
   .gift-row:last-child { border-bottom:none; }
   .gift-name { font-weight:600; color:#0f1f3d; }
-  .gift-tag { background:#c9a84c; color:white; font-size:6.5pt; font-weight:800; padding:1px 7px; border-radius:10px; letter-spacing:0.3px; }
-  .gift-price { color:#9ca3af; font-size:7.5pt; text-decoration:line-through; }
+  .gift-tag { background:#c9a84c; color:white; font-size:6pt; font-weight:800; padding:1px 5px; border-radius:8px; letter-spacing:0.3px; }
+  .gift-price { color:#9ca3af; font-size:7pt; text-decoration:line-through; }
 
   /* FOOTER */
   .footer { background: #0f1f3d; padding: 3.5mm 7mm; display: flex; justify-content: space-between; align-items: center; }
