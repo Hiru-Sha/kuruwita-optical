@@ -500,7 +500,9 @@ export default function HistoricalRecords() {
   const [tab,        setTab]        = useState('add');   // 'add' | 'view'
   const [rows,       setRows]       = useState([blankRow(new Date().toISOString().split('T')[0])]);
   const [savedCount, setSavedCount] = useState(0);
-  const [bulkDate,   setBulkDate]   = useState('');
+  const [bulkDate,      setBulkDate]      = useState('');
+  const [patientCount,  setPatientCount]  = useState('');
+  const [dateConfirmed, setDateConfirmed] = useState(false);
   const [editRecord, setEditRecord] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const firstRef = useRef();
@@ -543,6 +545,22 @@ export default function HistoricalRecords() {
   const deleteRow = (idx) => {
     if (rows.length === 1) { setRows([blankRow('')]); return; }
     setRows(prev => prev.filter((_,i)=>i!==idx));
+  };
+
+  const createRowsForDate = () => {
+    if (!bulkDate) return alert('Please select a date first');
+    const n = parseInt(patientCount);
+    if (!n || n < 1 || n > 50) return alert('Enter number of patients (1–50)');
+    // Clear any existing unsaved rows, add n rows with this date
+    const existing = rows.filter(r => r._saved);
+    const newRows  = Array.from({ length: n }, () => blankRow(bulkDate));
+    setRows([...existing, ...newRows]);
+    setDateConfirmed(true);
+    setTimeout(() => {
+      // Focus first name field of first new row
+      const inputs = document.querySelectorAll('input[placeholder="Full name"]');
+      if (inputs[existing.length]) inputs[existing.length].focus();
+    }, 100);
   };
 
   const addMoreRows = (n=5) => {
@@ -593,46 +611,72 @@ export default function HistoricalRecords() {
       {/* Add Records Tab */}
       {tab === 'add' && (
         <div>
-          {/* Toolbar */}
-          <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap', alignItems:'center', background:C.cream, padding:'12px 16px', borderRadius:12 }}>
-            <div style={{ fontSize:12, fontWeight:700, color:C.muted }}>Quick tools:</div>
+          {/* Toolbar — Step 1: Pick date + count, Step 2: Enter data */}
+          <div style={{ background:C.cream, borderRadius:14, padding:'16px 18px', marginBottom:14 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:12 }}>
+              Step 1 — Select Date & Number of Patients
+            </div>
+            <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                <label style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase' }}>Visit Date</label>
+                <input type="date" value={bulkDate}
+                  onChange={e=>{ setBulkDate(e.target.value); setDateConfirmed(false); }}
+                  style={{ padding:'8px 12px', border:`1.5px solid ${bulkDate?C.navy:C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'white', fontWeight:bulkDate?700:400 }}/>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                <label style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase' }}>No. of Patients That Day</label>
+                <input
+                  type="number" min="1" max="50"
+                  value={patientCount}
+                  onChange={e=>{ setPatientCount(e.target.value); setDateConfirmed(false); }}
+                  onKeyDown={e=>e.key==='Enter'&&createRowsForDate()}
+                  placeholder="e.g. 5"
+                  style={{ padding:'8px 12px', border:`1.5px solid ${patientCount?C.navy:C.border}`, borderRadius:9, fontSize:13, fontFamily:'inherit', outline:'none', background:'white', width:90, fontWeight:patientCount?700:400 }}/>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                <label style={{ fontSize:10, color:'transparent' }}>_</label>
+                <button onClick={createRowsForDate}
+                  style={{ padding:'8px 22px', background:bulkDate&&patientCount?C.navy:'#9ca3af', color:'white', border:'none', borderRadius:9, fontSize:13, fontWeight:700, cursor:bulkDate&&patientCount?'pointer':'not-allowed', fontFamily:'inherit', transition:'all .2s' }}>
+                  ✓ Create {patientCount||'?'} Rows
+                </button>
+              </div>
 
-            {/* Bulk date fill */}
-            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-              <input type="date" value={bulkDate} onChange={e=>setBulkDate(e.target.value)}
-                style={{ padding:'6px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:12, fontFamily:'inherit', outline:'none' }}/>
-              <button onClick={fillDate}
-                style={{ padding:'6px 14px', background:C.navy, color:'white', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                Apply Date to All
-              </button>
+              {dateConfirmed && (
+                <div style={{ background:'#dcfce7', border:'1px solid #86efac', borderRadius:9, padding:'8px 14px', fontSize:12, color:C.success, fontWeight:600 }}>
+                  ✓ {rows.filter(r=>!r._saved).length} rows ready for {new Date(bulkDate+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+                </div>
+              )}
+
+              <div style={{ marginLeft:'auto', display:'flex', gap:8, alignItems:'center' }}>
+                {rows.some(r=>r._saved) && (
+                  <button onClick={clearSaved}
+                    style={{ padding:'7px 14px', background:'#dcfce7', color:C.success, border:`1.5px solid #86efac`, borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                    Clear Saved
+                  </button>
+                )}
+                <span style={{ fontSize:12, color:C.muted }}>
+                  {rows.filter(r=>r._saved).length} / {rows.length} saved
+                </span>
+              </div>
             </div>
 
-            <div style={{ width:1, height:24, background:C.border }}/>
-
-            <button onClick={()=>addMoreRows(5)}
-              style={{ padding:'6px 14px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>
-              + 5 Rows
-            </button>
-            <button onClick={()=>addMoreRows(10)}
-              style={{ padding:'6px 14px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>
-              + 10 Rows
-            </button>
-
-            {rows.some(r=>r._saved) && (
-              <button onClick={clearSaved}
-                style={{ padding:'6px 14px', background:'#dcfce7', color:C.success, border:`1.5px solid #86efac`, borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                Clear Saved Rows
-              </button>
+            {/* Quick add more if needed */}
+            {dateConfirmed && (
+              <div style={{ marginTop:10, paddingTop:10, borderTop:`1px solid ${C.border}`, display:'flex', gap:8, alignItems:'center' }}>
+                <span style={{ fontSize:11, color:C.muted }}>Need more rows for this date?</span>
+                {[1,3,5].map(n=>(
+                  <button key={n} onClick={()=>addMoreRows(n)}
+                    style={{ padding:'4px 12px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>
+                    + {n}
+                  </button>
+                ))}
+              </div>
             )}
-
-            <div style={{ marginLeft:'auto', fontSize:12, color:C.muted }}>
-              {rows.filter(r=>r._saved).length} / {rows.length} rows saved
-            </div>
           </div>
 
           {/* Tips */}
           <div style={{ background:'#fef9c3', border:'1px solid #fde68a', borderRadius:10, padding:'10px 16px', marginBottom:14, fontSize:12, color:'#92400e' }}>
-            💡 <b>Tips:</b> Tab to move field to field · Enter or ✓ to save that row · New row added automatically after saving · Leave any field blank if unknown · Saved rows turn green
+            💡 <b>Step 2:</b> Fill in patient details · <b>Tab</b> moves between fields · <b>Enter</b> or <b>✓</b> saves that row (turns green) · Leave any field blank if unknown · Click <b>→L</b> to copy right eye power to left eye
           </div>
 
           {/* Spreadsheet table */}
@@ -677,13 +721,12 @@ export default function HistoricalRecords() {
             </table>
           </div>
 
-          {/* Add more rows button */}
-          <div style={{ textAlign:'center', marginTop:12 }}>
-            <button onClick={()=>addMoreRows(5)}
-              style={{ padding:'10px 28px', background:'white', border:`1.5px dashed ${C.border}`, borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
-              + Add 5 More Rows
-            </button>
-          </div>
+          {/* Add more rows below table */}
+          {!dateConfirmed && (
+            <div style={{ textAlign:'center', marginTop:12 }}>
+              <span style={{ fontSize:12, color:C.muted }}>Select a date and enter patient count above to create rows</span>
+            </div>
+          )}
         </div>
       )}
 
