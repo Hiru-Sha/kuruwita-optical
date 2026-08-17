@@ -1369,7 +1369,7 @@ export default function Orders() {
                 <div style={{ fontSize:13, color:C.muted }}>📞 {selected.phone} · Age {selected.age}</div>
               </div>
               <div style={{ display:'flex', gap:8 }}>
-                <button onClick={()=>{ setShowEdit(true); }}
+                <button onClick={()=>{ setEditForm(selected); setShowEdit(true); }}
                   style={{ background:'#eff6ff', border:'1.5px solid #93c5fd', borderRadius:8, padding:'6px 14px', fontSize:12, cursor:'pointer', fontFamily:'inherit', color:'#1e40af', fontWeight:700 }}>
                   ✏️ Edit
                 </button>
