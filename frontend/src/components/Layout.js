@@ -122,8 +122,9 @@ export default function Layout() {
   },[location.pathname]);
   useEffect(()=>{ if(mob) setOpen(false); },[location.pathname]);
 
-  // Get user permissions from user object (stored after login)
-  const userPerms = user?.permissions || null; // null = no restriction (admin)
+  // Admin always sees everything
+  // Staff: check permissions array (empty array = no restrictions for backwards compat)
+  const userPerms = (role === 'admin') ? null : (user?.permissions?.length > 0 ? user.permissions : null);
   const hasPerm = (perm) => !perm || !userPerms || userPerms.includes(perm);
 
   const navItems = NAV.filter(n =>
