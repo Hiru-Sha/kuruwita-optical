@@ -280,9 +280,12 @@ export default function Reports() {
       api('/reports/lensjobs'),
       api('/reports/profit'),
       api(`/reports/comparison?month=${month}`),
-      api('/reports/patterns?months=6'),
-    ]).then(([rev,top,jobs,prof,cmp,pat])=>{ setRevenue(rev); setTop(top); setLensJobs(jobs); setProfit(prof); setCompare(cmp); setPatterns(pat); })
+    ]).then(([rev,top,jobs,prof,cmp])=>{ setRevenue(rev); setTop(top); setLensJobs(jobs); setProfit(prof); setCompare(cmp); })
     .catch(console.error).finally(()=>setLoading(false));
+    // Fetch patterns separately so it doesn't block other reports
+    api('/reports/patterns?months=6')
+      .then(pat => setPatterns(pat && !pat.error ? pat : null))
+      .catch(() => setPatterns(null));
   },[month]);
 
   const TABS = [
@@ -832,7 +835,7 @@ export default function Reports() {
             ? <div style={{textAlign:'center',padding:60,color:C.muted}}>Loading patterns...</div>
             : <>
               {/* Day of week */}
-              <SectionCard title="📅 Best Days to Sell" subtitle={`Day of week revenue trend — last ${patterns.months_analyzed} months`}>
+              <SectionCard title="📅 Best Days to Sell" subtitle={`Day of week revenue trend — last ${patterns.months_analyzed || 6} months`}>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:8,marginBottom:12}}>
                   {(patterns.day_of_week||[]).map(d=>{
                     const pct = (patterns.max_rev_dow||1)>0?Math.round(d.revenue/(patterns.max_rev_dow||1)*100):0;

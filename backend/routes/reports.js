@@ -207,7 +207,6 @@ router.get('/profit', auth, async (req, res) => {
         AND status != 'cancelled'
         AND customer_own_frame IS NOT TRUE
         AND frame_sell_price > 0
-        AND frame_buy_price  > 0
       GROUP BY frame
       HAVING COUNT(*) >= 1
       ORDER BY avg_frame_profit DESC
@@ -592,8 +591,8 @@ router.get('/patterns', auth, async (req, res) => {
     });
     // Find best and worst day of month
     const domEntries = Object.entries(domPerDay).map(([d,v])=>({day:parseInt(d),...v}));
-    const bestDom  = domEntries.sort((a,b)=>b.rev-a.rev)[0];
-    const worstDom = domEntries.filter(d=>d.count>0).sort((a,b)=>a.rev-b.rev)[0];
+    const bestDom  = [...domEntries].sort((a,b)=>b.rev-a.rev)[0];
+    const worstDom = [...domEntries].filter(d=>d.count>0).sort((a,b)=>a.rev-b.rev)[0];
 
     // Day of week — map to readable names, sort Mon-Sun
     const DOW_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
