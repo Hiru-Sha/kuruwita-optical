@@ -424,6 +424,8 @@ router.patch('/:id', auth, async (req, res) => {
     'order_type','customer_own_frame',
     'seg_height_r','seg_height_l',
     'discount_amount','discount_percent',
+    'warranty_frame','warranty_lens',
+    'frame_inventory_id',
   ];
   const fields = [], values = [];
   allowed.forEach(f => {
