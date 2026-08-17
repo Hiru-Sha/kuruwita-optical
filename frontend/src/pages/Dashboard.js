@@ -96,18 +96,23 @@ export default function Dashboard() {
     { k:'deposits', l:'Deposits'},
   ];
 
-  const QUICK_ACTIONS = [
-    { label:'New Order',   sub:'With Rx',   bg:'var(--gold)',    color:'var(--navy)', icon:'📋', path:'/orders/new'  },
-    { label:'Quick Sale',  sub:'Cash sale', bg:'#059669',        color:'#fff',        icon:'⚡', path:'/quick-sale'  },
-    { label:'Repair',      sub:'Ticket',    bg:'#0891b2',        color:'#fff',        icon:'🔧', path:'/repairs'     },
-    { label:'All Orders',  sub:'View list', bg:'var(--navy)',    color:'#fff',        icon:'📝', path:'/orders'      },
-    { label:'Inventory',   sub:'Stock',     bg:'var(--bg-elevated)', color:'var(--text-primary)', icon:'📦', path:'/inventory' },
-    { label:'Expense',     sub:'Add',       bg:'#7c3aed',        color:'#fff',        icon:'💸', path:'/expenses'    },
-    { label:'Deposit',     sub:'To bank',   bg:'#2563eb',        color:'#fff',        icon:'🏦', path:'/expenses'    },
-    { label:'Calculator',  sub:'Lens',      bg:'#0f766e',        color:'#fff',        icon:'🧮', path:'/calculator'  },
-    { label:'Lens Prices', sub:'List',      bg:'#b45309',        color:'#fff',        icon:'🔍', path:'/lens-prices' },
-    { label:'Customers',   sub:'Database',  bg:'#be185d',        color:'#fff',        icon:'👥', path:'/customers'   },
+  const ALL_QUICK_ACTIONS = [
+    { label:'New Order',   sub:'With Rx',   bg:'var(--gold)',    color:'var(--navy)', icon:'📋', path:'/orders/new',  perm:'new_order' },
+    { label:'Quick Sale',  sub:'Cash sale', bg:'#059669',        color:'#fff',        icon:'⚡', path:'/quick-sale',  perm:'quick_sale' },
+    { label:'Repair',      sub:'Ticket',    bg:'#0891b2',        color:'#fff',        icon:'🔧', path:'/repairs',     perm:'repairs' },
+    { label:'All Orders',  sub:'View list', bg:'var(--navy)',    color:'#fff',        icon:'📝', path:'/orders',      perm:'orders' },
+    { label:'Inventory',   sub:'Stock',     bg:'var(--bg-elevated)', color:'var(--text-primary)', icon:'📦', path:'/inventory', perm:'inventory' },
+    { label:'Expense',     sub:'Add',       bg:'#7c3aed',        color:'#fff',        icon:'💸', path:'/expenses',    perm:'expenses' },
+    { label:'Deposit',     sub:'To bank',   bg:'#2563eb',        color:'#fff',        icon:'🏦', path:'/expenses',    perm:'expenses' },
+    { label:'Calculator',  sub:'Lens',      bg:'#0f766e',        color:'#fff',        icon:'🧮', path:'/calculator',  perm:'inventory' },
+    { label:'Lens Prices', sub:'List',      bg:'#b45309',        color:'#fff',        icon:'🔍', path:'/lens-prices', perm:'lens_prices' },
+    { label:'Customers',   sub:'Database',  bg:'#be185d',        color:'#fff',        icon:'👥', path:'/customers',   perm:'customers' },
   ];
+  // Filter quick actions based on user permissions
+  const userPerms = user?.role === 'admin' ? null : (user?.permissions?.length > 0 ? user.permissions : null);
+  const QUICK_ACTIONS = ALL_QUICK_ACTIONS.filter(a =>
+    !a.perm || !userPerms || userPerms.includes(a.perm)
+  );
 
   return (
     <div style={{fontFamily:'var(--font-body)',width:'100%'}}>

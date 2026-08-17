@@ -67,7 +67,7 @@ const NAV = [
   { to:'/price-check',    icon:'expenses',   label:'Price Check',    section:'inventory',perm:'lens_prices' },
   { to:'/store-manager',  icon:'inventory',  label:'Online Store',   section:'inventory',roles:['admin'] },
   { to:'/historical-records', icon:'customers', label:'📚 Old Records', section:'history', perm:'historical_records' },
-  { to:'/calculator',     icon:'calculator', label:'Calculator',     section:'inventory' },
+  { to:'/calculator',     icon:'calculator', label:'Calculator',     section:'inventory', perm:'inventory' },
   { to:'/dealers',        icon:'purchase',   label:'Purchases',      section:'inventory',perm:'expenses' },
   { to:'/kalutota',       icon:'balance',    label:'Kalutota A/C',   section:'inventory',perm:'kalutota' },
   { to:'/reports',        icon:'reports',    label:'Reports',        section:'finance',  roles:['admin'], perm:'reports' },
@@ -123,9 +123,14 @@ export default function Layout() {
   useEffect(()=>{ if(mob) setOpen(false); },[location.pathname]);
 
   // Admin always sees everything
-  // Staff: check permissions array (empty array = no restrictions for backwards compat)
+  // Staff with permissions set: ONLY show what's in their permissions list
+  // Staff with NO permissions set: show default staff items (backwards compat)
   const userPerms = (role === 'admin') ? null : (user?.permissions?.length > 0 ? user.permissions : null);
-  const hasPerm = (perm) => !perm || !userPerms || userPerms.includes(perm);
+  const hasPerm = (perm) => {
+    if (!perm) return userPerms === null; // unpermissioned items only visible to unrestricted users
+    if (!userPerms) return true;          // no restriction = see everything
+    return userPerms.includes(perm);
+  };
 
   const navItems = NAV.filter(n =>
     (!n.roles || n.roles.includes(role)) &&
