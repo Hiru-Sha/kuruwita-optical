@@ -1897,6 +1897,21 @@ export default function Orders() {
           onPrint={(overrides)=>{ setBillCustom(overrides); setShowBillOpts(false); setShowPrint(true); }}
         />
       )}
+
+      {/* ── Edit Order Modal ── */}
+      {showEdit && selected && (
+        <EditOrderModal
+          order={editForm && Object.keys(editForm).length > 0 ? editForm : selected}
+          onClose={()=>{ setShowEdit(false); setEditForm({}); }}
+          onSave={async (updates) => {
+            await updateOrder(selected.id, updates);
+            setShowEdit(false);
+            setEditForm({});
+            load();
+            setSelected(s => s ? { ...s, ...updates } : s);
+          }}
+        />
+      )}
     </div>
   );
 }
