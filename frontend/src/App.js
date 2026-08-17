@@ -43,7 +43,14 @@ function Protected({ children }) {
       <div style={{ fontSize:32 }}>👁️</div><div>Loading...</div>
     </div>
   );
-  return user ? children : <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+  // Restricted staff with only historical_records — land there directly
+  const perms = user?.permissions;
+  if (perms?.length > 0 && perms.includes('historical_records') && !perms.includes('dashboard')) {
+    const loc = window.location.pathname;
+    if (loc === '/' || loc === '/dashboard') return <Navigate to="/historical-records" replace />;
+  }
+  return children;
 }
 
 // Admin-only route — redirects staff to dashboard
@@ -53,13 +60,16 @@ function AdminOnly({ children }) {
   return <Navigate to="/dashboard" replace />;
 }
 
-// Permission guard — redirects to dashboard if user lacks permission
+// Permission guard — redirects to first allowed page if user lacks permission
 function PermGuard({ perm, children }) {
   const { user } = useAuth();
-  if (user?.role === 'admin') return children; // admin always allowed
+  if (user?.role === 'admin') return children;
   const perms = user?.permissions;
-  if (!perms || perms.length === 0) return children; // no restrictions = allowed
+  if (!perms || perms.length === 0) return children;
   if (perms.includes(perm)) return children;
+  // Redirect to first page they DO have access to
+  if (perms.includes('historical_records')) return <Navigate to="/historical-records" replace />;
+  if (perms.includes('dashboard'))          return <Navigate to="/dashboard" replace />;
   return <Navigate to="/dashboard" replace />;
 }
 
