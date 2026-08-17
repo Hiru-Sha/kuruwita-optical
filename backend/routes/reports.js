@@ -197,9 +197,9 @@ router.get('/profit', auth, async (req, res) => {
     const topMargin = await safeQuery(`
       SELECT
         frame,
-        COALESCE(AVG(NULLIF(frame_sell_price,0) - NULLIF(frame_buy_price,0)), 0) AS avg_frame_profit,
-        COALESCE(AVG(NULLIF(frame_sell_price,0)), 0) AS avg_sell_price,
-        COALESCE(AVG(NULLIF(frame_buy_price,0)),  0) AS avg_buy_price,
+        COALESCE(AVG(COALESCE(frame_sell_price,0) - COALESCE(frame_buy_price,0)), 0) AS avg_frame_profit,
+        COALESCE(AVG(frame_sell_price), 0) AS avg_sell_price,
+        COALESCE(AVG(frame_buy_price),  0) AS avg_buy_price,
         COUNT(*) AS orders
       FROM orders
       WHERE frame IS NOT NULL AND frame != ''
@@ -298,8 +298,8 @@ router.get('/topsellers', auth, async (req, res) => {
       SELECT frame, COUNT(*) AS units,
         COALESCE(SUM(NULLIF(frame_sell_price,0)),0) AS revenue,
         COALESCE(AVG(NULLIF(frame_sell_price,0)),0) AS avg_price,
-        COALESCE(AVG(NULLIF(frame_buy_price,0)),0)  AS avg_cost,
-        COALESCE(AVG(NULLIF(frame_sell_price,0) - NULLIF(frame_buy_price,0)),0) AS avg_margin
+        COALESCE(AVG(COALESCE(frame_buy_price,0)),0)  AS avg_cost,
+        COALESCE(AVG(COALESCE(frame_sell_price,0) - COALESCE(frame_buy_price,0)),0) AS avg_margin
       FROM orders
       WHERE frame IS NOT NULL AND frame != ''
         AND status != 'cancelled'
@@ -617,7 +617,7 @@ router.get('/patterns', auth, async (req, res) => {
       worst_dom:         worstDom,
       item_types:    itemTypes.rows,
       monthly_days:  monthlyDays.rows,
-      months_analyzed: months,
+      months_analyzed: parseInt(months),
     });
   } catch (err) {
     console.error('Patterns error:', err.message);

@@ -435,8 +435,8 @@ export default function Reports() {
               {profit?.top_margin_frames?.length > 0 && (
                 <SectionCard title="Best Profit Frames" subtitle="Frames with highest average profit (last 3 months)">
                   {profit.top_margin_frames.map((f,i)=>{
-                    const p = parseFloat(f.avg_total_profit)||0;
-                    const maxP = parseFloat(profit.top_margin_frames[0]?.avg_total_profit)||1;
+                    const p = parseFloat(f.avg_frame_profit || f.avg_total_profit || f.avg_margin)||0;
+                    const maxP = parseFloat(profit.top_margin_frames[0]?.avg_frame_profit || profit.top_margin_frames[0]?.avg_total_profit || profit.top_margin_frames[0]?.avg_margin)||1;
                     return (
                       <div key={i} style={{display:'flex',alignItems:'center',gap:14,marginBottom:14}}>
                         <Badge rank={i+1}/>
