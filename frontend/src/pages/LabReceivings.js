@@ -321,7 +321,15 @@ export default function LabReceivings() {
           // Mark ALL pre-cutoff orders as lab_paid (bill entered or not)
           // These were settled manually as expenses before the system tracked this
           if (orderDate < CUTOFF && !o.lab_paid) {
-            return { ...o, lab_paid: true, lab_paid_date: o.lab_paid_date || '2026-04-20', _auto_marked: true };
+            return {
+              ...o,
+              lab_paid:           true,
+              lab_paid_date:      o.lab_paid_date || '2026-04-20',
+              lab_payment_method: o.lab_payment_method || 'expense',
+              // If no bill entered, set 0 so it doesn't show "Enter bill"
+              lab_bill_amount:    o.lab_bill_amount || 0,
+              _auto_marked:       true,
+            };
           }
           return o;
         });
@@ -335,10 +343,11 @@ export default function LabReceivings() {
           const batch = toMark.slice(i, i + 10);
           await Promise.all(batch.map(o =>
             apiPatch(`/orders/${o.id}`, {
-              lab_paid: true,
-              lab_paid_date: '2026-04-20',
+              lab_paid:           true,
+              lab_paid_date:      '2026-04-20',
               lab_payment_method: 'expense',
-              lab_notes: 'Lens cost settled via expenses before 21 Apr 2026',
+              lab_bill_amount:    parseFloat(o.lab_bill_amount || 0) || 0,
+              lab_notes:          'Lens cost settled via expenses before 21 Apr 2026',
             }).catch(() => {})
           ));
         }
