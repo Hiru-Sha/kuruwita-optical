@@ -1898,6 +1898,26 @@ export default function Orders() {
         />
       )}
 
+      {/* ── Record Balance Payment Modal ── */}
+      {showPay && selected && (
+        <PaymentModal
+          order={selected}
+          onClose={()=>setShowPay(false)}
+          onSave={(msg)=>{
+            setShowPay(false);
+            showToast(msg);
+            // Update selected order balance locally
+            const paid = parseFloat(selected.advance_amount||0) + parseFloat(document._lastPayAmount||0);
+            setSelected(s => s ? {
+              ...s,
+              advance_amount: paid,
+              balance_amount: Math.max(0, parseFloat(s.total_amount||0) - paid),
+            } : s);
+            load();
+          }}
+        />
+      )}
+
       {/* ── Edit Order Modal ── */}
       {showEdit && selected && (
         <EditOrderModal
