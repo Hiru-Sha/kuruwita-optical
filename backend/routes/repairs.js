@@ -78,11 +78,16 @@ router.post('/', auth, async (req, res) => {
     const repair_number = await nextRepairNumber(client);
     const import_date   = req.body.repair_date || req.body.import_date || null;
 
+    // Auto-set status to 'collected' if fully paid on save
+    const advanceAmt = parseFloat(advance) || 0;
+    const chargeAmt  = parseFloat(charge)  || 0;
+    const autoStatus = (advanceAmt > 0 && advanceAmt >= chargeAmt - 0.01) ? 'collected' : (status || 'done');
+
     const result = await client.query(`
       INSERT INTO repairs
         (repair_number, customer_name, phone, repair_type, description, charge,
-         payment_method, status, notes, added_by, completed_at, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12::timestamp, NOW()))
+         payment_method, status, notes, added_by, completed_at, created_at, advance)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12::timestamp, NOW()),$13)
       RETURNING *`,
       [
         repair_number,
@@ -92,11 +97,12 @@ router.post('/', auth, async (req, res) => {
         description?.trim()   || null,
         parseFloat(charge)    || 0,
         payment_method        || 'cash',
-        status                || 'done',
+        autoStatus,
         notes?.trim()         || null,
         req.user.id,
-        (status || 'done') === 'done' ? new Date() : null,
+        ['done','collected'].includes(autoStatus) ? new Date() : null,
         import_date           || null,
+        parseFloat(advance)   || 0,
       ]
     );
 

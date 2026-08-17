@@ -297,13 +297,18 @@ export default function Repairs() {
     if (!form.repair_type) return setError('Please select a repair type');
     setError(''); setSaving(true);
     try {
+      const chargeAmt  = parseFloat(form.charge)  || 0;
+      const advanceAmt = parseFloat(form.advance) || 0;
+      // Auto-collect if fully paid
+      const autoStatus = (advanceAmt > 0 && advanceAmt >= chargeAmt - 0.01) ? 'collected' : form.status;
       const res = await apiPost('/repairs', {
         ...form,
-        charge:       parseFloat(form.charge)||0,
+        status:       autoStatus,
+        charge:       chargeAmt,
         repair_cost:  parseFloat(form.repair_cost)||0,
-        advance: parseFloat(form.advance)||0,
-        import_date: pastMode && repairDate ? repairDate : null,
-        customer_id: linkedCust?.id || null,
+        advance:      advanceAmt,
+        import_date:  pastMode && repairDate ? repairDate : null,
+        customer_id:  linkedCust?.id || null,
       });
       if (res.error) throw new Error(res.error);
       setLastDone(res);
