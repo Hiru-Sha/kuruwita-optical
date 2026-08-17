@@ -51,27 +51,27 @@ const ACCENT = {
 };
 
 const NAV = [
-  { to:'/dashboard',      icon:'dashboard',  label:'Dashboard',      section:'main'      },
-  { to:'/orders',         icon:'orders',     label:'Orders',         section:'main'      },
-  { to:'/warranty',       icon:'warranty',   label:'Warranty',       section:'main'      },
-  { to:'/balance',        icon:'balance',    label:'Balance Due',    section:'main'      },
-  { to:'/quick-sale',     icon:'sale',       label:'Quick Sale',     section:'main'      },
-  { to:'/repairs',        icon:'repairs',    label:'Repairs',        section:'main'      },
-  { to:'/customers',      icon:'customers',  label:'Customers',      section:'main'      },
-  { to:'/walkin-rx',      icon:'walkin',     label:'Walk-in Rx',     section:'main'      },
-  { to:'/rx-tracker',     icon:'rx',         label:'Rx Tracker',     section:'main'      },
+  { to:'/dashboard',      icon:'dashboard',  label:'Dashboard',      section:'main',     perm:'dashboard' },
+  { to:'/orders',         icon:'orders',     label:'Orders',         section:'main',     perm:'orders' },
+  { to:'/warranty',       icon:'warranty',   label:'Warranty',       section:'main',     perm:'orders' },
+  { to:'/balance',        icon:'balance',    label:'Balance Due',    section:'main',     perm:'orders' },
+  { to:'/quick-sale',     icon:'sale',       label:'Quick Sale',     section:'main',     perm:'quick_sale' },
+  { to:'/repairs',        icon:'repairs',    label:'Repairs',        section:'main',     perm:'repairs' },
+  { to:'/customers',      icon:'customers',  label:'Customers',      section:'main',     perm:'customers' },
+  { to:'/walkin-rx',      icon:'walkin',     label:'Walk-in Rx',     section:'main',     perm:'customers' },
+  { to:'/rx-tracker',     icon:'rx',         label:'Rx Tracker',     section:'main',     perm:'customers' },
   { to:'/grinding',       icon:'lab',        label:'Grinding',       section:'main',     roles:['admin'] },
   { to:'/lab-receivings', icon:'lab',        label:'Lab Receivings', section:'main',     roles:['admin'] },
-  { to:'/inventory',      icon:'inventory',  label:'Inventory',      section:'inventory' },
-  { to:'/lens-prices',    icon:'lens',       label:'Lens Prices',    section:'inventory' },
-  { to:'/price-check',    icon:'expenses',   label:'Price Check',    section:'inventory' },
-  { to:'/store-manager',  icon:'inventory',  label:'Online Store',   section:'inventory' },
-  { to:'/historical-records', icon:'customers', label:'📚 Old Records', section:'history' },
+  { to:'/inventory',      icon:'inventory',  label:'Inventory',      section:'inventory',perm:'inventory' },
+  { to:'/lens-prices',    icon:'lens',       label:'Lens Prices',    section:'inventory',perm:'lens_prices' },
+  { to:'/price-check',    icon:'expenses',   label:'Price Check',    section:'inventory',perm:'lens_prices' },
+  { to:'/store-manager',  icon:'inventory',  label:'Online Store',   section:'inventory',roles:['admin'] },
+  { to:'/historical-records', icon:'customers', label:'📚 Old Records', section:'history', perm:'historical_records' },
   { to:'/calculator',     icon:'calculator', label:'Calculator',     section:'inventory' },
-  { to:'/dealers',        icon:'purchase',   label:'Purchases',      section:'inventory' },
-  { to:'/kalutota',       icon:'balance',    label:'Kalutota A/C',   section:'inventory' },
-  { to:'/reports',        icon:'reports',    label:'Reports',        section:'finance',  roles:['admin'] },
-  { to:'/expenses',       icon:'expenses',   label:'Expenses',       section:'finance',  roles:['admin'] },
+  { to:'/dealers',        icon:'purchase',   label:'Purchases',      section:'inventory',perm:'expenses' },
+  { to:'/kalutota',       icon:'balance',    label:'Kalutota A/C',   section:'inventory',perm:'kalutota' },
+  { to:'/reports',        icon:'reports',    label:'Reports',        section:'finance',  roles:['admin'], perm:'reports' },
+  { to:'/expenses',       icon:'expenses',   label:'Expenses',       section:'finance',  roles:['admin'], perm:'expenses' },
   { to:'/end-of-day',     icon:'eod',        label:'End of Day',     section:'finance',  roles:['admin'] },
   { to:'/report-pdf',     icon:'rx',         label:'PDF Report',     section:'finance',  roles:['admin'] },
   { to:'/bulk-import',    icon:'import',     label:'Bulk Import',    section:'account',  roles:['admin'] },
@@ -122,7 +122,14 @@ export default function Layout() {
   },[location.pathname]);
   useEffect(()=>{ if(mob) setOpen(false); },[location.pathname]);
 
-  const navItems = NAV.filter(n=>!n.roles||n.roles.includes(role));
+  // Get user permissions from user object (stored after login)
+  const userPerms = user?.permissions || null; // null = no restriction (admin)
+  const hasPerm = (perm) => !perm || !userPerms || userPerms.includes(perm);
+
+  const navItems = NAV.filter(n =>
+    (!n.roles || n.roles.includes(role)) &&
+    hasPerm(n.perm)
+  );
   const currentPage = navItems.find(n=>location.pathname.startsWith(n.to))?.label||'';
 
   const handleScan = async (rawId) => {

@@ -36,6 +36,7 @@ const ALL_FEATURES = [
   { key:'delete_orders',   label:'Delete Orders',      icon:'🗑️', group:'Admin',    desc:'Can delete orders (sensitive)' },
   { key:'delete_inventory',label:'Delete Inventory',   icon:'🗑️', group:'Admin',    desc:'Can delete inventory items' },
   { key:'print_receipts',  label:'Print Receipts',     icon:'🖨️', group:'Core',     desc:'Print advance and balance bills' },
+  { key:'historical_records', label:'Old Records Entry', icon:'📚', group:'Core', desc:'Enter pre-2026 historical patient records' },
 ];
 
 const GROUPS = ['Core','Finance','Admin'];
