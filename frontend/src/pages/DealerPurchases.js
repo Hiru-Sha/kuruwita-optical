@@ -219,6 +219,21 @@ export default function DealerPurchases() {
 
   useEffect(()=>{ load(); },[load]);
 
+  // Recalculate dealer balances whenever purchases change
+  useEffect(() => {
+    const b = {};
+    purchases.forEach(p => {
+      const d = p.dealer_name || 'Unknown';
+      if (!b[d]) b[d] = { total_purchased:0, total_paid:0, unpaid_count:0 };
+      const amt = parseFloat(p.total_cost||0);
+      b[d].total_purchased += amt;
+      // Count as paid if payment_status is paid OR payment_method is cash (cash = paid on spot)
+      if (p.payment_status === 'paid') b[d].total_paid += amt;
+      else b[d].unpaid_count++;
+    });
+    setBalances(b);
+  }, [purchases]);
+
   const totalCost = parseFloat(form.unit_cost||0) * parseInt(form.quantity||0);
   const actualDealer = form.dealer_name === 'Other Dealer' ? form.custom_dealer : form.dealer_name;
 

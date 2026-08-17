@@ -442,14 +442,24 @@ export function StickerModal({ items, onClose }) {
   const [selected,   setSelected]   = useState(() => {
     const printed = getPrinted();
     const sel = {};
-    items.forEach(item => { sel[item.id] = !printed[String(item.id)]; });
+    // Default: nothing selected — user picks what to print
+    items.forEach(item => { sel[item.id] = false; });
     return sel;
   });
-  const [showAll, setShowAll] = useState(false);
+  const [showAll,    setShowAll]    = useState(true);
+  const [stickerSearch, setStickerSearch] = useState('');
 
   const printed       = getPrinted();
-  const filteredItems = items.filter(item => showAll || !printed[String(item.id)]);
-  const selectedItems = filteredItems.filter(item => selected[item.id]);
+  const searchedItems = stickerSearch.trim().length > 0
+    ? items.filter(item =>
+        (item.name||'').toLowerCase().includes(stickerSearch.toLowerCase()) ||
+        (item.brand||'').toLowerCase().includes(stickerSearch.toLowerCase()) ||
+        (item.frame_color||'').toLowerCase().includes(stickerSearch.toLowerCase()) ||
+        (item.category||'').toLowerCase().includes(stickerSearch.toLowerCase()) ||
+        (item.frame_material||'').toLowerCase().includes(stickerSearch.toLowerCase()))
+    : items;
+  const filteredItems = searchedItems.filter(item => showAll || !printed[String(item.id)]);
+  const selectedItems = items.filter(item => selected[item.id]);
 
   // Expand by quantity — per-item seq + global category seq
   // Global counter is CONTINUOUS across all items of same category group
@@ -557,66 +567,77 @@ export function StickerModal({ items, onClose }) {
           <span><b style={{ color:'#bbb' }}>Bottom-right (faint)</b> = global category count (all Polarised: 1..59)</span>
         </div>
 
-        {/* Item selector — improved grid */}
+        {/* Item selector — search + grid */}
         <div style={{ padding:'12px 20px', borderBottom:`1px solid ${C.border}`, background:C.cream }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-            <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>
-              Select items to print: <span style={{ color:C.gold }}>({selectedItems.length} of {filteredItems.length} selected · {expanded.length} stickers)</span>
+          {/* Search bar */}
+          <div style={{ display:'flex', gap:8, marginBottom:10, alignItems:'center' }}>
+            <input
+              value={stickerSearch}
+              onChange={e=>setStickerSearch(e.target.value)}
+              placeholder="🔍 Search by name, brand, color, material..."
+              style={{ flex:1, padding:'8px 12px', border:`1.5px solid ${C.border}`, borderRadius:9,
+                fontSize:13, fontFamily:'inherit', outline:'none', background:'white', color:C.navy }}
+              autoFocus/>
+            {stickerSearch && (
+              <button onClick={()=>setStickerSearch('')}
+                style={{ padding:'8px 12px', borderRadius:9, border:`1.5px solid ${C.border}`, background:'white', color:C.muted, cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>
+                ✕ Clear
+              </button>
+            )}
+          </div>
+          {/* Controls */}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+            <div style={{ fontSize:12, color:C.muted }}>
+              <b style={{color:C.navy}}>{selectedItems.length}</b> items selected ·
+              <b style={{color:C.gold}}> {expanded.length} stickers</b>
+              {stickerSearch && <span> · showing {filteredItems.length} results</span>}
             </div>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-              <button onClick={selectAll}
-                style={{ padding:'5px 12px', borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${C.navy}`, background:C.navy, color:'white' }}>
-                ✓ Select All
+            <div style={{ display:'flex', gap:6 }}>
+              <button onClick={()=>{ const s={}; filteredItems.forEach(i=>s[i.id]=true); setSelected(prev=>({...prev,...s})); }}
+                style={{ padding:'4px 12px', borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${C.navy}`, background:C.navy, color:'white' }}>
+                {stickerSearch ? '✓ Select Results' : '✓ All'}
               </button>
-              <button onClick={deselectAll}
-                style={{ padding:'5px 12px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid ${C.border}`, background:'white', color:C.muted }}>
-                ✕ None
+              <button onClick={()=>{ const s={}; filteredItems.forEach(i=>s[i.id]=false); setSelected(prev=>({...prev,...s})); }}
+                style={{ padding:'4px 12px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid ${C.border}`, background:'white', color:C.muted }}>
+                None
               </button>
-              <button onClick={()=>setShowAll(s=>!s)}
-                style={{ padding:'5px 12px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid ${C.border}`, background:showAll?'#fef9f0':'white', color:showAll?'#92400e':C.muted }}>
-                {showAll ? '👁 Showing All' : `Show Printed (${Object.keys(printed).length})`}
-              </button>
-              <button onClick={()=>{ clearPrinted(); setSelected(s=>{ const n={}; items.forEach(i=>n[i.id]=true); return n; }); }}
-                style={{ padding:'5px 12px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid #fca5a5`, background:'#fef2f2', color:'#c0392b' }}>
+              <button onClick={()=>{ clearPrinted(); }}
+                style={{ padding:'4px 12px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid #fca5a5`, background:'#fef2f2', color:'#c0392b' }}>
                 Reset History
               </button>
             </div>
           </div>
-          {/* Item grid — easy to see, click to toggle */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:6, maxHeight:240, overflowY:'auto', paddingRight:4 }}>
+          {/* Item grid */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))', gap:6, maxHeight:260, overflowY:'auto', paddingRight:4 }}>
             {filteredItems.map(item => {
               const isP   = !!printed[String(item.id)];
               const isSel = !!selected[item.id];
               return (
                 <div key={item.id} onClick={()=>toggleItem(item.id)}
-                  style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px',
+                  style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px',
                     borderRadius:9, cursor:'pointer', userSelect:'none',
-                    border:`2px solid ${isSel ? C.navy : C.border}`,
-                    background: isSel ? '#f0f4ff' : 'white',
-                    opacity: isP && !isSel ? 0.5 : 1,
-                    transition:'all .15s' }}>
-                  {/* Checkbox */}
-                  <div style={{ width:18, height:18, borderRadius:4, flexShrink:0,
                     border:`2px solid ${isSel?C.navy:C.border}`,
-                    background:isSel?C.navy:'white',
-                    display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    {isSel && <span style={{ color:'white', fontSize:11, fontWeight:900, lineHeight:1 }}>✓</span>}
+                    background:isSel?'#eef2ff':'white',
+                    transition:'all .12s' }}>
+                  <div style={{ width:18, height:18, borderRadius:4, flexShrink:0, border:`2px solid ${isSel?C.navy:C.border}`,
+                    background:isSel?C.navy:'white', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    {isSel && <span style={{ color:'white', fontSize:10, fontWeight:900 }}>✓</span>}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontSize:12, fontWeight:700, color:C.navy, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {item.brand || item.name || '—'}
                     </div>
                     <div style={{ fontSize:10, color:C.muted }}>
-                      {item.frame_color || item.category} · <b style={{ color:isSel?C.gold:C.muted }}>×{item.quantity} stickers</b>
-                      {isP && <span style={{ color:C.success, marginLeft:4 }}>✓ printed</span>}
+                      {item.frame_color||item.category} · <b style={{color:isSel?C.gold:C.muted}}>×{item.quantity}</b>
+                      {isP && !isSel && <span style={{color:C.success,marginLeft:4}}>✓ printed</span>}
                     </div>
                   </div>
                 </div>
               );
             })}
             {filteredItems.length === 0 && (
-              <div style={{ fontSize:13, color:C.muted, padding:'12px 0', gridColumn:'1/-1' }}>
-                All items printed — click "Show Printed" to see them.
+              <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'20px 0', fontSize:13, color:C.muted }}>
+                {stickerSearch ? `No items matching "${stickerSearch}"` : 'No items available'}
               </div>
             )}
           </div>
