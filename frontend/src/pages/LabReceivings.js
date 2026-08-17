@@ -310,8 +310,33 @@ export default function LabReceivings() {
       const res  = await fetch(`${BASE_URL()}/orders?limit=5000`, { headers:{ Authorization:`Bearer ${tok()}` } });
       const data = await res.json();
       const arr  = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [];
-      // only exclude cancelled orders — show everything else
-      setOrders(arr.filter(o => o.status !== 'cancelled'));
+      // Auto-mark old orders (before 21 Apr 2026) as lab_paid
+      // because those lens costs were already recorded as expenses manually
+      const CUTOFF = new Date('2026-04-21');
+      const processed = arr
+        .filter(o => o.status !== 'cancelled')
+        .map(o => {
+          const orderDate = new Date(o.created_at || o.order_date || 0);
+          if (orderDate < CUTOFF && !o.lab_paid && parseFloat(o.lab_bill_amount||0) > 0) {
+            // Show as paid — already settled via expenses
+            return { ...o, lab_paid: true, lab_paid_date: o.lab_paid_date || '2026-04-20', _auto_marked: true };
+          }
+          return o;
+        });
+      setOrders(processed);
+
+      // Silently save auto-marked orders to DB so they persist
+      const toMark = processed.filter(o => o._auto_marked);
+      if (toMark.length > 0) {
+        toMark.forEach(o => {
+          apiPatch(`/orders/${o.id}`, {
+            lab_paid: true,
+            lab_paid_date: '2026-04-20',
+            lab_payment_method: 'expense', // indicates settled via expense record
+            lab_notes: 'Lens cost settled via expenses before 21 Apr 2026',
+          }).catch(() => {});
+        });
+      }
       setSelectedIds(new Set());
     } catch(e){ console.error(e); }
     finally { setLoading(false); }
@@ -331,7 +356,7 @@ export default function LabReceivings() {
     if(billFilt==='unpaid') return parseFloat(o.lab_bill_amount||0)>0 && !o.lab_paid;
     if(billFilt==='paid')   return o.lab_paid;
     return true;
-  }).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  }).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)); // newest first
 
   // Stats
   const noBill   = orders.filter(o=>!parseFloat(o.lab_bill_amount||0)).length;
