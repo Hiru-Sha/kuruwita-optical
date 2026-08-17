@@ -13,8 +13,6 @@ const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 
 // ── GET /api/store/products ──────────────────────────────────
-// Shows ALL inventory items with images by default
-// Items explicitly hidden in Store Manager (show_on_store=FALSE) are excluded
 router.get('/products', async (req, res) => {
   const { category, search, sort = 'name', min_price, max_price, limit = 60, offset = 0 } = req.query;
   try {
@@ -52,14 +50,12 @@ router.get('/products', async (req, res) => {
     };
     const orderBy = orderMap[sort] || 'i.name ASC';
 
-    // Count
     const countRes = await pool.query(
       `SELECT COUNT(*) AS total FROM inventory i
        LEFT JOIN store_products sp ON sp.inventory_id = i.id ${where}`,
       params
     );
 
-    // Products
     params.push(parseInt(limit), parseInt(offset));
     const result = await pool.query(
       `SELECT
@@ -108,7 +104,7 @@ router.get('/products/:id', async (req, res) => {
              END AS final_price,
              i.quantity AS stock
       FROM inventory i
-      JOIN store_products sp ON sp.inventory_id = i.id
+      LEFT JOIN store_products sp ON sp.inventory_id = i.id
       WHERE i.id = $1 AND COALESCE(sp.show_on_store, TRUE) = TRUE
     `, [req.params.id]);
 
@@ -119,9 +115,10 @@ router.get('/products/:id', async (req, res) => {
         SELECT i.id, i.name, i.image_url, i.frame_color, i.category,
                COALESCE(sp.store_price, i.sell_price) AS price,
                sp.discount_pct
-        FROM inventory i JOIN store_products sp ON sp.inventory_id = i.id
+        FROM inventory i LEFT JOIN store_products sp ON sp.inventory_id = i.id
         WHERE i.category = $1 AND i.id != $2
           AND COALESCE(sp.show_on_store, TRUE) = TRUE
+          AND i.image_url IS NOT NULL AND i.sell_price > 0
         ORDER BY RANDOM() LIMIT 4
       `, [result.rows[0].category, req.params.id]),
       pool.query(`
@@ -129,7 +126,7 @@ router.get('/products/:id', async (req, res) => {
         FROM store_reviews
         WHERE inventory_id = $1 AND approved = TRUE
         ORDER BY created_at DESC LIMIT 10
-      `, [req.params.id]),
+      `, [req.params.id]).catch(() => ({ rows: [] })),
     ]);
 
     res.json({ product: result.rows[0], related: related.rows, reviews: reviews.rows });
@@ -147,17 +144,17 @@ router.get('/featured', async (req, res) => {
              i.quantity AS stock,
              COALESCE(sp.store_price, i.sell_price) AS price,
              i.sell_price AS original_price,
-             sp.discount_pct, sp.discount_label,
-             CASE WHEN sp.discount_pct > 0
-               THEN ROUND(COALESCE(sp.store_price, i.sell_price) * (1 - sp.discount_pct::DECIMAL/100), 2)
+             COALESCE(sp.discount_pct,0) AS discount_pct, sp.discount_label,
+             CASE WHEN COALESCE(sp.discount_pct,0) > 0
+               THEN ROUND(COALESCE(sp.store_price, i.sell_price) * (1 - COALESCE(sp.discount_pct,0)::DECIMAL/100), 2)
                ELSE COALESCE(sp.store_price, i.sell_price)
              END AS final_price
       FROM inventory i
-      JOIN store_products sp ON sp.inventory_id = i.id
+      LEFT JOIN store_products sp ON sp.inventory_id = i.id
       WHERE i.image_url IS NOT NULL AND i.image_url != ''
-        AND i.sell_price > 0
+        AND i.sell_price > 0 AND i.quantity > 0
         AND COALESCE(sp.show_on_store, TRUE) = TRUE
-      ORDER BY sp.sort_order ASC, i.created_at DESC
+      ORDER BY COALESCE(sp.sort_order, 999) ASC, i.created_at DESC
       LIMIT 8
     `);
     res.json(result.rows);
@@ -171,8 +168,10 @@ router.get('/categories', async (req, res) => {
       SELECT i.category, COUNT(*) AS product_count,
              MIN(COALESCE(sp.store_price, i.sell_price)) AS min_price,
              MAX(COALESCE(sp.store_price, i.sell_price)) AS max_price
-      FROM inventory i JOIN store_products sp ON sp.inventory_id = i.id
-      WHERE sp.show_on_store = TRUE
+      FROM inventory i
+      LEFT JOIN store_products sp ON sp.inventory_id = i.id
+      WHERE i.image_url IS NOT NULL AND i.sell_price > 0
+        AND COALESCE(sp.show_on_store, TRUE) = TRUE
       GROUP BY i.category ORDER BY product_count DESC
     `);
     res.json(result.rows);
@@ -191,7 +190,7 @@ router.post('/validate-promo', async (req, res) => {
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Invalid or expired promo code' });
     const promo = result.rows[0];
-    if (parseFloat(order_total) < parseFloat(promo.min_order_amount)) {
+    if (promo.min_order_amount && parseFloat(order_total) < parseFloat(promo.min_order_amount)) {
       return res.status(400).json({ error: `Minimum order Rs. ${parseFloat(promo.min_order_amount).toLocaleString()} required` });
     }
     const discount = promo.discount_type === 'pct'
@@ -226,18 +225,45 @@ router.post('/orders', async (req, res) => {
       custId = nc.rows[0].id;
     }
 
-    // Order number
+    // Order number OL-YYYYMMDD-XXX
     const d  = new Date();
     const ds = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-    const cnt = await client.query(`SELECT COUNT(*) AS c FROM store_orders WHERE TO_CHAR(created_at,'YYYYMMDD')=$1`, [ds])
-      .catch(() => ({ rows: [{ c: 0 }] }));
+    const cnt = await client.query(
+      `SELECT COUNT(*) AS c FROM store_orders WHERE TO_CHAR(created_at,'YYYYMMDD')=$1`, [ds]
+    ).catch(() => ({ rows: [{ c: 0 }] }));
     const orderNum = `OL-${ds}-${String(parseInt(cnt.rows[0].c)+1).padStart(3,'0')}`;
 
-    // Apply promo if valid
-    let finalDiscount = parseFloat(discount_amount) || 0;
+    // Apply promo
+    const finalDiscount = parseFloat(discount_amount) || 0;
     if (promo_code) {
-      await client.query(`UPDATE promo_codes SET used_count = used_count + 1 WHERE UPPER(code) = UPPER($1)`, [promo_code]);
+      await client.query(
+        `UPDATE promo_codes SET used_count = used_count + 1 WHERE UPPER(code) = UPPER($1)`, [promo_code]
+      ).catch(() => {});
     }
+
+    // Ensure store_orders table exists
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS store_orders (
+        id               SERIAL PRIMARY KEY,
+        order_number     VARCHAR(30) UNIQUE,
+        customer_id      INTEGER,
+        customer_name    VARCHAR(100),
+        customer_phone   VARCHAR(20),
+        customer_email   VARCHAR(100),
+        customer_address TEXT,
+        items            JSONB,
+        total_amount     DECIMAL(10,2),
+        payment_method   VARCHAR(30) DEFAULT 'cod',
+        payment_ref      VARCHAR(100),
+        payment_status   VARCHAR(20) DEFAULT 'pending',
+        delivery_type    VARCHAR(20) DEFAULT 'pickup',
+        order_status     VARCHAR(20) DEFAULT 'new',
+        notes            TEXT,
+        promo_code       VARCHAR(50),
+        discount_amount  DECIMAL(10,2) DEFAULT 0,
+        created_at       TIMESTAMP DEFAULT NOW()
+      )
+    `).catch(() => {});
 
     const storeOrder = await client.query(`
       INSERT INTO store_orders
@@ -253,24 +279,22 @@ router.post('/orders', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // WhatsApp notification URL for shop owner
-    const itemsList = items.map(i => `• ${i.name} ×${i.qty} — Rs.${(i.final_price||i.price)*i.qty}`).join('\n');
-    const waMsg = encodeURIComponent(
-      `🛒 *New Online Order!*\n\n` +
-      `📦 Order: ${orderNum}\n` +
-      `👤 Customer: ${customer_name}\n` +
-      `📞 Phone: ${customer_phone}\n` +
-      `🚚 Delivery: ${delivery_type}\n` +
-      `💳 Payment: ${payment_method}\n\n` +
-      `Items:\n${itemsList}\n\n` +
-      `${finalDiscount > 0 ? `🎟️ Promo: ${promo_code} (−Rs.${finalDiscount})\n` : ''}` +
-      `💰 Total: Rs.${parseFloat(total_amount).toLocaleString()}`
-    );
-
+    // Return full order data so frontend can trigger WA notification
     res.status(201).json({
-      order: storeOrder.rows[0],
-      order_number: orderNum,
-      wa_notify: `https://wa.me/94322221211?text=${waMsg}`,
+      ...storeOrder.rows[0],
+      order_number:    orderNum,
+      customer_name,
+      customer_phone,
+      customer_email:  customer_email  || null,
+      customer_address: customer_address || null,
+      delivery_type:   delivery_type || 'pickup',
+      payment_method:  payment_method || 'cod',
+      notes:           notes || null,
+      items,
+      total_amount,
+      discount_amount: finalDiscount,
+      promo_code:      promo_code || null,
+      message:         'Order placed successfully!',
     });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -295,6 +319,12 @@ router.post('/reviews', async (req, res) => {
   if (!inventory_id || !customer_name || !rating) return res.status(400).json({ error: 'Missing fields' });
   if (rating < 1 || rating > 5) return res.status(400).json({ error: 'Rating must be 1-5' });
   try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS store_reviews (
+        id SERIAL PRIMARY KEY, inventory_id INTEGER, customer_name VARCHAR(100),
+        customer_phone VARCHAR(20), rating INTEGER, review_text TEXT,
+        approved BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW()
+      )`).catch(() => {});
     await pool.query(
       `INSERT INTO store_reviews (inventory_id, customer_name, customer_phone, rating, review_text)
        VALUES ($1,$2,$3,$4,$5)`,
@@ -321,7 +351,6 @@ router.post('/payhere/notify', async (req, res) => {
 // ════════════════════════════════════════════════════════════
 
 // ── GET /api/store/admin/products ───────────────────────────
-// Paginated with search — no more loading 792 items at once
 router.get('/admin/products', auth, async (req, res) => {
   const { search, filter, limit = 30, offset = 0 } = req.query;
   try {
@@ -353,10 +382,7 @@ router.get('/admin/products', auth, async (req, res) => {
       LIMIT $${params.length - 1} OFFSET $${params.length}
     `, params);
 
-    // Run counts in parallel
-    const [shownRes] = await Promise.all([
-      pool.query(`SELECT COUNT(*) AS c FROM store_products WHERE show_on_store = TRUE`),
-    ]);
+    const shownRes = await pool.query(`SELECT COUNT(*) AS c FROM store_products WHERE show_on_store = TRUE`);
     res.json({
       products: result.rows,
       total:    parseInt(countRes.rows[0].total),
@@ -370,10 +396,7 @@ router.patch('/admin/products/:id', auth, async (req, res) => {
   const { show_on_store, store_price, discount_pct, discount_label,
           description, extra_images, tags, sort_order } = req.body;
   try {
-    // Check if row exists first - safer than ON CONFLICT (avoids unique constraint issues)
-    const existing = await pool.query(
-      'SELECT id FROM store_products WHERE inventory_id = $1', [req.params.id]
-    );
+    const existing = await pool.query('SELECT id FROM store_products WHERE inventory_id = $1', [req.params.id]);
     const vals = [
       req.params.id,
       show_on_store ?? false,
@@ -389,10 +412,10 @@ router.patch('/admin/products/:id', auth, async (req, res) => {
     if (existing.rows.length) {
       result = await pool.query(`
         UPDATE store_products SET
-          show_on_store  = $2, store_price = $3, discount_pct = $4,
-          discount_label = $5, description = $6, extra_images = $7,
-          tags = $8, sort_order = $9, updated_at = NOW()
-        WHERE inventory_id = $1 RETURNING *`, vals);
+          show_on_store=$2, store_price=$3, discount_pct=$4,
+          discount_label=$5, description=$6, extra_images=$7,
+          tags=$8, sort_order=$9, updated_at=NOW()
+        WHERE inventory_id=$1 RETURNING *`, vals);
     } else {
       result = await pool.query(`
         INSERT INTO store_products
@@ -435,7 +458,7 @@ router.get('/admin/reviews', auth, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT sr.*, i.name AS product_name FROM store_reviews sr
-      JOIN inventory i ON i.id = sr.inventory_id
+      LEFT JOIN inventory i ON i.id = sr.inventory_id
       ORDER BY sr.created_at DESC LIMIT 100
     `);
     res.json(result.rows);
