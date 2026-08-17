@@ -149,7 +149,13 @@ export default function DealerPurchases() {
   const [purchases,  setPurchases]  = useState([]);
   const [summary,    setSummary]    = useState(null);
   const [loading,    setLoading]    = useState(true);
-  const [activeTab,  setActiveTab]  = useState('log');
+  const [activeTab,    setActiveTab]    = useState('log');
+  const [balances,     setBalances]     = useState({}); // dealer → {total_purchased, total_paid, balance}
+  const [payingDealer, setPayingDealer] = useState(null); // dealer name being paid
+  const [payAmount,    setPayAmount]    = useState('');
+  const [payMethod,    setPayMethod]    = useState('cash');
+  const [payNote,      setPayNote]      = useState('');
+  const [payingSaving, setPayingSaving] = useState(false);
   const [month,      setMonth]      = useState(thisMonth());
   const [dealerFilt, setDealerFilt] = useState('all');
   const [catFilt,    setCatFilt]    = useState('all');
@@ -279,6 +285,7 @@ export default function DealerPurchases() {
   const TABS = [
     { key:'log',      label:'📋 Purchase Log' },
     { key:'dealers',  label:'🏪 By Dealer'    },
+    { key:'balances', label:'💳 Balances'      },
     { key:'analysis', label:'📊 Analysis'     },
   ];
 
@@ -683,6 +690,92 @@ export default function DealerPurchases() {
       )}
 
       {/* ── ANALYSIS TAB ── */}
+      {/* ── Balances tab ── */}
+      {activeTab==='balances' && (
+        <div style={{ padding:'20px' }}>
+          <div style={{ marginBottom:16, fontSize:13, color:C.muted }}>
+            Track what you owe each supplier. Payments recorded to Expenses automatically.
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            {Object.entries(balances).sort((a,b)=>(b[1].total_purchased-b[1].total_paid)-(a[1].total_purchased-a[1].total_paid)).map(([dealer,b]) => {
+              const owed    = Math.max(0, b.total_purchased - b.total_paid);
+              const paidPct = b.total_purchased > 0 ? Math.min(100, Math.round(b.total_paid/b.total_purchased*100)) : 100;
+              return (
+                <div key={dealer} style={{ background:'white', border:`1.5px solid ${owed>0?'#fca5a5':C.border}`, borderRadius:14, padding:'16px 20px' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+                    <div>
+                      <div style={{ fontSize:15, fontWeight:700, color:C.navy }}>{dealer}</div>
+                      <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>
+                        Total purchased: <b>{fmt(b.total_purchased)}</b> · Paid: <b style={{color:C.success}}>{fmt(b.total_paid)}</b>
+                      </div>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ fontSize:20, fontWeight:800, color:owed>0?C.danger:C.success }}>
+                        {owed>0 ? fmt(owed) : '✓ Clear'}
+                      </div>
+                      {owed>0 && <div style={{ fontSize:11, color:C.muted }}>outstanding</div>}
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{ height:6, background:C.cream, borderRadius:3, marginBottom:10 }}>
+                    <div style={{ height:'100%', width:`${paidPct}%`, background:paidPct===100?C.success:C.gold, borderRadius:3 }}/>
+                  </div>
+                  {owed > 0 && (
+                    <button onClick={()=>{ setPayingDealer(dealer); setPayAmount(String(Math.round(owed))); }}
+                      style={{ padding:'7px 18px', background:C.navy, color:'white', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                      💳 Record Payment
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {Object.keys(balances).length === 0 && (
+              <div style={{ textAlign:'center', padding:60, color:C.muted }}>
+                <div style={{ fontSize:40, marginBottom:10 }}>💳</div>
+                <div>No purchase records yet. Add purchases in the Purchase Log tab.</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Pay dealer modal ── */}
+      {payingDealer && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.6)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+          onClick={e=>{ if(e.target===e.currentTarget) setPayingDealer(null); }}>
+          <div style={{ background:'white', borderRadius:18, padding:28, width:'100%', maxWidth:420, boxShadow:'0 24px 60px rgba(0,0,0,.3)' }}>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:C.navy, marginBottom:4 }}>💳 Record Payment</div>
+            <div style={{ fontSize:13, color:C.muted, marginBottom:20 }}>To: <b style={{color:C.navy}}>{payingDealer}</b></div>
+            <div style={{ marginBottom:12 }}>
+              <label style={LBL}>Amount (Rs.)</label>
+              <input type="number" value={payAmount} onChange={e=>setPayAmount(e.target.value)} style={INP} autoFocus/>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <label style={LBL}>Payment Method</label>
+              <select value={payMethod} onChange={e=>setPayMethod(e.target.value)} style={SEL}>
+                <option value="cash">Cash</option>
+                <option value="bank">Bank Transfer</option>
+                <option value="cheque">Cheque</option>
+              </select>
+            </div>
+            <div style={{ marginBottom:20 }}>
+              <label style={LBL}>Note (optional)</label>
+              <input value={payNote} onChange={e=>setPayNote(e.target.value)} placeholder={`Payment to ${payingDealer}`} style={INP}/>
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={()=>setPayingDealer(null)}
+                style={{ flex:1, padding:'11px', background:C.cream, border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+                Cancel
+              </button>
+              <button onClick={handlePayDealer} disabled={payingSaving||!payAmount}
+                style={{ flex:2, padding:'11px', background:payingSaving?C.muted:C.success, color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:payingSaving?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                {payingSaving ? '⏳ Saving...' : `✓ Record ${fmt(payAmount)}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab==='analysis' && (
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
 

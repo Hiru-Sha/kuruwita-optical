@@ -557,45 +557,67 @@ export function StickerModal({ items, onClose }) {
           <span><b style={{ color:'#bbb' }}>Bottom-right (faint)</b> = global category count (all Polarised: 1..59)</span>
         </div>
 
-        {/* Item selector */}
+        {/* Item selector — improved grid */}
         <div style={{ padding:'12px 20px', borderBottom:`1px solid ${C.border}`, background:C.cream }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-            <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Select items:</div>
-            <div style={{ display:'flex', gap:6 }}>
-              <button onClick={()=>setShowAll(s=>!s)}
-                style={{ padding:'4px 10px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer',
-                  fontFamily:'inherit', border:`1px solid ${C.border}`,
-                  background:showAll?C.navy:'white', color:showAll?'white':C.muted }}>
-                {showAll ? '👁️ All' : `🔇 Printed hidden (${Object.keys(printed).length})`}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>
+              Select items to print: <span style={{ color:C.gold }}>({selectedItems.length} of {filteredItems.length} selected · {expanded.length} stickers)</span>
+            </div>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              <button onClick={selectAll}
+                style={{ padding:'5px 12px', borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit', border:`1.5px solid ${C.navy}`, background:C.navy, color:'white' }}>
+                ✓ Select All
               </button>
-              <button onClick={selectAll}   style={{ padding:'4px 10px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid ${C.border}`, background:'white', color:C.navy }}>All</button>
-              <button onClick={deselectAll} style={{ padding:'4px 10px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid ${C.border}`, background:'white', color:C.muted }}>None</button>
+              <button onClick={deselectAll}
+                style={{ padding:'5px 12px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid ${C.border}`, background:'white', color:C.muted }}>
+                ✕ None
+              </button>
+              <button onClick={()=>setShowAll(s=>!s)}
+                style={{ padding:'5px 12px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid ${C.border}`, background:showAll?'#fef9f0':'white', color:showAll?'#92400e':C.muted }}>
+                {showAll ? '👁 Showing All' : `Show Printed (${Object.keys(printed).length})`}
+              </button>
               <button onClick={()=>{ clearPrinted(); setSelected(s=>{ const n={}; items.forEach(i=>n[i.id]=true); return n; }); }}
-                style={{ padding:'4px 10px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer',
-                  fontFamily:'inherit', border:`1px solid #fca5a5`, background:'#fef2f2', color:'#c0392b' }}>
-                Reset printed
+                style={{ padding:'5px 12px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', border:`1px solid #fca5a5`, background:'#fef2f2', color:'#c0392b' }}>
+                Reset History
               </button>
             </div>
           </div>
-          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+          {/* Item grid — easy to see, click to toggle */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:6, maxHeight:240, overflowY:'auto', paddingRight:4 }}>
             {filteredItems.map(item => {
               const isP   = !!printed[String(item.id)];
-              const isSel = selected[item.id];
+              const isSel = !!selected[item.id];
               return (
-                <button key={item.id} onClick={()=>toggleItem(item.id)}
-                  style={{ padding:'5px 12px', borderRadius:8, fontSize:12, fontWeight:600,
-                    cursor:'pointer', fontFamily:'inherit',
-                    border:`1.5px solid ${isSel?C.navy:C.border}`,
+                <div key={item.id} onClick={()=>toggleItem(item.id)}
+                  style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px',
+                    borderRadius:9, cursor:'pointer', userSelect:'none',
+                    border:`2px solid ${isSel ? C.navy : C.border}`,
+                    background: isSel ? '#f0f4ff' : 'white',
+                    opacity: isP && !isSel ? 0.5 : 1,
+                    transition:'all .15s' }}>
+                  {/* Checkbox */}
+                  <div style={{ width:18, height:18, borderRadius:4, flexShrink:0,
+                    border:`2px solid ${isSel?C.navy:C.border}`,
                     background:isSel?C.navy:'white',
-                    color:isSel?'white':C.muted,
-                    opacity:isP?0.55:1 }}>
-                  {(item.brand||item.name||'').split(' · ')[0]} ×{item.quantity}
-                  {isP && <span style={{ fontSize:9, marginLeft:4 }}>✓</span>}
-                </button>
+                    display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    {isSel && <span style={{ color:'white', fontSize:11, fontWeight:900, lineHeight:1 }}>✓</span>}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:C.navy, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {item.brand || item.name || '—'}
+                    </div>
+                    <div style={{ fontSize:10, color:C.muted }}>
+                      {item.frame_color || item.category} · <b style={{ color:isSel?C.gold:C.muted }}>×{item.quantity} stickers</b>
+                      {isP && <span style={{ color:C.success, marginLeft:4 }}>✓ printed</span>}
+                    </div>
+                  </div>
+                </div>
               );
             })}
-            {filteredItems.length===0 && (
-              <div style={{ fontSize:13, color:C.muted }}>All printed — toggle "Printed hidden" to show.</div>
+            {filteredItems.length === 0 && (
+              <div style={{ fontSize:13, color:C.muted, padding:'12px 0', gridColumn:'1/-1' }}>
+                All items printed — click "Show Printed" to see them.
+              </div>
             )}
           </div>
         </div>

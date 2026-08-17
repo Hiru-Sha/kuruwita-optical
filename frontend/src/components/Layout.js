@@ -93,6 +93,22 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const role = user?.role || 'admin';
+  const [lowStockCount, setLowStockCount] = React.useState(0);
+
+  React.useEffect(() => {
+    const fetchLowStock = async () => {
+      try {
+        const token = localStorage.getItem('ko_token');
+        const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const res   = await fetch(`${BASE}/inventory?limit=5000&no_images=1`, { headers:{ Authorization:`Bearer ${token}` } });
+        const data  = await res.json();
+        const items = Array.isArray(data) ? data : (data.data || []);
+        const low   = items.filter(i => parseInt(i.quantity||0) <= parseInt(i.min_quantity||2) && parseInt(i.quantity||0) >= 0).length;
+        setLowStockCount(low);
+      } catch(e) {}
+    };
+    if (user) fetchLowStock();
+  }, [user]);
   const [mob,setMob] = useState(()=>window.innerWidth<768);
   const [open,setOpen] = useState(false);
   const [showScan,setShowScan] = useState(false);
