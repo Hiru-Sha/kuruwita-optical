@@ -43,14 +43,7 @@ function Protected({ children }) {
       <div style={{ fontSize:32 }}>👁️</div><div>Loading...</div>
     </div>
   );
-  if (!user) return <Navigate to="/login" replace />;
-  // Restricted staff with only historical_records — land there directly
-  const perms = user?.permissions;
-  if (perms?.length > 0 && perms.includes('historical_records') && !perms.includes('dashboard')) {
-    const loc = window.location.pathname;
-    if (loc === '/' || loc === '/dashboard') return <Navigate to="/historical-records" replace />;
-  }
-  return children;
+  return user ? children : <Navigate to="/login" replace />;
 }
 
 // Admin-only route — redirects staff to dashboard
@@ -73,6 +66,17 @@ function PermGuard({ perm, children }) {
   return <Navigate to="/dashboard" replace />;
 }
 
+// For staff with only historical_records — redirect away from dashboard
+function DashboardOrRedirect() {
+  const { user } = useAuth();
+  const perms = user?.permissions;
+  // If staff has permissions but no dashboard access → go to historical-records
+  if (perms?.length > 0 && !perms.includes('dashboard') && perms.includes('historical_records')) {
+    return <Navigate to="/historical-records" replace />;
+  }
+  return <Dashboard />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -82,7 +86,7 @@ export default function App() {
           <Route path="/scan" element={<MobileScan />}/>
           <Route path="/" element={<Protected><Layout /></Protected>}>
             <Route index                  element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard"       element={<Dashboard />} />
+            <Route path="dashboard"       element={<DashboardOrRedirect />} />
             <Route path="orders"          element={<PermGuard perm="orders"><Orders /></PermGuard>} />
             <Route path="orders/new"      element={<PermGuard perm="new_order"><NewOrder /></PermGuard>} />
             <Route path="customers"       element={<PermGuard perm="customers"><Customers /></PermGuard>} />
