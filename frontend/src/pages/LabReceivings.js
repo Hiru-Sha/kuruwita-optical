@@ -312,30 +312,36 @@ export default function LabReceivings() {
       const arr  = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [];
       // Auto-mark old orders (before 21 Apr 2026) as lab_paid
       // because those lens costs were already recorded as expenses manually
+      // Orders before 21 Apr 2026 — lens costs were paid as expenses, mark all as paid
       const CUTOFF = new Date('2026-04-21');
       const processed = arr
         .filter(o => o.status !== 'cancelled')
         .map(o => {
           const orderDate = new Date(o.created_at || o.order_date || 0);
-          if (orderDate < CUTOFF && !o.lab_paid && parseFloat(o.lab_bill_amount||0) > 0) {
-            // Show as paid — already settled via expenses
+          // Mark ALL pre-cutoff orders as lab_paid (bill entered or not)
+          // These were settled manually as expenses before the system tracked this
+          if (orderDate < CUTOFF && !o.lab_paid) {
             return { ...o, lab_paid: true, lab_paid_date: o.lab_paid_date || '2026-04-20', _auto_marked: true };
           }
           return o;
         });
       setOrders(processed);
 
-      // Silently save auto-marked orders to DB so they persist
+      // Save auto-marked orders to DB in batches so they stay paid permanently
       const toMark = processed.filter(o => o._auto_marked);
       if (toMark.length > 0) {
-        toMark.forEach(o => {
-          apiPatch(`/orders/${o.id}`, {
-            lab_paid: true,
-            lab_paid_date: '2026-04-20',
-            lab_payment_method: 'expense', // indicates settled via expense record
-            lab_notes: 'Lens cost settled via expenses before 21 Apr 2026',
-          }).catch(() => {});
-        });
+        // Save in small batches to avoid overwhelming the server
+        for (let i = 0; i < toMark.length; i += 10) {
+          const batch = toMark.slice(i, i + 10);
+          await Promise.all(batch.map(o =>
+            apiPatch(`/orders/${o.id}`, {
+              lab_paid: true,
+              lab_paid_date: '2026-04-20',
+              lab_payment_method: 'expense',
+              lab_notes: 'Lens cost settled via expenses before 21 Apr 2026',
+            }).catch(() => {})
+          ));
+        }
       }
       setSelectedIds(new Set());
     } catch(e){ console.error(e); }
