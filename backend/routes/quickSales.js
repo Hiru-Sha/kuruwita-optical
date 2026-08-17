@@ -77,7 +77,12 @@ router.post('/', auth, async (req, res) => {
         payment_method       || 'cash',
         parseFloat(amount_paid)  || 0,
         parseFloat(change_given) || 0,
-        notes    || null,
+        (() => {
+          const gStr = giftsArr.length > 0
+            ? `\nGifts given: ${giftsArr.map(g=>g.name).join(', ')}`
+            : '';
+          return (notes || '') + gStr || null;
+        })(),
         req.user.id,
         saleDate,
       ]
@@ -103,6 +108,24 @@ router.post('/', auth, async (req, res) => {
           [invId, item.name || 'Item', -qty, 'Sale: ' + saleNum, req.user.id]
         ).catch(() => {});
       } catch(e) { console.warn('Stock deduct failed:', e.message); }
+    }
+
+    // Deduct gift items from inventory
+    const giftsArr = Array.isArray(req.body.gifts) ? req.body.gifts : [];
+    for (const gift of giftsArr) {
+      if (!gift.id) continue;
+      try {
+        await pool.query(
+          'UPDATE inventory SET quantity = GREATEST(0, quantity - $1), updated_at = NOW() WHERE id = $2',
+          [gift.qty || 1, gift.id]
+        );
+        await pool.query(
+          `INSERT INTO stock_adjustments
+             (inventory_id, item_name, change_type, quantity_change, reason, notes, adjusted_by)
+           VALUES ($1,$2,'remove',$3,'Quick Sale Gift',$4,$5)`,
+          [gift.id, gift.name, -(gift.qty||1), `Free gift with Sale: ${saleNum}`, req.user.id]
+        ).catch(()=>{});
+      } catch(e) { console.warn('Gift stock deduct failed:', e.message); }
     }
 
     // Auto bank deposit for non-cash payments

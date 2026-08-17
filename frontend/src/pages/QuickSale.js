@@ -279,6 +279,32 @@ export default function QuickSale() {
   const upd = (id,f,v) => setCart(c=>c.map(x=>x.inventory_id===id?{...x,[f]:v}:x));
   const rem = (id)      => setCart(c=>c.filter(x=>x.inventory_id!==id));
 
+  const [gifts,       setGifts]       = useState([]); // free gift items
+  const [giftSearch,  setGiftSearch]  = useState('');
+  const [giftResults, setGiftResults] = useState([]);
+
+  const searchGifts = async (q) => {
+    setGiftSearch(q);
+    if (!q.trim() || q.length < 2) { setGiftResults([]); return; }
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res   = await fetch(`${BASE}/inventory?search=${encodeURIComponent(q)}&limit=8`, { headers:{ Authorization:`Bearer ${token}` } });
+      const data  = await res.json();
+      setGiftResults(Array.isArray(data) ? data : (data.data || []));
+    } catch(e) {}
+  };
+
+  const addGift = (item) => {
+    if (!gifts.find(g => g.id === item.id)) {
+      setGifts(g => [...g, { id: item.id, name: item.name, qty: 1, stock: item.quantity, sell_price: item.sell_price, image_url: item.image_url }]);
+    }
+    setGiftSearch('');
+    setGiftResults([]);
+  };
+
+  const removeGift = (id) => setGifts(g => g.filter(x => x.id !== id));
+
   const subtotal = cart.reduce((s,i)=>s+(parseFloat(i.price)||0)*(parseInt(i.qty)||1)-(parseFloat(i.item_discount)||0),0);
   const discAmt  = parseFloat(overDisc)||0;
   const total    = Math.max(0,subtotal-discAmt);
@@ -295,12 +321,12 @@ export default function QuickSale() {
       const res   = await fetch(`${BASE}/quick-sales`,{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-        body:JSON.stringify({customer_name:custName.trim()||null,customer_phone:custPhone.trim()||null,customer_id:linkedCust?.id||null,items:cart,subtotal,discount:discAmt,total,payment_method:payMethod,amount_paid:paid,change_given:change,import_date:pastMode&&saleDate?saleDate:null})
+        body:JSON.stringify({customer_name:custName.trim()||null,customer_phone:custPhone.trim()||null,customer_id:linkedCust?.id||null,items:cart,gifts,subtotal,discount:discAmt,total,payment_method:payMethod,amount_paid:paid,change_given:change,import_date:pastMode&&saleDate?saleDate:null})
       });
       if (!res.ok){const d=await res.json();throw new Error(d.error||'Failed');}
       const data=await res.json();
       setDoneItems([...cart]);
-      setDone(data);
+      setDone({...data, bill_gifts: gifts.map(g=>({ name:g.name, price:g.sell_price, qty:g.qty }))});
 
       // Stock deduction and audit log handled by backend POST /quick-sales
       // No duplicate call needed here
@@ -724,6 +750,56 @@ export default function QuickSale() {
                     {change===0&&<span style={{fontSize:24}}>✅</span>}
                   </div>
                 )}
+                {/* ── Free Gifts Section ── */}
+                <div style={{background:C.cream,borderRadius:12,padding:'12px 14px',marginBottom:14,border:`1.5px solid ${C.border}`}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                    <div style={{fontSize:12,fontWeight:700,color:C.navy}}>🎁 Free Gifts</div>
+                    <div style={{fontSize:11,color:C.muted}}>deducted from stock</div>
+                  </div>
+                  {/* Gift search */}
+                  <div style={{position:'relative',marginBottom:8}}>
+                    <input
+                      value={giftSearch}
+                      onChange={e=>searchGifts(e.target.value)}
+                      placeholder="Search item to give as gift (box, pouch, case...)"
+                      style={{width:'100%',padding:'8px 12px',border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,fontFamily:'inherit',outline:'none',background:'white',boxSizing:'border-box'}}/>
+                    {giftResults.length > 0 && (
+                      <div style={{position:'absolute',top:'100%',left:0,right:0,background:'white',border:`1.5px solid ${C.border}`,borderRadius:10,zIndex:50,boxShadow:'0 8px 24px rgba(0,0,0,.12)',maxHeight:200,overflowY:'auto',marginTop:2}}>
+                        {giftResults.map(item=>(
+                          <div key={item.id} onClick={()=>addGift(item)}
+                            style={{padding:'9px 14px',cursor:'pointer',borderBottom:`1px solid ${C.cream}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}
+                            onMouseEnter={e=>e.currentTarget.style.background=C.cream}
+                            onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                            <div>
+                              <div style={{fontSize:13,fontWeight:600,color:C.navy}}>{item.name}</div>
+                              <div style={{fontSize:11,color:C.muted}}>Stock: {item.quantity} · {item.category}</div>
+                            </div>
+                            <div style={{fontSize:12,fontWeight:700,color:C.gold}}>Rs.{parseFloat(item.sell_price||0).toLocaleString()}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Gift list */}
+                  {gifts.length === 0
+                    ? <div style={{fontSize:12,color:C.muted}}>No gifts added. Search above to add.</div>
+                    : gifts.map(g=>(
+                      <div key={g.id} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,background:'white',borderRadius:8,padding:'7px 10px',border:`1px solid #86efac`}}>
+                        <span style={{fontSize:16}}>🎁</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,fontWeight:600,color:C.navy,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.name}</div>
+                          <div style={{fontSize:11,color:C.muted}}>Stock: {g.stock} · Value: Rs.{parseFloat(g.sell_price||0).toLocaleString()}</div>
+                        </div>
+                        <div style={{display:'flex',alignItems:'center',gap:6}}>
+                          <span style={{background:'#dcfce7',color:C.success,fontSize:10,fontWeight:800,padding:'2px 8px',borderRadius:20}}>FREE</span>
+                          <button onClick={()=>removeGift(g.id)}
+                            style={{background:'#fee2e2',border:'none',borderRadius:6,color:C.danger,cursor:'pointer',padding:'3px 7px',fontSize:12}}>✕</button>
+                        </div>
+                      </div>
+                    ))
+                  }
+                </div>
+
                 <button onClick={complete} disabled={saving||cart.length===0||paid<total}
                   style={{width:'100%',padding:'14px',fontSize:14,fontWeight:700,
                     cursor:cart.length===0||paid<total||saving?'not-allowed':'pointer',

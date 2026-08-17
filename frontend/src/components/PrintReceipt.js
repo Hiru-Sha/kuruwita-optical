@@ -480,6 +480,20 @@ function buildQuickSaleBill(sale, items) {
       <span style="font-size:8pt;color:#15803d;font-weight:700;">Change Returned: ${fmt(change)}</span>
     </div>` : ''}
 
+    ${(sale.bill_gifts||[]).filter(g=>g.name).length > 0 ? `
+    <div class="gifts-box">
+      <div class="gifts-title">🎁 Complimentary Gifts Included</div>
+      ${(sale.bill_gifts||[]).filter(g=>g.name).map(g=>`
+        <div class="gift-row">
+          <span class="gift-name">${g.name}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${g.price ? `<span class="gift-price">${fmt(g.price)}</span>` : ''}
+            <span class="gift-tag">FREE GIFT</span>
+          </div>
+        </div>`).join('')}
+      <div style="font-size:7pt;color:#9ca3af;margin-top:3px;">Above items are complimentary gifts — no charge applied</div>
+    </div>` : ''}
+
     <div class="note-box">Thank you for your purchase! Please keep this receipt.</div>
 
     <div class="stamp-sig">
