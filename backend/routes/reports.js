@@ -412,7 +412,10 @@ router.get('/comparison', auth, async (req, res) => {
           AND status != 'cancelled'`, [fromDate, toDate]),
         safeQuery(`SELECT COALESCE(SUM(total),0) AS qs_revenue, COUNT(*) AS qs_count
           FROM quick_sales WHERE created_at::date BETWEEN $1 AND $2`, [fromDate, toDate]),
-        safeQuery(`SELECT COALESCE(SUM(charge),0) AS repair_revenue, COUNT(*) AS repair_count
+        safeQuery(`SELECT
+          COALESCE(SUM(charge),0)       AS repair_revenue,
+          COALESCE(SUM(repair_cost),0)  AS repair_cogs,
+          COUNT(*) AS repair_count
           FROM repairs WHERE created_at::date BETWEEN $1 AND $2
             AND status IN ('done','collected')`, [fromDate, toDate]),
         safeQuery(`SELECT COALESCE(SUM(amount),0) AS total_expenses
@@ -425,7 +428,8 @@ router.get('/comparison', auth, async (req, res) => {
       const e   = expenses.rows[0]||{};
       const total_revenue = parseFloat(ord.revenue||0) + parseFloat(q.qs_revenue||0) + parseFloat(r.repair_revenue||0);
       const expenses_amt  = parseFloat(e.total_expenses||0);
-      const cogs          = parseFloat(ord.frame_cogs||0);
+      const repair_cogs   = parseFloat(r.repair_cogs||0);
+      const cogs          = parseFloat(ord.frame_cogs||0) + repair_cogs;
       const gross_profit  = total_revenue - cogs;
       const net_profit    = gross_profit - expenses_amt;
       return {
@@ -435,6 +439,7 @@ router.get('/comparison', auth, async (req, res) => {
         order_revenue:  parseFloat(ord.revenue||0),
         qs_revenue:     parseFloat(q.qs_revenue||0),
         repair_revenue: parseFloat(r.repair_revenue||0),
+        repair_cogs:    repair_cogs,
         expenses: expenses_amt, cogs, gross_profit, net_profit,
         net_margin: total_revenue > 0 ? Math.round(net_profit/total_revenue*100) : 0,
         order_count:   parseInt(ord.order_count||0),
