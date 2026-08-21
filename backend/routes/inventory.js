@@ -128,7 +128,7 @@ router.patch('/:id', auth, async (req, res) => {
     'frame_color', 'frame_type', 'frame_shape', 'frame_material', 'frame_size',
     'sg_type', 'rg_lens_type', 'rg_material', 'rg_power', 'item_name',
     'sell_price', 'cost_price', 'quantity', 'min_quantity', 'image_url',
-    'display_number', 'stock_number', 'location', 'notes',
+    'display_number', 'stock_number', 'location', 'showroom_qty', 'notes',
   ];
 
   const fields = [];

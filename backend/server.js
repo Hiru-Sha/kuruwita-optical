@@ -244,6 +244,8 @@ const pool = require('./db/pool');
     `).catch(()=>{});
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_hist_name  ON historical_records(customer_name)`).catch(()=>{});
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_hist_phone ON historical_records(phone)`).catch(()=>{});
+    await pool.query(`ALTER TABLE inventory ADD COLUMN IF NOT EXISTS showroom_qty INTEGER DEFAULT 0`).catch(()=>{});
+    await pool.query(`ALTER TABLE inventory ADD COLUMN IF NOT EXISTS showroom_qty INTEGER DEFAULT 0`).catch(()=>{});
     console.log('✅ DB migrations complete');
   } catch (e) { console.warn('Migration warning:', e.message); }
 })();

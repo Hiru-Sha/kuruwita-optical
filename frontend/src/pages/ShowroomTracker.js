@@ -21,6 +21,7 @@ export default function ShowroomTracker() {
   const [toast,       setToast]       = useState('');
   const [checkMode,   setCheckMode]   = useState(false); // weekly check mode
   const [mismatches,  setMismatches]  = useState([]); // items that don't match reality
+  const [editQty,     setEditQty]     = useState({}); // { [id]: tempQty }
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(''),3000); };
 
@@ -49,6 +50,36 @@ export default function ShowroomTracker() {
       });
       setItems(prev => prev.map(i => i.id === id ? { ...i, location } : i));
       showToast(`✓ Moved to ${location}`);
+    } catch(e) { showToast('Failed to update'); }
+    finally { setSaving(s => ({ ...s, [id]: false })); }
+  };
+
+  // Update showroom quantity
+  const setShowroomQty = async (id, qty) => {
+    setSaving(s => ({ ...s, [id]: true }));
+    try {
+      await fetch(`${BASE()}/inventory/${id}`, {
+        method: 'PATCH',
+        headers: hdr(),
+        body: JSON.stringify({ showroom_qty: qty }),
+      });
+      setItems(prev => prev.map(i => i.id === id ? { ...i, showroom_qty: qty } : i));
+    } catch(e) {}
+    finally { setSaving(s => ({ ...s, [id]: false })); }
+  };
+
+  // Update showroom quantity
+  const updateShowroomQty = async (id, qty) => {
+    const q = Math.max(0, parseInt(qty) || 0);
+    setSaving(s => ({ ...s, [id]: true }));
+    try {
+      await fetch(`${BASE()}/inventory/${id}`, {
+        method: 'PATCH', headers: hdr(),
+        body: JSON.stringify({ showroom_qty: q, location: q > 0 ? 'showroom' : 'stock' }),
+      });
+      setItems(prev => prev.map(i => i.id === id ? { ...i, showroom_qty: q, location: q > 0 ? 'showroom' : 'stock' } : i));
+      setEditQty(e => { const n={...e}; delete n[id]; return n; });
+      showToast(`✓ Showroom qty set to ${q}`);
     } catch(e) { showToast('Failed to update'); }
     finally { setSaving(s => ({ ...s, [id]: false })); }
   };
@@ -247,16 +278,40 @@ export default function ShowroomTracker() {
                   <div style={{ fontSize:11, color:C.muted }}>
                     {[item.category, item.frame_color, item.frame_material].filter(Boolean).join(' · ')}
                   </div>
-                  <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>
-                    Stock: <b style={{ color: qty === 0 ? C.danger : qty <= 2 ? '#f59e0b' : C.success }}>{qty}</b>
-                    {item.display_number && <span style={{ marginLeft:8 }}>Display #: <b>{item.display_number}</b></span>}
+                  <div style={{ fontSize:11, color:C.muted, marginTop:2, display:'flex', gap:10, flexWrap:'wrap' }}>
+                    <span>Total: <b style={{ color: qty === 0 ? C.danger : qty <= 2 ? '#f59e0b' : C.success }}>{qty}</b></span>
+                    {parseInt(item.showroom_qty||0) > 0 && <span style={{ color:'#15803d' }}>🏪 <b>{item.showroom_qty}</b> in showroom</span>}
+                    {qty - parseInt(item.showroom_qty||0) > 0 && parseInt(item.showroom_qty||0) > 0 && <span style={{ color:'#1e40af' }}>📦 <b>{qty - parseInt(item.showroom_qty||0)}</b> in stock</span>}
+                    {item.display_number && <span>Display #: <b>{item.display_number}</b></span>}
                   </div>
                 </div>
+
+                {/* Showroom quantity adjuster — only when in showroom */}
+                {item.location === 'showroom' && qty > 0 && (
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, background:'#f0fdf4', borderRadius:8, padding:'6px 10px' }}>
+                    <div style={{ fontSize:11, color:'#15803d', fontWeight:700, flex:1 }}>🏪 In showroom:</div>
+                    <button onClick={() => setShowroomQty(item.id, Math.max(0, parseInt(item.showroom_qty||0) - 1))}
+                      disabled={saving[item.id] || parseInt(item.showroom_qty||0) <= 0}
+                      style={{ width:26, height:26, border:'1.5px solid #86efac', borderRadius:6, background:'white',
+                        color:'#15803d', fontWeight:700, cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      −
+                    </button>
+                    <span style={{ fontSize:16, fontWeight:800, color:'#15803d', minWidth:20, textAlign:'center' }}>
+                      {item.showroom_qty || 0}
+                    </span>
+                    <button onClick={() => setShowroomQty(item.id, Math.min(qty, parseInt(item.showroom_qty||0) + 1))}
+                      disabled={saving[item.id] || parseInt(item.showroom_qty||0) >= qty}
+                      style={{ width:26, height:26, border:'1.5px solid #86efac', borderRadius:6, background:'white',
+                        color:'#15803d', fontWeight:700, cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      +
+                    </button>
+                    <span style={{ fontSize:10, color:'#86efac', marginLeft:2 }}>/ {qty} total</span>
+                  </div>
+                )}
 
                 {/* Action buttons */}
                 {qty > 0 && (
                   checkMode ? (
-                    // Check mode — just confirm seen
                     <button onClick={() => confirmSeen(item.id)} disabled={isSaving}
                       style={{ width:'100%', padding:'8px', background:item.location==='showroom'?'#dcfce7':'#eff6ff',
                         border:`1.5px solid ${item.location==='showroom'?'#86efac':'#93c5fd'}`,
@@ -265,28 +320,48 @@ export default function ShowroomTracker() {
                       {item.location === 'showroom' ? '✓ Confirmed in Showroom' : '✓ Mark as Seen in Showroom'}
                     </button>
                   ) : (
-                    // Normal mode — location buttons
-                    <div style={{ display:'flex', gap:6 }}>
-                      <button onClick={() => setLocation(item.id, 'showroom')} disabled={isSaving || item.location==='showroom'}
-                        style={{ flex:1, padding:'6px', background:item.location==='showroom'?'#dcfce7':'white',
-                          border:`1.5px solid ${item.location==='showroom'?'#86efac':C.border}`,
-                          borderRadius:8, fontSize:11, fontWeight:700, cursor:item.location==='showroom'?'default':'pointer',
-                          fontFamily:'inherit', color:item.location==='showroom'?'#15803d':C.navy }}>
-                        🏪 Showroom
-                      </button>
-                      <button onClick={() => setLocation(item.id, 'stock')} disabled={isSaving || (item.location==='stock'||!item.location)}
-                        style={{ flex:1, padding:'6px', background:(!item.location||item.location==='stock')?'#eff6ff':'white',
-                          border:`1.5px solid ${(!item.location||item.location==='stock')?'#93c5fd':C.border}`,
-                          borderRadius:8, fontSize:11, fontWeight:700, cursor:(!item.location||item.location==='stock')?'default':'pointer',
-                          fontFamily:'inherit', color:(!item.location||item.location==='stock')?'#1e40af':C.navy }}>
-                        📦 Stock
-                      </button>
-                      <button onClick={() => markMissing(item.id)} disabled={isSaving}
-                        style={{ padding:'6px 10px', background:item.location==='missing'?'#fee2e2':'white',
-                          border:`1.5px solid ${item.location==='missing'?'#fca5a5':C.border}`,
-                          borderRadius:8, fontSize:11, cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
-                        ⚠️
-                      </button>
+                    <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                      {/* Showroom qty adjuster */}
+                      <div style={{ display:'flex', alignItems:'center', gap:6, background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:8, padding:'6px 10px' }}>
+                        <span style={{ fontSize:11, fontWeight:700, color:'#15803d', flexShrink:0 }}>🏪 Showroom:</span>
+                        <button onClick={() => updateShowroomQty(item.id, (parseInt(item.showroom_qty)||0) - 1)}
+                          disabled={isSaving || (parseInt(item.showroom_qty)||0) === 0}
+                          style={{ width:24, height:24, borderRadius:6, border:`1px solid #86efac`, background:'white',
+                            color:'#15803d', fontSize:14, fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                          −
+                        </button>
+                        <input
+                          type="number" min="0" max={qty}
+                          value={editQty[item.id] !== undefined ? editQty[item.id] : (parseInt(item.showroom_qty)||0)}
+                          onChange={e => setEditQty(ev => ({ ...ev, [item.id]: e.target.value }))}
+                          onBlur={e => { if (editQty[item.id] !== undefined) updateShowroomQty(item.id, editQty[item.id]); }}
+                          onKeyDown={e => { if (e.key === 'Enter') updateShowroomQty(item.id, editQty[item.id] ?? item.showroom_qty); }}
+                          style={{ width:36, textAlign:'center', border:'1px solid #86efac', borderRadius:6, padding:'3px',
+                            fontSize:14, fontWeight:800, color:'#15803d', fontFamily:'inherit', outline:'none' }}/>
+                        <button onClick={() => updateShowroomQty(item.id, (parseInt(item.showroom_qty)||0) + 1)}
+                          disabled={isSaving || (parseInt(item.showroom_qty)||0) >= qty}
+                          style={{ width:24, height:24, borderRadius:6, border:`1px solid #86efac`, background:'white',
+                            color:'#15803d', fontSize:14, fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                          +
+                        </button>
+                        <span style={{ fontSize:10, color:'#9ca3af', marginLeft:'auto' }}>/ {qty} total</span>
+                      </div>
+                      {/* Stock / Missing buttons */}
+                      <div style={{ display:'flex', gap:6 }}>
+                        <button onClick={() => setLocation(item.id, 'stock')} disabled={isSaving}
+                          style={{ flex:1, padding:'6px', background:(!item.location||item.location==='stock')?'#eff6ff':'white',
+                            border:`1.5px solid ${(!item.location||item.location==='stock')?'#93c5fd':C.border}`,
+                            borderRadius:8, fontSize:11, fontWeight:700, cursor:'pointer',
+                            fontFamily:'inherit', color:(!item.location||item.location==='stock')?'#1e40af':C.navy }}>
+                          📦 All in Stock Room
+                        </button>
+                        <button onClick={() => markMissing(item.id)} disabled={isSaving}
+                          style={{ padding:'6px 10px', background:item.location==='missing'?'#fee2e2':'white',
+                            border:`1.5px solid ${item.location==='missing'?'#fca5a5':C.border}`,
+                            borderRadius:8, fontSize:11, cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
+                          ⚠️ Missing
+                        </button>
+                      </div>
                     </div>
                   )
                 )}
