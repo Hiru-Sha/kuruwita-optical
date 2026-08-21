@@ -138,7 +138,7 @@ function hdr(billType, billNo, dateStr) {
 function ftr() {
   return `
   <div class="footer" id="footer">
-    <div class="footer-slogan">Thank you for choosing Wickramakalutota Opticals</div>
+    <div class="footer-slogan">Thank you for choosing Wickramakalutota Opticals!</div>
     <div class="footer-sub">Printed: ${today()}</div>
   </div>`;
 }

@@ -144,13 +144,15 @@ function Sticker({ item, onReady, stickerNum }) {
           }}>{[color, detail].filter(Boolean).join(' · ')}</div>
         ) : null}
 
-        {/* Price */}
+        {/* Stock count instead of price */}
         <div style={{
-          fontSize:'13pt', fontWeight:'bold', color:'#0f1f3d',
           borderTop:'0.3mm solid #ddd', paddingTop:'1mm',
-          width:'100%', textAlign:'center',
-          marginTop:'1mm',
-        }}>{fmt(item.sell_price)}</div>
+          width:'100%', textAlign:'center', marginTop:'1mm',
+          display:'flex', alignItems:'center', justifyContent:'center', gap:'1mm',
+        }}>
+          <div style={{ fontSize:'5pt', color:'#888', textTransform:'uppercase', letterSpacing:'0.5pt' }}>Stock</div>
+          <div style={{ fontSize:'11pt', fontWeight:'bold', color:'#0f1f3d', lineHeight:1 }}>{item.quantity || 0}</div>
+        </div>
       </div>
     </div>
   );
@@ -214,10 +216,13 @@ function AccessorySticker({ item, onReady, stickerNum }) {
           wordBreak:'break-word',
         }}>{name}</div>
         <div style={{
-          fontSize:'9pt', fontWeight:'bold', color:'#0f1f3d',
+          fontSize:'7pt', color:'#888',
           borderTop:'0.2mm solid #eee', paddingTop:'0.8mm',
-          lineHeight:1,
-        }}>{fmt(item.sell_price)}</div>
+          lineHeight:1, display:'flex', alignItems:'center', gap:'1mm',
+        }}>
+          <span>Stock:</span>
+          <span style={{ fontWeight:'bold', color:'#0f1f3d', fontSize:'9pt' }}>{item.quantity || 0}</span>
+        </div>
       </div>
     </div>
   );

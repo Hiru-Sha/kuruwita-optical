@@ -49,12 +49,14 @@ function QuickBtn({ label, sub, bg, color='white', icon, onClick }) {
 export default function Dashboard() {
   const { user }   = useAuth();
   const navigate   = useNavigate();
-  const [data,     setData]    = useState(null);
-  const [cash,     setCash]    = useState({});
-  const [cashTab,  setCashTab] = useState('today');
-  const [loading,  setLoading] = useState(true);
-  const [showScan, setShowScan]= useState(false);
-  const [scanItem, setScanItem]= useState(null);
+  const [data,       setData]     = useState(null);
+  const [cash,       setCash]     = useState({});
+  const [cashTab,    setCashTab]  = useState('today');
+  const [loading,    setLoading]  = useState(true);
+  const [showScan,   setShowScan] = useState(false);
+  const [scanItem,   setScanItem] = useState(null);
+  const [showroomAlerts, setShowroomAlerts] = useState([]); // frames to put in showroom
+  const [alertsDismissed, setAlertsDismissed] = useState(false);
 
   const hour     = new Date().getHours();
   const greeting = hour<12 ? 'Good morning' : hour<17 ? 'Good afternoon' : 'Good evening';
@@ -66,6 +68,40 @@ export default function Dashboard() {
       .then(d=>{ setData(d); setCash(d.daily_cash||{}); })
       .catch(console.error)
       .finally(()=>setLoading(false));
+
+    // Check for frames sold today that still have stock (need to move to showroom)
+    const checkShowroom = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        // Get today's delivered/collected orders
+        const res = await fetch(`${BASE()}/orders?status=delivered&date=${today}&limit=50`, {headers:{Authorization:`Bearer ${tok()}`}});
+        const orders = await res.json();
+        const arr = Array.isArray(orders) ? orders : (orders.data || []);
+        const alerts = [];
+        for (const o of arr) {
+          if (!o.frame_inventory_id || o.customer_own_frame) continue;
+          // Check if same item still has stock
+          try {
+            const inv = await fetch(`${BASE()}/inventory/${o.frame_inventory_id}`, {headers:{Authorization:`Bearer ${tok()}`}});
+            const item = await inv.json();
+            if (item?.id && parseInt(item.quantity||0) > 0) {
+              // Still has stock — show alert to put in showroom
+              if (!alerts.find(a => a.inventory_id === item.id)) {
+                alerts.push({
+                  inventory_id: item.id,
+                  order_number: o.order_number,
+                  frame_name:   item.name || o.frame,
+                  frame_color:  item.frame_color || o.frame_color,
+                  stock_left:   parseInt(item.quantity),
+                });
+              }
+            }
+          } catch(e) {}
+        }
+        setShowroomAlerts(alerts);
+      } catch(e) {}
+    };
+    checkShowroom();
   },[]);
 
   const handleScan = async rawId => {
