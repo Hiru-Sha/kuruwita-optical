@@ -156,6 +156,7 @@ function OrderRow({ order, selected, onToggle, onSaved, quickMode, rowIndex, tot
     try {
       const updates = {
         lab_bill_amount: bill,
+        lens_buy_price:  bill, // sync lens buy price = lab bill amount
         lens_company:    labVal,
         lens_step:       Math.max(order.lens_step||0, 2),
         ...(markPaid ? { lab_paid:true, lab_paid_date:today(), lab_payment_method:'cash' } : {}),
