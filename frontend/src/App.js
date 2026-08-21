@@ -16,6 +16,7 @@ import LensPrices from './pages/LensPrices';
 import LensPriceCheckerPage from './pages/LensPriceChecker';
 import StoreManager from './pages/StoreManager';
 import HistoricalRecords from './pages/HistoricalRecords';
+import ShowroomTracker from './pages/ShowroomTracker';
 import QuickSale  from './pages/QuickSale';
 import Grinding   from './pages/Grinding';
 import Reports    from './pages/Reports';
@@ -95,6 +96,7 @@ export default function App() {
             <Route path="price-check"     element={<LensPriceCheckerPage />} />
             <Route path="store-manager"    element={<PermGuard perm="inventory"><StoreManager /></PermGuard>} />
             <Route path="historical-records" element={<PermGuard perm="historical_records"><HistoricalRecords /></PermGuard>} />
+            <Route path="showroom" element={<ShowroomTracker />} />
             <Route path="quick-sale"      element={<PermGuard perm="quick_sale"><QuickSale /></PermGuard>} />
             <Route path="settings"        element={<Settings />} />
             <Route path="balance"         element={<PermGuard perm="orders"><BalanceFollowUp /></PermGuard>} />
