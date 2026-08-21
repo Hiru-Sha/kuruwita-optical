@@ -410,7 +410,16 @@ router.get('/comparison', auth, async (req, res) => {
         FROM orders
         WHERE created_at::date BETWEEN $1 AND $2
           AND status != 'cancelled'`, [fromDate, toDate]),
-        safeQuery(`SELECT COALESCE(SUM(total),0) AS qs_revenue, COUNT(*) AS qs_count
+        safeQuery(`SELECT
+          COALESCE(SUM(total),0) AS qs_revenue,
+          COUNT(*) AS qs_count,
+          COALESCE((
+            SELECT SUM((item->>'cost_price')::numeric * (item->>'qty')::numeric)
+            FROM quick_sales qs2, jsonb_array_elements(qs2.items::jsonb) AS item
+            WHERE qs2.created_at::date BETWEEN $1 AND $2
+              AND (item->>'cost_price') IS NOT NULL
+              AND (item->>'cost_price')::numeric > 0
+          ), 0) AS qs_cogs
           FROM quick_sales WHERE created_at::date BETWEEN $1 AND $2`, [fromDate, toDate]),
         safeQuery(`SELECT
           COALESCE(SUM(charge),0)       AS repair_revenue,
@@ -429,7 +438,8 @@ router.get('/comparison', auth, async (req, res) => {
       const total_revenue = parseFloat(ord.revenue||0) + parseFloat(q.qs_revenue||0) + parseFloat(r.repair_revenue||0);
       const expenses_amt  = parseFloat(e.total_expenses||0);
       const repair_cogs   = parseFloat(r.repair_cogs||0);
-      const cogs          = parseFloat(ord.frame_cogs||0) + repair_cogs;
+      const qs_cogs       = parseFloat(q.qs_cogs||0);
+      const cogs          = parseFloat(ord.frame_cogs||0) + repair_cogs + qs_cogs;
       const gross_profit  = total_revenue - cogs;
       const net_profit    = gross_profit - expenses_amt;
       return {
@@ -440,6 +450,7 @@ router.get('/comparison', auth, async (req, res) => {
         qs_revenue:     parseFloat(q.qs_revenue||0),
         repair_revenue: parseFloat(r.repair_revenue||0),
         repair_cogs:    repair_cogs,
+        qs_cogs:        qs_cogs,
         expenses: expenses_amt, cogs, gross_profit, net_profit,
         net_margin: total_revenue > 0 ? Math.round(net_profit/total_revenue*100) : 0,
         order_count:   parseInt(ord.order_count||0),

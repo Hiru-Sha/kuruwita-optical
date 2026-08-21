@@ -174,6 +174,7 @@ export default function QuickSale() {
               category:      item.category,
               image_url:     item.image_url || null,
               price:         parseFloat(price) || parseFloat(item.sell_price) || 0,
+              cost_price:    parseFloat(item.cost_price) || 0,
               qty:           1,
               max_qty:       item.quantity,
               item_discount: 0,
@@ -258,7 +259,7 @@ export default function QuickSale() {
     setCart(c=>{
       const ex=c.find(x=>x.inventory_id===item.id);
       if(ex) return c.map(x=>x.inventory_id===item.id?{...x,qty:Math.min(x.qty+1,item.quantity)}:x);
-      return [...c,{inventory_id:item.id,name:item.name,category:item.category,image_url:item.image_url,price:parseFloat(item.sell_price)||0,qty:1,max_qty:item.quantity,item_discount:0}];
+      return [...c,{inventory_id:item.id,name:item.name,category:item.category,image_url:item.image_url,price:parseFloat(item.sell_price)||0,cost_price:parseFloat(item.cost_price)||0,qty:1,max_qty:item.quantity,item_discount:0}];
     });
     setQuery(''); setResults([]);
   };
