@@ -402,7 +402,7 @@ router.get('/', auth, async (req, res) => {
 
       orders:     { ...os, list: orderList.rows },
       quickSales: { ...qs, list: qsList.rows },
-      repairs:    { ...rs, types: repairTypes.rows },
+      repairs:    { ...rs, types: repairTypes.rows, list: repairList.rows },
       expenses: {
         total_count: ex.total_count,
         total_amount: ex.total_amount,

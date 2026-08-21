@@ -249,19 +249,66 @@ function buildReportHTML(data, from, to) {
       <td style="padding:5px 10px;border:1px solid #e0ddd6;text-align:right;font-weight:600;color:#c0392b;">${fmtR(e.total)}</td>
     </tr>`).join('');
 
-  // Order list rows (first 30)
-  const orderRows = o.list.slice(0,30).map(or=>`
-    <tr>
-      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${or.order_number}</td>
-      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${new Date(or.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</td>
-      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${(or.customer_name||or.customer||'—').slice(0,22)}</td>
-      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${(or.frame||'—').slice(0,18)}</td>
-      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;">${or.lens_type||'—'}</td>
-      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;text-align:right;">${fmtR(or.total_amount)}</td>
-      <td style="padding:4px 8px;border:1px solid #e0ddd6;font-size:11px;text-align:center;">
-        <span class="badge ${or.status==='delivered'?'badge-green':or.status==='overdue'?'badge-red':'badge-blue'}">${or.status}</span>
-      </td>
-    </tr>`).join('');
+  // Order profit breakdown rows — all orders
+  const td = (v, opts='') => `<td style="padding:4px 6px;border:1px solid #e0ddd6;font-size:10px;${opts}">${v}</td>`;
+  const orderRows = o.list.map(or=>{
+    const rev      = parseFloat(or.total_amount||0);
+    const frameBuy = parseFloat(or.frame_buy_price||0);
+    const lensBuy  = parseFloat(or.lens_buy_price||or.lab_bill_amount||0);
+    const giftCost = parseFloat(or.gift_cost||0);
+    const cogs     = frameBuy + lensBuy + giftCost;
+    const profit   = parseFloat(or.order_profit||0) || (rev - cogs);
+    const margin   = rev > 0 ? Math.round(profit/rev*100) : 0;
+    const profitColor = profit >= 0 ? '#15803d' : '#dc2626';
+    return `<tr>
+      ${td(or.order_number,'font-weight:700;color:#0f1f3d;')}
+      ${td(new Date(or.date||or.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}))}
+      ${td((or.customer_name||or.customer||'—').slice(0,18))}
+      ${td(fmtR(rev),'text-align:right;font-weight:700;')}
+      ${td(frameBuy>0?fmtR(frameBuy):'—','text-align:right;color:#6b7280;')}
+      ${td(lensBuy>0?fmtR(lensBuy):'—','text-align:right;color:#6b7280;')}
+      ${td(giftCost>0?fmtR(giftCost):'—','text-align:right;color:#c9a84c;')}
+      ${td(cogs>0?fmtR(cogs):'—','text-align:right;color:#374151;')}
+      ${td(`<b style="color:${profitColor};">${fmtR(profit)}</b> <span style="font-size:9px;color:${profitColor};">(${margin}%)</span>`,'text-align:right;')}
+    </tr>`;
+  }).join('');
+
+  // Quick sales profit breakdown
+  const qsRows = (qs.list||[]).map(sale=>{
+    const rev    = parseFloat(sale.total||0);
+    const cogs   = parseFloat(sale.cogs||sale.qs_cogs||0);
+    const profit = rev - cogs;
+    const margin = rev > 0 ? Math.round(profit/rev*100) : 0;
+    const profitColor = profit >= 0 ? '#15803d' : '#dc2626';
+    const items  = Array.isArray(sale.items) ? sale.items.map(i=>i.name).join(', ') : '—';
+    return `<tr>
+      ${td(sale.sale_number||'QS','font-weight:700;color:#0f1f3d;')}
+      ${td(new Date(sale.date||sale.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}))}
+      ${td((sale.customer_name||'Walk-in').slice(0,18))}
+      ${td(items.slice(0,25),'color:#6b7280;')}
+      ${td(fmtR(rev),'text-align:right;font-weight:700;')}
+      ${td(cogs>0?fmtR(cogs):'—','text-align:right;color:#6b7280;')}
+      ${td(`<b style="color:${profitColor};">${fmtR(profit)}</b> <span style="font-size:9px;color:${profitColor};">(${margin}%)</span>`,'text-align:right;')}
+    </tr>`;
+  }).join('');
+
+  // Repairs profit breakdown
+  const repairDetailRows = (rep.list||[]).map(r=>{
+    const charge = parseFloat(r.charge||0);
+    const cost   = parseFloat(r.repair_cost||0);
+    const profit = charge - cost;
+    const margin = charge > 0 ? Math.round(profit/charge*100) : 0;
+    const profitColor = profit >= 0 ? '#15803d' : '#dc2626';
+    return `<tr>
+      ${td(r.repair_number||r.id,'font-weight:700;color:#0f1f3d;')}
+      ${td(new Date(r.date||r.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}))}
+      ${td((r.customer_name||'—').slice(0,18))}
+      ${td(r.repair_type||'—')}
+      ${td(fmtR(charge),'text-align:right;font-weight:700;')}
+      ${td(cost>0?fmtR(cost):'—','text-align:right;color:#6b7280;')}
+      ${td(`<b style="color:${profitColor};">${fmtR(profit)}</b> <span style="font-size:9px;color:${profitColor};">(${margin}%)</span>`,'text-align:right;')}
+    </tr>`;
+  }).join('');
 
   // Top frames
   const frameRows = (data.topFrames||[]).slice(0,8).map((f,i)=>{
@@ -277,7 +324,7 @@ function buildReportHTML(data, from, to) {
     </tr>`;
   }).join('');
 
-  // Repair types
+  // Repair types summary
   const repairRows = rep.types.map(r=>`
     <tr>
       <td style="padding:5px 10px;border:1px solid #e0ddd6;">${r.repair_type}</td>
@@ -545,12 +592,27 @@ ${monthly.length > 0 ? `
 </div>
 
 ${o.list.length > 0 ? `
-<h3>Order List ${o.list.length > 30 ? '(first 30 shown)' : ''}</h3>
-<table>
-  <tr>
-    <th>Order No.</th><th>Date</th><th>Customer</th><th>Frame</th><th>Lens</th><th class="r">Total</th><th class="c">Status</th>
+<h3>Order Profit Breakdown (${o.list.length} orders)</h3>
+<table style="font-size:10px;">
+  <tr style="background:#0f1f3d;color:white;">
+    <th style="padding:5px 6px;text-align:left;">Order</th>
+    <th style="padding:5px 6px;text-align:left;">Date</th>
+    <th style="padding:5px 6px;text-align:left;">Customer</th>
+    <th style="padding:5px 6px;text-align:right;">Revenue</th>
+    <th style="padding:5px 6px;text-align:right;">Frame Cost</th>
+    <th style="padding:5px 6px;text-align:right;">Lens Cost</th>
+    <th style="padding:5px 6px;text-align:right;">Gift Cost</th>
+    <th style="padding:5px 6px;text-align:right;">Total COGS</th>
+    <th style="padding:5px 6px;text-align:right;">Net Profit</th>
   </tr>
   ${orderRows}
+  <tr style="background:#f8f5ef;font-weight:700;">
+    <td colspan="3" style="padding:5px 6px;border:1px solid #e0ddd6;">TOTAL (${o.list.length} orders)</td>
+    <td style="padding:5px 6px;border:1px solid #e0ddd6;text-align:right;">${fmtR(o.revenue)}</td>
+    <td colspan="3" style="padding:5px 6px;border:1px solid #e0ddd6;text-align:right;color:#6b7280;">${fmtR(s.totalCOGS)}</td>
+    <td style="padding:5px 6px;border:1px solid #e0ddd6;text-align:right;"></td>
+    <td style="padding:5px 6px;border:1px solid #e0ddd6;text-align:right;color:#15803d;">${fmtR(s.grossProfit)}</td>
+  </tr>
 </table>` : ''}
 
 <!-- ══ PAGE BREAK ════════════════════════════════════════ -->
@@ -565,7 +627,7 @@ ${o.list.length > 0 ? `
 </div>
 
 ${qs.list && qs.list.length > 0 ? `
-<h3>Quick Sales List</h3>
+<h3>Quick Sales Profit Breakdown (${qs.list.length} sales)</h3>
 <table>
   <tr>
     <th>Sale No.</th>
@@ -615,6 +677,27 @@ ${rep.types.length > 0 ? `
 <table>
   <tr><th>Repair Type</th><th class="c">Count</th><th class="r">Revenue</th></tr>
   ${repairRows}
+</table>` : ''}
+
+${rep.list && rep.list.length > 0 ? `
+<h3>Repair Profit Breakdown (${rep.list.length} repairs)</h3>
+<table style="font-size:10px;">
+  <tr style="background:#0f1f3d;color:white;">
+    <th style="padding:5px 6px;text-align:left;">Repair No.</th>
+    <th style="padding:5px 6px;text-align:left;">Date</th>
+    <th style="padding:5px 6px;text-align:left;">Customer</th>
+    <th style="padding:5px 6px;text-align:left;">Type</th>
+    <th style="padding:5px 6px;text-align:right;">Charge</th>
+    <th style="padding:5px 6px;text-align:right;">Cost</th>
+    <th style="padding:5px 6px;text-align:right;">Net Profit</th>
+  </tr>
+  ${repairDetailRows}
+  <tr style="background:#f8f5ef;font-weight:700;">
+    <td colspan="4" style="padding:5px 6px;border:1px solid #e0ddd6;">TOTAL</td>
+    <td style="padding:5px 6px;border:1px solid #e0ddd6;text-align:right;">${fmtR(rep.revenue)}</td>
+    <td style="padding:5px 6px;border:1px solid #e0ddd6;text-align:right;color:#6b7280;"></td>
+    <td style="padding:5px 6px;border:1px solid #e0ddd6;text-align:right;color:#15803d;">${fmtR(rep.list.reduce((s,r)=>s+parseFloat(r.charge||0)-parseFloat(r.repair_cost||0),0))}</td>
+  </tr>
 </table>` : ''}
 
 <!-- ══ EXPENSES ════════════════════════════════════════════ -->
