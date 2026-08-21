@@ -1198,7 +1198,11 @@ export default function Inventory() {
     const token = localStorage.getItem('ko_token');
     const params = new URLSearchParams({ limit:'5000', no_images:'1' });
     if (search)                   params.set('search', search);
-    if (activeCat !== 'All')      params.set('category', activeCat);
+    if (activeCat === 'Out of Stock') {
+      params.set('stock_filter', 'out'); // tell backend to return all qty=0 items regardless of category
+    } else if (activeCat !== 'All') {
+      params.set('category', activeCat);
+    }
     if (dealerFilter)             params.set('dealer', dealerFilter);
     fetch(`${BASE}/inventory?${params}`, { headers:{ Authorization:`Bearer ${token}` } })
       .then(r=>r.json())

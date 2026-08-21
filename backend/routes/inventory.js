@@ -12,7 +12,7 @@ const auth   = require('../middleware/auth');
 
 // GET /api/inventory
 router.get('/', auth, async (req, res) => {
-  const { search, category, dealer: dealerFilter, limit = 5000, no_images } = req.query;
+  const { search, category, dealer: dealerFilter, limit = 5000, no_images, stock_filter } = req.query;
   const imageCol = no_images === '1' ? 'NULL::text AS image_url' : 'image_url';
 
   try {
@@ -46,7 +46,9 @@ router.get('/', auth, async (req, res) => {
       params.push(category);
       sql += ` AND category = $${params.length}`;
     }
-    if (dealerFilter) { params.push(`%${dealerFilter}%`); sql += ` AND dealer ILIKE $${params.length}`; }
+    if (dealerFilter)             { params.push(`%${dealerFilter}%`); sql += ` AND dealer ILIKE $${params.length}`; }
+    if (stock_filter === 'out')   { sql += ` AND quantity = 0`; }
+    if (stock_filter === 'low')   { sql += ` AND quantity > 0 AND quantity <= COALESCE(min_quantity, 2)`; }
     params.push(parseInt(limit));
     sql += ` ORDER BY category ASC, name ASC LIMIT $${params.length}`;
 
