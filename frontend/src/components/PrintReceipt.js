@@ -27,7 +27,7 @@ const PAGE_CSS = `
   .hdr-inner { display: flex; justify-content: space-between; align-items: flex-start; }
   .shop-name { font-family:'Playfair Display',serif; font-size: 14pt; font-weight: 900; color: white; line-height: 1.1; letter-spacing:-0.3px; }
   .shop-tagline { font-size: 6pt; color: #c9a84c; letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; font-weight:600; }
-  .shop-addr { font-size: 7.5pt; color: white; margin-top: 4px; line-height: 1.6; font-weight:600; letter-spacing:0.2px; }
+  .shop-addr { font-size: 8.5pt; color: white; margin-top: 4px; line-height: 1.6; font-weight:600; letter-spacing:0.2px; }
   .bill-badge { background: #c9a84c; color: #0f1f3d; font-size: 6.5pt; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 1px; text-transform: uppercase; display: inline-block; margin-bottom: 3px; }
   .bill-no { font-family:'Playfair Display',serif; font-size: 15pt; font-weight: 900; color: white; line-height: 1; letter-spacing:-0.5px; }
   .bill-date { font-size: 7pt; color: rgba(237,233,224,.7); margin-top: 2px; }
@@ -59,16 +59,17 @@ const PAGE_CSS = `
   .price-table { width:100%; border-collapse:collapse; margin-bottom:3mm; }
   .price-table td { padding: 1.5px 0; font-size:8pt; vertical-align:middle; }
   .price-table td:last-child { text-align:right; font-weight:700; }
-  .price-table .row-sub td { color:#9ca3af; font-size:8pt; }
+  .price-table .row-sub td { color:#0f1f3d; font-size:8.5pt; font-weight:700; background:#f0f4ff; padding:2px 6px; }
   .price-table .row-disc td { color:#dc2626; font-weight:700; font-size:9.5pt; }
-  .price-table .total-row td { font-size:10.5pt; font-weight:900; color:#0f1f3d; border-top:2px solid #0f1f3d; padding-top:6px; margin-top:2px; }
+  .price-table .total-row td { font-size:11pt; font-weight:900; color:white; background:#0f1f3d; border-top:2px solid #0f1f3d; padding:4px 6px; }
+  .price-table .total-row { border-radius:5px; overflow:hidden; }
 
   /* AMOUNT BOXES */
   .amt-box { background:#0f1f3d; border-radius:7px; padding:5px 10px; display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5mm; }
-  .amt-box .lbl { font-size:7pt; color:#c9a84c; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
+  .amt-box .lbl { font-size:7pt; color:#c9a84c; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:none; }
   .amt-box .val { font-family:'Playfair Display',serif; font-size:13pt; font-weight:900; color:white; }
   .bal-box { border:2px solid #dc2626; border-radius:7px; padding:4px 10px; display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5mm; }
-  .bal-box .lbl { font-size:7pt; color:#dc2626; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
+  .bal-box .lbl { font-size:7pt; color:#dc2626; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:none; }
   .bal-box .val { font-family:'Playfair Display',serif; font-size:11pt; font-weight:900; color:#dc2626; }
 
   /* BADGES */
@@ -122,7 +123,7 @@ function hdr(billType, billNo, dateStr) {
       <div>
         <div class="shop-name">Wickramakalutota Opticals</div>
         <div class="shop-tagline">Your Trusted Eye Care · Chilaw</div>
-        <div class="shop-addr">No.57, Kurunegala Road, Chilaw &nbsp;|&nbsp; Tel: 032 222 1211</div>
+        <div class="shop-addr">No.57, Kurunegala Road, Chilaw &nbsp;|&nbsp; Tel: 032 222 1211 &nbsp;|&nbsp; 077 194 1211</div>
       </div>
       <div style="text-align:right;padding-top:2px;">
         <div class="bill-badge">${billType}</div>
@@ -137,7 +138,7 @@ function hdr(billType, billNo, dateStr) {
 function ftr() {
   return `
   <div class="footer" id="footer">
-    <div class="footer-slogan">Thank you for choosing Wickramakalutota Opticals 🙏</div>
+    <div class="footer-slogan">Thank you for choosing Wickramakalutota Opticals</div>
     <div class="footer-sub">Printed: ${today()}</div>
   </div>`;
 }
@@ -181,6 +182,133 @@ window.onload = function() {
 };
 <\/script>
 </body></html>`;
+}
+
+// ── SINGLE BILL (one bill for both payments) ──────────────────
+function buildSingleBill(order) {
+  const total   = parseFloat(order.total_amount   || 0);
+  const advance = parseFloat(order.advance_amount || 0);
+  const balance = parseFloat(order.balance_amount || 0);
+  const fSell   = parseFloat(order.frame_sell_price || 0);
+  const lSell   = parseFloat(order.lens_sell_price  || 0);
+  const discAmt = parseFloat(order.discount_amount  || 0);
+  const discPct = parseFloat(order.discount_percent || 0);
+  const sub     = (fSell > 0 || lSell > 0) ? fSell + lSell : 0;
+  const gifts   = order.bill_gifts || [];
+  const orderDate  = order.created_at ? fmtD(order.created_at) : today();
+  const frameColor  = order.frame_color  || '';
+  const lensCoating = order.lens_coating || '';
+
+  const body = `
+  <div class="body">
+    <!-- Top row -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
+      <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Order Date: ${orderDate}</span>
+      <span style="font-size:7.5pt;font-weight:700;color:#c9a84c;">Ready By: ${fmtD(order.deliver_date)}</span>
+    </div>
+
+    <!-- Customer block -->
+    <div class="cust-block">
+      <div style="flex:1;">
+        <div class="kv" style="margin-bottom:3px;"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
+        <div style="display:flex;gap:8mm;margin-top:3px;">
+          <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
+          <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
+        </div>
+      </div>
+      ${order.warranty_frame || order.warranty_lens ? `
+      <div style="text-align:right;">
+        ${order.warranty_frame ? `<div class="kv" style="text-align:right;"><div class="k" style="text-align:right;">Shield Frame</div><div class="v" style="color:#15803d;">${order.warranty_frame}</div></div>` : ''}
+        ${order.warranty_lens  ? `<div class="kv" style="text-align:right;"><div class="k" style="text-align:right;">Shield Lens</div><div class="v" style="color:#15803d;">${order.warranty_lens}</div></div>` : ''}
+      </div>` : ''}
+    </div>
+
+    <!-- Frame pill -->
+    <div class="pill-bar pill-bar-frame">
+      <div><div class="pill-label">Frame</div><div class="pill-value">${order.frame || '—'}</div></div>
+      ${frameColor ? `<div class="pill-sub">${frameColor}</div>` : ''}
+    </div>
+
+    <!-- Lens pill -->
+    <div class="pill-bar pill-bar-lens" style="flex-direction:column;align-items:flex-start;gap:2px;">
+      <div class="pill-label">Lens</div>
+      <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+        <div class="pill-value">${order.lens_type || '—'}</div>
+        ${lensCoating ? `<div style="background:#c9a84c;color:#0f1f3d;font-size:7.5pt;font-weight:800;padding:2px 8px;border-radius:10px;">${printCoating(lensCoating)}</div>` : ''}
+      </div>
+    </div>
+
+    <hr class="divider-dashed"/>
+
+    <!-- Price table -->
+    <table class="price-table">
+      ${(fSell > 0 && order.show_frame_price !== false) ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
+      ${(lSell > 0 && order.show_lens_price  !== false) ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
+      ${sub > 0 && (discAmt > 0 || discPct > 0) ? `<tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>` : ''}
+      ${discAmt > 0 || discPct > 0 ? `
+        <tr class="row-disc"><td style="font-weight:700;">Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td>
+          <td style="font-size:10pt;font-weight:800;color:#dc2626;">- ${fmt(discAmt > 0 ? discAmt : Math.round((sub||total) * discPct / 100))}</td></tr>
+        <tr class="total-row"><td>Net Payable</td><td>${fmt(total)}</td></tr>` :
+        `<tr class="total-row"><td>${sub > 0 ? 'Total' : 'Total Amount'}</td><td>${fmt(total)}</td></tr>`}
+    </table>
+
+    ${gifts.filter(g=>g.name).length > 0 ? `
+    <div class="gifts-box">
+      <div class="gifts-title">Complimentary Gifts</div>
+      ${gifts.filter(g=>g.name).map(g=>`
+        <div class="gift-row">
+          <span class="gift-name">${g.name}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${g.price ? `<span class="gift-price">${fmt(g.price)}</span>` : ''}
+            <span class="gift-tag">FREE</span>
+          </div>
+        </div>`).join('')}
+    </div>` : ''}
+
+    <div class="note-box">Please bring this bill when collecting your spectacles.</div>
+
+    <!-- ── PAYMENT SECTION ── -->
+    <div style="border:1.5px solid #0f1f3d;border-radius:8px;overflow:hidden;margin-top:2mm;">
+
+      <!-- Advance row -->
+      <div style="display:flex;align-items:stretch;border-bottom:1.5px solid #0f1f3d;">
+        <div style="background:#0f1f3d;padding:5px 10px;display:flex;align-items:center;flex-shrink:0;min-width:28mm;">
+          <span style="font-size:7.5pt;font-weight:800;color:#c9a84c;text-transform:uppercase;letter-spacing:.5px;">Advance<br>Paid</span>
+        </div>
+        <div style="flex:1;padding:5px 10px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-family:'Playfair Display',serif;font-size:13pt;font-weight:900;color:#0f1f3d;">${fmt(advance)}</span>
+          <span style="font-size:8pt;color:#9ca3af;">${orderDate}</span>
+        </div>
+      </div>
+
+      <!-- Balance row — with tick box for manual signing -->
+      <div style="display:flex;align-items:stretch;">
+        <div style="background:#dc2626;padding:5px 10px;display:flex;align-items:center;flex-shrink:0;min-width:28mm;">
+          <span style="font-size:7.5pt;font-weight:800;color:white;text-transform:uppercase;letter-spacing:.5px;">Balance<br>Due</span>
+        </div>
+        <div style="flex:1;padding:5px 10px;display:flex;align-items:center;justify-content:space-between;gap:4mm;">
+          <span style="font-family:'Playfair Display',serif;font-size:13pt;font-weight:900;color:#dc2626;">${fmt(balance)}</span>
+          <!-- Manual tick + signature area -->
+          <div style="display:flex;align-items:center;gap:3mm;flex-shrink:0;">
+            <div style="width:14px;height:14px;border:2px solid #374151;border-radius:3px;flex-shrink:0;"></div>
+            <div style="border-bottom:1px solid #9ca3af;min-width:22mm;height:16px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Received line -->
+      <div style="background:#f8f5ef;padding:4px 10px;display:flex;align-items:center;gap:4mm;border-top:1px solid #e0ddd6;">
+        <span style="font-size:7pt;color:#9ca3af;flex-shrink:0;">Received by:</span>
+        <div style="border-bottom:1px solid #d1d5db;flex:1;height:12px;"></div>
+        <span style="font-size:7pt;color:#9ca3af;flex-shrink:0;">Date:</span>
+        <div style="border-bottom:1px solid #d1d5db;width:18mm;height:12px;"></div>
+      </div>
+    </div>
+
+  </div>
+  `;
+
+  return wrap(body, 'Order Receipt', order.order_number, `Date: ${orderDate}`);
 }
 
 // ── ADVANCE BILL ──────────────────────────────────────────────
@@ -286,14 +414,10 @@ function buildAdvanceBill(order) {
 
     <div class="note-box">Please bring this receipt when collecting your spectacles.</div>
 
-    <div class="stamp-sig">
-      <div class="stamp-box"></div>
-      <div class="sig-line"><hr/><span>Authorized Signature</span></div>
-    </div>
   </div>
   `;
 
-  return wrap(body, 'Advance Receipt', order.order_number, `Date: ${orderDate}`);
+  return wrap(body, 'Order Receipt', order.order_number, `Date: ${orderDate}`);
 }
 
 // ── BALANCE BILL ──────────────────────────────────────────────
@@ -390,14 +514,10 @@ function buildBalanceBill(order) {
 
     <div class="note-box">Thank you! Please keep this receipt as proof of payment.</div>
 
-    <div class="stamp-sig">
-      <div class="stamp-box"></div>
-      <div class="sig-line"><hr/><span>Authorized Signature</span></div>
-    </div>
   </div>
   `;
 
-  return wrap(body, 'Final Receipt', order.order_number, `Collected: ${today()}`);
+  return wrap(body, 'Order Receipt', order.order_number, `Collected: ${today()}`);
 }
 
 // ── QUICK SALE BILL ───────────────────────────────────────────
@@ -496,10 +616,6 @@ function buildQuickSaleBill(sale, items) {
 
     <div class="note-box">Thank you for your purchase! Please keep this receipt.</div>
 
-    <div class="stamp-sig">
-      <div class="stamp-box"></div>
-      <div class="sig-line"><hr/><span>Authorized Signature</span></div>
-    </div>
   </div>
   `;
 
@@ -585,10 +701,6 @@ function buildRepairBill(repair) {
 
     <div class="note-box">Please bring this receipt when collecting your item.</div>
 
-    <div class="stamp-sig">
-      <div class="stamp-box"></div>
-      <div class="sig-line"><hr/><span>Authorized Signature</span></div>
-    </div>
   </div>
   `;
 
@@ -776,9 +888,10 @@ export default function PrintReceipt({ order, onClose }) {
   const [tab, setTab] = useState('advance');
 
   const TABS = [
-    { key: 'advance', label: '🧾 Advance Bill', desc: 'A5 portrait · Advance payment receipt' },
-    { key: 'balance', label: '✅ Balance Bill', desc: 'A5 portrait · Final receipt when fully paid' },
-    { key: 'lab', label: '🔬 Lab Job Card', desc: 'A6 portrait · Send with frame to lab' },
+    { key: 'single',  label: '📋 Single Bill',  desc: 'One bill for both payments — customer signs on balance collection' },
+    { key: 'advance', label: '🧾 Advance Bill',  desc: 'A5 portrait · Advance payment receipt' },
+    { key: 'balance', label: '✅ Balance Bill',  desc: 'A5 portrait · Final receipt when fully paid' },
+    { key: 'lab',     label: '🔬 Lab Job Card',  desc: 'A6 portrait · Send with frame to lab' },
   ];
 
   return (
@@ -834,9 +947,10 @@ export default function PrintReceipt({ order, onClose }) {
             ))}
           </div>
           <button onClick={() => {
+            if (tab === 'single')  openPrint(buildSingleBill(order));
             if (tab === 'advance') openPrint(buildAdvanceBill(order));
             if (tab === 'balance') openPrint(buildBalanceBill(order));
-            if (tab === 'lab') openPrint(buildLabCardHTML(order));
+            if (tab === 'lab')     openPrint(buildLabCardHTML(order));
           }}
             style={{
               width: '100%', padding: '13px', background: C.navy, color: C.gold, border: 'none',
