@@ -735,7 +735,19 @@ export default function NewOrder() {
             </div>
             {!customerOwnFrame && selectedFrame?.image_url && (
               <div style={{ marginBottom:14, borderRadius:10, overflow:'hidden', border:`1px solid ${C.border}` }}>
-                <img src={selectedFrame.image_url} alt={selectedFrame.name} style={{ width:'100%', height:220, objectFit:'contain', background:'#f8f5ef', padding:'12px' }}/>
+                <div style={{ overflow:'hidden', background:'#f8f5ef', cursor:'zoom-in', position:'relative' }}
+                  onMouseMove={e=>{
+                    const r=e.currentTarget.getBoundingClientRect();
+                    const x=((e.clientX-r.left)/r.width*100).toFixed(1);
+                    const y=((e.clientY-r.top)/r.height*100).toFixed(1);
+                    e.currentTarget.querySelector('img').style.transformOrigin=`${x}% ${y}%`;
+                  }}
+                  onMouseEnter={e=>{e.currentTarget.querySelector('img').style.transform='scale(2.5)';}}
+                  onMouseLeave={e=>{e.currentTarget.querySelector('img').style.transform='scale(1)';}}>
+                  <img src={selectedFrame.image_url} alt={selectedFrame.name}
+                    style={{ width:'100%', height:220, objectFit:'contain', padding:'12px', display:'block',
+                      transition:'transform .1s ease', pointerEvents:'none' }}/>
+                </div>
                 <div style={{ padding:'8px 12px', background:'#dcfce7', fontSize:12, fontWeight:600, color:C.success }}>
                   ✓ {selectedFrame.name}{selectedFrame.frame_color?` · ${selectedFrame.frame_color}`:''}
                 </div>
