@@ -735,7 +735,7 @@ export default function NewOrder() {
             </div>
             {!customerOwnFrame && selectedFrame?.image_url && (
               <div style={{ marginBottom:14, borderRadius:10, overflow:'hidden', border:`1px solid ${C.border}` }}>
-                <img src={selectedFrame.image_url} alt={selectedFrame.name} style={{ width:'100%', height:140, objectFit:'cover' }}/>
+                <img src={selectedFrame.image_url} alt={selectedFrame.name} style={{ width:'100%', height:220, objectFit:'contain', background:'#f8f5ef', padding:'12px' }}/>
                 <div style={{ padding:'8px 12px', background:'#dcfce7', fontSize:12, fontWeight:600, color:C.success }}>
                   ✓ {selectedFrame.name}{selectedFrame.frame_color?` · ${selectedFrame.frame_color}`:''}
                 </div>
