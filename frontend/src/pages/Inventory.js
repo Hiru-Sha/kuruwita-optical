@@ -69,8 +69,8 @@ const compressImage = (file, maxWidth=500, quality=0.7) => new Promise((resolve,
 const toBase64 = compressImage;  // alias so existing code still works
 const fmtDate   = (d) => new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 
-const CATS      = ['All','Frames','Sunglasses','Reading Glasses','Boxes','Sunglass Pouches','Glass Cleaner','Chains','Ear Tips','Old Stock'];
-const CAT_ICON  = { Frames:'🕶️', Sunglasses:'😎', 'Reading Glasses':'👓', Boxes:'📦', 'Sunglass Pouches':'👜', 'Glass Cleaner':'🧴', Chains:'⛓️', 'Ear Tips':'🔧', 'Old Stock':'📦' };
+const CATS      = ['All','Frames','Sunglasses','Reading Glasses','Boxes','Sunglass Pouches','Glass Cleaner','Chains','Ear Tips','Old Stock','Out of Stock'];
+const CAT_ICON  = { Frames:'🕶️', Sunglasses:'😎', 'Reading Glasses':'👓', Boxes:'📦', 'Sunglass Pouches':'👜', 'Glass Cleaner':'🧴', Chains:'⛓️', 'Ear Tips':'🔧', 'Old Stock':'📦', 'Out of Stock':'❌' };
 const FR_SHAPES = ['Round','Oval','Rectangle','Square','Cat-eye','Aviator','Wayfarer','Butterfly','Hexagon','Geometric'];
 const FR_TYPES  = ['Full rim','Half rim','Rimless'];
 const FR_MATS   = ['Plastic','Metal','TR90','Titanium','Acetate','Mixed'];
@@ -1714,7 +1714,8 @@ export default function Inventory() {
       {/* Stats + Category Counts */}
       {(() => {
         // Compute counts per category and sub-type
-        const allItems = items.filter(i => i.category !== 'Old Stock');
+        const allItems = items.filter(i => i.category !== 'Old Stock' && parseInt(i.quantity||0) > 0);
+        const outOfStock = items.filter(i => parseInt(i.quantity||0) === 0);
         const frames   = allItems.filter(i => i.category === 'Frames');
         const sg       = allItems.filter(i => i.category === 'Sunglasses');
         const rg       = allItems.filter(i => i.category === 'Reading Glasses');
@@ -1741,6 +1742,7 @@ export default function Inventory() {
           { label:'↳ Single Vision', count:rgSV.length,      qty:totalQty(rgSV),      c:'#166534', bg:'#f0fdf4', cat:'Reading Glasses', sub:'Single Vision', indent:true },
           { label:'↳ Bifocal',       count:rgBifocal.length, qty:totalQty(rgBifocal), c:'#166534', bg:'#f0fdf4', cat:'Reading Glasses', sub:'Bifocal',        indent:true },
           { label:'Accessories',    count:accs.length,       qty:totalQty(accs),       c:'#6b21a8', bg:'#f5f3ff', cat:null,          sub:'accs' },
+          { label:'Out of Stock',   count:outOfStock.length, qty:0,                    c:'#6b7280', bg:'#f3f4f6', cat:'Out of Stock',  sub:null, dark:false, isOut:true },
         ];
 
         return (
@@ -2278,6 +2280,10 @@ export default function Inventory() {
                 // Stock filter
                 if (stockFilter==='low') return item.quantity>0 && item.quantity<=item.min_quantity;
                 if (stockFilter==='out') return item.quantity===0;
+                // Out of Stock tab — bypass normal category filter, show all qty=0
+                if (activeCat === 'Out of Stock') return parseInt(item.quantity||0) === 0;
+                // Hide out-of-stock from all other tabs
+                if (parseInt(item.quantity||0) === 0) return false;
                 // Hide Old Stock in All tab
                 if (activeCat==='All' && item.category==='Old Stock') return false;
                 // Category / sub filter
@@ -2291,6 +2297,10 @@ export default function Inventory() {
                     if (!(item.rg_lens_type||'').toLowerCase().includes(subFilter.toLowerCase())) return false;
                   }
                 }
+                // ── Hide out-of-stock from all tabs except 'Out of Stock' tab ──
+                if (activeCat !== 'Out of Stock' && parseInt(item.quantity||0) === 0) return false;
+                // In Out of Stock tab — show ONLY out-of-stock items
+                if (activeCat === 'Out of Stock' && parseInt(item.quantity||0) > 0) return false;
                 // ── Advanced filters ──
                 if (filterMaterial && !(item.frame_material||'').toLowerCase().includes(filterMaterial.toLowerCase())) return false;
                 if (filterShape    && !(item.frame_shape||'').toLowerCase().includes(filterShape.toLowerCase()))    return false;
