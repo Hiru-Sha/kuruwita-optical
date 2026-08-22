@@ -32,6 +32,7 @@ router.get('/', auth, async (req, res) => {
       qsCOGS,
       repairStats,
       repairTypes,
+      repairList,
       lensCOGS,
       frameCOGS,
       giftCOGS,
@@ -157,6 +158,17 @@ router.get('/', auth, async (req, res) => {
         FROM repairs
         WHERE created_at::date BETWEEN $1 AND $2
         GROUP BY repair_type ORDER BY count DESC
+      `, [from, to]),
+
+      // ── Repair list (per repair profit breakdown) ─────────────
+      pool.query(`
+        SELECT id, repair_number, customer_name, repair_type,
+               charge, repair_cost, payment_method, status,
+               created_at AS date
+        FROM repairs
+        WHERE created_at::date BETWEEN $1 AND $2
+          AND status IN ('done','collected')
+        ORDER BY created_at DESC
       `, [from, to]),
 
       // ── LENS COGS: from Lab Receivings expenses ──────────────
