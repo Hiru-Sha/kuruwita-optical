@@ -55,6 +55,9 @@ router.get('/', auth, async (req, res) => {
       reminders,         // 9
       todayBalPayments,  // 10
       invValue,          // 11
+      warrantyAlerts,    // 12
+      overdueAlerts,     // 13
+      balancePayments,   // 14
     ] = await Promise.all([
 
       // 0: Month revenue — excludes cancelled orders
@@ -160,6 +163,56 @@ router.get('/', auth, async (req, res) => {
         FROM inventory
         WHERE quantity > 0
       `).catch(() => ({ rows: [{ stock_value: 0, retail_value: 0, total_units: 0 }] })),
+
+      // 12: Warranty expiry alerts — expiring within 30 days or already expired
+      pool.query(`
+        SELECT o.id, o.order_number, o.deliver_date,
+               c.name AS customer_name, c.phone,
+               o.warranty_frame, o.warranty_lens, o.frame,
+               o.deliver_date + (
+                 CASE
+                   WHEN o.warranty_frame ILIKE '%1 year%' OR o.warranty_lens ILIKE '%1 year%' THEN INTERVAL '1 year'
+                   WHEN o.warranty_frame ILIKE '%6 month%' OR o.warranty_lens ILIKE '%6 month%' THEN INTERVAL '6 months'
+                   WHEN o.warranty_frame ILIKE '%3 month%' OR o.warranty_lens ILIKE '%3 month%' THEN INTERVAL '3 months'
+                   ELSE INTERVAL '1 year'
+                 END
+               ) AS warranty_expires
+        FROM orders o
+        JOIN customers c ON o.customer_id = c.id
+        WHERE o.status = 'delivered'
+          AND (o.warranty_frame IS NOT NULL OR o.warranty_lens IS NOT NULL)
+          AND o.deliver_date IS NOT NULL
+          AND o.deliver_date + INTERVAL '1 year' >= CURRENT_DATE - INTERVAL '7 days'
+          AND o.deliver_date + INTERVAL '1 year' <= CURRENT_DATE + INTERVAL '30 days'
+        ORDER BY warranty_expires ASC
+        LIMIT 10
+      `).catch(() => ({ rows: [] })),
+
+      // 13: Overdue orders alert
+      pool.query(`
+        SELECT o.id, o.order_number, o.deliver_date,
+               o.balance_amount, o.total_amount,
+               c.name AS customer_name, c.phone, o.frame,
+               CURRENT_DATE - o.deliver_date AS days_overdue
+        FROM orders o
+        JOIN customers c ON o.customer_id = c.id
+        WHERE o.status = 'overdue'
+          AND o.deliver_date IS NOT NULL
+        ORDER BY o.deliver_date ASC
+        LIMIT 20
+      `).catch(() => ({ rows: [] })),
+
+      // 14: Balance payments collected today (for cash deposit tracking)
+      pool.query(`
+        SELECT o.order_number, o.last_payment_amount AS amount,
+               o.last_payment_method AS method, c.name AS customer_name,
+               o.balance_amount AS remaining_balance
+        FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.id
+        WHERE o.last_payment_date = $1
+          AND o.last_payment_amount > 0
+        ORDER BY o.updated_at DESC
+      `, [today]).catch(() => ({ rows: [] })),
     ]);
 
     const mr = monthRevenue.rows[0];

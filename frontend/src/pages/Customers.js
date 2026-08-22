@@ -949,6 +949,8 @@ export default function Customers() {
                           {[
                             { l:'Full Name',    k:'name',    type:'text',  ph:'Customer name' },
                             { l:'Phone',        k:'phone',   type:'tel',   ph:'07X XXX XXXX' },
+                            { l:'Phone 2',      k:'phone2',  type:'tel',   ph:'Alt number' },
+                            { l:'Phone 3',      k:'phone3',  type:'tel',   ph:'Alt number' },
                             { l:'Age',          k:'age',     type:'number',ph:'e.g. 35' },
                             { l:'Address',      k:'address', type:'text',  ph:'Street, City' },
                             { l:'Email',        k:'email',   type:'email', ph:'optional' },

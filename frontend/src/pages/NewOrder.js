@@ -1118,7 +1118,30 @@ export default function NewOrder() {
               </Field>
             </div>
             <Field label="Internal Notes (optional)" span>
-              <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Any notes about this order..." style={{ ...INP, resize:'vertical', minHeight:72, lineHeight:1.6 }}/>
+              <div style={{ position:'relative' }}>
+                {noteTemplates.length > 0 && (
+                  <div style={{ position:'absolute', top:-32, right:0 }}>
+                    <button type="button" onClick={()=>setShowNoteTemplates(s=>!s)}
+                      style={{ padding:'4px 12px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:11, cursor:'pointer', fontFamily:'inherit', color:C.muted, fontWeight:600 }}>
+                      📋 Templates
+                    </button>
+                    {showNoteTemplates && (
+                      <div style={{ position:'absolute', right:0, top:'100%', background:'white', border:`1.5px solid ${C.border}`, borderRadius:10, zIndex:50, boxShadow:'0 8px 24px rgba(0,0,0,.15)', minWidth:240, marginTop:4 }}>
+                        {noteTemplates.map(t => (
+                          <div key={t.id} onClick={()=>{ setNotes(t.content); setShowNoteTemplates(false); }}
+                            style={{ padding:'10px 14px', cursor:'pointer', borderBottom:`1px solid #f3f4f6` }}
+                            onMouseEnter={e=>e.currentTarget.style.background='#f8f5ef'}
+                            onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                            <div style={{ fontWeight:600, color:'#0f1f3d', fontSize:13 }}>{t.title}</div>
+                            <div style={{ fontSize:11, color:'#6b7280', marginTop:2 }}>{t.content.slice(0,50)}{t.content.length>50?'...':''}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Any notes about this order..." style={{ ...INP, resize:'vertical', minHeight:72, lineHeight:1.6, width:'100%' }}/>
+              </div>
             </Field>
           </Card>
 

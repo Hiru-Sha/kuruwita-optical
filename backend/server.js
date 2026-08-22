@@ -68,6 +68,7 @@ app.use('/api/full-report',       require('./routes/fullReport'));
 app.use('/api/scan-session',      require('./routes/scanSession'));
 app.use('/api/store',             require('./routes/store'));
 app.use('/api/historical-records', require('./routes/historicalRecords'));
+app.use('/api/activity-log',       require('./routes/activityLog'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 
@@ -246,6 +247,30 @@ const pool = require('./db/pool');
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_hist_phone ON historical_records(phone)`).catch(()=>{});
     await pool.query(`ALTER TABLE inventory ADD COLUMN IF NOT EXISTS showroom_qty INTEGER DEFAULT 0`).catch(()=>{});
     await pool.query(`ALTER TABLE inventory ADD COLUMN IF NOT EXISTS showroom_qty INTEGER DEFAULT 0`).catch(()=>{});
+    // Activity log table
+    await pool.query(`CREATE TABLE IF NOT EXISTS activity_log (
+      id          SERIAL PRIMARY KEY,
+      user_id     INTEGER REFERENCES users(id),
+      user_name   VARCHAR(100),
+      action      VARCHAR(50),
+      entity_type VARCHAR(50),
+      entity_id   VARCHAR(50),
+      description TEXT,
+      metadata    JSONB,
+      created_at  TIMESTAMP DEFAULT NOW()
+    )`).catch(()=>{});
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_activity_log_created ON activity_log(created_at DESC)`).catch(()=>{});
+    // Order note templates
+    await pool.query(`CREATE TABLE IF NOT EXISTS order_note_templates (
+      id         SERIAL PRIMARY KEY,
+      title      VARCHAR(100),
+      content    TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT NOW()
+    )`).catch(()=>{});
+    // Multiple phones for customers
+    await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone2 VARCHAR(20)`).catch(()=>{});
+    await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone3 VARCHAR(20)`).catch(()=>{});
     console.log('✅ DB migrations complete');
   } catch (e) { console.warn('Migration warning:', e.message); }
 })();

@@ -443,7 +443,23 @@ router.patch('/:id', auth, async (req, res) => {
       values
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
-    res.json(result.rows[0]);
+    const updated = result.rows[0];
+
+    // If balance payment recorded → add to cash_deposits for daily tracking
+    if (req.body.last_payment_amount && parseFloat(req.body.last_payment_amount) > 0) {
+      const payDate   = req.body.last_payment_date || new Date().toISOString().split('T')[0];
+      const payMethod = req.body.last_payment_method || 'cash';
+      const payAmt    = parseFloat(req.body.last_payment_amount);
+      pool.query(`
+        INSERT INTO cash_deposits (date, amount, payment_type, notes, order_id, added_by)
+        VALUES ($1, $2, $3, $4, $5, $6)
+      `, [payDate, payAmt, payMethod,
+          `Balance payment — ${updated.order_number}`,
+          updated.id, req.user.id]
+      ).catch(() => {});
+    }
+
+    res.json(updated);
   } catch (err) {
     console.error('Update order error:', err.message);
     if (err.message.includes('column') && err.message.includes('does not exist')) {

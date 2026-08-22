@@ -55,8 +55,10 @@ export default function Dashboard() {
   const [loading,    setLoading]  = useState(true);
   const [showScan,   setShowScan] = useState(false);
   const [scanItem,   setScanItem] = useState(null);
-  const [showroomAlerts, setShowroomAlerts] = useState([]); // frames to put in showroom
-  const [alertsDismissed, setAlertsDismissed] = useState(false);
+  const [showroomAlerts,   setShowroomAlerts]   = useState([]);
+  const [alertsDismissed,  setAlertsDismissed]  = useState(false);
+  const [dismissedSections, setDismissedSections] = useState({});
+  const dismissSection = (key) => setDismissedSections(s => ({...s, [key]: true}));
 
   const hour     = new Date().getHours();
   const greeting = hour<12 ? 'Good morning' : hour<17 ? 'Good afternoon' : 'Good evening';
@@ -281,6 +283,89 @@ export default function Dashboard() {
         </div>
         <div style={{color:'var(--text-muted)',fontSize:12}}>→</div>
       </button>
+
+      {/* ── Warranty Expiry Alerts ── */}
+        {data?.warranty_alerts?.length > 0 && !dismissedSections['warranty'] && (
+          <div style={{ background:'#fff7ed', border:'2px solid #f59e0b', borderRadius:14, padding:'14px 18px', marginBottom:16 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+              <div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#92400e' }}>🛡️ Warranties Expiring Soon</div>
+                <div style={{ fontSize:12, color:'#b45309', marginTop:2 }}>Contact these customers before their warranty expires</div>
+              </div>
+              <button onClick={()=>dismissSection('warranty')} style={{ background:'none', border:'none', color:'#9ca3af', cursor:'pointer', fontSize:18 }}>✕</button>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {data.warranty_alerts.map((w,i) => {
+                const expires  = new Date(w.warranty_expires);
+                const daysLeft = Math.ceil((expires - new Date()) / 86400000);
+                const isExpired = daysLeft < 0;
+                return (
+                  <div key={i} style={{ background:'white', borderRadius:10, padding:'10px 14px', border:`1px solid ${isExpired?'#fca5a5':'#fde68a'}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:'#92400e' }}>{w.customer_name} · {w.order_number}</div>
+                      <div style={{ fontSize:11, color:'#b45309', marginTop:2 }}>{w.frame} · {w.phone}</div>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:isExpired?'#dc2626':'#f59e0b' }}>
+                        {isExpired ? `Expired ${Math.abs(daysLeft)} days ago` : `${daysLeft} days left`}
+                      </div>
+                      <div style={{ fontSize:10, color:'#9ca3af' }}>{expires.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Overdue Orders Alert ── */}
+        {data?.overdue_alerts?.length > 0 && !dismissedSections['overdue'] && (
+          <div style={{ background:'#fef2f2', border:'2px solid #dc2626', borderRadius:14, padding:'14px 18px', marginBottom:16 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+              <div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#dc2626' }}>⚠️ {data.overdue_alerts.length} Overdue Orders</div>
+                <div style={{ fontSize:12, color:'#b91c1c', marginTop:2 }}>These orders passed their delivery date</div>
+              </div>
+              <button onClick={()=>dismissSection('overdue')} style={{ background:'none', border:'none', color:'#9ca3af', cursor:'pointer', fontSize:18 }}>✕</button>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {data.overdue_alerts.map((o,i) => (
+                <div key={i} style={{ background:'white', borderRadius:10, padding:'10px 14px', border:'1px solid #fca5a5', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#dc2626' }}>{o.order_number} · {o.customer_name}</div>
+                    <div style={{ fontSize:11, color:'#b91c1c', marginTop:2 }}>{o.phone} · Balance: Rs. {parseFloat(o.balance_amount||0).toLocaleString()}</div>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#dc2626' }}>{o.days_overdue} days overdue</div>
+                    <div style={{ fontSize:10, color:'#9ca3af' }}>Due: {new Date(o.deliver_date+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Balance Payments Today ── */}
+        {data?.balance_payments?.length > 0 && !dismissedSections['balance'] && (
+          <div style={{ background:'#f0fdf4', border:'2px solid #86efac', borderRadius:14, padding:'14px 18px', marginBottom:16 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+              <div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#15803d' }}>💰 Balance Payments Today</div>
+                <div style={{ fontSize:12, color:'#166534', marginTop:2 }}>
+                  Rs. {data.balance_payments.reduce((s,p)=>s+parseFloat(p.amount||0),0).toLocaleString()} collected
+                </div>
+              </div>
+              <button onClick={()=>dismissSection('balance')} style={{ background:'none', border:'none', color:'#9ca3af', cursor:'pointer', fontSize:18 }}>✕</button>
+            </div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+              {data.balance_payments.map((p,i) => (
+                <div key={i} style={{ background:'white', borderRadius:8, padding:'7px 14px', border:'1px solid #86efac', fontSize:12, fontWeight:600, color:'#15803d' }}>
+                  {p.order_number} — Rs. {parseFloat(p.amount||0).toLocaleString()}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* Quick actions */}
       <div style={{marginBottom:24}}>
