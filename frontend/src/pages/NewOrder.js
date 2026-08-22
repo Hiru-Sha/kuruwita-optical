@@ -164,7 +164,18 @@ export default function NewOrder() {
   }, []);
   const [step,    setStep]   = useState(1);
   const location = useLocation();
-  const [saving,  setSaving] = useState(false);
+  const [saving,          setSaving]          = useState(false);
+  const [noteTemplates,   setNoteTemplates]   = useState([]);
+  const [showNoteTemplates, setShowNoteTemplates] = useState(false);
+
+  useEffect(() => {
+    const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    const token = localStorage.getItem('ko_token');
+    fetch(`${BASE}/activity-log/note-templates`, { headers:{ Authorization:`Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setNoteTemplates(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
   const [error,   setError]  = useState('');
 
   const [custMode,     setCustMode]    = useState('search');
