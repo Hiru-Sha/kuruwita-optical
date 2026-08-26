@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CASHIER
+  STAFF
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(STAFF)
+  createdAt DateTime @default(now())
+}
+
+model Customer {
+  id        Int      @id @default(autoincrement())
+  title     String   // Mr, Mrs, Master, Rev
+  name      String
+  phone     String   @unique
+  age       Int
+  createdAt DateTime @default(now())
+
+  prescriptions Prescription[]
+  invoices       Invoice[]
+}
+ 
+model Prescription {
+  id           Int      @id @default(autoincrement())
+  customerId   Int
+  customer     Customer @relation(fields: [customerId], references: [id])
+
+  sourceType   String   // "HOSPITAL" or "SHOP"
+  hospitalName String?  // only if HOSPITAL
+  date         DateTime @default(now())
+
+  // RIGHT EYE
+  rSph  Float?
+  rCyl  Float?
+  rAxis Int?
+  rAdd  Float?
+
+  // LEFT EYE
+  lSph  Float?
+  lCyl  Float?
+  lAxis Int?
+  lAdd  Float?
+
+  pd    Float?   // Pupillary distance
+  notes String?
+
+  createdAt DateTime @default(now())
+}
+
+
+
+model Frame {
+  id           Int      @id @default(autoincrement())
+  sku          String   @unique
+  brand        String
+  model        String
+  color        String?
+  size         String?
+  costPrice    Float
+  sellPrice    Float
+  stockQty     Int      @default(0)
+  reorderLevel Int      @default(5)
+  createdAt    DateTime @default(now())
+}
+model Lens {
+  id           Int      @id @default(autoincrement())
+  sku          String   @unique
+  type         String
+  index        String
+  coating      String?
+  costPrice    Float
+  sellPrice    Float
+  stockQty     Int      @default(0)
+  reorderLevel Int      @default(5)
+  createdAt    DateTime @default(now())
+}
+
+model StockMovement {
+  id        Int      @id @default(autoincrement())
+  itemType  String   // "FRAME" or "LENS"
+  itemId    Int
+  quantity  Int
+  direction String   // "IN" or "OUT"
+  reason    String?  // purchase, sale, adjustment
+  createdAt DateTime @default(now())
+}
+
+model Supplier {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+
+  purchases Purchase[]
+}
+
+model Purchase {
+  id          Int      @id @default(autoincrement())
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  supplierId  Int
+  totalCost   Float
+  paidAmount  Float    @default(0)
+  status      String   // PAID, PARTIAL, CREDIT
+  createdAt   DateTime @default(now())
+
+  items PurchaseItem[]
+}
+
+model PurchaseItem {
+  id         Int      @id @default(autoincrement())
+  purchase   Purchase @relation(fields: [purchaseId], references: [id])
+  purchaseId Int
+
+  itemType   String   // FRAME or LENS
+  itemId     Int
+  quantity   Int
+  unitCost   Float
+}
+
+model Invoice {
+  id         Int      @id @default(autoincrement())
+  invoiceNo  String   @unique
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId Int
+
+  subtotal   Float
+  discount   Float    @default(0)
+  total      Float
+  cogs       Float
+  profit     Float
+
+  createdAt  DateTime @default(now())
+
+  items      InvoiceItem[]
+  payments   Payment[]
+}
+
+model InvoiceItem {
+  id         Int     @id @default(autoincrement())
+  invoice    Invoice @relation(fields: [invoiceId], references: [id])
+  invoiceId  Int
+
+  itemType   String  // FRAME or LENS
+  itemId     Int
+  quantity   Int
+  unitPrice  Float
+  unitCost   Float
+}
+
+model Payment {
+  id         Int     @id @default(autoincrement())
+  invoice    Invoice @relation(fields: [invoiceId], references: [id])
+  invoiceId  Int
+
+  amount     Float
+  method     String  // CASH / CARD / TRANSFER
+  createdAt  DateTime @default(now())
+}
