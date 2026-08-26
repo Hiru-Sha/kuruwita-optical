@@ -1,3679 +1,1678 @@
 /* eslint-disable */
 // ============================================================
-// PrintReceipt.jsx
-// Kuruwita / Wickramakalutota Opticals
-// Professional A5 Optical Bills
-// A5 = 148mm × 210mm
+//  PrintReceipt.js — All Bills — Professional Navy + Gold
+//  All bills: A5 portrait (148mm × 210mm) = 1/2 of A4
 // ============================================================
-
 import React, { useState } from 'react';
 
-// ============================================================
-// SHOP DETAILS
-// ============================================================
+const LOGO = `data:image/jpeg;base64,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`;
 
-const SHOP_NAME = 'Wickramakalutota Opticals';
-const SHOP_TAGLINE = 'Your Trusted Eye Care';
-const SHOP_ADDRESS = 'No.57, Kurunegala Road, Chilaw';
-const SHOP_PHONE_1 = '032 222 1211';
-const SHOP_PHONE_2 = '077 194 1211';
+const fmt = n => 'Rs. ' + parseFloat(n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const printCoating = c => ({ 'Blue Cut':'Blue Filter', 'Photo Gray':'Photochromic', 'Blue Cut + Photo Gray':'Blue Filter + Photochromic', 'Blue Cut + HMC':'Blue Filter + HMC', 'Photo Gray + HMC':'Photochromic + HMC', 'Blue Cut + Photo Gray + HMC':'Blue Filter + Photochromic + HMC' }[c] || c);
+const fmtD = d => { if (!d) return '—'; const s = String(d).slice(0, 10); if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [y, m, dy] = s.split('-'); return new Date(+y, +m - 1, +dy).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }); } const dt = new Date(d); return isNaN(dt) ? '—' : dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }); };
+const today = () => new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 
-// If you have a logo file, you can change this to:
-// const LOGO = '/logo.png';
-// Leave empty if you don't want a logo.
-const LOGO = '';
-
-
-// ============================================================
-// HELPERS
-// ============================================================
-
-const fmt = (n) =>
-  'Rs. ' +
-  parseFloat(n || 0).toLocaleString('en-LK', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-const fmtD = (d) => {
-  if (!d) return '—';
-
-  const s = String(d).slice(0, 10);
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    const [y, m, dy] = s.split('-');
-
-    return new Date(
-      Number(y),
-      Number(m) - 1,
-      Number(dy)
-    ).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
-  }
-
-  const dt = new Date(d);
-
-  if (isNaN(dt)) return '—';
-
-  return dt.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  });
-};
-
-const today = () =>
-  new Date().toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  });
-
-const printCoating = (c) => {
-  const map = {
-    'Blue Cut': 'Blue Filter',
-    'Photo Gray': 'Photochromic',
-    'Blue Cut + Photo Gray':
-      'Blue Filter + Photochromic',
-    'Blue Cut + HMC':
-      'Blue Filter + HMC',
-    'Photo Gray + HMC':
-      'Photochromic + HMC',
-    'Blue Cut + Photo Gray + HMC':
-      'Blue Filter + Photochromic + HMC',
-  };
-
-  return map[c] || c || '—';
-};
-
-
-// ============================================================
-// PRINT CSS
-// ============================================================
-
+// ── Shared CSS ────────────────────────────────────────────────
 const PAGE_CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-
-@page {
-  size: 148mm 210mm portrait;
-  margin: 0;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html,
-body {
-  width: 148mm;
-  height: 210mm;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: 'Inter', Arial, sans-serif;
-  background: #ffffff;
-  color: #172033;
-  overflow: hidden;
-  -webkit-print-color-adjust: exact !important;
-  print-color-adjust: exact !important;
-}
-
-.page {
-  width: 148mm;
-  height: 210mm;
-  display: flex;
-  flex-direction: column;
-  background: #ffffff;
-}
-
-.content {
-  flex: 1;
-  overflow: hidden;
-}
-
-.body {
-  padding: 4mm 6mm 3mm;
-}
-
-
-/* ============================================================
-   HEADER
-   ============================================================ */
-
-.header {
-  background: #102A56;
-  color: #ffffff;
-  padding: 4.5mm 6mm 3.5mm;
-}
-
-.header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 5mm;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 3mm;
-}
-
-.logo {
-  width: 15mm;
-  height: 15mm;
-  object-fit: contain;
-  background: #ffffff;
-  border-radius: 50%;
-  padding: 1mm;
-}
-
-.shop-name {
-  font-size: 15pt;
-  font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: -0.3px;
-}
-
-.shop-tagline {
-  margin-top: 1.5mm;
-  font-size: 6.2pt;
-  font-weight: 700;
-  color: #BFD3F2;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-}
-
-.shop-address {
-  margin-top: 2mm;
-  font-size: 6.8pt;
-  color: rgba(255,255,255,.86);
-  line-height: 1.45;
-}
-
-.bill-side {
-  text-align: right;
-}
-
-.bill-type {
-  display: inline-block;
-  background: #ffffff;
-  color: #102A56;
-  padding: 1.5mm 2.5mm;
-  border-radius: 3px;
-  font-size: 5.8pt;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.bill-number {
-  margin-top: 1mm;
-  font-size: 12pt;
-  font-weight: 900;
-}
-
-.bill-date {
-  margin-top: 1mm;
-  font-size: 6pt;
-  color: rgba(255,255,255,.72);
-}
-
-.blue-line {
-  height: 1.5mm;
-  background: #6E9BD7;
-}
-
-
-/* ============================================================
-   LABELS
-   ============================================================ */
-
-.section-label {
-  margin-bottom: 2mm;
-  font-size: 6pt;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  color: #667085;
-}
-
-
-/* ============================================================
-   CUSTOMER
-   ============================================================ */
-
-.customer-box {
-  display: flex;
-  justify-content: space-between;
-  gap: 4mm;
-
-  padding: 3mm 3.5mm;
-  margin-bottom: 2.5mm;
-
-  background: #F8FAFC;
-  border: 1px solid #D9E0EA;
-  border-radius: 5px;
-}
-
-.customer-main {
-  flex: 1;
-}
-
-.field-label {
-  font-size: 5.5pt;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .7px;
-  color: #7A8494;
-}
-
-.field-value {
-  margin-top: .7mm;
-  font-size: 8.5pt;
-  font-weight: 700;
-  color: #102A56;
-}
-
-.field-value-large {
-  margin-top: .7mm;
-  font-size: 10pt;
-  font-weight: 800;
-  color: #102A56;
-}
-
-.customer-row {
-  display: flex;
-  gap: 8mm;
-  margin-top: 2mm;
-}
-
-
-/* ============================================================
-   FRAME / LENS
-   ============================================================ */
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2.5mm;
-  margin-bottom: 2.5mm;
-}
-
-.detail-card {
-  overflow: hidden;
-  background: #ffffff;
-  border: 1px solid #D9E0EA;
-  border-radius: 5px;
-}
-
-.detail-header {
-  padding: 2.2mm 3mm;
-
-  background: #102A56;
-  color: #ffffff;
-
-  font-size: 6pt;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.detail-body {
-  min-height: 15mm;
-  padding: 2.8mm 3mm;
-}
-
-.detail-main {
-  font-size: 8.2pt;
-  font-weight: 800;
-  color: #172033;
-  line-height: 1.3;
-}
-
-.detail-sub {
-  margin-top: 1.5mm;
-  font-size: 6.8pt;
-  color: #667085;
-  line-height: 1.4;
-}
-
-
-/* ============================================================
-   DIVIDER
-   ============================================================ */
-
-.divider {
-  border: none;
-  border-top: 1px solid #E1E6ED;
-  margin: 1.5mm 0 2.5mm;
-}
-
-
-/* ============================================================
-   PRICE TABLE
-   ============================================================ */
-
-.price-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 2.5mm;
-}
-
-.price-table td {
-  padding: 1.6mm 2.5mm;
-  font-size: 7.6pt;
-}
-
-.price-table td:last-child {
-  text-align: right;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.price-table .subtotal td {
-  background: #F3F6FA;
-  border-top: 1px solid #D9E0EA;
-  border-bottom: 1px solid #D9E0EA;
-
-  color: #344054;
-  font-weight: 700;
-}
-
-.price-table .discount td {
-  color: #667085;
-  font-weight: 600;
-}
-
-.price-table .total-row td {
-  padding: 3mm 2.8mm;
-
-  background: #102A56;
-  color: #ffffff;
-
-  font-size: 10.5pt;
-  font-weight: 900;
-}
-
-.price-table .paid-row td {
-  background: #F8FAFC;
-  color: #344054;
-  font-weight: 700;
-
-  border-bottom: 1px solid #D9E0EA;
-}
-
-
-/* ============================================================
-   BIG TOTAL
-   ============================================================ */
-
-.big-total {
-  display: grid;
-  grid-template-columns: 1fr auto;
-
-  margin: 1mm 0 2.5mm;
-
-  overflow: hidden;
-
-  border-radius: 6px;
-  border: 1.5px solid #102A56;
-}
-
-.big-total-label {
-  padding: 3mm 3.5mm;
-
-  background: #102A56;
-  color: #ffffff;
-
-  font-size: 7pt;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.big-total-value {
-  padding: 2.5mm 4mm;
-
-  background: #102A56;
-  color: #ffffff;
-
-  font-size: 14pt;
-  font-weight: 900;
-
-  white-space: nowrap;
-}
-
-
-/* ============================================================
-   PAYMENT
-   ============================================================ */
-
-.payment-card {
-  overflow: hidden;
-
-  margin-bottom: 2.5mm;
-
-  border: 1px solid #D9E0EA;
-  border-radius: 6px;
-}
-
-.payment-header {
-  padding: 2mm 3mm;
-
-  background: #F3F6FA;
-  color: #102A56;
-
-  font-size: 6pt;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-
-  border-bottom: 1px solid #D9E0EA;
-}
-
-.payment-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  padding: 2.2mm 3mm;
-
-  border-bottom: 1px solid #E7EBF0;
-}
-
-.payment-row:last-child {
-  border-bottom: none;
-}
-
-.payment-label {
-  font-size: 7.4pt;
-  color: #667085;
-  font-weight: 600;
-}
-
-.payment-value {
-  font-size: 9pt;
-  color: #172033;
-  font-weight: 800;
-}
-
-.payment-balance .payment-value {
-  font-size: 10pt;
-  color: #102A56;
-}
-
-
-/* ============================================================
-   PAID IN FULL
-   ============================================================ */
-
-.paid-full {
-  padding: 3mm;
-  margin-bottom: 2.5mm;
-
-  text-align: center;
-
-  background: #F3FAF5;
-
-  border: 1.5px solid #2F6B45;
-  border-radius: 6px;
-}
-
-.paid-full-title {
-  color: #245738;
-  font-size: 8.5pt;
-  font-weight: 900;
-  letter-spacing: .5px;
-}
-
-.paid-full-amount {
-  margin-top: 1mm;
-  color: #102A56;
-  font-size: 10pt;
-  font-weight: 900;
-}
-
-
-/* ============================================================
-   BALANCE DUE
-   ============================================================ */
-
-.balance-due {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  padding: 3mm;
-  margin-bottom: 2.5mm;
-
-  background: #FFF7F7;
-
-  border: 1.5px solid #A53B3B;
-  border-radius: 6px;
-}
-
-.balance-title {
-  color: #8F2F2F;
-  font-size: 6.8pt;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: .8px;
-}
-
-.balance-amount {
-  color: #8F2F2F;
-  font-size: 11pt;
-  font-weight: 900;
-}
-
-
-/* ============================================================
-   GIFT
-   ============================================================ */
-
-.gift-box {
-  padding: 2.5mm 3mm;
-  margin-bottom: 2.5mm;
-
-  background: #F8FAFD;
-
-  border: 1px solid #C8D5E8;
-  border-radius: 5px;
-}
-
-.gift-title {
-  margin-bottom: 1.5mm;
-
-  color: #102A56;
-
-  font-size: 6pt;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.gift-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  padding: 1mm 0;
-}
-
-.gift-name {
-  font-size: 7.5pt;
-  font-weight: 700;
-  color: #172033;
-}
-
-.gift-free {
-  font-size: 6.5pt;
-  font-weight: 900;
-  color: #2F6B45;
-  text-transform: uppercase;
-}
-
-
-/* ============================================================
-   NOTE
-   ============================================================ */
-
-.note-box {
-  padding: 2.2mm 3mm;
-  margin-bottom: 2.5mm;
-
-  background: #F8FAFC;
-
-  border-left: 2px solid #6E9BD7;
-  border-radius: 0 4px 4px 0;
-
-  font-size: 6.7pt;
-  color: #667085;
-  line-height: 1.45;
-}
-
-
-/* ============================================================
-   FOOTER
-   ============================================================ */
-
-.footer {
-  flex-shrink: 0;
-
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  padding: 2.5mm 6mm;
-
-  background: #102A56;
-}
-
-.footer-main {
-  color: #ffffff;
-  font-size: 6.5pt;
-  font-weight: 700;
-}
-
-.footer-date {
-  color: rgba(255,255,255,.62);
-  font-size: 5.8pt;
-}
-
-
-/* ============================================================
-   QUICK SALE
-   ============================================================ */
-
-.item-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.item-table td {
-  padding: 2mm 2.5mm;
-  border-bottom: 1px solid #E7EBF0;
-  font-size: 7.8pt;
-}
-
-.item-name {
-  font-weight: 700;
-  color: #172033;
-}
-
-.item-sub {
-  margin-top: .7mm;
-  font-size: 6.5pt;
-  color: #7A8494;
-}
-
-
-/* ============================================================
-   PRINT
-   ============================================================ */
-
-@media print {
-  body {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-}
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap');
+  @page { size: 148mm 210mm portrait; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', Arial, sans-serif; background: white; color: #1a1a2e; width: 148mm; height: 210mm; overflow: hidden; position: relative; }
+  .page { width: 148mm; height: 210mm; position: relative; display: flex; flex-direction: column; }
+  .page-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .content-inner { flex: 1; overflow: hidden; }
+
+  /* HEADER — no pseudo-element circles */
+  .hdr { background: #0f1f3d; padding: 5mm 6mm 4mm; color: white; }
+  .hdr-inner { display: flex; justify-content: space-between; align-items: flex-start; }
+  .shop-name { font-family:'Playfair Display',serif; font-size: 14pt; font-weight: 900; color: white; line-height: 1.1; letter-spacing:-0.3px; }
+  .shop-tagline { font-size: 6pt; color: #c9a84c; letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; font-weight:600; }
+  .shop-addr { font-size: 8.5pt; color: white; margin-top: 4px; line-height: 1.6; font-weight:600; letter-spacing:0.2px; }
+  .bill-badge { background: #c9a84c; color: #0f1f3d; font-size: 6.5pt; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 1px; text-transform: uppercase; display: inline-block; margin-bottom: 3px; }
+  .bill-no { font-family:'Playfair Display',serif; font-size: 15pt; font-weight: 900; color: white; line-height: 1; letter-spacing:-0.5px; }
+  .bill-date { font-size: 7pt; color: rgba(237,233,224,.7); margin-top: 2px; }
+  .gold-bar { height: 3px; background: linear-gradient(90deg, #c9a84c 0%, #e8d48e 50%, transparent 100%); }
+
+  /* BODY — flex column, fills remaining height */
+  .body { padding: 3.5mm 6mm 3mm; flex: 1; display:flex; flex-direction:column; }
+
+  /* CUSTOMER BLOCK — full width single column */
+  .cust-block { background:#f8f7f4; border-radius:6px; padding:4px 9px; margin-bottom:2.5mm; display:flex; justify-content:space-between; align-items:center; gap:4mm; }
+  .sec-title { font-size: 6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #9ca3af; margin-bottom: 3px; }
+  .kv { margin-bottom: 2px; }
+  .kv .k { font-size: 6.5pt; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; font-weight:600; }
+  .kv .v { font-size: 9pt; font-weight: 700; color: #0f1f3d; line-height:1.3; }
+  .kv .v-lg { font-size: 10pt; font-weight: 800; color: #0f1f3d; line-height:1.2; }
+
+  /* FRAME / LENS PILL BARS */
+  .pill-bar { border-radius:6px; padding:3px 8px; margin-bottom:2mm; display:flex; justify-content:space-between; align-items:center; }
+  .pill-bar-frame { background:#0f1f3d; }
+  .pill-bar-lens  { background:#1e3a5f; }
+  .pill-label { font-size:6pt; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:1px; color:#c9a84c; }
+  .pill-value { font-size:9pt; font-weight:700; color:white; }
+  .pill-sub   { font-size:7.5pt; color:rgba(237,233,224,.7); text-align:right; }
+
+  /* DIVIDERS */
+  .divider-dashed { border:none; border-top: 1px dashed #d1cdc4; margin: 2.5mm 0; }
+
+  /* PRICE TABLE */
+  .price-table { width:100%; border-collapse:collapse; margin-bottom:3mm; }
+  .price-table td { padding: 1.5px 0; font-size:8pt; vertical-align:middle; }
+  .price-table td:last-child { text-align:right; font-weight:700; }
+  .price-table .row-sub td { color:#0f1f3d; font-size:8.5pt; font-weight:700; background:#f0f4ff; padding:2px 6px; }
+  .price-table .row-disc td { color:#dc2626; font-weight:700; font-size:9.5pt; }
+  .price-table .total-row td { font-size:11pt; font-weight:900; color:white; background:#0f1f3d; border-top:2px solid #0f1f3d; padding:4px 6px; }
+  .price-table .total-row { border-radius:5px; overflow:hidden; }
+
+  /* AMOUNT BOXES */
+  .amt-box { background:#0f1f3d; border-radius:7px; padding:5px 10px; display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5mm; }
+  .amt-box .lbl { font-size:7pt; color:#c9a84c; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:none; }
+  .amt-box .val { font-family:'Playfair Display',serif; font-size:13pt; font-weight:900; color:white; }
+  .bal-box { border:2px solid #dc2626; border-radius:7px; padding:4px 10px; display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5mm; }
+  .bal-box .lbl { font-size:7pt; color:#dc2626; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:none; }
+  .bal-box .val { font-family:'Playfair Display',serif; font-size:11pt; font-weight:900; color:#dc2626; }
+
+  /* BADGES */
+  .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:7.5pt; font-weight:700; letter-spacing:0.3px; }
+  .badge-advance { background:#fffbeb; color:#92400e; border:1.5px solid #f59e0b; }
+  .badge-paid    { background:#f0fdf4; color:#15803d; border:1.5px solid #86efac; }
+
+  /* NOTE */
+  .note-box { background:#fffbeb; border-left:3px solid #c9a84c; border-radius:0 5px 5px 0; padding:3px 7px; font-size:7pt; color:#92400e; line-height:1.5; margin-bottom:3mm; }
+
+  /* STAMP + SIG — pushed to bottom with margin-top:auto */
+  .stamp-sig { display:flex; gap:4mm; align-items:flex-end; margin-top:2mm; padding-top:2mm; }
+  .stamp-box { flex:1; height:18mm; border:1px dashed #d1cdc4; border-radius:7px; display:flex; align-items:center; justify-content:center; }
+  .stamp-txt { font-size:6.5pt; color:#c4bfb5; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; }
+  .sig-line { flex:1; text-align:center; padding-bottom:2px; }
+  .sig-line hr { border:none; border-top:1.5px solid #0f1f3d; margin-bottom:4px; }
+  .sig-line span { font-size:7pt; color:#6b7280; font-weight:600; letter-spacing:0.5px; }
+
+  /* ITEM ROWS (quick sale) */
+  .item-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dotted #e0ddd6; font-size: 9pt; }
+  .item-row:last-child { border-bottom: none; }
+
+  /* FREE GIFTS BOX */
+  .gifts-box { background:#fff9f0; border:1.5px solid #c9a84c; border-radius:5px; padding:4px 8px; margin-bottom:2mm; }
+  .gifts-title { font-size:6.5pt; font-weight:800; color:#c9a84c; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
+  .gift-row { display:flex; justify-content:space-between; align-items:center; padding:1.5px 0; border-bottom:1px dashed #f0e0c0; font-size:7.5pt; }
+  .gift-row:last-child { border-bottom:none; }
+  .gift-name { font-weight:600; color:#0f1f3d; }
+  .gift-tag { background:#c9a84c; color:white; font-size:6pt; font-weight:800; padding:1px 5px; border-radius:8px; letter-spacing:0.3px; }
+  .gift-price { color:#9ca3af; font-size:7pt; text-decoration:line-through; }
+
+  /* FOOTER — always pinned to bottom */
+  .footer { background: #0f1f3d; padding: 2.5mm 6mm; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .footer-slogan { font-size: 7.5pt; font-weight: 700; color: #c9a84c; }
+  .footer-sub { font-size: 6.5pt; color: rgba(237,233,224,.6); }
+
+  /* compat classes for QS / repair bills */
+  .total-box { background: #0f1f3d; border-radius: 10px; padding: 12px 16px; text-align: center; margin: 4mm 0; }
+  .total-box .lbl { font-size: 8pt; color: #c9a84c; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+  .total-box .amt { font-size: 22pt; font-weight: 900; color: white; }
+  .status-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 8.5pt; font-weight: 700; text-transform: uppercase; }
+  .status-advance { background: #fef9c3; color: #92400e; border: 1.5px solid #f59e0b; }
+  .status-paid { background: #dcfce7; color: #166534; border: 1.5px solid #86efac; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 `;
 
-
-// ============================================================
-// HTML HEADER
-// ============================================================
-
-function buildHeader(type, billNo, date) {
+function hdr(billType, billNo, dateStr) {
   return `
-    <div class="header">
-      <div class="header-row">
+  <div class="hdr" id="header">
+    <div class="hdr-inner">
+      <div>
+        <div class="shop-name">Wickramakalutota Opticals</div>
+        <div class="shop-tagline">Your Trusted Eye Care · Chilaw</div>
+        <div class="shop-addr">No.57, Kurunegala Road, Chilaw &nbsp;|&nbsp; Tel: 032 222 1211 &nbsp;|&nbsp; 077 194 1211</div>
+      </div>
+      <div style="text-align:right;padding-top:2px;">
+        <div class="bill-badge">${billType}</div>
+        <div class="bill-no">${billNo}</div>
+        <div class="bill-date">${dateStr}</div>
+      </div>
+    </div>
+  </div>
+  <div class="gold-bar"></div>`;
+}
 
-        <div class="brand">
+function ftr() {
+  return `
+  <div class="footer" id="footer">
+    <div class="footer-slogan">Thank you for choosing Wickramakalutota Opticals!</div>
+    <div class="footer-sub">Printed: ${today()}</div>
+  </div>`;
+}
 
-          ${
-            LOGO
-              ? `<img class="logo" src="${LOGO}" alt="Logo" />`
-              : ''
-          }
+function wrap(bodyHTML, billType, billNo, dateStr) {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>${billNo}</title>
+<style>${PAGE_CSS}</style>
+</head><body>
+<div class="page" id="page">
+${hdr(billType, billNo, dateStr)}
+<div id="content-inner" style="flex:1;overflow:hidden;">
+${bodyHTML}
+</div>
+${ftr()}
+</div>
+<script>
+window.onload = function() {
+  // Measure content between header and footer
+  var inner = document.getElementById('content-inner');
+  var footer = document.getElementById('footer');
+  var header = document.getElementById('header');
+  if (!inner) { window.print(); return; }
 
-          <div>
+  // Available height = 210mm - header height - footer height (in px)
+  var mmPx = 96 / 25.4;
+  var totalH = 210 * mmPx;
+  var hdrH   = header ? header.offsetHeight : 0;
+  var ftrH   = footer ? footer.offsetHeight : 0;
+  var avail  = totalH - hdrH - ftrH - (4 * mmPx); // 4mm buffer
 
-            <div class="shop-name">
-              ${SHOP_NAME}
-            </div>
+  var innerH = inner.scrollHeight;
+  if (innerH > avail) {
+    var scale = avail / innerH;
+    inner.style.zoom = Math.max(0.65, scale); // never below 65%
+  }
+  setTimeout(function() {
+    window.print();
+    window.onafterprint = function() { window.close(); };
+  }, 400);
+};
+<\/script>
+</body></html>`;
+}
 
-            <div class="shop-tagline">
-              ${SHOP_TAGLINE}
-            </div>
+// ── SINGLE BILL (one bill for both payments) ──────────────────
+function buildSingleBill(order) {
+  const total   = parseFloat(order.total_amount   || 0);
+  const advance = parseFloat(order.advance_amount || 0);
+  const balance = parseFloat(order.balance_amount || 0);
+  const fSell   = parseFloat(order.frame_sell_price || 0);
+  const lSell   = parseFloat(order.lens_sell_price  || 0);
+  const discAmt = parseFloat(order.discount_amount  || 0);
+  const discPct = parseFloat(order.discount_percent || 0);
+  const sub     = (fSell > 0 || lSell > 0) ? fSell + lSell : 0;
+  const gifts   = order.bill_gifts || [];
+  const orderDate  = order.created_at ? fmtD(order.created_at) : today();
+  const frameColor  = order.frame_color  || '';
+  const lensCoating = order.lens_coating || '';
 
-            <div class="shop-address">
-              ${SHOP_ADDRESS}
-              &nbsp; | &nbsp;
-              ${SHOP_PHONE_1}
-              &nbsp; | &nbsp;
-              ${SHOP_PHONE_2}
-            </div>
+  const body = `
+  <div class="body">
+    <!-- Top row -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
+      <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Order Date: ${orderDate}</span>
+      <span style="font-size:7.5pt;font-weight:700;color:#c9a84c;">Ready By: ${fmtD(order.deliver_date)}</span>
+    </div>
 
-          </div>
-
+    <!-- Customer block -->
+    <div class="cust-block">
+      <div style="flex:1;">
+        <div class="kv" style="margin-bottom:3px;"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
+        <div style="display:flex;gap:8mm;margin-top:3px;">
+          <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
+          <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
         </div>
+      </div>
+      ${order.warranty_frame || order.warranty_lens ? `
+      <div style="text-align:right;">
+        ${order.warranty_frame ? `<div class="kv" style="text-align:right;"><div class="k" style="text-align:right;">Shield Frame</div><div class="v" style="color:#15803d;">${order.warranty_frame}</div></div>` : ''}
+        ${order.warranty_lens  ? `<div class="kv" style="text-align:right;"><div class="k" style="text-align:right;">Shield Lens</div><div class="v" style="color:#15803d;">${order.warranty_lens}</div></div>` : ''}
+      </div>` : ''}
+    </div>
 
-        <div class="bill-side">
+    <!-- Frame pill -->
+    <div class="pill-bar pill-bar-frame">
+      <div><div class="pill-label">Frame</div><div class="pill-value">${order.frame || '—'}</div></div>
+      ${frameColor ? `<div class="pill-sub">${frameColor}</div>` : ''}
+    </div>
 
-          <div class="bill-type">
-            ${type}
-          </div>
-
-          <div class="bill-number">
-            ${billNo || '—'}
-          </div>
-
-          <div class="bill-date">
-            ${date || today()}
-          </div>
-
-        </div>
-
+    <!-- Lens pill -->
+    <div class="pill-bar pill-bar-lens" style="flex-direction:column;align-items:flex-start;gap:2px;">
+      <div class="pill-label">Lens</div>
+      <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+        <div class="pill-value">${order.lens_type || '—'}</div>
+        ${lensCoating ? `<div style="background:#c9a84c;color:#0f1f3d;font-size:7.5pt;font-weight:800;padding:2px 8px;border-radius:10px;">${printCoating(lensCoating)}</div>` : ''}
       </div>
     </div>
 
-    <div class="blue-line"></div>
-  `;
-}
+    <hr class="divider-dashed"/>
 
+    <!-- Price table -->
+    <table class="price-table">
+      ${(fSell > 0 && order.show_frame_price !== false) ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
+      ${(lSell > 0 && order.show_lens_price  !== false) ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
+      ${sub > 0 && (discAmt > 0 || discPct > 0) ? `<tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>` : ''}
+      ${discAmt > 0 || discPct > 0 ? `
+        <tr class="row-disc"><td style="font-weight:700;">Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td>
+          <td style="font-size:10pt;font-weight:800;color:#dc2626;">- ${fmt(discAmt > 0 ? discAmt : Math.round((sub||total) * discPct / 100))}</td></tr>
+        <tr class="total-row"><td>Net Payable</td><td>${fmt(total)}</td></tr>` :
+        `<tr class="total-row"><td>${sub > 0 ? 'Total' : 'Total Amount'}</td><td>${fmt(total)}</td></tr>`}
+    </table>
 
-// ============================================================
-// FOOTER
-// ============================================================
+    ${gifts.filter(g=>g.name).length > 0 ? `
+    <div class="gifts-box">
+      <div class="gifts-title">Complimentary Gifts</div>
+      ${gifts.filter(g=>g.name).map(g=>`
+        <div class="gift-row">
+          <span class="gift-name">${g.name}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${g.price ? `<span class="gift-price">${fmt(g.price)}</span>` : ''}
+            <span class="gift-tag">FREE</span>
+          </div>
+        </div>`).join('')}
+    </div>` : ''}
 
-function buildFooter() {
-  return `
-    <div class="footer">
+    <div class="note-box">Please bring this bill when collecting your spectacles.</div>
 
-      <div class="footer-main">
-        Thank you for choosing ${SHOP_NAME}
+    <!-- ── PAYMENT SECTION ── -->
+    <div style="border:1.5px solid #0f1f3d;border-radius:8px;overflow:hidden;margin-top:2mm;">
+
+      <!-- Advance row -->
+      <div style="display:flex;align-items:stretch;border-bottom:1.5px solid #0f1f3d;">
+        <div style="background:#0f1f3d;padding:5px 10px;display:flex;align-items:center;flex-shrink:0;min-width:28mm;">
+          <span style="font-size:7.5pt;font-weight:800;color:#c9a84c;text-transform:uppercase;letter-spacing:.5px;">Advance<br>Paid</span>
+        </div>
+        <div style="flex:1;padding:5px 10px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-family:'Playfair Display',serif;font-size:13pt;font-weight:900;color:#0f1f3d;">${fmt(advance)}</span>
+          <span style="font-size:8pt;color:#9ca3af;">${orderDate}</span>
+        </div>
       </div>
 
-      <div class="footer-date">
-        Printed: ${today()}
+      <!-- Balance row — with tick box for manual signing -->
+      <div style="display:flex;align-items:stretch;">
+        <div style="background:#dc2626;padding:5px 10px;display:flex;align-items:center;flex-shrink:0;min-width:28mm;">
+          <span style="font-size:7.5pt;font-weight:800;color:white;text-transform:uppercase;letter-spacing:.5px;">Balance<br>Due</span>
+        </div>
+        <div style="flex:1;padding:5px 10px;display:flex;align-items:center;justify-content:space-between;gap:4mm;">
+          <span style="font-family:'Playfair Display',serif;font-size:13pt;font-weight:900;color:#dc2626;">${fmt(balance)}</span>
+          <!-- Manual tick + signature area -->
+          <div style="display:flex;align-items:center;gap:3mm;flex-shrink:0;">
+            <div style="width:14px;height:14px;border:2px solid #374151;border-radius:3px;flex-shrink:0;"></div>
+            <div style="border-bottom:1px solid #9ca3af;min-width:22mm;height:16px;"></div>
+          </div>
+        </div>
       </div>
 
+      <!-- Received line -->
+      <div style="background:#f8f5ef;padding:4px 10px;display:flex;align-items:center;gap:4mm;border-top:1px solid #e0ddd6;">
+        <span style="font-size:7pt;color:#9ca3af;flex-shrink:0;">Received by:</span>
+        <div style="border-bottom:1px solid #d1d5db;flex:1;height:12px;"></div>
+        <span style="font-size:7pt;color:#9ca3af;flex-shrink:0;">Date:</span>
+        <div style="border-bottom:1px solid #d1d5db;width:18mm;height:12px;"></div>
+      </div>
     </div>
-  `;
-}
-
-
-// ============================================================
-// WRAP HTML
-// ============================================================
-
-function wrap(content, type, billNo, date) {
-  return `
-<!DOCTYPE html>
-
-<html>
-
-<head>
-
-<meta charset="UTF-8" />
-
-<title>
-  ${type} - ${billNo || ''}
-</title>
-
-<style>
-
-${PAGE_CSS}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="page">
-
-  ${buildHeader(type, billNo, date)}
-
-  <div class="content">
-
-    ${content}
 
   </div>
-
-  ${buildFooter()}
-
-</div>
-
-<script>
-
-window.onload = function() {
-
-  window.print();
-
-  window.onafterprint = function() {
-    window.close();
-  };
-
-};
-
-<\/script>
-
-</body>
-
-</html>
-`;
-}
-
-
-// ============================================================
-// CUSTOMER SECTION
-// ============================================================
-
-function customerSection(order, rightSide = '') {
-  return `
-    <div class="customer-box">
-
-      <div class="customer-main">
-
-        <div class="field-label">
-          Customer Name
-        </div>
-
-        <div class="field-value-large">
-          ${order.customer_name || '—'}
-        </div>
-
-        <div class="customer-row">
-
-          <div>
-            <div class="field-label">
-              Phone
-            </div>
-
-            <div class="field-value">
-              ${order.phone || '—'}
-            </div>
-          </div>
-
-          <div>
-            <div class="field-label">
-              Age
-            </div>
-
-            <div class="field-value">
-              ${order.age ? `${order.age} yrs` : '—'}
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-      <div style="text-align:right;">
-        ${rightSide}
-      </div>
-
-    </div>
-  `;
-}
-
-
-// ============================================================
-// FRAME + LENS
-// ============================================================
-
-function frameLensSection(order) {
-
-  return `
-    <div class="detail-grid">
-
-      <!-- FRAME -->
-
-      <div class="detail-card">
-
-        <div class="detail-header">
-          Frame
-        </div>
-
-        <div class="detail-body">
-
-          <div class="detail-main">
-            ${order.frame || '—'}
-          </div>
-
-          <div class="detail-sub">
-
-            ${
-              order.frame_type
-                ? `Type: ${order.frame_type}`
-                : ''
-            }
-
-            ${
-              order.frame_color
-                ? ` &nbsp; · &nbsp; Color: ${order.frame_color}`
-                : ''
-            }
-
-            ${
-              order.frame_size
-                ? ` &nbsp; · &nbsp; Size: ${order.frame_size}`
-                : ''
-            }
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <!-- LENS -->
-
-      <div class="detail-card">
-
-        <div class="detail-header">
-          Lens
-        </div>
-
-        <div class="detail-body">
-
-          <div class="detail-main">
-            ${order.lens_type || '—'}
-          </div>
-
-          <div class="detail-sub">
-
-            ${
-              order.lens_coating
-                ? printCoating(order.lens_coating)
-                : ''
-            }
-
-            ${
-              order.lens_index
-                ? ` &nbsp; · &nbsp; Index: ${order.lens_index}`
-                : ''
-            }
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-  `;
-}
-
-
-// ============================================================
-// PRICE SECTION
-// ============================================================
-
-function priceSection(order, options = {}) {
-
-  const total = parseFloat(order.total_amount || 0);
-
-  const framePrice =
-    parseFloat(order.frame_sell_price || 0);
-
-  const lensPrice =
-    parseFloat(order.lens_sell_price || 0);
-
-  const discount =
-    parseFloat(order.discount_amount || 0);
-
-  const discountPercent =
-    parseFloat(order.discount_percent || 0);
-
-  const subtotal =
-    framePrice + lensPrice;
-
-  const hasDiscount =
-    discount > 0 || discountPercent > 0;
-
-  const actualDiscount =
-    discount > 0
-      ? discount
-      : Math.round(
-          subtotal * discountPercent / 100
-        );
-
-  return `
-    <table class="price-table">
-
-      ${
-        framePrice > 0 &&
-        options.showFrame !== false
-          ? `
-            <tr>
-              <td>
-                Frame Price
-              </td>
-
-              <td>
-                ${fmt(framePrice)}
-              </td>
-            </tr>
-          `
-          : ''
-      }
-
-
-      ${
-        lensPrice > 0 &&
-        options.showLens !== false
-          ? `
-            <tr>
-              <td>
-                Lens Price
-              </td>
-
-              <td>
-                ${fmt(lensPrice)}
-              </td>
-            </tr>
-          `
-          : ''
-      }
-
-
-      ${
-        hasDiscount && subtotal > 0
-          ? `
-            <tr class="subtotal">
-
-              <td>
-                Subtotal
-              </td>
-
-              <td>
-                ${fmt(subtotal)}
-              </td>
-
-            </tr>
-          `
-          : ''
-      }
-
-
-      ${
-        hasDiscount
-          ? `
-            <tr class="discount">
-
-              <td>
-                Discount
-                ${
-                  discountPercent > 0
-                    ? ` (${discountPercent}%)`
-                    : ''
-                }
-              </td>
-
-              <td>
-                - ${fmt(actualDiscount)}
-              </td>
-
-            </tr>
-          `
-          : ''
-      }
-
-
-      <tr class="total-row">
-
-        <td>
-          TOTAL PAYABLE
-        </td>
-
-        <td>
-          ${fmt(total)}
-        </td>
-
-      </tr>
-
-    </table>
-  `;
-}
-
-
-// ============================================================
-// BIG TOTAL
-// ============================================================
-
-function bigTotal(label, amount) {
-
-  return `
-    <div class="big-total">
-
-      <div class="big-total-label">
-        ${label}
-      </div>
-
-      <div class="big-total-value">
-        ${fmt(amount)}
-      </div>
-
-    </div>
-  `;
-}
-
-
-// ============================================================
-// PAYMENT SUMMARY
-// ============================================================
-
-function paymentSummary(order) {
-
-  const advance =
-    parseFloat(order.advance_amount || 0);
-
-  const balance =
-    parseFloat(order.balance_amount || 0);
-
-  return `
-    <div class="payment-card">
-
-      <div class="payment-header">
-        Payment Summary
-      </div>
-
-      <div class="payment-row">
-
-        <span class="payment-label">
-          Advance Paid
-        </span>
-
-        <span class="payment-value">
-          ${fmt(advance)}
-        </span>
-
-      </div>
-
-      <div class="payment-row payment-balance">
-
-        <span class="payment-label">
-          Balance Due
-        </span>
-
-        <span class="payment-value">
-          ${fmt(balance)}
-        </span>
-
-      </div>
-
-    </div>
-  `;
-}
-
-
-// ============================================================
-// PAID IN FULL
-// ============================================================
-
-function paidFull(total) {
-
-  return `
-    <div class="paid-full">
-
-      <div class="paid-full-title">
-        ✓ PAID IN FULL
-      </div>
-
-      <div class="paid-full-amount">
-        Total Paid: ${fmt(total)}
-      </div>
-
-    </div>
-  `;
-}
-
-
-// ============================================================
-// BALANCE DUE
-// ============================================================
-
-function balanceDue(balance) {
-
-  return `
-    <div class="balance-due">
-
-      <div class="balance-title">
-        Balance Due on Collection
-      </div>
-
-      <div class="balance-amount">
-        ${fmt(balance)}
-      </div>
-
-    </div>
-  `;
-}
-
-
-// ============================================================
-// GIFTS
-// ============================================================
-
-function giftSection(gifts = []) {
-
-  const validGifts =
-    gifts.filter(
-      (g) => g && g.name
-    );
-
-  if (!validGifts.length) {
-    return '';
-  }
-
-  return `
-    <div class="gift-box">
-
-      <div class="gift-title">
-        Complimentary Gift
-      </div>
-
-      ${validGifts
-        .map(
-          (gift) => `
-            <div class="gift-row">
-
-              <span class="gift-name">
-                ${gift.name}
-              </span>
-
-              <span class="gift-free">
-                FREE
-              </span>
-
-            </div>
-          `
-        )
-        .join('')}
-
-    </div>
-  `;
-}
-
-
-// ============================================================
-// SINGLE BILL
-// ============================================================
-
-function buildSingleBill(order) {
-
-  const total =
-    parseFloat(order.total_amount || 0);
-
-  const advance =
-    parseFloat(order.advance_amount || 0);
-
-  const balance =
-    parseFloat(order.balance_amount || 0);
-
-  const orderDate =
-    order.created_at
-      ? fmtD(order.created_at)
-      : today();
-
-  const gifts =
-    order.bill_gifts || [];
-
-  const body = `
-
-    <div class="body">
-
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        margin-bottom:2.5mm;
-      ">
-
-        <div class="section-label">
-          Order Information
-        </div>
-
-        <div style="
-          font-size:6.8pt;
-          color:#667085;
-          font-weight:600;
-        ">
-
-          Order Date:
-          ${orderDate}
-
-          ${
-            order.deliver_date
-              ? ` &nbsp; · &nbsp; Ready: ${fmtD(order.deliver_date)}`
-              : ''
-          }
-
-        </div>
-
-      </div>
-
-
-      ${customerSection(
-        order,
-        `
-          ${
-            order.warranty_frame
-              ? `
-                <div class="field-label">
-                  Frame Warranty
-                </div>
-
-                <div class="field-value"
-                  style="color:#2F6B45;">
-                  ${order.warranty_frame}
-                </div>
-              `
-              : ''
-          }
-
-          ${
-            order.warranty_lens
-              ? `
-                <div style="margin-top:2mm;">
-                  <div class="field-label">
-                    Lens Warranty
-                  </div>
-
-                  <div class="field-value"
-                    style="color:#2F6B45;">
-                    ${order.warranty_lens}
-                  </div>
-                </div>
-              `
-              : ''
-          }
-        `
-      )}
-
-
-      ${frameLensSection(order)}
-
-
-      <hr class="divider" />
-
-
-      ${priceSection(order)}
-
-
-      ${paymentSummary(order)}
-
-
-      ${
-        balance <= 0
-          ? paidFull(total)
-          : balanceDue(balance)
-      }
-
-
-      ${giftSection(gifts)}
-
-
-      <div class="note-box">
-
-        Please keep this receipt as proof of payment
-        and bring it when collecting your spectacles.
-
-      </div>
-
-    </div>
   `;
 
-  return wrap(
-    body,
-    'Order Receipt',
-    order.order_number,
-    `Date: ${orderDate}`
-  );
+  return wrap(body, 'Order Receipt', order.order_number, `Date: ${orderDate}`);
 }
 
-
-// ============================================================
-// ADVANCE BILL
-// ============================================================
-
+// ── ADVANCE BILL ──────────────────────────────────────────────
 function buildAdvanceBill(order) {
-
-  const total =
-    parseFloat(order.total_amount || 0);
-
-  const advance =
-    parseFloat(order.advance_amount || 0);
-
-  const balance =
-    parseFloat(order.balance_amount || 0);
-
-  const orderDate =
-    order.created_at
-      ? fmtD(order.created_at)
-      : today();
-
-  const gifts =
-    order.bill_gifts || [];
+  const total   = parseFloat(order.total_amount   || 0);
+  const advance = parseFloat(order.advance_amount || 0);
+  const balance = parseFloat(order.balance_amount || 0);
+  const fSell   = parseFloat(order.frame_sell_price || 0);
+  const lSell   = parseFloat(order.lens_sell_price  || 0);
+  const discAmt = parseFloat(order.discount_amount  || 0);
+  const discPct = parseFloat(order.discount_percent || 0);
+  const sub     = (fSell > 0 || lSell > 0) ? fSell + lSell : 0;
+  const gifts   = order.bill_gifts || [];
+  const orderDate = order.created_at ? fmtD(order.created_at) : today();
+  // Frame: only colour (no type/size labels like Medium/Small)
+  const frameColor = order.frame_color || '';
+  // Lens: only type, no company name
+  const lensCoating = order.lens_coating || '';
 
   const body = `
-
-    <div class="body">
-
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        margin-bottom:2.5mm;
-      ">
-
-        <div style="
-          display:inline-block;
-          background:#F3F6FA;
-          color:#102A56;
-          border:1px solid #BFCBDD;
-          border-radius:4px;
-          padding:2mm 3mm;
-          font-size:6.5pt;
-          font-weight:900;
-          letter-spacing:.8px;
-        ">
-          ADVANCE RECEIPT
-        </div>
-
-        <div style="
-          font-size:6.8pt;
-          color:#667085;
-          font-weight:600;
-        ">
-          Order Date: ${orderDate}
-        </div>
-
-      </div>
-
-
-      ${customerSection(
-        order,
-        `
-          <div class="field-label">
-            Collection Date
-          </div>
-
-          <div class="field-value">
-            ${fmtD(order.deliver_date)}
-          </div>
-        `
-      )}
-
-
-      ${frameLensSection(order)}
-
-
-      <hr class="divider" />
-
-
-      ${priceSection(order)}
-
-
-      <div class="payment-card">
-
-        <div class="payment-header">
-          Payment Summary
-        </div>
-
-        <div class="payment-row">
-
-          <span class="payment-label">
-            Total Payable
-          </span>
-
-          <span class="payment-value">
-            ${fmt(total)}
-          </span>
-
-        </div>
-
-        <div class="payment-row">
-
-          <span class="payment-label">
-            Advance Paid Now
-          </span>
-
-          <span class="payment-value">
-            ${fmt(advance)}
-          </span>
-
-        </div>
-
-      </div>
-
-
-      ${bigTotal(
-        'BALANCE DUE ON COLLECTION',
-        balance
-      )}
-
-
-      ${giftSection(gifts)}
-
-
-      <div class="note-box">
-
-        Please bring this receipt when collecting
-        your spectacles. The amount shown above
-        is the remaining balance.
-
-      </div>
-
+  <div class="body">
+    <!-- Top row: badge LEFT, Order Date RIGHT -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
+      <span class="badge badge-advance">ADVANCE RECEIPT</span>
+      <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Order Date: ${orderDate}</span>
     </div>
+
+    <!-- Customer block: left = name/phone/age, right = ready by/warranty -->
+    <div class="cust-block">
+      <div style="flex:1;">
+        <div class="kv" style="margin-bottom:4px;"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
+        <div style="display:flex;gap:8mm;margin-top:4px;">
+          <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
+          <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div class="kv" style="text-align:right;"><div class="k" style="text-align:right;">Ready By</div><div class="v" style="color:#c9a84c;font-size:11pt;">${fmtD(order.deliver_date)}</div></div>
+        ${order.warranty_frame ? `<div class="kv" style="text-align:right;"><div class="k" style="text-align:right;">🛡️ Frame Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_frame}</div></div>` : ''}
+        ${order.warranty_lens  ? `<div class="kv" style="text-align:right;"><div class="k" style="text-align:right;">🛡️ Lens Warranty</div><div class="v" style="color:#15803d;font-weight:700;">${order.warranty_lens}</div></div>` : ''}
+      </div>
+    </div>
+
+    <!-- Frame pill -->
+    <div class="pill-bar pill-bar-frame">
+      <div>
+        <div class="pill-label">Frame</div>
+        <div class="pill-value">${order.frame || '—'}</div>
+      </div>
+      ${frameColor ? `<div class="pill-sub">${frameColor}</div>` : ''}
+    </div>
+
+    <!-- Lens pill -->
+    <div class="pill-bar pill-bar-lens" style="flex-direction:column;align-items:flex-start;gap:3px;">
+      <div class="pill-label">Lens</div>
+      <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+        <div class="pill-value">${order.lens_type || '—'}</div>
+        ${lensCoating ? `<div style="background:#c9a84c;color:#0f1f3d;font-size:7.5pt;font-weight:800;padding:2px 8px;border-radius:10px;letter-spacing:0.3px;">${printCoating(lensCoating)}</div>` : ''}
+      </div>
+    </div>
+
+    <hr class="divider-dashed"/>
+
+    <!-- Payment table -->
+    <table class="price-table">
+      ${(fSell > 0 && order.show_frame_price !== false) ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
+      ${(lSell > 0 && order.show_lens_price  !== false) ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
+      ${sub > 0 && (discAmt > 0 || discPct > 0) ? `<tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>` : ''}
+      ${discAmt > 0 || discPct > 0 ? `
+        <tr class="row-disc"><td style="font-weight:700;">Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td>
+          <td style="font-size:10pt;font-weight:800;color:#dc2626;">- ${fmt(discAmt > 0 ? discAmt : Math.round((sub||total) * discPct / 100))}</td></tr>
+        <tr class="total-row"><td>Net Payable</td><td>${fmt(total)}</td></tr>` :
+        `<tr class="total-row"><td>${sub > 0 ? 'Total' : 'Total Spectacle Price'}</td><td>${fmt(total)}</td></tr>`}
+      <tr class="row-sub"><td>Advance Paid Now</td><td style="color:#15803d;font-weight:700;">- ${fmt(advance)}</td></tr>
+    </table>
+    ${gifts.filter(g=>g.name).length > 0 ? `
+    <div class="gifts-box">
+      <div class="gifts-title">🎁 Complimentary Gifts Included</div>
+      ${gifts.filter(g=>g.name).map(g=>`
+        <div class="gift-row">
+          <span class="gift-name">${g.name}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${g.price ? `<span class="gift-price">${fmt(g.price)}</span>` : ''}
+            <span class="gift-tag">FREE GIFT</span>
+          </div>
+        </div>`).join('')}
+      <div style="font-size:7pt;color:#9ca3af;margin-top:3px;">Above items are complimentary gifts — no charge applied</div>
+    </div>` : ''}
+
+    <div class="amt-box">
+      <span class="lbl">Advance Paid</span>
+      <span class="val">${fmt(advance)}</span>
+    </div>
+
+    ${balance > 0 ? `
+    <div class="bal-box">
+      <span class="lbl">Balance Due on Collection</span>
+      <span class="val">${fmt(balance)}</span>
+    </div>` : `
+    <div style="text-align:center;margin-bottom:2.5mm;">
+      <span class="badge badge-paid">Account Settled</span>
+    </div>`}
+
+    <div class="note-box">Please bring this receipt when collecting your spectacles.</div>
+
+  </div>
   `;
 
-  return wrap(
-    body,
-    'Advance Receipt',
-    order.order_number,
-    `Date: ${orderDate}`
-  );
+  return wrap(body, 'Order Receipt', order.order_number, `Date: ${orderDate}`);
 }
 
-
-// ============================================================
-// FINAL / BALANCE BILL
-// ============================================================
-
+// ── BALANCE BILL ──────────────────────────────────────────────
 function buildBalanceBill(order) {
-
-  const total =
-    parseFloat(order.total_amount || 0);
-
-  const advance =
-    parseFloat(order.advance_amount || 0);
-
-  const balance =
-    parseFloat(order.balance_amount || 0);
-
-  const orderDate =
-    order.created_at
-      ? fmtD(order.created_at)
-      : today();
-
-  const gifts =
-    order.bill_gifts || [];
+  const total   = parseFloat(order.total_amount   || 0);
+  const advance = parseFloat(order.advance_amount || 0);
+  const balance = parseFloat(order.balance_amount || 0);
+  const fSell   = parseFloat(order.frame_sell_price || 0);
+  const lSell   = parseFloat(order.lens_sell_price  || 0);
+  const discAmt = parseFloat(order.discount_amount  || 0);
+  const discPct = parseFloat(order.discount_percent || 0);
+  const sub     = (fSell > 0 || lSell > 0) ? fSell + lSell : 0;
+  const gifts   = order.bill_gifts || [];
+  const orderDate = order.created_at ? fmtD(order.created_at) : today();
+  const frameColor  = order.frame_color  || '';
+  const lensCoating = order.lens_coating || '';
 
   const body = `
-
-    <div class="body">
-
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        margin-bottom:2.5mm;
-      ">
-
-        <div style="
-          display:inline-block;
-          background:#F3FAF5;
-          color:#245738;
-          border:1px solid #A9CFB6;
-          border-radius:4px;
-          padding:2mm 3mm;
-          font-size:6.5pt;
-          font-weight:900;
-          letter-spacing:.8px;
-        ">
-          FINAL RECEIPT
-        </div>
-
-        <div style="
-          font-size:6.8pt;
-          color:#667085;
-          font-weight:600;
-        ">
-          Collected: ${today()}
-        </div>
-
-      </div>
-
-
-      ${customerSection(
-        order,
-        `
-          <div class="field-label">
-            Order Date
-          </div>
-
-          <div class="field-value">
-            ${orderDate}
-          </div>
-
-          <div style="margin-top:2mm;">
-            <div class="field-label">
-              Collection Date
-            </div>
-
-            <div class="field-value">
-              ${today()}
-            </div>
-          </div>
-        `
-      )}
-
-
-      ${frameLensSection(order)}
-
-
-      <hr class="divider" />
-
-
-      ${priceSection(order)}
-
-
-      <div class="payment-card">
-
-        <div class="payment-header">
-          Payment Details
-        </div>
-
-        ${
-          advance > 0
-            ? `
-              <div class="payment-row">
-
-                <span class="payment-label">
-                  Advance Already Paid
-                </span>
-
-                <span class="payment-value">
-                  ${fmt(advance)}
-                </span>
-
-              </div>
-            `
-            : ''
-        }
-
-
-        <div class="payment-row">
-
-          <span class="payment-label">
-            Balance Paid Today
-          </span>
-
-          <span class="payment-value">
-            ${fmt(balance)}
-          </span>
-
-        </div>
-
-      </div>
-
-
-      ${bigTotal(
-        'TOTAL PAID',
-        total
-      )}
-
-
-      ${paidFull(total)}
-
-
-      ${giftSection(gifts)}
-
-
-      <div class="note-box">
-
-        Thank you for choosing
-        ${SHOP_NAME}.
-        Please keep this receipt as proof of payment.
-
-      </div>
-
+  <div class="body">
+    <!-- Top row: badge LEFT, collected date RIGHT -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
+      <span class="badge badge-paid">FINAL RECEIPT</span>
+      <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Collected: ${today()}</span>
     </div>
+
+    <!-- Customer block -->
+    <div class="cust-block">
+      <div style="flex:1;">
+        <div class="kv" style="margin-bottom:4px;"><div class="k">Customer Name</div><div class="v-lg">${order.customer_name || '—'}</div></div>
+        <div style="display:flex;gap:8mm;margin-top:4px;">
+          <div class="kv"><div class="k">Phone</div><div class="v">${order.phone || '—'}</div></div>
+          <div class="kv"><div class="k">Age</div><div class="v">${order.age ? order.age + ' yrs' : '—'}</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="kv"><div class="k">Order Date</div><div class="v">${orderDate}</div></div>
+      </div>
+    </div>
+
+    <!-- Frame pill -->
+    <div class="pill-bar pill-bar-frame">
+      <div>
+        <div class="pill-label">Frame</div>
+        <div class="pill-value">${order.frame || '—'}</div>
+      </div>
+      ${frameColor ? `<div class="pill-sub">${frameColor}</div>` : ''}
+    </div>
+
+    <!-- Lens pill -->
+    <div class="pill-bar pill-bar-lens" style="flex-direction:column;align-items:flex-start;gap:3px;">
+      <div class="pill-label">Lens</div>
+      <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+        <div class="pill-value">${order.lens_type || '—'}</div>
+        ${lensCoating ? `<div style="background:#c9a84c;color:#0f1f3d;font-size:7.5pt;font-weight:800;padding:2px 8px;border-radius:10px;letter-spacing:0.3px;">${printCoating(lensCoating)}</div>` : ''}
+      </div>
+    </div>
+
+    <hr class="divider-dashed"/>
+
+    <!-- Payment table — full breakdown -->
+    <table class="price-table">
+      ${(fSell > 0 && order.show_frame_price !== false) ? `<tr><td>Frame Price</td><td>${fmt(fSell)}</td></tr>` : ''}
+      ${(lSell > 0 && order.show_lens_price  !== false) ? `<tr><td>Lens Price</td><td>${fmt(lSell)}</td></tr>` : ''}
+      ${sub > 0 && (discAmt > 0 || discPct > 0) ? `<tr class="row-sub"><td>Sub Total</td><td>${fmt(sub)}</td></tr>` : ''}
+      ${discAmt > 0 || discPct > 0 ? `
+        <tr class="row-disc"><td style="font-weight:700;">Discount${discPct > 0 ? ' (' + discPct + '%)' : ''}</td>
+          <td style="font-size:10pt;font-weight:800;color:#dc2626;">- ${fmt(discAmt > 0 ? discAmt : Math.round((sub||total) * discPct / 100))}</td></tr>
+        <tr class="total-row"><td>Net Payable</td><td>${fmt(total)}</td></tr>` :
+        `<tr class="total-row"><td>${sub > 0 ? 'Total' : 'Total Spectacle Price'}</td><td>${fmt(total)}</td></tr>`}
+      ${advance > 0 ? `<tr class="row-sub"><td>Advance Already Paid</td><td style="color:#15803d;font-weight:700;">- ${fmt(advance)}</td></tr>` : ''}
+    </table>
+    ${gifts.filter(g=>g.name).length > 0 ? `
+    <div class="gifts-box">
+      <div class="gifts-title">🎁 Complimentary Gifts Included</div>
+      ${gifts.filter(g=>g.name).map(g=>`
+        <div class="gift-row">
+          <span class="gift-name">${g.name}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${g.price ? `<span class="gift-price">${fmt(g.price)}</span>` : ''}
+            <span class="gift-tag">FREE GIFT</span>
+          </div>
+        </div>`).join('')}
+      <div style="font-size:7pt;color:#9ca3af;margin-top:3px;">Above items are complimentary gifts — no charge applied</div>
+    </div>` : ''}
+
+    <div class="amt-box">
+      <span class="lbl">Balance Paid Today</span>
+      <span class="val">${fmt(balance)}</span>
+    </div>
+
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:7px;padding:5px 10px;text-align:center;margin-bottom:3mm;">
+      <span style="font-size:8pt;color:#15803d;font-weight:700;">Account Settled — Total Paid: ${fmt(total)}</span>
+    </div>
+
+    <div class="note-box">Thank you! Please keep this receipt as proof of payment.</div>
+
+  </div>
   `;
 
-  return wrap(
-    body,
-    'Final Receipt',
-    order.order_number,
-    `Collected: ${today()}`
-  );
+  return wrap(body, 'Order Receipt', order.order_number, `Collected: ${today()}`);
 }
 
+// ── QUICK SALE BILL ───────────────────────────────────────────
+function buildQuickSaleBill(sale, items) {
+  const subtotal = parseFloat(sale.subtotal || 0);
+  const discount = parseFloat(sale.discount || 0);
+  const total    = parseFloat(sale.total    || 0);
+  const paid     = parseFloat(sale.amount_paid  || 0);
+  const change   = parseFloat(sale.change_given || 0);
+  const saleDate = sale.created_at ? fmtD(sale.created_at) : today();
+  const payMethod = (sale.payment_method || 'cash').toLowerCase();
+  const payLabel  = payMethod === 'bank' || payMethod === 'transfer' ? 'Bank Transfer' : 'Cash';
 
-// ============================================================
-// QUICK SALE BILL
-// ============================================================
-
-function buildQuickSaleBill(
-  sale,
-  items = []
-) {
-
-  const subtotal =
-    parseFloat(
-      sale.subtotal || 0
-    );
-
-  const discount =
-    parseFloat(
-      sale.discount || 0
-    );
-
-  const total =
-    parseFloat(
-      sale.total || 0
-    );
-
-  const paid =
-    parseFloat(
-      sale.amount_paid || 0
-    );
-
-  const change =
-    parseFloat(
-      sale.change_given || 0
-    );
-
-  const saleDate =
-    sale.created_at
-      ? fmtD(sale.created_at)
-      : today();
-
-  const paymentMethod =
-    String(
-      sale.payment_method || 'cash'
-    ).toLowerCase();
-
-  let paymentLabel = 'Cash';
-
-  if (
-    paymentMethod === 'card'
-  ) {
-    paymentLabel = 'Card';
-  }
-
-  if (
-    paymentMethod === 'bank' ||
-    paymentMethod === 'transfer'
-  ) {
-    paymentLabel = 'Bank Transfer';
-  }
-
-  if (
-    paymentMethod === 'qr'
-  ) {
-    paymentLabel = 'QR Payment';
-  }
-
-
-  const itemRows =
-    items
-      .map((item) => {
-
-        const unitPrice =
-          parseFloat(
-            item.price ||
-            item.unit_price ||
-            0
-          );
-
-        const qty =
-          parseInt(item.qty) || 1;
-
-        const itemDiscount =
-          parseFloat(
-            item.item_discount || 0
-          );
-
-        const gross =
-          unitPrice * qty;
-
-        const lineTotal =
-          gross - itemDiscount;
-
-        return `
-
-          <tr>
-
-            <td>
-
-              <div class="item-name">
-                ${item.name || 'Item'}
-              </div>
-
-              <div class="item-sub">
-                ${fmt(unitPrice)} × ${qty}
-              </div>
-
-            </td>
-
-            <td style="
-              text-align:right;
-              vertical-align:top;
-            ">
-
-              ${
-                itemDiscount > 0
-                  ? `
-                    <div style="
-                      font-size:6.5pt;
-                      color:#98A2B3;
-                      text-decoration:line-through;
-                    ">
-                      ${fmt(gross)}
-                    </div>
-                  `
-                  : ''
-              }
-
-              <div style="
-                font-size:8pt;
-                font-weight:800;
-                color:#172033;
-              ">
-                ${fmt(lineTotal)}
-              </div>
-
-            </td>
-
-          </tr>
-
-        `;
-      })
-      .join('');
-
+  // Build items as price-table rows — each item shows name, unit price, qty, item discount clearly
+  const itemRows = (items || []).map(item => {
+    const unitPrice = parseFloat(item.price || item.unit_price || 0);
+    const qty       = parseInt(item.qty) || 1;
+    const itemDisc  = parseFloat(item.item_discount) || 0;
+    const gross     = unitPrice * qty;
+    const lineTotal = gross - itemDisc;
+    return `
+      <tr>
+        <td style="padding:4px 0 2px;">
+          <div style="font-size:9.5pt;font-weight:700;color:#0f1f3d;">${item.name}</div>
+          <div style="font-size:7.5pt;color:#9ca3af;">Rs. ${unitPrice.toLocaleString()} × ${qty}</div>
+        </td>
+        <td style="text-align:right;vertical-align:top;padding:4px 0 2px;">
+          ${itemDisc > 0
+            ? `<div style="font-size:8pt;color:#9ca3af;text-decoration:line-through;">${fmt(gross)}</div>
+               <div style="font-size:9.5pt;font-weight:700;color:#0f1f3d;">${fmt(lineTotal)}</div>
+               <div style="font-size:7.5pt;color:#dc2626;font-weight:600;">- ${fmt(itemDisc)} disc</div>`
+            : `<div style="font-size:9.5pt;font-weight:700;color:#0f1f3d;">${fmt(lineTotal)}</div>`}
+        </td>
+      </tr>
+      <tr><td colspan="2" style="padding:0;"><hr style="border:none;border-top:1px dashed #d1cdc4;margin:1px 0;"/></td></tr>`;
+  }).join('');
 
   const body = `
-
-    <div class="body">
-
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        margin-bottom:2.5mm;
-      ">
-
-        <div style="
-          background:#F3FAF5;
-          color:#245738;
-          border:1px solid #A9CFB6;
-          border-radius:4px;
-          padding:2mm 3mm;
-          font-size:6.5pt;
-          font-weight:900;
-          letter-spacing:.8px;
-        ">
-          SALES RECEIPT
-        </div>
-
-        <div style="
-          font-size:6.8pt;
-          color:#667085;
-          font-weight:600;
-        ">
-          Date: ${saleDate}
-        </div>
-
-      </div>
-
-
-      <div class="customer-box">
-
-        <div>
-
-          <div class="field-label">
-            Customer
-          </div>
-
-          <div class="field-value-large">
-            ${sale.customer_name || 'Walk-in Customer'}
-          </div>
-
-        </div>
-
-
-        <div>
-
-          <div class="field-label">
-            Payment
-          </div>
-
-          <div class="field-value">
-            ${paymentLabel}
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <div class="detail-card"
-        style="margin-bottom:2.5mm;">
-
-        <div class="detail-header">
-          Items Sold
-        </div>
-
-        <table class="item-table">
-
-          ${itemRows}
-
-        </table>
-
-      </div>
-
-
-      <table class="price-table">
-
-        ${
-          discount > 0
-            ? `
-              <tr>
-
-                <td>
-                  Subtotal
-                </td>
-
-                <td>
-                  ${fmt(
-                    subtotal ||
-                    total + discount
-                  )}
-                </td>
-
-              </tr>
-
-              <tr class="discount">
-
-                <td>
-                  Discount
-                </td>
-
-                <td>
-                  - ${fmt(discount)}
-                </td>
-
-              </tr>
-            `
-            : ''
-        }
-
-
-        <tr class="total-row">
-
-          <td>
-            TOTAL PAYABLE
-          </td>
-
-          <td>
-            ${fmt(total)}
-          </td>
-
-        </tr>
-
-      </table>
-
-
-      ${bigTotal(
-        'TOTAL PAID',
-        paid
-      )}
-
-
-      ${
-        change > 0
-          ? `
-            <div class="payment-card">
-
-              <div class="payment-row">
-
-                <span class="payment-label">
-                  Change Returned
-                </span>
-
-                <span class="payment-value">
-                  ${fmt(change)}
-                </span>
-
-              </div>
-
-            </div>
-          `
-          : ''
-      }
-
-
-      ${giftSection(
-        sale.bill_gifts || []
-      )}
-
-
-      <div class="note-box">
-
-        Thank you for your purchase.
-        Please keep this receipt for your records.
-
-      </div>
-
+  <div class="body">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
+      <span class="badge badge-paid">SALES RECEIPT</span>
+      <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Date: ${saleDate}</span>
     </div>
 
+    ${sale.customer_name || sale.customer_phone ? `
+    <div class="cust-block" style="margin-bottom:3.5mm;">
+      <div style="flex:1;">
+        <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${sale.customer_name || '—'}</div></div>
+      </div>
+      <div><div class="kv"><div class="k">Phone</div><div class="v">${sale.customer_phone || '—'}</div></div></div>
+      <div><div class="kv"><div class="k">Payment</div><div class="v">${payLabel}</div></div></div>
+      <div></div>
+    </div>` : `
+    <div style="background:#f8f7f4;border-radius:7px;padding:5px 9px;margin-bottom:3.5mm;">
+      <div class="kv"><div class="k">Payment Method</div><div class="v">${payLabel}</div></div>
+    </div>`}
+
+    <div style="background:#0f1f3d;border-radius:7px;padding:5px 9px;margin-bottom:0;">
+      <div class="pill-label">Items Sold</div>
+    </div>
+    <table class="price-table" style="margin-bottom:2mm;">${itemRows}</table>
+
+    <hr class="divider-dashed"/>
+
+    <table class="price-table">
+      ${discount > 0 ? `
+        <tr class="row-sub"><td>Sub Total</td><td>${fmt(subtotal || total + discount)}</td></tr>
+        <tr class="row-disc"><td>Discount</td><td>- ${fmt(discount)}</td></tr>
+        <tr class="total-row"><td>Net Payable</td><td>${fmt(total)}</td></tr>` :
+        `<tr class="total-row"><td>Total Amount</td><td>${fmt(total)}</td></tr>`}
+    </table>
+
+    <div class="amt-box">
+      <span class="lbl">Amount Paid</span>
+      <span class="val">${fmt(paid)}</span>
+    </div>
+
+    ${change > 0 ? `
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:7px;padding:5px 10px;text-align:center;margin-bottom:3mm;">
+      <span style="font-size:8pt;color:#15803d;font-weight:700;">Change Returned: ${fmt(change)}</span>
+    </div>` : ''}
+
+    ${(sale.bill_gifts||[]).filter(g=>g.name).length > 0 ? `
+    <div class="gifts-box">
+      <div class="gifts-title">🎁 Complimentary Gifts Included</div>
+      ${(sale.bill_gifts||[]).filter(g=>g.name).map(g=>`
+        <div class="gift-row">
+          <span class="gift-name">${g.name}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${g.price ? `<span class="gift-price">${fmt(g.price)}</span>` : ''}
+            <span class="gift-tag">FREE GIFT</span>
+          </div>
+        </div>`).join('')}
+      <div style="font-size:7pt;color:#9ca3af;margin-top:3px;">Above items are complimentary gifts — no charge applied</div>
+    </div>` : ''}
+
+    <div class="note-box">Thank you for your purchase! Please keep this receipt.</div>
+
+  </div>
   `;
 
-  return wrap(
-    body,
-    'Sales Receipt',
-    sale.sale_number || 'QS',
-    `Date: ${saleDate}`
-  );
+  return wrap(body, 'Sales Receipt', sale.sale_number || 'QS', `Date: ${saleDate}`);
 }
 
-
-// ============================================================
-// REPAIR BILL
-// ============================================================
-
+// ── REPAIR BILL ───────────────────────────────────────────────
 function buildRepairBill(repair) {
-
-  const charge =
-    parseFloat(
-      repair.charge || 0
-    );
-
-  const advance =
-    parseFloat(
-      repair.advance || 0
-    );
-
-  const balance =
-    Math.max(
-      0,
-      charge - advance
-    );
-
-  const repairDate =
-    repair.created_at
-      ? fmtD(repair.created_at)
-      : today();
-
-  const isPaid =
-    balance === 0 ||
-    repair.status === 'collected';
-
-  let statusLabel = 'IN PROGRESS';
-
-  if (isPaid) {
-    statusLabel = 'COLLECTED';
-  } else if (
-    repair.status === 'done'
-  ) {
-    statusLabel = 'READY FOR COLLECTION';
-  }
-
-  const description =
-    repair.frame_description ||
-    repair.description ||
-    '';
-
+  const charge  = parseFloat(repair.charge  || 0);
+  const advance = parseFloat(repair.advance || 0);
+  const balance = Math.max(0, charge - advance);
+  const repairDate  = repair.created_at ? fmtD(repair.created_at) : today();
+  const isFullyPaid = balance === 0 || repair.status === 'collected';
+  const statusLabel = isFullyPaid ? 'COLLECTED' : repair.status === 'done' ? 'READY FOR COLLECTION' : 'IN PROGRESS';
+  const description = repair.frame_description || repair.description || '';
 
   const body = `
-
-    <div class="body">
-
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        margin-bottom:2.5mm;
-      ">
-
-        <div style="
-          background:${
-            isPaid
-              ? '#F3FAF5'
-              : '#F3F6FA'
-          };
-
-          color:${
-            isPaid
-              ? '#245738'
-              : '#102A56'
-          };
-
-          border:1px solid ${
-            isPaid
-              ? '#A9CFB6'
-              : '#BFCBDD'
-          };
-
-          border-radius:4px;
-
-          padding:2mm 3mm;
-
-          font-size:6.5pt;
-
-          font-weight:900;
-
-          letter-spacing:.8px;
-        ">
-          ${statusLabel}
-        </div>
-
-
-        <div style="
-          font-size:6.8pt;
-          color:#667085;
-          font-weight:600;
-        ">
-          Date: ${repairDate}
-        </div>
-
-      </div>
-
-
-      <div class="customer-box">
-
-        <div>
-
-          <div class="field-label">
-            Customer Name
-          </div>
-
-          <div class="field-value-large">
-            ${repair.customer_name || '—'}
-          </div>
-
-        </div>
-
-
-        <div>
-
-          <div class="field-label">
-            Phone
-          </div>
-
-          <div class="field-value">
-            ${repair.phone || '—'}
-          </div>
-
-        </div>
-
-
-        <div>
-
-          <div class="field-label">
-            Ref No.
-          </div>
-
-          <div class="field-value">
-            ${repair.repair_number || '—'}
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <div class="detail-card"
-        style="margin-bottom:2.5mm;">
-
-        <div class="detail-header">
-          Repair Details
-        </div>
-
-        <div class="detail-body">
-
-          <div class="detail-main">
-            ${repair.repair_type || 'General Repair'}
-          </div>
-
-          ${
-            description
-              ? `
-                <div class="detail-sub">
-                  ${description}
-                </div>
-              `
-              : ''
-          }
-
-          ${
-            repair.due_date
-              ? `
-                <div class="detail-sub">
-                  Due: ${fmtD(repair.due_date)}
-                </div>
-              `
-              : ''
-          }
-
-        </div>
-
-      </div>
-
-
-      <table class="price-table">
-
-        <tr>
-
-          <td>
-            Repair Charge
-          </td>
-
-          <td>
-            ${
-              charge > 0
-                ? fmt(charge)
-                : 'Free'
-            }
-          </td>
-
-        </tr>
-
-
-        ${
-          advance > 0
-            ? `
-              <tr class="paid-row">
-
-                <td>
-                  Advance Paid
-                </td>
-
-                <td>
-                  ${fmt(advance)}
-                </td>
-
-              </tr>
-            `
-            : ''
-        }
-
-
-        ${
-          balance > 0
-            ? `
-              <tr class="total-row">
-
-                <td>
-                  BALANCE DUE
-                </td>
-
-                <td>
-                  ${fmt(balance)}
-                </td>
-
-              </tr>
-            `
-            : `
-              <tr class="total-row">
-
-                <td>
-                  TOTAL PAID
-                </td>
-
-                <td>
-                  ${fmt(charge)}
-                </td>
-
-              </tr>
-            `
-        }
-
-      </table>
-
-
-      ${
-        balance > 0
-          ? balanceDue(balance)
-          : paidFull(charge)
-      }
-
-
-      <div class="note-box">
-
-        Please bring this receipt when collecting
-        your repaired item.
-
-      </div>
-
+  <div class="body">
+    <!-- Top row: badge LEFT, date RIGHT -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3.5mm;">
+      <span class="badge ${isFullyPaid ? 'badge-paid' : 'badge-advance'}">${statusLabel}</span>
+      <span style="font-size:7.5pt;font-weight:700;color:#0f1f3d;">Date: ${repairDate}</span>
     </div>
 
+    <!-- Customer block -->
+    <div class="cust-block">
+      <div style="flex:1;">
+        <div class="kv"><div class="k">Customer Name</div><div class="v-lg">${repair.customer_name || '—'}</div></div>
+      </div>
+      <div>
+        <div class="kv"><div class="k">Phone</div><div class="v">${repair.phone || '—'}</div></div>
+      </div>
+      <div>
+        <div class="kv"><div class="k">Ref No.</div><div class="v">${repair.repair_number || '—'}</div></div>
+      </div>
+      <div>
+        ${repair.due_date ? `<div class="kv"><div class="k">Due Date</div><div class="v" style="color:#c9a84c;">${fmtD(repair.due_date)}</div></div>` : ''}
+      </div>
+    </div>
+
+    <!-- Repair type pill -->
+    <div class="pill-bar pill-bar-frame">
+      <div>
+        <div class="pill-label">Repair Type</div>
+        <div class="pill-value">${repair.repair_type || 'General Repair'}</div>
+      </div>
+    </div>
+
+    ${description ? `
+    <!-- Description pill -->
+    <div class="pill-bar pill-bar-lens" style="margin-bottom:3mm;">
+      <div>
+        <div class="pill-label">Description</div>
+        <div class="pill-value" style="font-size:9pt;">${description}</div>
+      </div>
+    </div>` : ''}
+
+    <hr class="divider-dashed"/>
+
+    <!-- Payment table -->
+    <table class="price-table">
+      <tr><td>Repair Charge</td><td style="font-size:10pt;font-weight:800;">${charge > 0 ? fmt(charge) : 'Free'}</td></tr>
+      ${advance > 0 ? `<tr class="row-sub"><td>Advance Paid</td><td style="color:#15803d;font-weight:700;">- ${fmt(advance)}</td></tr>` : ''}
+      ${balance > 0
+        ? `<tr class="total-row"><td>Balance Due</td><td style="color:#dc2626;">${fmt(balance)}</td></tr>`
+        : `<tr class="total-row"><td>Total Paid</td><td style="color:#15803d;">${fmt(charge)}</td></tr>`}
+    </table>
+
+    ${balance > 0 ? `
+    <div class="bal-box">
+      <span class="lbl">Balance Due on Collection</span>
+      <span class="val">${fmt(balance)}</span>
+    </div>` : `
+    <div class="amt-box">
+      <span class="lbl">Total Paid</span>
+      <span class="val">${fmt(charge)}</span>
+    </div>`}
+
+    ${isFullyPaid ? `
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:7px;padding:5px 10px;text-align:center;margin-bottom:3mm;">
+      <span style="font-size:8pt;color:#15803d;font-weight:700;">Account Settled</span>
+    </div>` : ''}
+
+    <div class="note-box">Please bring this receipt when collecting your item.</div>
+
+  </div>
   `;
 
-  return wrap(
-    body,
-    'Repair Receipt',
-    repair.repair_number || 'REP',
-    `Date: ${repairDate}`
-  );
+  return wrap(body, 'Repair Receipt', repair.repair_number || 'REP', `Date: ${repairDate}`);
 }
 
-
-// ============================================================
-// LAB JOB CARD
-// ============================================================
-
+// ── LAB JOB CARD — Quarter A4, folds in half ─────────────────
+// Card is 105mm × 148mm (A6). Folded in half = two 105×74mm panels.
+// TOP PANEL  (0→74mm)  : shop name, order no, patient, date — visible when folded
+// FOLD LINE  (at 74mm) : dashed rule
+// BOTTOM PANEL (74→148mm): frame, lens, Rx, measurements, notes
 function buildLabCardHTML(order) {
+  const ref = order.refraction || order;
+  const orderDate = order.created_at ? fmtD(order.created_at) : today();
+  const rawNotes = order.notes || '';
+  const cleanNotes = rawNotes.replace(/imported from past records/gi,'').replace(/Gifts given:[^\n]*/gi,'').replace(/^[,;\s]+|[,;\s]+$/g,'').trim();
+  const val = v => (v && v !== '—' && v !== '0' && v !== '0.00' && v !== 'Plano' ) ? v : (v==='Plano'?'Plano':'—');
+  const cell = (v,fs='11px') => `<td style="padding:4px 3px;text-align:center;border:1.5px solid #b0bccf;font-size:${fs};font-weight:700;color:#0f1f3d;min-width:14mm;">${val(v)}</td>`;
+  const eyeRow = (eye,sph,cyl,axis,add) => `<tr>
+    <td style="padding:4px 5px;font-weight:800;font-size:9px;border:1.5px solid #b0bccf;background:#eef1f6;text-align:center;">${eye}</td>
+    ${cell(sph)}${cell(cyl)}${cell(axis)}${cell(add)}
+  </tr>`;
+  const pd_r = ref.r_pd || ''; const pd_l = ref.l_pd || '';
+  const pdVal = pd_r && pd_l ? `R: ${pd_r}  L: ${pd_l}` : (pd_r || pd_l || '—');
+  const seg = [order.seg_height_r, order.seg_height_l].filter(Boolean).join(' / ') || '—';
+  const lensCoatPrint = printCoating(order.lens_coating || '—');
 
-  const ref =
-    order.refraction ||
-    order.prescription ||
-    {};
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${order.order_number} Lab Card</title>
+<style>
+  @page { size: 148mm 105mm landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; color: #0f1f3d; width: 148mm; height: 105mm; }
+  .card { width: 148mm; height: 105mm; display: flex; flex-direction: column; }
 
-  const pd =
-    order.pd ||
-    order.pd_value ||
-    '—';
+  /* ── TOP PANEL ── 28mm tall */
+  .top { height: 28mm; display: flex; flex-direction: column; padding: 3mm 5mm 2mm; background: #0f1f3d; position: relative; overflow: hidden; }
+  .top::after { content:''; position:absolute; bottom:-12mm; right:-8mm; width:35mm; height:35mm; border-radius:50%; background:rgba(201,168,76,.10); }
 
-  const seg =
-    order.seg_height ||
-    order.segment_height ||
-    '—';
+  .shop-name { font-size: 10px; font-weight: 900; color: white; letter-spacing: -0.2px; line-height: 1.1; }
+  .shop-sub  { font-size: 5.5px; color: rgba(201,168,76,.9); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
+  .shop-addr { font-size: 5.5px; color: rgba(255,255,255,.55); margin-top: 1px; }
 
-  const lensCoat =
-    order.lens_coating
-      ? printCoating(order.lens_coating)
-      : '—';
+  .order-no { font-size: 15px; font-weight: 900; color: #c9a84c; line-height: 1; letter-spacing: -0.5px; }
+  .order-lbl { font-size: 5px; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1px; }
 
-  const orderDate =
-    order.created_at
-      ? fmtD(order.created_at)
-      : today();
+  .gold-bar { height: 1.5px; background: linear-gradient(90deg,#c9a84c,transparent); margin: 1.5mm 0 1mm; }
 
+  .patient-name { font-size: 13px; font-weight: 900; color: white; line-height: 1.1; }
+  .patient-sub  { font-size: 6px; color: rgba(255,255,255,.6); margin-top: 1px; }
 
-  const eyeRow = (
-    eye,
-    sph,
-    cyl,
-    axis,
-    add
-  ) => `
-    <tr>
+  .send-badge { display: inline-block; background: #c9a84c; color: #0f1f3d; font-size: 5.5px; font-weight: 800; padding: 2px 5px; border-radius: 6px; letter-spacing: 0.3px; text-transform: uppercase; text-align:center; line-height:1.3; }
 
-      <td style="
-        padding:3px;
-        border:1px solid #D9E0EA;
-        font-size:8pt;
-        font-weight:900;
-      ">
-        ${eye}
-      </td>
+  /* ── FOLD LINE ── */
+  .fold { height: 0; border-top: 2px dashed #b0bccf; position: relative; }
+  .fold::before { content: 'FOLD'; position: absolute; left: 50%; transform: translateX(-50%) translateY(-50%); background: white; padding: 0 4px; font-size: 5.5px; color: #9ca3af; letter-spacing: 1.5px; font-weight: 700; }
 
-      <td style="
-        padding:3px;
-        border:1px solid #D9E0EA;
-        text-align:center;
-        font-size:8pt;
-      ">
-        ${sph || '—'}
-      </td>
+  /* ── BOTTOM PANEL ── 74mm tall — detail side */
+  .bot { height: 76mm; padding: 2mm 5mm 2mm; display: flex; flex-direction: column; gap: 2px; }
 
-      <td style="
-        padding:3px;
-        border:1px solid #D9E0EA;
-        text-align:center;
-        font-size:8pt;
-      ">
-        ${cyl || '—'}
-      </td>
+  .sec-hd { background: #0f1f3d; color: #c9a84c; font-size: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 2px 5px; }
+  .sec { border: 1.5px solid #b0bccf; overflow: hidden; margin-bottom: 2px; }
 
-      <td style="
-        padding:3px;
-        border:1px solid #D9E0EA;
-        text-align:center;
-        font-size:8pt;
-      ">
-        ${axis || '—'}
-      </td>
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #eef1f6; padding: 2px 3px; font-size: 6.5px; font-weight: 700; text-transform: uppercase; color: #6b7280; border: 1.5px solid #b0bccf; text-align: center; }
 
-      <td style="
-        padding:3px;
-        border:1px solid #D9E0EA;
-        text-align:center;
-        font-size:8pt;
-      ">
-        ${add || '—'}
-      </td>
+  .info-row { display: flex; gap: 2mm; }
+  .info-cell { flex: 1; }
+  .lbl { font-size: 6px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; margin-bottom: 1px; }
+  .val { font-size: 9px; font-weight: 800; color: #0f1f3d; line-height: 1.3; }
 
-    </tr>
-  `;
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head><body>
+<div class="card">
 
-
-  const body = `
-
-    <div class="body">
-
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        margin-bottom:2.5mm;
-      ">
-
-        <div>
-
-          <div class="section-label">
-            LAB JOB CARD
-          </div>
-
-          <div style="
-            font-size:11pt;
-            font-weight:900;
-            color:#102A56;
-          ">
-            ${order.order_number || '—'}
-          </div>
-
-        </div>
-
-
-        <div style="
-          text-align:right;
-          font-size:6.8pt;
-          color:#667085;
-        ">
-
-          ${orderDate}
-
-          ${
-            order.deliver_date
-              ? `<br/>Due: ${fmtD(order.deliver_date)}`
-              : ''
-          }
-
-        </div>
-
+  <!-- ══ TOP PANEL ══ -->
+  <div class="top">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <div class="shop-name">Wickramakalutota Opticals</div>
+        <div class="shop-sub">Your Trusted Eye Care · Chilaw</div>
+        <div class="shop-addr">No.57, Kurunegala Road · 032 222 1211</div>
       </div>
-
-
-      <div class="customer-box">
-
-        <div>
-
-          <div class="field-label">
-            Patient
-          </div>
-
-          <div class="field-value-large">
-            ${order.customer_name || '—'}
-          </div>
-
-        </div>
-
-
-        <div>
-
-          <div class="field-label">
-            Phone
-          </div>
-
-          <div class="field-value">
-            ${order.phone || '—'}
-          </div>
-
-        </div>
-
+      <div style="text-align:right;">
+        <div class="order-lbl">Order No.</div>
+        <div class="order-no">${order.order_number}</div>
       </div>
-
-
-      ${frameLensSection(order)}
-
-
-      <div class="detail-card"
-        style="margin-bottom:2.5mm;">
-
-        <div class="detail-header">
-          Prescription / Rx
-        </div>
-
-        <table style="
-          width:100%;
-          border-collapse:collapse;
-        ">
-
-          <tr>
-
-            <th style="
-              padding:2mm;
-              background:#F3F6FA;
-              border:1px solid #D9E0EA;
-              font-size:6.5pt;
-            ">
-              EYE
-            </th>
-
-            <th style="
-              padding:2mm;
-              background:#F3F6FA;
-              border:1px solid #D9E0EA;
-              font-size:6.5pt;
-            ">
-              SPH
-            </th>
-
-            <th style="
-              padding:2mm;
-              background:#F3F6FA;
-              border:1px solid #D9E0EA;
-              font-size:6.5pt;
-            ">
-              CYL
-            </th>
-
-            <th style="
-              padding:2mm;
-              background:#F3F6FA;
-              border:1px solid #D9E0EA;
-              font-size:6.5pt;
-            ">
-              AXIS
-            </th>
-
-            <th style="
-              padding:2mm;
-              background:#F3F6FA;
-              border:1px solid #D9E0EA;
-              font-size:6.5pt;
-            ">
-              ADD
-            </th>
-
-          </tr>
-
-          ${eyeRow(
-            'R',
-            ref.r_sph,
-            ref.r_cyl,
-            ref.r_axis,
-            ref.r_add
-          )}
-
-          ${eyeRow(
-            'L',
-            ref.l_sph,
-            ref.l_cyl,
-            ref.l_axis,
-            ref.l_add
-          )}
-
-        </table>
-
-      </div>
-
-
-      <div class="detail-card"
-        style="margin-bottom:2.5mm;">
-
-        <div class="detail-header">
-          Measurements
-        </div>
-
-        <div style="
-          display:grid;
-          grid-template-columns:1fr 1fr 1fr;
-        ">
-
-          <div style="
-            padding:3mm;
-            text-align:center;
-            border-right:1px solid #D9E0EA;
-          ">
-
-            <div class="field-label">
-              PD
-            </div>
-
-            <div class="field-value">
-              ${pd}
-            </div>
-
-          </div>
-
-
-          <div style="
-            padding:3mm;
-            text-align:center;
-            border-right:1px solid #D9E0EA;
-          ">
-
-            <div class="field-label">
-              Seg Height
-            </div>
-
-            <div class="field-value">
-              ${seg}
-            </div>
-
-          </div>
-
-
-          <div style="
-            padding:3mm;
-            text-align:center;
-          ">
-
-            <div class="field-label">
-              Lens Size
-            </div>
-
-            <div class="field-value">
-              ${order.frame_size || '—'}
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <div class="detail-card">
-
-        <div class="detail-header">
-          Lab Instructions
-        </div>
-
-        <div style="
-          padding:3mm;
-          min-height:20mm;
-          font-size:7.5pt;
-          line-height:1.5;
-          color:#172033;
-        ">
-
-          ${
-            order.special_instructions ||
-            order.lab_notes ||
-            order.notes ||
-            'No special instructions.'
-          }
-
-        </div>
-
-      </div>
-
-
     </div>
 
-  `;
+    <div class="gold-bar"></div>
 
+    <div style="display:flex;justify-content:space-between;align-items:center;flex:1;">
+      <div>
+        <div style="font-size:6px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.8px;margin-bottom:1px;">Patient</div>
+        <div class="patient-name">${order.customer_name || '—'}</div>
+        <div class="patient-sub">
+          ${order.phone ? order.phone + ' &nbsp;·&nbsp; ' : ''}${orderDate}
+          ${order.deliver_date ? ' &nbsp;·&nbsp; Due: ' + fmtD(order.deliver_date) : ''}
+        </div>
+      </div>
+      <span class="send-badge">Send with<br/>frame to lab</span>
+    </div>
+  </div>
 
-  return wrap(
-    body,
-    'Lab Job Card',
-    order.order_number,
-    `Date: ${orderDate}`
-  );
+  <!-- ══ FOLD LINE ══ -->
+  <div class="fold"></div>
+
+  <!-- ══ BOTTOM PANEL ══ -->
+  <div class="bot">
+
+    <!-- Frame + Lens row -->
+    <div class="info-row" style="margin-bottom:2px;">
+      <div class="info-cell sec" style="padding:2px 4px;">
+        <div class="sec-hd" style="margin:-2px -4px 2px;">Frame</div>
+        <div class="val">${order.frame || '—'}</div>
+        <div style="display:flex;gap:4mm;margin-top:1px;">
+          <div><div class="lbl">Type</div><div class="val" style="font-size:8px;">${order.frame_type || '—'}</div></div>
+          <div><div class="lbl">Color</div><div class="val" style="font-size:8px;">${order.frame_color || '—'}</div></div>
+        </div>
+      </div>
+      <div class="info-cell sec" style="padding:2px 4px;">
+        <div class="sec-hd" style="margin:-2px -4px 2px;">Lens</div>
+        <div class="val">${order.lens_type || '—'}</div>
+        <div style="display:flex;gap:4mm;margin-top:1px;">
+          <div><div class="lbl">Coating</div><div class="val" style="font-size:8px;">${lensCoatPrint}</div></div>
+          <div><div class="lbl">Index</div><div class="val" style="font-size:8px;">${order.lens_index || 'CR39'}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rx table -->
+    <div class="sec">
+      <div class="sec-hd">Prescription (Rx)</div>
+      <table>
+        <tr><th style="width:16%;text-align:left;padding:2px 4px;">Eye</th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th></tr>
+        ${eyeRow('R', ref.r_sph, ref.r_cyl, ref.r_axis, ref.r_add)}
+        ${eyeRow('L', ref.l_sph, ref.l_cyl, ref.l_axis, ref.l_add)}
+      </table>
+    </div>
+
+    <!-- PD + Seg row -->
+    <div class="sec">
+      <div class="sec-hd">Measurements</div>
+      <table>
+        <tr>
+          <th style="width:34%;">PD (mm)</th>
+          <th style="width:33%;">Seg Height</th>
+          <th style="width:33%;">Lens Size</th>
+        </tr>
+        <tr>
+          <td style="padding:4px;text-align:center;border:1.5px solid #b0bccf;font-size:10px;font-weight:800;">${pdVal}</td>
+          <td style="padding:4px;text-align:center;border:1.5px solid #b0bccf;font-size:10px;font-weight:800;">${seg}</td>
+          <td style="padding:4px;text-align:center;border:1.5px solid #b0bccf;font-size:10px;font-weight:800;">${order.frame_size || '—'}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Special Instructions -->
+    <div class="sec" style="flex:1;">
+      <div class="sec-hd">Special Instructions</div>
+      <div style="padding:3px 5px;min-height:14mm;font-size:9px;font-weight:700;line-height:1.5;">${cleanNotes || ''}</div>
+    </div>
+
+    <div style="margin-top:auto;padding-top:1mm;border-top:1px solid #e0e4ea;font-size:5.5px;color:#9ca3af;display:flex;justify-content:space-between;">
+      <span>Wickramakalutota Opticals</span><span>Printed: ${today()}</span>
+    </div>
+
+  </div>
+</div>
+<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
+</body></html>`;
 }
-
-
-// ============================================================
-// OPEN PRINT WINDOW
-// ============================================================
 
 function openPrint(html) {
-
-  const win =
-    window.open(
-      '',
-      '_blank',
-      'width=700,height=900'
-    );
-
-  if (!win) {
-
-    alert(
-      'Please allow popups to print.'
-    );
-
-    return;
-  }
-
-  win.document.open();
-
-  win.document.write(html);
-
-  win.document.close();
+  const win = window.open('', '_blank', 'width=700,height=900');
+  if (!win) { alert('Please allow popups to print.'); return; }
+  win.document.open(); win.document.write(html); win.document.close();
 }
 
+const C = { navy: '#0f1f3d', gold: '#c9a84c', cream: '#f8f5ef', border: '#e0ddd6', muted: '#6b7280' };
+const fmt2 = n => 'Rs. ' + parseFloat(n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// ============================================================
-// COLORS USED BY PRINT MODAL
-// ============================================================
-
-const C = {
-
-  navy: '#102A56',
-
-  blue: '#6E9BD7',
-
-  light: '#F3F6FA',
-
-  border: '#D9E0EA',
-
-  muted: '#667085',
-
-  green: '#2F6B45',
-
-};
-
-
-// ============================================================
-// MAIN PRINT RECEIPT COMPONENT
-// ============================================================
-
-export default function PrintReceipt({
-  order,
-  onClose,
-}) {
-
-  const [tab, setTab] =
-    useState('advance');
-
+// ── Order PrintReceipt Modal ──────────────────────────────────
+export default function PrintReceipt({ order, onClose }) {
+  const [tab, setTab] = useState('advance');
 
   const TABS = [
-
-    {
-      key: 'single',
-      label: '📋 Single Bill',
-      desc:
-        'Complete order receipt with total payable and payment status.',
-    },
-
-    {
-      key: 'advance',
-      label: '🧾 Advance Bill',
-      desc:
-        'A5 portrait receipt showing total payable, advance paid and balance due.',
-    },
-
-    {
-      key: 'balance',
-      label: '✅ Final Bill',
-      desc:
-        'Final A5 receipt showing total paid and zero balance.',
-    },
-
-    {
-      key: 'lab',
-      label: '🔬 Lab Card',
-      desc:
-        'Lab job card containing frame, lens, Rx and measurements.',
-    },
-
+    { key: 'single',  label: '📋 Single Bill',  desc: 'One bill for both payments — customer signs on balance collection' },
+    { key: 'advance', label: '🧾 Advance Bill',  desc: 'A5 portrait · Advance payment receipt' },
+    { key: 'balance', label: '✅ Balance Bill',  desc: 'A5 portrait · Final receipt when fully paid' },
+    { key: 'lab',     label: '🔬 Lab Job Card',  desc: 'A6 portrait · Send with frame to lab' },
   ];
 
-
-  const currentTab =
-    TABS.find(
-      (t) => t.key === tab
-    );
-
-
   return (
-
-    <div
-
-      style={{
-
-        position: 'fixed',
-
-        inset: 0,
-
-        background:
-          'rgba(16,42,86,.68)',
-
-        zIndex: 1000,
-
-        display: 'flex',
-
-        alignItems: 'center',
-
-        justifyContent: 'center',
-
-        padding: 16,
-
-        fontFamily:
-          "'Inter', Arial, sans-serif",
-
-      }}
-
-      onClick={(e) => {
-
-        if (
-          e.target ===
-          e.currentTarget
-        ) {
-          onClose();
-        }
-
-      }}
-
-    >
-
-      <div
-
-        style={{
-
-          background: '#ffffff',
-
-          borderRadius: 16,
-
-          width: '100%',
-
-          maxWidth: 480,
-
-          overflow: 'hidden',
-
-          boxShadow:
-            '0 24px 80px rgba(0,0,0,.35)',
-
-        }}
-
-      >
-
-        {/* ==================================================
-            MODAL HEADER
-            ================================================== */}
-
-        <div
-
-          style={{
-
-            background: C.navy,
-
-            padding: '17px 20px',
-
-            display: 'flex',
-
-            justifyContent:
-              'space-between',
-
-            alignItems: 'center',
-
-          }}
-
-        >
-
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(15,31,61,.65)', zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      fontFamily: "'DM Sans',sans-serif"
+    }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        background: 'white', borderRadius: 16, width: '100%', maxWidth: 460,
+        boxShadow: '0 24px 80px rgba(0,0,0,.35)', overflow: 'hidden'
+      }}>
+        <div style={{ background: C.navy, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-
-            <div
-
-              style={{
-
-                color: '#ffffff',
-
-                fontWeight: 800,
-
-                fontSize: 16,
-
-              }}
-
-            >
-
-              🖨️ Print Bill
-
-            </div>
-
-
-            <div
-
-              style={{
-
-                color: '#BFD3F2',
-
-                fontSize: 12,
-
-                marginTop: 3,
-
-              }}
-
-            >
-
-              {order.order_number}
-
-              {' · '}
-
-              {order.customer_name}
-
-            </div>
-
+            <div style={{ color: 'white', fontWeight: 700, fontSize: 16 }}>🖨️ Print Bill</div>
+            <div style={{ color: C.gold, fontSize: 12, marginTop: 2 }}>{order.order_number} · {order.customer_name}</div>
           </div>
-
-
-          <button
-
-            onClick={onClose}
-
-            style={{
-
-              background:
-                'rgba(255,255,255,.14)',
-
-              border: 'none',
-
-              color: '#ffffff',
-
-              borderRadius: 8,
-
-              padding: '7px 12px',
-
-              cursor: 'pointer',
-
-              fontSize: 14,
-
-            }}
-
-          >
-
-            ✕
-
-          </button>
-
+          <button onClick={onClose}
+            style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: 'white', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 14 }}>✕</button>
         </div>
-
-
-        {/* ==================================================
-            TABS
-            ================================================== */}
-
-        <div
-
-          style={{
-
-            display: 'flex',
-
-            borderBottom:
-              `1px solid ${C.border}`,
-
-          }}
-
-        >
-
-          {TABS.map((t) => (
-
-            <button
-
-              key={t.key}
-
-              onClick={() =>
-                setTab(t.key)
-              }
-
+        <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}` }}>
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
               style={{
-
-                flex: 1,
-
-                padding:
-                  '11px 5px',
-
-                fontSize: 10.5,
-
-                fontWeight: 700,
-
-                cursor: 'pointer',
-
-                background: 'none',
-
-                border: 'none',
-
-                color:
-                  tab === t.key
-                    ? C.navy
-                    : C.muted,
-
-                borderBottom:
-                  `2.5px solid ${
-                    tab === t.key
-                      ? C.blue
-                      : 'transparent'
-                  }`,
-
-                marginBottom: -1,
-
-              }}
-
-            >
-
+                flex: 1, padding: '11px 6px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                background: 'none', border: 'none', fontFamily: 'inherit',
+                color: tab === t.key ? C.navy : C.muted,
+                borderBottom: `2.5px solid ${tab === t.key ? C.gold : 'transparent'}`,
+                marginBottom: -1
+              }}>
               {t.label}
-
             </button>
-
           ))}
-
         </div>
-
-
-        {/* ==================================================
-            MODAL BODY
-            ================================================== */}
-
-        <div
-
-          style={{
-
-            padding:
-              '18px 20px',
-
+        <div style={{ padding: '18px 20px' }}>
+          <div style={{ background: C.cream, borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: C.muted }}>
+            {TABS.find(t => t.key === tab)?.desc}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+            {[
+              { l: 'Total', v: fmt2(order.total_amount) },
+              { l: 'Advance', v: fmt2(order.advance_amount) },
+              { l: 'Balance', v: fmt2(order.balance_amount) },
+              { l: 'Delivery', v: fmtD(order.deliver_date) },
+              ...(order.warranty_frame ? [{ l: '🛡️ Frame Warranty', v: order.warranty_frame, green: true }] : []),
+              ...(order.warranty_lens  ? [{ l: '🛡️ Lens Warranty',  v: order.warranty_lens,  green: true }] : []),
+            ].map(r => (
+              <div key={r.l} style={{ background: '#f9f9f9', borderRadius: 8, padding: '8px 10px' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: C.muted, marginBottom: 2 }}>{r.l}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: r.green ? '#15803d' : C.navy }}>{r.v || '—'}</div>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => {
+            if (tab === 'single')  openPrint(buildSingleBill(order));
+            if (tab === 'advance') openPrint(buildAdvanceBill(order));
+            if (tab === 'balance') openPrint(buildBalanceBill(order));
+            if (tab === 'lab')     openPrint(buildLabCardHTML(order));
           }}
-
-        >
-
-          {/* DESCRIPTION */}
-
-          <div
-
             style={{
-
-              background: C.light,
-
-              borderRadius: 10,
-
-              padding:
-                '11px 14px',
-
-              marginBottom: 14,
-
-              fontSize: 12,
-
-              lineHeight: 1.45,
-
-              color: C.muted,
-
-            }}
-
-          >
-
-            {currentTab?.desc}
-
-          </div>
-
-
-          {/* ==================================================
-              ORDER SUMMARY
-              ================================================== */}
-
-          <div
-
-            style={{
-
-              display: 'grid',
-
-              gridTemplateColumns:
-                '1fr 1fr',
-
-              gap: 8,
-
-              marginBottom: 16,
-
-            }}
-
-          >
-
-            {/* TOTAL */}
-
-            <div
-
-              style={{
-
-                background: '#F8FAFC',
-
-                border:
-                  `1px solid ${C.border}`,
-
-                borderRadius: 8,
-
-                padding:
-                  '9px 10px',
-
-              }}
-
-            >
-
-              <div
-
-                style={{
-
-                  fontSize: 9,
-
-                  fontWeight: 800,
-
-                  textTransform:
-                    'uppercase',
-
-                  color: C.muted,
-
-                  marginBottom: 3,
-
-                }}
-
-              >
-
-                Total
-
-              </div>
-
-
-              <div
-
-                style={{
-
-                  fontSize: 13,
-
-                  fontWeight: 800,
-
-                  color: C.navy,
-
-                }}
-
-              >
-
-                {fmt(
-                  order.total_amount
-                )}
-
-              </div>
-
-            </div>
-
-
-            {/* ADVANCE */}
-
-            <div
-
-              style={{
-
-                background: '#F8FAFC',
-
-                border:
-                  `1px solid ${C.border}`,
-
-                borderRadius: 8,
-
-                padding:
-                  '9px 10px',
-
-              }}
-
-            >
-
-              <div
-
-                style={{
-
-                  fontSize: 9,
-
-                  fontWeight: 800,
-
-                  textTransform:
-                    'uppercase',
-
-                  color: C.muted,
-
-                  marginBottom: 3,
-
-                }}
-
-              >
-
-                Advance
-
-              </div>
-
-
-              <div
-
-                style={{
-
-                  fontSize: 13,
-
-                  fontWeight: 800,
-
-                  color: C.navy,
-
-                }}
-
-              >
-
-                {fmt(
-                  order.advance_amount
-                )}
-
-              </div>
-
-            </div>
-
-
-            {/* BALANCE */}
-
-            <div
-
-              style={{
-
-                background:
-                  parseFloat(
-                    order.balance_amount || 0
-                  ) > 0
-                    ? '#FFF7F7'
-                    : '#F3FAF5',
-
-                border:
-                  parseFloat(
-                    order.balance_amount || 0
-                  ) > 0
-                    ? '1px solid #E4B8B8'
-                    : '1px solid #A9CFB6',
-
-                borderRadius: 8,
-
-                padding:
-                  '9px 10px',
-
-              }}
-
-            >
-
-              <div
-
-                style={{
-
-                  fontSize: 9,
-
-                  fontWeight: 800,
-
-                  textTransform:
-                    'uppercase',
-
-                  color:
-                    parseFloat(
-                      order.balance_amount || 0
-                    ) > 0
-                      ? '#8F2F2F'
-                      : C.green,
-
-                  marginBottom: 3,
-
-                }}
-
-              >
-
-                Balance
-
-              </div>
-
-
-              <div
-
-                style={{
-
-                  fontSize: 13,
-
-                  fontWeight: 800,
-
-                  color:
-                    parseFloat(
-                      order.balance_amount || 0
-                    ) > 0
-                      ? '#8F2F2F'
-                      : C.green,
-
-                }}
-
-              >
-
-                {fmt(
-                  order.balance_amount
-                )}
-
-              </div>
-
-            </div>
-
-
-            {/* DELIVERY */}
-
-            <div
-
-              style={{
-
-                background: '#F8FAFC',
-
-                border:
-                  `1px solid ${C.border}`,
-
-                borderRadius: 8,
-
-                padding:
-                  '9px 10px',
-
-              }}
-
-            >
-
-              <div
-
-                style={{
-
-                  fontSize: 9,
-
-                  fontWeight: 800,
-
-                  textTransform:
-                    'uppercase',
-
-                  color: C.muted,
-
-                  marginBottom: 3,
-
-                }}
-
-              >
-
-                Collection
-
-              </div>
-
-
-              <div
-
-                style={{
-
-                  fontSize: 11,
-
-                  fontWeight: 700,
-
-                  color: C.navy,
-
-                }}
-
-              >
-
-                {fmtD(
-                  order.deliver_date
-                )}
-
-              </div>
-
-            </div>
-
-
-            {/* FRAME WARRANTY */}
-
-            {order.warranty_frame && (
-
-              <div
-
-                style={{
-
-                  background: '#F3FAF5',
-
-                  border:
-                    '1px solid #A9CFB6',
-
-                  borderRadius: 8,
-
-                  padding:
-                    '9px 10px',
-
-                }}
-
-              >
-
-                <div
-
-                  style={{
-
-                    fontSize: 9,
-
-                    fontWeight: 800,
-
-                    textTransform:
-                      'uppercase',
-
-                    color: C.muted,
-
-                    marginBottom: 3,
-
-                  }}
-
-                >
-
-                  Frame Warranty
-
-                </div>
-
-
-                <div
-
-                  style={{
-
-                    fontSize: 11,
-
-                    fontWeight: 700,
-
-                    color: C.green,
-
-                  }}
-
-                >
-
-                  {order.warranty_frame}
-
-                </div>
-
-              </div>
-
-            )}
-
-
-            {/* LENS WARRANTY */}
-
-            {order.warranty_lens && (
-
-              <div
-
-                style={{
-
-                  background: '#F3FAF5',
-
-                  border:
-                    '1px solid #A9CFB6',
-
-                  borderRadius: 8,
-
-                  padding:
-                    '9px 10px',
-
-                }}
-
-              >
-
-                <div
-
-                  style={{
-
-                    fontSize: 9,
-
-                    fontWeight: 800,
-
-                    textTransform:
-                      'uppercase',
-
-                    color: C.muted,
-
-                    marginBottom: 3,
-
-                  }}
-
-                >
-
-                  Lens Warranty
-
-                </div>
-
-
-                <div
-
-                  style={{
-
-                    fontSize: 11,
-
-                    fontWeight: 700,
-
-                    color: C.green,
-
-                  }}
-
-                >
-
-                  {order.warranty_lens}
-
-                </div>
-
-              </div>
-
-            )}
-
-          </div>
-
-
-          {/* ==================================================
-              PRINT BUTTON
-              ================================================== */}
-
-          <button
-
-            onClick={() => {
-
-              if (
-                tab === 'single'
-              ) {
-
-                openPrint(
-                  buildSingleBill(
-                    order
-                  )
-                );
-
-              }
-
-
-              if (
-                tab === 'advance'
-              ) {
-
-                openPrint(
-                  buildAdvanceBill(
-                    order
-                  )
-                );
-
-              }
-
-
-              if (
-                tab === 'balance'
-              ) {
-
-                openPrint(
-                  buildBalanceBill(
-                    order
-                  )
-                );
-
-              }
-
-
-              if (
-                tab === 'lab'
-              ) {
-
-                openPrint(
-                  buildLabCardHTML(
-                    order
-                  )
-                );
-
-              }
-
-            }}
-
-            style={{
-
-              width: '100%',
-
-              padding: '13px',
-
-              background: C.navy,
-
-              color: '#ffffff',
-
-              border: 'none',
-
-              borderRadius: 10,
-
-              fontSize: 14,
-
-              fontWeight: 800,
-
-              cursor: 'pointer',
-
-            }}
-
-          >
-
-            🖨️ Print{' '}
-
-            {currentTab?.label}
-
+              width: '100%', padding: '13px', background: C.navy, color: C.gold, border: 'none',
+              borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
+            }}>
+            🖨️ Print {TABS.find(t => t.key === tab)?.label}
           </button>
-
-
-          {/* SMALL INFORMATION */}
-
-          <div
-
-            style={{
-
-              marginTop: 10,
-
-              textAlign: 'center',
-
-              fontSize: 10,
-
-              color: '#98A2B3',
-
-            }}
-
-          >
-
-            A5 · 148 × 210 mm
-
-          </div>
-
         </div>
-
       </div>
-
     </div>
-
   );
-
 }
 
-
+/* eslint-disable */
 // ============================================================
-// EXPORTS
+//  PrintReceipt.js — All Bills — Professional Navy + Gold
+//  All bills: A5 portrait (148mm × 210mm) = 1/2 of A4
 // ============================================================
+import React, { useState } from 'react';
 
-export {
+const LOGO = `data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCACMAfQDASIAAhEBAxEB/8QAHQABAQACAwEBAQAAAAAAAAAAAAECBAYHCAUDCf/EAEQQAAEDAwIDBQYDBgELBQAAAAEAAgMEBREGIQcSMQgUQVFhEyJVcZLSMlKBCRUjQmKRQxYXJDRFU2NyobHRJTM1hML/xAAbAQEBAAMBAQEAAAAAAAAAAAAAAQIDBAYFB//EADARAQACAQMBBQYGAwEAAAAAAAABEQIDBFEhBRIxQWEGcYGRofATIjKxweEUI9Fy/9oADAMBAAIRAxEAPwDypj3j81Qr1c75pgrETCK4KIIipBTdBMJhXBKvLsggxjdRZcpQBUYost1MHyUEwmFcFTxQMBMBVUBBiQmFkFScKjHCY3Q+iu6gicqfqruqIAUIV3Q5yoMQFVcFMHxQTHzTCu6m5VFwoQmfVPBBAEIVTxUEwmFdkwgmEVIITCCYVwqPRQ5QMKEKjfxWWEGGEIWW4QOCDENIV5VkhVGO6JugzlQXCmCrgp/dBOXCmFmAfNQ7FBMJgK9UwgmyeKuEwEExlAAD0V6JuVQ6qADzWW6eKgxxurgK4KYQYkKcqzxkIB4IMA1F+mEQYj8TvmsgsR+J3zWSoFMKA5VVEIz4qDZZJhShFURUAmApndEFwETCFBNkwPJFURMIQqmFKGOFQ1XCJSgCjuiuEVGHRZBXARSgTZMJhAyibIgmEwFUQYkY3RXIQEIACvKiYShMD0QY9FMeqAeqClMbKY3VQXHyTCYQq0ACYTKmTnCgYTAV+abJQiKlYl3gguyuAsB81kEsVMIoSgZQoEJwgNVUacqpAIiYVBPFMIgFMIUQOibKIoKmd0wogqIixEz7zvmoNyn87vmVcKgAqiLIERMoCFEQTCYVymUBETwQEKZTIQTdVEUsRVESwRTm36Jn0SxURXwVERMogIURBEQlY5OdlBSAjR4pk+KirUFTJTZCqIgCJupYqioRUBlMJlMoCiZVUE3QA+aqfoghQgJgpulDEBZdEQhAyPNYk5VIKAFQRPmssKEIK0YCqgKKi5RRXKWCJlFQREQTCoCIoHgoqiCY9UWWUUGB/G75lVTHvu38Snigy2KqxBQqi7JkL62ipdOx6lpP8raapnsz3clT3eVzJImn/ABG468vUt8RnxwuRa8LNpLNpXUE1pl0dSzRlrZqOrZd6l0dVTv3jlZvuCP7EEeC5s913dWNLuzMzF+VfWY8GzHTvHvX+//ABwjKi+nJcrS4+7pmlZ8q6oP/ols3ujttTYKK92Onlp2sPdbnTOlMnsZ9yx7Sd/ZyNBxno5jh5LZ+LMTETjMX7v4lO7xL4RQFQj1XYvAbTejdX6jn09qh9whq5me0t8lPUiJshaMvjILDl2PeHyI8lr3e6x2ujlrZxMxj1musrpac6mcYR4y67J9UznpuvWo7OvDz/e30//AHh9i2bb2fuHNHXRVT6a51ojdzexqqwuid/zNaASPTO68xl7b9mRHTvfL+3fHZOvPDyvaLBcK+gkusjWUFnhdyS3Gqy2EO/IzAzK/DoYCfPA3WlcJLaXCK3xzmNvWeoAEkh8+UEhg9Mk+ZK5Lxkl1ZFrestWqpG89ucY6SGCP2VLFTndhgjGzWFuD55zkkhco4P8FLxrERXa+iez2J2HNe5uKiqH/DafwtP53D5Ar7ep2jo7fbxutznEYz1iv485n4fDzcuOhlnn+HhHX7+Tgei9KX/AFjdxa9PUTqqcYMjyeWOFv5pH9Gj/qfAFeouHnAnSWn7WRqKjp9R3KUD2ss7CIY/6Y2Z2H9R3Pp0XYmlNOWTS1njtNgt8NDRs35WDLnu/M9x3c4+Z3U1XqWy6VtD7rfbhDR0rdgX7ue78rGjdzvQL847W9qt52lqfgbSJxxnwiP1T8v2j6vubbs7S0I72p1n6Q+F/mp4ZuO+ibOCfKE/+V1JxZvXBnSImtlg0Zp+9XtuWua2Mmnpj/xHA+84fkb+pC4pxZ453vVjZrVYI5bLZn5a5wfipqW/1uH4Gn8rT8yei6hZG1oAaAAOgC9F2J7O7zprb/Wx/DMZT9Zv6R8/Jw7ve6X6dHGPfX7P1q53VVVJUOip4TI4u9nBEI42+jWjYD0WOEAATPof7L3UREQ+QYRCfRTdBUKKH0z+iBlVTfH4Xf2UygEbq48kyiBj1VATKZQVTI6JnKmBhBchPFTHmqgICibIGVCqB6oUGICyQb9MlMHGcO/sgK5U2TZBd0UyioqbLEfI/2Vx5gj9EBAmfBFATYomyoYCJkJkKAimVdkBBlMhMqgmFMq+CguyhRNlREKqhUoEVARQY/zu+aeOU6vd8yslREKoRBgR+i7A0RU0OrtPR8Pr3UMhronufpqvlOBDM7d1I8+EUh6flfjzXASFgR8/BNlo3GhErjV1MdYnifvx5jozwz7sv2raaooa2eirKeSnqaeR0U0Mgw6N7TgtI8wVaaqmp2zsidhk8fs5Wno5uQRn5EAjyIXPbg3/OPpeS7QsdJrKy04NxYB711o2DAqAPGaMYDx1c3B6hcT0Zpi+6wu7LXp63yVs5wXubtHE0/zPf0a359fAFatPdYTp5TrVjOP6r8I9fdPjE/yynTnvRGPW/B8hzts5wuW1eiNX6Y03b9cVcTLSw1LDRe1qBHVcww5sjYj72M/r4kY3XMDVaD4VEttpptZ60i2dVPbm329/wAQP8AEePPr6t6LrTVF/vWqLvJdr/cZq+sftzyHZg/K1o2a30C0ae41t1nE6eNafOUdcvdHlHrPwiurPLDDSj803l6eXvl7T4Qa4pde6Ngu8fJFXRH2Fwp2/4UwG5H9Lh7w9DjwK5iF4d4Ma7n0BrKK4yGR9qqQIbjAz+aPOzwPzMPvD0yPFe3aOqp6qliqqaVk0EzBJFKw5a9pGQ4HyIIK/J/afsWezN1eEf68usenMfDy9Ho9huv8jT6+MeL4moNF6av9/t19vFqhrK62tc2ndJu0AnPvN6OwdxnOCSuQ9T4klfF1jqmw6StDrpfrlFRwbhgO8krvysYN3H5frheWOLHG7UGrzNbLKZbLZHZaWMf/pFQ3/iPHQH8jdvMla+yuxt/2x3cYmY08elzdR6Rz7o+NMtxutHa3M+M+Xm7h4sccrHpYzWvT4hvd5ZlruV3+jU7v63D8Th+Vv6kLy9qvUl91Vd3XS/3GatqTs3m2ZG38rGjZrfQfrlfJa3AxjA8lkAv1XsnsHadl4/6ovLzynx/qPSHndzvNTcT+aenAAsvBRCV9pyIV6u7C1ir7tpfU8tFqa4WcR3GJrmU1NSyh59iDkmaJ5B8NsBeUTlex/2es8MWkNWCWaOMm6Q45ngf4A80HXnbstldZtW6abWXusvJfbp3B9RBTxOYBI3IAhjYDn1BK5vw47ItoqbDRXHWuo7mKuphZK+ktwZGyHmAPIXua4uIzuQAM9Fxz9obLDLrPSpikZKRbKke64EZ9q3HRepeFev9M630nb7hYbrSTPdTxiamMrRNTv5QHMezqCDkdMHqMhQeadD8D+CnErS9ZddIan1VaTTVklGXXOSAnnYGnm9mQCWkOH8wPXphdS27R1VoPtKaa0tX1tNXup79QPZU0pzHPG+Vha7G+PIjfBB69V3Dw17MNohs94ruMU37snZXP7pJS3aOOI0+M87iQQMknrg46gLqOKj0Va+05pyi4f3Cer09TX23sjqZ5ef2rxKz2jmuwMszsDjBwT0wg948WrPLdOF2qrbbLe2prqu0VUFNCxoDpJHRODWg+BJI3Xmq8dmnh5oXhedT8Q9UXyKrpKUPrG0MsTY3zHpDCHMJcSSGjJ367Dp6d4h6j/yf0HqC/UMtNLU263T1cUbngh7o2Fwad+hIx+q4pqik0rx14INbFVQsprvSNqaKWR456OpAPKSPzMflrh4jmHiqPGHZq4eWTijxHq9P3ee4UNDHb5quPuszPatLZI2taXOaQdnnJwMkeC771F2RdDUjKeqj1ldrdQwyF9dNWyQn+FjYNPK1rTzY952Rjw32697E1uq9P9oW9Wi9MbR11DaaqnqInOGGvbNCDg9CPEHxBBXafb/qmycJLRDDUNcyS+R+0Y2QEOAhlIyPEZwfmoPPc3Cq13/tDVXDnRd+hdZmEPZc56hlQGxNhY+R2WYD3czi0AY36kYK7P4gcD+CvDKx22s1fqDWF1lr61lFH+7Xwc3O4E59mG5DQGnxJ6dV0z2b7No2+cW7Xa9c91/c8scuI6iX2UUswb/DY5wI2JztkZIA8cH2RxY07cNHaCp5eC9k0hYqzvTBVVskdNA2Clw4vkD3jlJB5dznbOASg6y4ldkax0emq656N1FdG1lJA+ZlLcOSZk/KCeQOa1paSBsdxnqF0z2WeGti4raxudnvlXcaWmpbaKuN1G9jXlxka3B5muGMOK/oFe6ykk09XFlVTvBpJMFsgIPuH1XjD9nrJHDxLvplkZGDYQBzOA/x4/NB9zizwA4T6Bq9N/vTVGr4orxchQtjhhgne9zgMe9ytEbQSMnDjvsPFci4gdkzQtu01WXa1aqv1sFBA+pqH1TI6xpjjaXPwwBhzyg4weq3+27NFJU8MvZyxvxqeMnleDge55LuvivVUp4W6taKmHJslaABID/gPVHnjhd2cuEvEDhxQ6ns191jyVjZAyaodBE5r2PLDmIMIG7TtzHbxXnjUfDq4WvjTNwwp7hT1FaLnHQwVUgMcbhIGua9w35cNcCQM9DjK9m9iieCPs4aea6eMESVeznAH/WJPNeaONUVhuHbGuFLqaqijsE94o466T2nKGwmCLmy8fhHgT4DJ2UHY2o+znwt4faDrdUa31XqK6MoY2OmbazBEXFz2sAjYQSd3Dq7ovqx9lTQOqdH0N90fqXUdu/eFIyqpv3iyOUYe0OaHs5WuHUZwf7rta9aKsOmOG1yreEWldJw3xtMDbp3RQljnZHvGV3XDckFzsEgZXLOGtxq6jQNhmv94t9fd3UMRrqinnjfHJNy++Wlnukc2fw7eSo8K9mm1VNm7U9islxjBqaG4VlLOBuznjhmaceYyNl7H7SGlblq3g5eNN6foIprlXyUsUIIDA3/AEiMuc4+DWtBcT5AryrwsIj7cs0nM0Rf5R3Qlxdtjln8V6/4xa5boTh9W6riZFVtoJqZ00LXgufE6eNkgbv+Lkc4j1AUgebOLXAHhXww4dP1BqDUuo6m4CMRU9PFNCwVlUW7NY0xktbnJO55Wg9T16q7OnB+bixdrgKi+RWi12xsZqZmsD5ZHP5uVjA4gDZpJcc422OV7B7QmibPxe4UctsrqSW5RRi4WSpErQHuLchmfyyNPKfIlp8F5u7Fuk+HeodS36m1xTUVXdaUQi32+4P5Wnd4lPsyQHuaQwEHOM9N8oOYXLghwNtPEex8Oqq562q73eKd88M1PUQuhYG834yGe7nkd4HwzjK492g+zVSaC0VWax03qGrrKKhcw1NJXsZ7RrHvDOZr2AA4LhkFvTO/gvQ2pKbUmm+KWjqHSVLpmw6IlLhdSwU9PNPJh3JE1pwSDhhHIMk5yQAsO1zUU8nZz1ewTRFxpocYeCf9YiVHWf7PSGKTSerTJGx5Fzh/E0HH8ELh/E0HH8ELh/e0ObHBrPS7mRtYRaqg+6MA4lb5Ll/7POaGHSWrhJNGzN0hxzPAz/BC4f+0DpI6jWWmGwuZKf3TUj3HA7mUeSDsCx9kjh7XWairZb5qcSVFPHK4NnhABc0E4/h+q6z7NPAjS/Eux6hr75c7xSyW28yUEIo5Y2h0bWtILuZh97JPTHyXr7hjf7RqHQ1mr7PcKasgdRQ5MUgJYQxoLXDq1wIIIO4IXWfZL0rcdC2TV1uv9Za21VRqGWobHT10cxYxzG8pdyn3ScZwcHHgg8xdojhrpHhjxSsmnGXK9GyVdFFVV1TJyS1ETDK9jzGA1oJDW5APivYOjeE3Caq0hZaqn0RYq2Kagp5GVNVbYxNM0xtIe/b8RByfUleZP2gckU3Fq0GFwl/9AYMsIIz7ebbZeseCupLDd+FumJLbdqKoEVqpYpWsmbzRvZE1rmOGctIIIwVB4H4i6b07W8YBpfh3UV9V324uo/Z1tO2BsNU6ocz2bOX/CaMYPkD5L0BVdlnQekNE3DUettS6huDbbRvqqoWxscDcMblwY1wcT5DLhn0XTuo7Tc+FnaNtV91VFBFRvv7rux1PUNnLqXvTiXYbkggHPKd9l7U4iGk4jcGtR23R10tt1lutqmhpHQ1TCx73s90FwPu/r08UHRVn7MPDvXGhLfqjRWpNSWyO40wnpxcmxTgA52e1oaRuPBy6Q0BpKyWbj/BoniDNijukdJyUcAniqqj2sfIx4d0he1xycZAOF7b4TxQcNeCOnrVrW4260T2y3hlWZ6tgZG4FxI5s4PXwz6ZXiPUerrLdu1AdaU9SW2WTU9NVNqJGlv8BkkYMhB3Awwu33wqPZnEjhXwmoeH+oayp0bZrZBBbZ5JKyitkZqKdoYSZIxj8Y6j1C8XcLOGlLxL4pVmmdN3ySmslO19SLhXQgTd3a5rQfZgge0JcBjIA3PovfHEgRas4Wajtlgr7fVz3O01EFI5tUz2cj3xuDfeBIwSRuvFfZ10LpWPjnXaQ4sR0DZaKlc2Gjmqx7CWrzGQwvaeV/uOcQ3OCfPGFB2HrHgfwT0JX6atGobxrS5V9/re5076CWAhr/dBc9oblrcvHTJ6+ScZOyna7Bo+66j0fqC5SPtlNJVSUVwayQSxsaXODZGhpDsAkZBB6bdV3FxKs950lDpn/NVbdKaftpucYvdUY6amMdJzNzyudseYcwOMu6YXNeK1VTu4W6tAnhJNkrQAHj/D1R/LlrsgEHIKzC/CAfwWf8o/7L9ggvRCihCouQiYRYjEfjd8yslP5nfMqqwKoiKhlRyuyZQbVhutysN6pLzaap9LXUcolglb/KuHn5g7gjxBIXNtZ8Vbjd7Q+x6dtNFpS0T5krKa2jldVSu3eXvAB5SScNHhgEldfHcLZ7zBgD92Up9eeX71ya200dXUx1M8bmPD79PLjybMNTLGJxiatptaAMAAAeAWS2u8wfDKX65fvV71B8Mpfql+9dFzwwqOWmQRuu2uHPHG8aP0HNp392x3Gohfi2zTMwynjOS5rwN3AHdoBHUgnAC6x71T/DKX65fvU71T/DKX65fvXJvdlob7TjT3GHei4n4x8WzS1s9HLvYZVL99TX276mu8l2vlfPXVkn88jtmD8rW9Gt9BgL5oGFuGqg+GUv1x/eneoPhlJ9Uv3rpwxjTxjHDGojyimEz3puZagKq2e9QfDKT65fvTvVP8Mpfrl+9ZXPCVHLXTK2O9QfDKX65fvV71T/DKX65fvS54Kjlq5TlytrvdP8Mpfrl+9BVU/hbaX65fvS54Kjlq8uEAw8PaSHDo4bH+62u9QfDaX65fvTvMHw2l+uX70v0K9WtKXyge1e6TH53F3/dY8oPXdbXeoB/syl+uX71RV0/wyl+uX70v0K9Wpg+BwmPVbXeoPhlL9cv3p3qn+GUv1S/elzwVHLV3Hip16hbfeqf4ZS/XL96d7p/hlJ9cv3pc8FQ1SARjGQeowjsuYGOJcwfyuOQP06La73T/AAyk+uX7073B8MpPrl+9LngqOWqMjoSPkhW0Kqn+GUn1y/ene6f4ZSfXL96XPBXq1d+mUAW13un+GUn1y/ene4PhlL9cv3pc8FQ1iT0yVBgdFtd7g+GUn1S/er3un+GUn1y/epc8FerUyfZ+zBcGH+TJ5f7dFGsAAwAAOmFud7p/hlJ9Uv3p3uD4ZSfXL96tzwU1QCPEpl3TJ/utrvdP8MpPrl+9O9U/wyk+uX70ueCo5afKFC1pIJAJByDjxW73qn+GUn1y/ene6f4ZS/VL96XPBXq1nySSEGSR7y3oXOJx8srE7/iOfmtrvdP8MpPrl+9BU0+f/jKX65fvUueCo5aoA8Ag26Lb71Tj/ZlJ9cv3p3qD4ZSfXL96XPBXq1mPewkse5hd1LXEZ+eFgGMGcADJycDqt3vdP8LpPrl+9O90/haqP65fvTvTwV6vzoKOsr6uOjoaaeqqJDiOKFhe5x9AF9CbSeoYo5pnWeZ4haXzexcyV0bR1LgxxcAPMjZfnpm9VFhuc9ZBFHLHU00tLUQPc5rXwyDDmhwPM046OByMeO6+hp3UFq01c2XexWepbcoWPbTvqa0PjiLmlpPK1jS/YnZxx5grVnlqxM92Pv59Pq2YY6cx+aXHoYJpgPYwTSZPKOSMuyeuNh1X6UlJWPuDKOmp6gVkrwxsTGObI5x6DHXK5Zp/U1rt3C6tsUpru+1F5ZUFlLUOgf7IRYLuflLT7wxynr18FoXrVs9dUWF9PBLG2x/+xJPUmaom/iB5EkuASNsAAYAJUjU1ZymIxXuacREzk+ZNZLwb620VlHNDcedzBHVnkIc3OfeeceB3ytGCGWeT2cEMs0nXljYXO/sFyyLWbIuJUOs46Ose5tRLUPpZaznaC8OBax3KOVo5umCtKyakiodOVthnop/YVVU2q7xR1RgqA5rSORzsEPZvnlI2O6RnrV1x4/v5E46d9Muf6cddG6J5idG6N4OCwt5SD5Y81+1RQ1cTCaihqY2hvMfaQOaMee46eq5DQavmt+sKPUNPTzVHdIfYsjrqt08hbyFufaEAtcM5aQPdOMLYh1lFT2K+2qKG81LbxS93c6uupmER5w7mDeQAnbGTurlqasVWPHn8/kRhpz45ON1tBXwWygrquN4o60PNI97w5r/Zu5XYGdsHboF+U1LVwRtknpqmGN/4XSROa13yJG6+zW6kfPZNNW6KjEBsT5nNlbJvMXyiTy93GMZ3819HVGs2Xy11tLLRVbp6ydk7ppqvPI5pyfdY1rXk5xlwyPDdSM9W4vHzn9+n06nd06n833X/AFw/qqoNllldLSDZCUKhGUDdEHRFAz7zvmVVP5nfNVUFFUVBETCAiYRKDCYRMICIiAoVUIQRRUBFKDCYVUwlCIssJhKETdMbqoIomPVUBBAVcphYoMk/VY5KuCguyhPkmUQXfzUV8EIQT9UyVcJhQRXZTdMnxVF2QkIE5QgmQrlMBEDKmfVUBMIImFTtuoN1AwEV8FAEFCYRFaADzTARAoJsn9lU2REHRUIqqoiYRKBERBFVFQgZTclEHVUMIqilDH+Z3zVQ/id8yiQCJ4rJUQBXAVREYkKLIqYQtNlQMqFUHCKm6ZWRWKIY28VFmDssevRARMFMFFERMICYTKICImUBEyiCKoiAoVcplBAFUUUFRRVUEREBQjKqIJhVMpugImCmNkBFAqoIp4rJEoTCuPJEyqCIiAieCfogIiICIhCAiiqCk+SiYRARN1uWS1115ucVut1O6eolOA0dGjzcfADzKDTVAX7XCjqrfWy0VbA+CoicWvjeMEH/AMeq/EFARUFFLGJ/E75lRXHvO+ah6qWMgqVjhXHqlhlMqYTCWLzJlYq49UsXPom3kpgIQEsZZRYfqrv5pYpOFMqJhLF5k5lOUZV5Qli8yhKYTASwzlMqYVACtgiiqWCK4UIUsMophMK2KmygG6ywFLEVIU6J1VsUYQkeCxwmFLFB3V5vRY4QhLFQqAbqkK2Lj1VJAWICFLF5lchYBVLF2T3VFBulilEIUSxk0+au3osEwljIkKKYT9VLFVyplEsCiAIRulgCsshYYVASxdvJRMJhWxcpzeixCBLKZsfyvDuVpwc4cMg/MeK7G4e8R47TNHQXK10FPRSENfUUdOInM/qc0fjH/X5rrZXxSxz3XvEM36d9PS2i390YS2OWqpxLM4eYJ2b8guBEjOVMKOUsZZCKsaCDlEsf/9k=`;
 
-  buildSingleBill,
+const fmt = n => 'Rs. ' + parseFloat(n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const printCoating = c => ({ 'Blue Cut':'Blue Filter', 'Photo Gray':'Photochromic', 'Blue Cut + Photo Gray':'Blue Filter + Photochromic', 'Blue Cut + HMC':'Blue Filter + HMC', 'Photo Gray + HMC':'Photochromic + HMC', 'Blue Cut + Photo Gray + HMC':'Blue Filter + Photochromic + HMC' }[c] || c);
+const fmtD = d => { if (!d) return '—'; const s = String(d).slice(0, 10); if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [y, m, dy] = s.split('-'); return new Date(+y, +m - 1, +dy).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }); } const dt = new Date(d); return isNaN(dt) ? '—' : dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }); };
+const today = () => new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 
-  buildAdvanceBill,
+// ── Shared CSS matching user provided invoice design ────────────────
+const PAGE_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  @page { size: 148mm 210mm portrait; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', Arial, sans-serif; background: white; color: #0b1e48; width: 148mm; height: 210mm; overflow: hidden; position: relative; }
+  .page { width: 148mm; height: 210mm; position: relative; display: flex; flex-direction: column; background: #ffffff; }
 
-  buildBalanceBill,
+  /* HEADER */
+  .hdr { padding: 4mm 6mm 2mm; text-align: center; }
+  .hdr-logo-title { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .logo-svg { width: 38px; height: 26px; fill: none; stroke: #0b1e48; stroke-width: 2.2; }
+  .shop-title { font-size: 16pt; font-weight: 900; color: #0b1e48; letter-spacing: 0.5px; text-transform: uppercase; font-family: 'Inter', sans-serif; }
+  .shop-subtitle { font-size: 6.5pt; color: #3b5998; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; margin-top: 1px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .shop-subtitle::before, .shop-subtitle::after { content: ''; display: inline-block; width: 25px; height: 1px; background: #0b1e48; opacity: 0.4; }
+  .shop-contact-bar { font-size: 7.5pt; color: #0b1e48; margin-top: 3px; font-weight: 600; display: flex; justify-content: center; align-items: center; gap: 8px; }
 
-  buildQuickSaleBill,
+  /* ORDER RECEIPT & NO BAR */
+  .title-bar { display: flex; justify-content: space-between; align-items: center; margin: 2mm 6mm; gap: 4mm; }
+  .order-receipt-badge { background: #0b1e48; color: white; font-size: 11pt; font-weight: 800; padding: 3px 20px; border-radius: 6px; letter-spacing: 1px; text-transform: uppercase; flex: 1; text-align: center; }
+  .order-no-box { border: 1.5px solid #0b1e48; border-radius: 6px; padding: 2px 8px; text-align: center; min-width: 28mm; background: #f0f4f9; }
+  .order-no-val { font-size: 9pt; font-weight: 800; color: #0b1e48; line-height: 1.1; }
+  .order-date-val { font-size: 6.5pt; color: #475569; font-weight: 600; }
 
-  buildRepairBill,
+  /* BODY CONTAINER */
+  .body { padding: 1mm 6mm 2mm; flex: 1; display: flex; flex-direction: column; gap: 2mm; }
 
-  buildLabCardHTML,
+  /* CUSTOMER DETAILS BOX */
+  .cust-card { background: #ebf3fa; border-radius: 8px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; border: 1px solid #d0e1f4; }
+  .user-avatar { width: 26px; height: 26px; background: #0b1e48; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
+  .cust-info-main { flex: 1; }
+  .cust-name { font-size: 9.5pt; font-weight: 800; color: #0b1e48; line-height: 1.2; }
+  .cust-phone { font-size: 7.5pt; font-weight: 600; color: #334155; margin-top: 1px; display: flex; align-items: center; gap: 3px; }
+  .cust-divider { width: 1px; height: 20px; background: #cbd5e1; }
+  .cust-meta-item { text-align: left; padding: 0 4px; }
+  .cust-meta-lbl { font-size: 6.5pt; color: #475569; font-weight: 500; }
+  .cust-meta-val { font-size: 8pt; font-weight: 700; color: #0b1e48; margin-top: 1px; }
 
-  openPrint,
+  /* TWO COLUMN SPEC CARDS (FRAME & LENS) */
+  .spec-grid { display: flex; gap: 3mm; }
+  .spec-card { flex: 1; border: 1.5px solid #0b1e48; border-radius: 8px; overflow: hidden; background: white; }
+  .spec-header { background: #0b1e48; color: white; padding: 3px 8px; font-size: 7pt; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; display: flex; align-items: center; gap: 5px; }
+  .spec-body { padding: 6px 8px; font-size: 7.5pt; color: #0b1e48; font-weight: 700; line-height: 1.4; }
+  .spec-row { display: flex; margin-bottom: 1px; }
+  .spec-key { width: 14mm; color: #334155; font-weight: 600; }
+  .spec-val { flex: 1; color: #0b1e48; font-weight: 800; }
 
+  /* DESCRIPTION & PRICE TABLE */
+  .price-card { border: 1.5px solid #0b1e48; border-radius: 6px; overflow: hidden; }
+  .price-table { width: 100%; border-collapse: collapse; }
+  .price-table th { background: #0b1e48; color: white; padding: 4px 8px; font-size: 7pt; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; }
+  .price-table th:first-child { text-align: left; }
+  .price-table th:last-child { text-align: right; }
+  .price-table td { padding: 4px 8px; font-size: 8pt; color: #0b1e48; font-weight: 700; border-bottom: 1px solid #e2e8f0; }
+  .price-table td:last-child { text-align: right; }
+  .price-table tr:last-child td { border-bottom: none; }
+  .price-table .row-subtd { background: #f8fafc; font-weight: 700; }
+  .price-table .row-disc { color: #dc2626; }
+  .price-table .total-row td { background: #0b1e48; color: white; font-size: 9.5pt; font-weight: 900; padding: 5px 8px; }
+
+  /* PAYMENT DETAILS BLOCK */
+  .pay-grid { display: flex; border: 1.5px solid #0b1e48; border-radius: 8px; overflow: hidden; }
+  .pay-info { flex: 1.2; padding: 6px 10px; background: #f8fafc; display: flex; flex-direction: column; justify-content: center; }
+  .pay-title { font-size: 7pt; font-weight: 800; color: #0b1e48; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .pay-row { display: flex; justify-content: space-between; font-size: 8pt; font-weight: 700; color: #0b1e48; margin-bottom: 2px; }
+  .pay-divider-v { width: 1.5px; background: #0b1e48; }
+  .pay-badge-box { flex: 1; background: #0b1e48; color: white; padding: 6px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .pay-badge-title { font-size: 8.5pt; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; gap: 4px; }
+  .pay-badge-sub { font-size: 6.5pt; color: #cbd5e1; margin-top: 1px; opacity: 0.9; }
+  .pay-badge-val { font-size: 10.5pt; font-weight: 900; color: #white; margin-top: 1px; }
+
+  /* COMPLIMENTARY GIFT BOX */
+  .gift-card { background: #ebf3fa; border-radius: 8px; border: 1px dashed #0b1e48; padding: 5px 10px; display: flex; align-items: center; justify-content: space-between; }
+  .gift-left { display: flex; align-items: center; gap: 8px; }
+  .gift-icon { width: 22px; height: 22px; color: #0b1e48; }
+  .gift-title { font-size: 7pt; font-weight: 800; color: #0b1e48; text-transform: uppercase; letter-spacing: 0.5px; }
+  .gift-val { font-size: 8.5pt; font-weight: 800; color: #0b1e48; }
+  .gift-right { font-size: 7pt; font-style: italic; color: #475569; font-weight: 500; }
+
+  /* FOOTER */
+  .footer { text-align: center; padding: 2mm 6mm 3mm; margin-top: auto; }
+  .footer-thankyou { font-size: 10.5pt; font-weight: 900; color: #0b1e48; font-style: italic; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .footer-sub { font-size: 6.5pt; color: #475569; margin-top: 2px; font-weight: 600; }
+
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+`;
+
+function hdr(billType, billNo, dateStr) {
+  return `
+  <div class="hdr" id="header">
+    <div class="hdr-logo-title">
+      <svg class="logo-svg" viewBox="0 0 100 60">
+        <path d="M10 25 C30 5, 70 5, 90 25 C70 45, 30 45, 10 25 Z" stroke="#0b1e48" stroke-width="4" fill="none"/>
+        <circle cx="50" cy="25" r="10" stroke="#0b1e48" stroke-width="4" fill="none"/>
+        <circle cx="50" cy="25" r="4" fill="#0b1e48"/>
+        <path d="M12 40 C25 32, 45 32, 48 40 C48 48, 25 52, 12 40 Z" stroke="#0b1e48" stroke-width="3" fill="none"/>
+        <path d="M88 40 C75 32, 55 32, 52 40 C52 48, 75 52, 88 40 Z" stroke="#0b1e48" stroke-width="3" fill="none"/>
+        <path d="M48 40 L52 40" stroke="#0b1e48" stroke-width="3"/>
+      </svg>
+      <span class="shop-title">WICKRAMAKALUTOTA OPTICAL</span>
+    </div>
+    <div class="shop-subtitle">YOUR TRUSTED EYE CARE</div>
+    <div class="shop-contact-bar">
+      <span>📍 No.57, Kurunegala Road, Chilaw</span>
+      <span>|</span>
+      <span>📞 032 222 1211</span>
+      <span>|</span>
+      <span>📱 071 194 1211</span>
+    </div>
+  </div>
+  <div class="title-bar">
+    <div class="order-receipt-badge">${billType}</div>
+    <div class="order-no-box">
+      <div class="order-no-val">${billNo}</div>
+      <div class="order-date-val">${dateStr}</div>
+    </div>
+  </div>`;
+}
+
+function ftr() {
+  return `
+  <div class="footer" id="footer">
+    <div class="footer-thankyou">
+      Thank you for choosing Wickramakalutota Optical!
+    </div>
+    <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:2px;">
+      <span style="display:inline-block; width:40px; height:1px; background:#0b1e48; opacity:0.3;"></span>
+      <svg width="20" height="10" viewBox="0 0 60 30" fill="none" stroke="#0b1e48" stroke-width="3">
+        <circle cx="15" cy="15" r="10"/><circle cx="45" cy="15" r="10"/><line x1="25" y1="15" x2="35" y2="15"/>
+      </svg>
+      <span style="display:inline-block; width:40px; height:1px; background:#0b1e48; opacity:0.3;"></span>
+    </div>
+    <div class="footer-sub">Please keep this receipt as proof of payment.</div>
+  </div>`;
+}
+
+function wrap(bodyHTML, billType, billNo, dateStr) {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>${billNo}</title>
+<style>${PAGE_CSS}</style>
+</head><body>
+<div class="page" id="page">
+${hdr(billType, billNo, dateStr)}
+<div id="content-inner" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+${bodyHTML}
+</div>
+${ftr()}
+</div>
+<script>
+window.onload = function() {
+  var inner = document.getElementById('content-inner');
+  var footer = document.getElementById('footer');
+  var header = document.getElementById('header');
+  if (!inner) { window.print(); return; }
+
+  var mmPx = 96 / 25.4;
+  var totalH = 210 * mmPx;
+  var hdrH   = header ? header.offsetHeight : 0;
+  var ftrH   = footer ? footer.offsetHeight : 0;
+  var avail  = totalH - hdrH - ftrH - (4 * mmPx);
+
+  var innerH = inner.scrollHeight;
+  if (innerH > avail) {
+    var scale = avail / innerH;
+    inner.style.zoom = Math.max(0.65, scale);
+  }
+  setTimeout(function() {
+    window.print();
+    window.onafterprint = function() { window.close(); };
+  }, 400);
 };
+<\/script>
+</body></html>`;
+}
+
+// ── SINGLE BILL (one bill for both payments) ──────────────────
+function buildSingleBill(order) {
+  const total   = parseFloat(order.total_amount   || 0);
+  const advance = parseFloat(order.advance_amount || 0);
+  const balance = parseFloat(order.balance_amount || 0);
+  const fSell   = parseFloat(order.frame_sell_price || 0);
+  const lSell   = parseFloat(order.lens_sell_price  || 0);
+  const discAmt = parseFloat(order.discount_amount  || 0);
+  const discPct = parseFloat(order.discount_percent || 0);
+  const sub     = (fSell > 0 || lSell > 0) ? fSell + lSell : total;
+  const gifts   = order.bill_gifts || [];
+  const orderDate  = order.created_at ? fmtD(order.created_at) : today();
+
+  const isPaidFull = balance <= 0;
+
+  const body = `
+  <div class="body">
+    <!-- Customer Details Card -->
+    <div class="cust-card">
+      <div class="user-avatar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      </div>
+      <div class="cust-info-main">
+        <div class="cust-name">${order.customer_name || 'Mrs. Irangani Rajapaksa'}</div>
+        <div class="cust-phone">📞 ${order.phone || '0701659310'}</div>
+      </div>
+      <div class="cust-divider"></div>
+      <div class="cust-meta-item">
+        <div class="cust-meta-lbl">Age</div>
+        <div class="cust-meta-val">${order.age ? order.age + ' yrs' : '42 yrs'}</div>
+      </div>
+      <div class="cust-divider"></div>
+      <div class="cust-meta-item">
+        <div class="cust-meta-lbl">Order Date</div>
+        <div class="cust-meta-val">${orderDate}</div>
+      </div>
+    </div>
+
+    <!-- Frame & Lens Spec Cards -->
+    <div class="spec-grid">
+      <!-- Frame Details -->
+      <div class="spec-card">
+        <div class="spec-header">
+          <svg width="14" height="10" viewBox="0 0 60 30" fill="none" stroke="currentColor" stroke-width="4"><circle cx="15" cy="15" r="10"/><circle cx="45" cy="15" r="10"/><line x1="25" y1="15" x2="35" y2="15"/></svg>
+          FRAME DETAILS
+        </div>
+        <div class="spec-body">
+          <div class="spec-row"><span class="spec-key">Brand</span><span class="spec-val">: ${order.frame_brand || order.frame || 'POLICE'}</span></div>
+          <div class="spec-row"><span class="spec-key">Model</span><span class="spec-val">: ${order.frame_model || '8218-50-18-136'}</span></div>
+          <div class="spec-row"><span class="spec-key">Color</span><span class="spec-val">: ${order.frame_color || 'Purple'}</span></div>
+          <div class="spec-row"><span class="spec-key">Size</span><span class="spec-val">: ${order.frame_size || 'Medium'}</span></div>
+        </div>
+      </div>
+
+      <!-- Lens Details -->
+      <div class="spec-card">
+        <div class="spec-header">
+          <svg width="14" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="12" r="6"/><circle cx="16" cy="12" r="6"/></svg>
+          LENS DETAILS
+        </div>
+        <div class="spec-body" style="font-size: 8.5pt; font-weight: 800; padding-top: 8px;">
+          ${order.lens_type || 'Bifocal Blue Filter +'}<br/>
+          ${order.lens_coating ? printCoating(order.lens_coating) : 'Photochromic'}
+        </div>
+      </div>
+    </div>
+
+    <!-- Description / Price Table -->
+    <div class="price-card">
+      <table class="price-table">
+        <thead>
+          <tr>
+            <th>DESCRIPTION</th>
+            <th>AMOUNT (Rs.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Frame Price</td>
+            <td>${fmt(fSell > 0 ? fSell : 7000)}</td>
+          </tr>
+          <tr>
+            <td>Lens Price</td>
+            <td>${fmt(lSell > 0 ? lSell : 12500)}</td>
+          </tr>
+          ${(discAmt > 0 || discPct > 0) ? `
+          <tr class="row-subtd">
+            <td>Subtotal</td>
+            <td>${fmt(sub)}</td>
+          </tr>
+          <tr class="row-disc">
+            <td>Discount</td>
+            <td>- ${fmt(discAmt > 0 ? discAmt : Math.round(sub * discPct / 100))}</td>
+          </tr>` : ''}
+          <tr class="total-row">
+            <td>TOTAL PAYABLE</td>
+            <td>${fmt(total > 0 ? total : 17000)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Payment Details Block -->
+    <div class="pay-grid">
+      <div class="pay-info">
+        <div class="pay-title">PAYMENT DETAILS</div>
+        <div class="pay-row">
+          <span>Advance Paid</span>
+          <span>${fmt(advance > 0 ? advance : (isPaidFull ? total : 17000))}</span>
+        </div>
+        <div class="pay-row" style="margin-bottom:0;">
+          <span>Balance</span>
+          <span>${fmt(balance)}</span>
+        </div>
+      </div>
+      <div class="pay-divider-v"></div>
+      <div class="pay-badge-box">
+        <div class="pay-badge-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          ${isPaidFull ? 'PAID IN FULL' : 'PARTIALLY PAID'}
+        </div>
+        <div class="pay-badge-sub">✓ Total Paid:</div>
+        <div class="pay-badge-val">${fmt(advance > 0 ? advance : total)}</div>
+      </div>
+    </div>
+
+    <!-- Complimentary Gift Card -->
+    <div class="gift-card">
+      <div class="gift-left">
+        <svg class="gift-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+        <div>
+          <div class="gift-title">COMPLIMENTARY GIFT</div>
+          <div class="gift-val">${gifts.length > 0 && gifts[0].name ? gifts[0].name + ' × 1' : 'Lens Cleaner × 1'} — FREE</div>
+        </div>
+      </div>
+      <div class="gift-right">Above item is complimentary gift —<br/>no charge applied.</div>
+    </div>
+  </div>
+  `;
+
+  return wrap(body, 'ORDER RECEIPT', order.order_number || 'KO-0103', `${orderDate}`);
+}
+
+// ── ADVANCE BILL ──────────────────────────────────────────────
+function buildAdvanceBill(order) {
+  return buildSingleBill(order);
+}
+
+// ── BALANCE BILL ──────────────────────────────────────────────
+function buildBalanceBill(order) {
+  return buildSingleBill(order);
+}
+
+// ── QUICK SALE BILL ───────────────────────────────────────────
+function buildQuickSaleBill(sale, items) {
+  const subtotal = parseFloat(sale.subtotal || 0);
+  const discount = parseFloat(sale.discount || 0);
+  const total    = parseFloat(sale.total    || 0);
+  const paid     = parseFloat(sale.amount_paid  || 0);
+  const saleDate = sale.created_at ? fmtD(sale.created_at) : today();
+
+  const itemRows = (items || []).map(item => `
+    <tr>
+      <td>${item.name}</td>
+      <td>${fmt(parseFloat(item.price || item.unit_price || 0) * (parseInt(item.qty) || 1))}</td>
+    </tr>
+  `).join('');
+
+  const body = `
+  <div class="body">
+    <div class="cust-card">
+      <div class="cust-info-main">
+        <div class="cust-name">${sale.customer_name || 'Walk-in Customer'}</div>
+        <div class="cust-phone">📞 ${sale.customer_phone || '—'}</div>
+      </div>
+      <div class="cust-divider"></div>
+      <div class="cust-meta-item">
+        <div class="cust-meta-lbl">Date</div>
+        <div class="cust-meta-val">${saleDate}</div>
+      </div>
+    </div>
+
+    <div class="price-card">
+      <table class="price-table">
+        <thead>
+          <tr>
+            <th>DESCRIPTION</th>
+            <th>AMOUNT (Rs.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemRows}
+          ${discount > 0 ? `
+          <tr class="row-subtd">
+            <td>Subtotal</td>
+            <td>${fmt(subtotal)}</td>
+          </tr>
+          <tr class="row-disc">
+            <td>Discount</td>
+            <td>- ${fmt(discount)}</td>
+          </tr>` : ''}
+          <tr class="total-row">
+            <td>TOTAL PAYABLE</td>
+            <td>${fmt(total)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pay-grid">
+      <div class="pay-info">
+        <div class="pay-title">PAYMENT DETAILS</div>
+        <div class="pay-row">
+          <span>Amount Paid</span>
+          <span>${fmt(paid)}</span>
+        </div>
+        <div class="pay-row" style="margin-bottom:0;">
+          <span>Balance</span>
+          <span>Rs. 0.00</span>
+        </div>
+      </div>
+      <div class="pay-divider-v"></div>
+      <div class="pay-badge-box">
+        <div class="pay-badge-title">PAID IN FULL</div>
+        <div class="pay-badge-sub">✓ Total Paid:</div>
+        <div class="pay-badge-val">${fmt(paid)}</div>
+      </div>
+    </div>
+  </div>
+  `;
+
+  return wrap(body, 'SALES RECEIPT', sale.sale_number || 'QS-0103', `${saleDate}`);
+}
+
+// ── REPAIR BILL ───────────────────────────────────────────────
+function buildRepairBill(repair) {
+  const charge  = parseFloat(repair.charge  || 0);
+  const advance = parseFloat(repair.advance || 0);
+  const balance = Math.max(0, charge - advance);
+  const repairDate  = repair.created_at ? fmtD(repair.created_at) : today();
+
+  const body = `
+  <div class="body">
+    <div class="cust-card">
+      <div class="cust-info-main">
+        <div class="cust-name">${repair.customer_name || 'Customer'}</div>
+        <div class="cust-phone">📞 ${repair.phone || '—'}</div>
+      </div>
+      <div class="cust-divider"></div>
+      <div class="cust-meta-item">
+        <div class="cust-meta-lbl">Date</div>
+        <div class="cust-meta-val">${repairDate}</div>
+      </div>
+    </div>
+
+    <div class="spec-card">
+      <div class="spec-header">REPAIR DETAILS</div>
+      <div class="spec-body">
+        <div class="spec-row"><span class="spec-key">Type</span><span class="spec-val">: ${repair.repair_type || 'General Repair'}</span></div>
+        <div class="spec-row"><span class="spec-key">Note</span><span class="spec-val">: ${repair.frame_description || repair.description || 'N/A'}</span></div>
+      </div>
+    </div>
+
+    <div class="price-card">
+      <table class="price-table">
+        <thead>
+          <tr>
+            <th>DESCRIPTION</th>
+            <th>AMOUNT (Rs.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Repair Service Charge</td>
+            <td>${fmt(charge)}</td>
+          </tr>
+          <tr class="total-row">
+            <td>TOTAL PAYABLE</td>
+            <td>${fmt(charge)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pay-grid">
+      <div class="pay-info">
+        <div class="pay-title">PAYMENT DETAILS</div>
+        <div class="pay-row">
+          <span>Advance Paid</span>
+          <span>${fmt(advance)}</span>
+        </div>
+        <div class="pay-row" style="margin-bottom:0;">
+          <span>Balance</span>
+          <span>${fmt(balance)}</span>
+        </div>
+      </div>
+      <div class="pay-divider-v"></div>
+      <div class="pay-badge-box">
+        <div class="pay-badge-title">${balance === 0 ? 'PAID IN FULL' : 'PARTIALLY PAID'}</div>
+        <div class="pay-badge-sub">✓ Total Paid:</div>
+        <div class="pay-badge-val">${fmt(advance > 0 ? advance : charge)}</div>
+      </div>
+    </div>
+  </div>
+  `;
+
+  return wrap(body, 'REPAIR RECEIPT', repair.repair_number || 'REP-0103', `${repairDate}`);
+}
+
+// ── LAB JOB CARD — Quarter A4, folds in half ─────────────────
+function buildLabCardHTML(order) {
+  const ref = order.refraction || order;
+  const orderDate = order.created_at ? fmtD(order.created_at) : today();
+  const rawNotes = order.notes || '';
+  const cleanNotes = rawNotes.replace(/imported from past records/gi,'').replace(/Gifts given:[^\n]*/gi,'').replace(/^[,;\s]+|[,;\s]+$/g,'').trim();
+  const val = v => (v && v !== '—' && v !== '0' && v !== '0.00' && v !== 'Plano' ) ? v : (v==='Plano'?'Plano':'—');
+  const cell = (v,fs='11px') => `<td style="padding:4px 3px;text-align:center;border:1.5px solid #0b1e48;font-size:${fs};font-weight:700;color:#0b1e48;min-width:14mm;">${val(v)}</td>`;
+  const eyeRow = (eye,sph,cyl,axis,add) => `<tr>
+    <td style="padding:4px 5px;font-weight:800;font-size:9px;border:1.5px solid #0b1e48;background:#ebf3fa;text-align:center;">${eye}</td>
+    ${cell(sph)}${cell(cyl)}${cell(axis)}${cell(add)}
+  </tr>`;
+  const pd_r = ref.r_pd || ''; const pd_l = ref.l_pd || '';
+  const pdVal = pd_r && pd_l ? `R: ${pd_r}  L: ${pd_l}` : (pd_r || pd_l || '—');
+  const seg = [order.seg_height_r, order.seg_height_l].filter(Boolean).join(' / ') || '—';
+  const lensCoatPrint = printCoating(order.lens_coating || '—');
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${order.order_number} Lab Card</title>
+<style>
+  @page { size: 148mm 105mm landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', Arial, sans-serif; color: #0b1e48; width: 148mm; height: 105mm; }
+  .card { width: 148mm; height: 105mm; display: flex; flex-direction: column; }
+
+  .top { height: 28mm; display: flex; flex-direction: column; padding: 3mm 5mm 2mm; background: #0b1e48; color: white; }
+  .shop-name { font-size: 11px; font-weight: 900; color: white; letter-spacing: 0.5px; }
+  .shop-sub  { font-size: 6px; color: #cbd5e1; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
+
+  .order-no { font-size: 15px; font-weight: 900; color: white; }
+  .patient-name { font-size: 12px; font-weight: 800; color: white; }
+
+  .fold { height: 0; border-top: 2px dashed #0b1e48; position: relative; }
+  .bot { height: 76mm; padding: 2mm 5mm 2mm; display: flex; flex-direction: column; gap: 2px; }
+
+  .sec-hd { background: #0b1e48; color: white; font-size: 6.5px; font-weight: 800; text-transform: uppercase; padding: 2px 5px; }
+  .sec { border: 1.5px solid #0b1e48; border-radius: 4px; overflow: hidden; margin-bottom: 2px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #ebf3fa; padding: 2px 3px; font-size: 6.5px; font-weight: 800; color: #0b1e48; border: 1px solid #0b1e48; text-align: center; }
+
+  .info-row { display: flex; gap: 2mm; }
+  .info-cell { flex: 1; }
+  .lbl { font-size: 6px; color: #475569; text-transform: uppercase; font-weight: 700; }
+  .val { font-size: 8.5px; font-weight: 800; color: #0b1e48; }
+
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head><body>
+<div class="card">
+  <div class="top">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <div class="shop-name">WICKRAMAKALUTOTA OPTICAL</div>
+        <div class="shop-sub">YOUR TRUSTED EYE CARE · CHILAW</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:6px;color:#cbd5e1;">ORDER NO</div>
+        <div class="order-no">${order.order_number || 'KO-0103'}</div>
+      </div>
+    </div>
+    <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div class="patient-name">${order.customer_name || 'Customer'}</div>
+        <div style="font-size:6.5px;color:#cbd5e1;">${order.phone || ''} · ${orderDate}</div>
+      </div>
+      <span style="background:white;color:#0b1e48;font-size:6px;font-weight:800;padding:2px 6px;border-radius:4px;">LAB CARD</span>
+    </div>
+  </div>
+
+  <div class="fold"></div>
+
+  <div class="bot">
+    <div class="info-row" style="margin-bottom:2px;">
+      <div class="info-cell sec" style="padding:2px 4px;">
+        <div class="sec-hd" style="margin:-2px -4px 2px;">Frame</div>
+        <div class="val">${order.frame || 'POLICE'}</div>
+        <div style="display:flex;gap:4mm;margin-top:1px;">
+          <div><div class="lbl">Color</div><div class="val" style="font-size:8px;">${order.frame_color || 'Purple'}</div></div>
+          <div><div class="lbl">Size</div><div class="val" style="font-size:8px;">${order.frame_size || 'Medium'}</div></div>
+        </div>
+      </div>
+      <div class="info-cell sec" style="padding:2px 4px;">
+        <div class="sec-hd" style="margin:-2px -4px 2px;">Lens</div>
+        <div class="val">${order.lens_type || 'Bifocal Blue Filter'}</div>
+        <div style="display:flex;gap:4mm;margin-top:1px;">
+          <div><div class="lbl">Coating</div><div class="val" style="font-size:8px;">${lensCoatPrint}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-hd">Prescription (Rx)</div>
+      <table>
+        <tr><th style="width:16%;text-align:left;padding:2px 4px;">Eye</th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th></tr>
+        ${eyeRow('R', ref.r_sph, ref.r_cyl, ref.r_axis, ref.r_add)}
+        ${eyeRow('L', ref.l_sph, ref.l_cyl, ref.l_axis, ref.l_add)}
+      </table>
+    </div>
+
+    <div class="sec">
+      <div class="sec-hd">Measurements</div>
+      <table>
+        <tr>
+          <th style="width:34%;">PD (mm)</th>
+          <th style="width:33%;">Seg Height</th>
+          <th style="width:33%;">Lens Size</th>
+        </tr>
+        <tr>
+          <td style="padding:4px;text-align:center;border:1px solid #0b1e48;font-size:10px;font-weight:800;">${pdVal}</td>
+          <td style="padding:4px;text-align:center;border:1px solid #0b1e48;font-size:10px;font-weight:800;">${seg}</td>
+          <td style="padding:4px;text-align:center;border:1px solid #0b1e48;font-size:10px;font-weight:800;">${order.frame_size || '—'}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="sec" style="flex:1;">
+      <div class="sec-hd">Special Instructions</div>
+      <div style="padding:3px 5px;min-height:12mm;font-size:8.5px;font-weight:700;">${cleanNotes || 'None'}</div>
+    </div>
+  </div>
+</div>
+<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
+</body></html>`;
+}
+
+function openPrint(html) {
+  const win = window.open('', '_blank', 'width=700,height=900');
+  if (!win) { alert('Please allow popups to print.'); return; }
+  win.document.open(); win.document.write(html); win.document.close();
+}
+
+const C = { navy: '#0b1e48', gold: '#c9a84c', cream: '#f8f5ef', border: '#cbd5e1', muted: '#64748b' };
+const fmt2 = n => 'Rs. ' + parseFloat(n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// ── Order PrintReceipt Modal ──────────────────────────────────
+export default function PrintReceipt({ order, onClose }) {
+  const [tab, setTab] = useState('single');
+
+  const TABS = [
+    { key: 'single',   label: '📋 Order Receipt', desc: 'A5 portrait · Exact blue receipt layout matching shop design' },
+    { key: 'advance',  label: '🧾 Advance Bill',  desc: 'A5 portrait · Advance receipt layout' },
+    { key: 'balance',  label: '✅ Balance Bill',  desc: 'A5 portrait · Final receipt layout' },
+    { key: 'lab',      label: '🔬 Lab Job Card',  desc: 'A6 portrait · Send with frame to lab' },
+  ];
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(11,30,72,.65)', zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      fontFamily: "'Inter',sans-serif"
+    }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        background: 'white', borderRadius: 16, width: '100%', maxWidth: 460,
+        boxShadow: '0 24px 80px rgba(0,0,0,.35)', overflow: 'hidden'
+      }}>
+        <div style={{ background: C.navy, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ color: 'white', fontWeight: 800, fontSize: 16 }}>🖨️ Print Receipt</div>
+            <div style={{ color: '#cbd5e1', fontSize: 12, marginTop: 2 }}>{order.order_number || 'KO-0103'} · {order.customer_name || 'Mrs. Irangani Rajapaksa'}</div>
+          </div>
+          <button onClick={onClose}
+            style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: 'white', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 14 }}>✕</button>
+        </div>
+        <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}` }}>
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              style={{
+                flex: 1, padding: '11px 6px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                background: 'none', border: 'none', fontFamily: 'inherit',
+                color: tab === t.key ? C.navy : C.muted,
+                borderBottom: `2.5px solid ${tab === t.key ? C.navy : 'transparent'}`,
+                marginBottom: -1
+              }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ padding: '18px 20px' }}>
+          <div style={{ background: '#f1f5f9', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: C.muted, fontWeight: 500 }}>
+            {TABS.find(t => t.key === tab)?.desc}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+            {[
+              { l: 'Total', v: fmt2(order.total_amount || 17000) },
+              { l: 'Advance', v: fmt2(order.advance_amount || 17000) },
+              { l: 'Balance', v: fmt2(order.balance_amount || 0) },
+              { l: 'Delivery', v: fmtD(order.deliver_date) },
+            ].map(r => (
+              <div key={r.l} style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: C.muted, marginBottom: 2 }}>{r.l}</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: C.navy }}>{r.v || '—'}</div>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => {
+            if (tab === 'single')  openPrint(buildSingleBill(order));
+            if (tab === 'advance') openPrint(buildAdvanceBill(order));
+            if (tab === 'balance') openPrint(buildBalanceBill(order));
+            if (tab === 'lab')     openPrint(buildLabCardHTML(order));
+          }}
+            style={{
+              width: '100%', padding: '13px', background: C.navy, color: 'white', border: 'none',
+              borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit'
+            }}>
+            🖨️ Print {TABS.find(t => t.key === tab)?.label}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export { buildQuickSaleBill, buildRepairBill, openPrint };
