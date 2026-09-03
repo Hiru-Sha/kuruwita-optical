@@ -69,6 +69,7 @@ app.use('/api/scan-session',      require('./routes/scanSession'));
 app.use('/api/store',             require('./routes/store'));
 app.use('/api/historical-records', require('./routes/historicalRecords'));
 app.use('/api/activity-log',       require('./routes/activityLog'));
+app.use('/api/lens-stock', require('./routes/lensStock'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 

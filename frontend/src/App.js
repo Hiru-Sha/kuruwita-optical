@@ -36,6 +36,7 @@ const LensCalculator = React.lazy(() => import('./pages/LensCalculator').catch((
 import EndOfDay        from './pages/EndOfDay';
 import Warranty        from './pages/Warranty';
 import BackupRestore   from './pages/BackupRestore';
+import LensStock from './pages/LensStock';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -113,7 +114,8 @@ export default function App() {
             <Route path="end-of-day"      element={<EndOfDay />} />
             <Route path="warranty"         element={<PermGuard perm="orders"><Warranty /></PermGuard>} />
             <Route path="backup"           element={<BackupRestore />} />
-            {/* Admin-only routes */}
+<Route path="lens-stock" element={<LensStock />} />
+{/* Admin-only routes */}
             <Route path="grinding"  element={<AdminOnly><Grinding /></AdminOnly>} />
             <Route path="reports"   element={<AdminOnly><Reports  /></AdminOnly>} />
             <Route path="expenses"  element={<AdminOnly><Expenses /></AdminOnly>} />

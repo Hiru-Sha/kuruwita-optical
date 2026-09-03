@@ -78,6 +78,7 @@ const NAV = [
   { to:'/bulk-import',    icon:'import',     label:'Bulk Import',    section:'account',  roles:['admin'] },
   { to:'/settings',       icon:'settings',   label:'Settings',       section:'account'   },
   { to:'/backup',         icon:'backup',     label:'Backup Data',    section:'account',  roles:['admin'] },
+{ to:'/lens-stock', icon:'inventory', label:'🔬 Lens Stock', section:'inventory', perm:'inventory' },
 ];
 const SECTIONS = { main:null, inventory:'Inventory', finance:'Finance & Reports', history:'Old Records', account:'Account' };
 const BOTTOM_NAV = [
