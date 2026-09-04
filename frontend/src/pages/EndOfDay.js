@@ -408,16 +408,20 @@ ${data.orders.outstanding > 0 ? `
           {data.deposits.list.length > 0 && (
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
               <div style={{ padding:'11px 16px', background:'#eff6ff', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:'#1e40af' }}>
-                🏦 Bank Deposits — {fmt(data.deposits.total)}
+                🏦 Deposits & Balance Payments — {fmt(data.deposits.total)}
               </div>
-              {data.deposits.list.map(d=>(
-                <Row key={d.id}
-                  label={d.bank_name||'Bank Deposit'}
-                  sub={d.reference ? `Ref: ${d.reference}` : ''}
-                  value={fmt(d.amount)}
-                  color='#2563eb'
-                />
-              ))}
+              {data.deposits.list.map(d=>{
+                const isBalPay = (d.notes||'').startsWith('Balance payment');
+                const isCash   = d.payment_type === 'cash';
+                return (
+                  <Row key={d.id}
+                    label={isBalPay ? d.notes : (d.bank_name || (isCash ? 'Cash Deposit' : 'Bank Deposit'))}
+                    sub={d.reference ? `Ref: ${d.reference}` : (d.payment_type ? `via ${d.payment_type}` : '')}
+                    value={fmt(d.amount)}
+                    color={isCash && !isBalPay ? C.success : '#2563eb'}
+                  />
+                );
+              })}
             </div>
           )}
         </>

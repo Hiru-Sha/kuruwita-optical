@@ -257,7 +257,7 @@ router.post('/', auth, orderValidation, validate, async (req, res) => {
             req.body.import_date || new Date().toISOString().split('T')[0],
             netAmount,   // ← NET amount after card charge
             'Pan Asia Bank',
-            pm === 'card' ? 'card' : 'online',
+            pm === 'card' ? 'card' : pm === 'bank' ? 'bank' : 'cash',
             depositNote,
             req.user.id, orderId,
           ]
@@ -450,9 +450,16 @@ router.patch('/:id', auth, async (req, res) => {
       const payDate   = req.body.last_payment_date || new Date().toISOString().split('T')[0];
       const payMethod = req.body.last_payment_method || 'cash';
       const payAmt    = parseFloat(req.body.last_payment_amount);
+      // Only insert if not already recorded (prevent duplicates on multiple PATCH calls)
       pool.query(`
         INSERT INTO cash_deposits (date, amount, payment_type, notes, order_id, added_by)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        SELECT $1, $2, $3, $4, $5, $6
+        WHERE NOT EXISTS (
+          SELECT 1 FROM cash_deposits
+          WHERE order_id = $5
+            AND notes LIKE 'Balance payment%'
+            AND date = $1
+        )
       `, [payDate, payAmt, payMethod,
           `Balance payment — ${updated.order_number}`,
           updated.id, req.user.id]
