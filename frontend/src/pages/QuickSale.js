@@ -187,14 +187,11 @@ export default function QuickSale() {
   const [activeTab,setActiveTab]= useState('sale');
   const [pastMode, setPastMode] = useState(false);
   const [saleDate, setSaleDate] = useState('');   // 'sale' | 'history'
-  const [history,   setHistory]   = useState([]);
-  const [histLoad,  setHistLoad]  = useState(false);
-  const [histFrom,  setHistFrom]  = useState('');
-  const [histTo,    setHistTo]    = useState('');
-  const [histSearch,setHistSearch]= useState('');
-  const [histPage,  setHistPage]  = useState(0);
-  const [histTotal, setHistTotal] = useState(0);
-  const HIST_LIMIT = 20;
+  const [history,  setHistory]  = useState([]);
+  const [histLoad, setHistLoad] = useState(false);
+  const [histFrom,   setHistFrom]   = useState('');
+  const [histTo,     setHistTo]     = useState('');
+  const [histSearch, setHistSearch] = useState('');
   const timer = useRef(null);
 
   useEffect(()=>{
@@ -203,21 +200,20 @@ export default function QuickSale() {
     return () => window.removeEventListener('resize', fn);
   },[]);
 
-  const loadHistory = async (page=histPage, search=histSearch, from=histFrom, to=histTo) => {
+  const loadHistory = async () => {
     setHistLoad(true);
     try {
-      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-      const token = localStorage.getItem('ko_token');
+      const BASE   = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token  = localStorage.getItem('ko_token');
       const offset = page * HIST_LIMIT;
       const params = new URLSearchParams({ limit: HIST_LIMIT, offset });
-      if (search) params.set('search', search);
-      if (from)   params.set('from_date', from);
-      if (to)     params.set('to_date', to);
+      if (search)   params.set('search', search);
+      if (from)     params.set('from_date', from);
+      if (to)       params.set('to_date', to);
       const res  = await fetch(`${BASE}/quick-sales?${params}`, { headers:{ Authorization:`Bearer ${token}` } });
       const data = await res.json();
-      const arr  = Array.isArray(data) ? data : (data.data || []);
+      const arr  = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
       setHistTotal(data.total || arr.length);
-      if (arr.length > 0) {
       setHistory(arr);
     } catch(e) { console.error(e); }
     finally { setHistLoad(false); }
@@ -821,7 +817,7 @@ export default function QuickSale() {
       <div>
         {/* Date range + name filter for history */}
         <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap', marginBottom:10 }}>
-          <input value={histSearch} onChange={e=>{ setHistSearch(e.target.value); setHistPage(0); loadHistory(0, e.target.value); }} placeholder="Search by name, phone, sale no..."
+          <input value={histSearch} onChange={e=>{ setHistSearch(e.target.value); setHistPage(0); loadHistory(0, e.target.value, histFrom, histTo); }} placeholder="🔍 Search name, phone, sale no..."
             style={{ flex:1, minWidth:160, padding:'6px 10px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:12, fontFamily:'inherit', outline:'none', background:'white' }}/>
           <span style={{ fontSize:12, fontWeight:600, color:C.muted }}>Date:</span>
           <input type="date" value={histFrom} onChange={e=>{ setHistFrom(e.target.value); setHistPage(0); loadHistory(0, histSearch, e.target.value, histTo); }}
@@ -844,22 +840,26 @@ export default function QuickSale() {
             </span>
           )}
         </div>
-        {/* Pagination info */}
+        {/* Pagination bar */}
         {histTotal > 0 && (
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-            <div style={{ fontSize:12, color:C.muted }}>
-              Showing <b style={{color:C.navy}}>{histPage*HIST_LIMIT+1}–{Math.min((histPage+1)*HIST_LIMIT, histTotal)}</b> of <b style={{color:C.navy}}>{histTotal}</b> sales
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,flexWrap:'wrap',gap:8}}>
+            <div style={{fontSize:12,color:C.muted}}>
+              Showing <b style={{color:C.navy}}>{histPage*HIST_LIMIT+1}–{Math.min((histPage+1)*HIST_LIMIT,histTotal)}</b> of <b style={{color:C.navy}}>{histTotal}</b> sales
             </div>
-            <div style={{ display:'flex', gap:6 }}>
-              <button onClick={()=>{ const p=histPage-1; setHistPage(p); loadHistory(p); }} disabled={histPage===0}
-                style={{ padding:'5px 14px', border:`1.5px solid ${C.border}`, borderRadius:8, background:histPage===0?C.cream:'white', color:histPage===0?C.muted:C.navy, fontWeight:700, fontSize:13, cursor:histPage===0?'not-allowed':'pointer', fontFamily:'inherit' }}>
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <button onClick={()=>{const p=histPage-1;setHistPage(p);loadHistory(p);}} disabled={histPage===0}
+                style={{padding:'5px 16px',border:`1.5px solid ${C.border}`,borderRadius:8,background:histPage===0?C.cream:'white',
+                  color:histPage===0?C.muted:C.navy,fontWeight:700,fontSize:13,cursor:histPage===0?'not-allowed':'pointer',fontFamily:'inherit'}}>
                 ← Prev
               </button>
-              <span style={{ padding:'5px 12px', fontSize:12, color:C.muted, fontWeight:600 }}>
-                Page {histPage+1} / {Math.ceil(histTotal/HIST_LIMIT)||1}
+              <span style={{fontSize:12,color:C.muted,fontWeight:600,padding:'0 4px'}}>
+                {histPage+1} / {Math.ceil(histTotal/HIST_LIMIT)||1}
               </span>
-              <button onClick={()=>{ const p=histPage+1; setHistPage(p); loadHistory(p); }} disabled={(histPage+1)*HIST_LIMIT>=histTotal}
-                style={{ padding:'5px 14px', border:`1.5px solid ${C.border}`, borderRadius:8, background:(histPage+1)*HIST_LIMIT>=histTotal?C.cream:'white', color:(histPage+1)*HIST_LIMIT>=histTotal?C.muted:C.navy, fontWeight:700, fontSize:13, cursor:(histPage+1)*HIST_LIMIT>=histTotal?'not-allowed':'pointer', fontFamily:'inherit' }}>
+              <button onClick={()=>{const p=histPage+1;setHistPage(p);loadHistory(p);}} disabled={(histPage+1)*HIST_LIMIT>=histTotal}
+                style={{padding:'5px 16px',border:`1.5px solid ${C.border}`,borderRadius:8,
+                  background:(histPage+1)*HIST_LIMIT>=histTotal?C.cream:'white',
+                  color:(histPage+1)*HIST_LIMIT>=histTotal?C.muted:C.navy,
+                  fontWeight:700,fontSize:13,cursor:(histPage+1)*HIST_LIMIT>=histTotal?'not-allowed':'pointer',fontFamily:'inherit'}}>
                 Next →
               </button>
             </div>
@@ -867,11 +867,15 @@ export default function QuickSale() {
         )}
 
         {histLoad
-          ? <div style={{textAlign:'center',padding:32,color:C.muted,background:'white',borderRadius:14,border:`1px solid ${C.border}`}}>⏳ Loading...</div>
+          ? <div style={{textAlign:'center',padding:48,color:C.muted,background:'white',borderRadius:14,border:`1px solid ${C.border}`}}>
+              <div style={{fontSize:32,marginBottom:10}}>⏳</div>
+              <div style={{fontSize:13,color:C.muted}}>Loading sales...</div>
+            </div>
           : !history.length
             ? <div style={{textAlign:'center',padding:48,color:C.muted,background:'white',borderRadius:14,border:`1px solid ${C.border}`}}>
                 <div style={{fontSize:36,marginBottom:12}}>🛍️</div>
-                <div style={{fontSize:14,fontWeight:600,color:C.navy}}>No sales yet</div>
+                <div style={{fontSize:14,fontWeight:600,color:C.navy}}>No sales found</div>
+                <div style={{fontSize:12,color:C.muted,marginTop:4}}>{histSearch||histFrom||histTo ? 'Try adjusting your search or date filter' : 'Quick sales will appear here'}</div>
               </div>
             : <div style={{background:'white',border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden'}}>
                 {/* Table header */}
@@ -882,17 +886,7 @@ export default function QuickSale() {
                   <span style={{textAlign:'right'}}>Total</span>
                   <span style={{textAlign:'center'}}>Print</span>
                 </div>
-                {history.filter(sale => {
-                  if (histFrom && sale.created_at?.slice(0,10) < histFrom) return false;
-                  if (histTo   && sale.created_at?.slice(0,10) > histTo)   return false;
-                  if (histSearch) {
-                    const q = histSearch.toLowerCase();
-                    return (sale.customer_name||'').toLowerCase().includes(q) ||
-                           (sale.customer_phone||'').toLowerCase().includes(q) ||
-                           (sale.sale_number||'').toLowerCase().includes(q);
-                  }
-                  return true;
-                }).map((sale,i)=>{
+                {history.map((sale,i)=>{
                   const prev = history[i-1];
                   const saleDate = sale.created_at?.slice(0,10);
                   const prevDate = prev?.created_at?.slice(0,10);
@@ -993,9 +987,9 @@ export default function QuickSale() {
                   );
                 })}
                 {/* Month total */}
-                <div style={{padding:'11px 16px',background:C.cream,display:'flex',justifyContent:'space-between',fontSize:13,fontWeight:700,borderTop:`1px solid ${C.border}`}}>
-                  <span style={{color:C.muted}}>Total ({history.length} sales)</span>
-                  <span style={{color:C.navy}}>{fmtM(history.reduce((s,q)=>s+parseFloat(q.total||0),0))}</span>
+                <div style={{padding:'11px 16px',background:C.cream,display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:13,fontWeight:700,borderTop:`1px solid ${C.border}`}}>
+                  <span style={{color:C.muted}}>{histTotal} sales total — page {histPage+1} / {Math.ceil(histTotal/HIST_LIMIT)||1}</span>
+                  <span style={{color:C.navy}}>{fmtM(history.reduce((s,q)=>s+parseFloat(q.total||0),0))} this page</span>
                 </div>
               </div>
         }
