@@ -371,10 +371,10 @@ export default function Dashboard() {
       {data && (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:20 }}>
           {[
-            { label:"Today's Revenue",  value:`Rs. ${((data.daily_cash?.order_total||0)+(data.daily_cash?.qs_total||0)+(data.daily_cash?.repair_total||0)).toLocaleString()}`, icon:'💰', color:'#15803d', bg:'#f0fdf4' },
-            { label:'Orders Today',     value:data.daily_cash?.order_count||0,  icon:'📋', color:'#0f1f3d', bg:'#f8f5ef' },
-            { label:'Quick Sales',      value:data.daily_cash?.qs_count||0,     icon:'⚡', color:'#1e40af', bg:'#eff6ff' },
-            { label:'Balance Collected',value:`Rs. ${(data.daily_cash?.balance_collected||0).toLocaleString()}`, icon:'✅', color:'#c9a84c', bg:'#fffbeb' },
+            { label:"Today's Revenue",  value:`Rs. ${((data.daily_cash?.orderIncome||0)+(data.daily_cash?.qsIncome||0)+(data.daily_cash?.repairIncome||0)).toLocaleString()}`, icon:'💰', color:'#15803d', bg:'#f0fdf4' },
+            { label:'Orders Today',     value:data.daily_cash?.orderCount||0,   icon:'📋', color:'#0f1f3d', bg:'#f8f5ef' },
+            { label:'Quick Sales',      value:data.daily_cash?.qsCount||0,      icon:'⚡', color:'#1e40af', bg:'#eff6ff' },
+            { label:'Balance Collected',value:`Rs. ${(data.daily_cash?.balTotal||0).toLocaleString()}`, icon:'✅', color:'#c9a84c', bg:'#fffbeb' },
           ].map(k=>(
             <div key={k.label} style={{ background:k.bg, borderRadius:12, padding:'14px 16px', border:`1px solid ${k.bg}` }}>
               <div style={{ fontSize:18, marginBottom:4 }}>{k.icon}</div>
