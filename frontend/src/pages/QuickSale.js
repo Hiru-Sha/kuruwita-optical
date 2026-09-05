@@ -187,11 +187,14 @@ export default function QuickSale() {
   const [activeTab,setActiveTab]= useState('sale');
   const [pastMode, setPastMode] = useState(false);
   const [saleDate, setSaleDate] = useState('');   // 'sale' | 'history'
-  const [history,  setHistory]  = useState([]);
-  const [histLoad, setHistLoad] = useState(false);
-  const [histFrom,   setHistFrom]   = useState('');
-  const [histTo,     setHistTo]     = useState('');
-  const [histSearch, setHistSearch] = useState('');
+  const [history,   setHistory]   = useState([]);
+  const [histLoad,  setHistLoad]  = useState(false);
+  const [histFrom,  setHistFrom]  = useState('');
+  const [histTo,    setHistTo]    = useState('');
+  const [histSearch,setHistSearch]= useState('');
+  const [histPage,  setHistPage]  = useState(0);
+  const [histTotal, setHistTotal] = useState(0);
+  const HIST_LIMIT = 20;
   const timer = useRef(null);
 
   useEffect(()=>{
