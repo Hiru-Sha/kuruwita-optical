@@ -187,14 +187,11 @@ export default function QuickSale() {
   const [activeTab,setActiveTab]= useState('sale');
   const [pastMode, setPastMode] = useState(false);
   const [saleDate, setSaleDate] = useState('');   // 'sale' | 'history'
-  const [history,   setHistory]   = useState([]);
-  const [histLoad,  setHistLoad]  = useState(false);
-  const [histFrom,  setHistFrom]  = useState('');
-  const [histTo,    setHistTo]    = useState('');
-  const [histSearch,setHistSearch]= useState('');
-  const [histPage,  setHistPage]  = useState(0);
-  const [histTotal, setHistTotal] = useState(0);
-  const HIST_LIMIT = 20;
+  const [history,  setHistory]  = useState([]);
+  const [histLoad, setHistLoad] = useState(false);
+  const [histFrom,   setHistFrom]   = useState('');
+  const [histTo,     setHistTo]     = useState('');
+  const [histSearch, setHistSearch] = useState('');
   const timer = useRef(null);
 
   useEffect(()=>{
@@ -203,7 +200,7 @@ export default function QuickSale() {
     return () => window.removeEventListener('resize', fn);
   },[]);
 
-  const loadHistory = async () => {
+  const loadHistory = async (page=0, search=histSearch, from=histFrom, to=histTo) => {
     setHistLoad(true);
     try {
       const BASE   = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
