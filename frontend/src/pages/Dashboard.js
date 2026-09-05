@@ -367,6 +367,24 @@ export default function Dashboard() {
           </div>
         )}
 
+      {/* ── Today's Revenue KPIs ── */}
+      {data && (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:20 }}>
+          {[
+            { label:"Today's Revenue",  value:`Rs. ${((data.daily_cash?.order_total||0)+(data.daily_cash?.qs_total||0)+(data.daily_cash?.repair_total||0)).toLocaleString()}`, icon:'💰', color:'#15803d', bg:'#f0fdf4' },
+            { label:'Orders Today',     value:data.daily_cash?.order_count||0,  icon:'📋', color:'#0f1f3d', bg:'#f8f5ef' },
+            { label:'Quick Sales',      value:data.daily_cash?.qs_count||0,     icon:'⚡', color:'#1e40af', bg:'#eff6ff' },
+            { label:'Balance Collected',value:`Rs. ${(data.daily_cash?.balance_collected||0).toLocaleString()}`, icon:'✅', color:'#c9a84c', bg:'#fffbeb' },
+          ].map(k=>(
+            <div key={k.label} style={{ background:k.bg, borderRadius:12, padding:'14px 16px', border:`1px solid ${k.bg}` }}>
+              <div style={{ fontSize:18, marginBottom:4 }}>{k.icon}</div>
+              <div style={{ fontSize:20, fontWeight:800, color:k.color }}>{k.value}</div>
+              <div style={{ fontSize:11, color:'#6b7280', fontWeight:600, marginTop:2 }}>{k.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Quick actions */}
       <div style={{marginBottom:24}}>
         <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text-muted)',marginBottom:12}}>Quick Actions</div>

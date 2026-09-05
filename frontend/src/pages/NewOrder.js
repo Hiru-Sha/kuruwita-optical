@@ -180,6 +180,7 @@ export default function NewOrder() {
 
   const [custMode,     setCustMode]    = useState('search');
   const [custSearch,   setCustSearch]  = useState('');
+  const [prevRx,       setPrevRx]      = useState(null);
   const [custResults,  setCustResults] = useState([]);
   const [selectedCust, setSelectedCust]= useState(null);
   const [newCust,      setNewCust]     = useState({ title:'Mr.', name:'', phone:'', age:'' });
@@ -325,7 +326,18 @@ export default function NewOrder() {
       catch { setCustResults([]); }
     }, 400);
   };
-  const pickCustomer = (c) => { setSelectedCust(c); setCustSearch(c.name); setCustResults([]); };
+  const pickCustomer = async (c) => {
+    setSelectedCust(c); setCustSearch(c.name); setCustResults([]);
+    setPrevRx(null);
+    try {
+      const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res = await fetch(`${BASE}/refractions?customer_id=${c.id}&limit=1`, { headers:{ Authorization:`Bearer ${token}` } });
+      const data = await res.json();
+      const rx = Array.isArray(data) ? data[0] : null;
+      if (rx && (rx.r_sph || rx.l_sph)) setPrevRx(rx);
+    } catch(e) {}
+  };
 
   const handleFrameSearch = (v) => {
     setFrameSearch(v);
@@ -565,6 +577,40 @@ export default function NewOrder() {
                     style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, fontSize:16 }}>✕</button>
                 </div>
               )}
+              {/* Previous Rx Banner */}
+              {prevRx && selectedCust && (
+                <div style={{ marginTop:8, background:'#eff6ff', border:'1.5px solid #93c5fd', borderRadius:10, padding:'10px 14px' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#1e40af' }}>📋 Previous Prescription</div>
+                    <div style={{ display:'flex', gap:8 }}>
+                      <button type="button" onClick={()=>{
+                        if (prevRx.r_sph !== undefined) { document.querySelector('[data-rx="r_sph"]') && (document.querySelector('[data-rx="r_sph"]').value = prevRx.r_sph||''); }
+                        setRxForm(f=>({...f,
+                          r_sph:prevRx.r_sph||'', r_cyl:prevRx.r_cyl||'', r_axis:prevRx.r_axis||'', r_add:prevRx.r_add||'',
+                          l_sph:prevRx.l_sph||'', l_cyl:prevRx.l_cyl||'', l_axis:prevRx.l_axis||'', l_add:prevRx.l_add||'',
+                        }));
+                        setPrevRx(null);
+                      }}
+                        style={{ padding:'4px 12px', background:'#1e40af', color:'white', border:'none', borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                        Use This Rx
+                      </button>
+                      <button type="button" onClick={()=>setPrevRx(null)}
+                        style={{ background:'none', border:'none', color:'#9ca3af', cursor:'pointer', fontSize:14 }}>✕</button>
+                    </div>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6, fontSize:11 }}>
+                    {[['R SPH',prevRx.r_sph],['R CYL',prevRx.r_cyl],['R AXIS',prevRx.r_axis],['R ADD',prevRx.r_add],
+                      ['L SPH',prevRx.l_sph],['L CYL',prevRx.l_cyl],['L AXIS',prevRx.l_axis],['L ADD',prevRx.l_add]
+                    ].map(([k,v])=>(
+                      <div key={k} style={{ background:'white', borderRadius:6, padding:'4px 8px' }}>
+                        <div style={{ color:'#9ca3af', fontSize:9, fontWeight:700 }}>{k}</div>
+                        <div style={{ color:'#1e40af', fontWeight:700, fontSize:12 }}>{v||'—'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {!selectedCust && !custResults.length && custSearch.length>1 && (
                 <div style={{ marginTop:8, fontSize:13, color:C.muted }}>
                   Not found —{' '}
@@ -746,18 +792,23 @@ export default function NewOrder() {
             </div>
             {!customerOwnFrame && selectedFrame?.image_url && (
               <div style={{ marginBottom:14, borderRadius:10, overflow:'hidden', border:`1px solid ${C.border}` }}>
-                <div style={{ overflow:'hidden', background:'#f8f5ef', cursor:'zoom-in', position:'relative' }}
+                <div style={{ overflow:'hidden', background:'#f8f5ef', cursor:'crosshair', position:'relative', borderRadius:8 }}
                   onMouseMove={e=>{
                     const r=e.currentTarget.getBoundingClientRect();
-                    const x=((e.clientX-r.left)/r.width*100).toFixed(1);
-                    const y=((e.clientY-r.top)/r.height*100).toFixed(1);
-                    e.currentTarget.querySelector('img').style.transformOrigin=`${x}% ${y}%`;
+                    const x=((e.clientX-r.left)/r.width*100).toFixed(2);
+                    const y=((e.clientY-r.top)/r.height*100).toFixed(2);
+                    const img=e.currentTarget.querySelector('img');
+                    img.style.transformOrigin=`${x}% ${y}%`;
+                    img.style.transform='scale(2.5)';
                   }}
-                  onMouseEnter={e=>{e.currentTarget.querySelector('img').style.transform='scale(2.5)';}}
-                  onMouseLeave={e=>{e.currentTarget.querySelector('img').style.transform='scale(1)';}}>
+                  onMouseLeave={e=>{
+                    const img=e.currentTarget.querySelector('img');
+                    img.style.transform='scale(1)';
+                    img.style.transformOrigin='center center';
+                  }}>
                   <img src={selectedFrame.image_url} alt={selectedFrame.name}
                     style={{ width:'100%', height:220, objectFit:'contain', padding:'12px', display:'block',
-                      transition:'transform .1s ease', pointerEvents:'none' }}/>
+                      transition:'transform 0.08s ease-out, transform-origin 0s', pointerEvents:'none' }}/>
                 </div>
                 <div style={{ padding:'8px 12px', background:'#dcfce7', fontSize:12, fontWeight:600, color:C.success }}>
                   ✓ {selectedFrame.name}{selectedFrame.frame_color?` · ${selectedFrame.frame_color}`:''}

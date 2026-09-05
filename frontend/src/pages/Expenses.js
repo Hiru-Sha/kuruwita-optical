@@ -86,8 +86,20 @@ export default function Expenses() {
   const [catFilter,    setCatFilter]    = useState('all');
 
   // Add expense form
-  const [showAddExp,  setShowAddExp]  = useState(false);
-  const [expForm,     setExpForm]     = useState({ date:today(), category:'Rent', description:'', amount:'', payment_method:'cash', notes:'' });
+  const [showAddExp,    setShowAddExp]    = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [expForm,       setExpForm]       = useState({ date:today(), category:'Rent', description:'', amount:'', payment_method:'cash', notes:'' });
+
+  const RECURRING_TEMPLATES = [
+    { label:'Shop Rent',      category:'Rent',        description:'Monthly shop rent' },
+    { label:'Electricity',    category:'Utility',     description:'Electricity bill' },
+    { label:'Water Bill',     category:'Utility',     description:'Water bill' },
+    { label:'Staff Salary',   category:'Salary',      description:'Staff salary payment' },
+    { label:'Internet',       category:'Utility',     description:'Internet bill' },
+    { label:'Phone Bill',     category:'Utility',     description:'Phone bill' },
+    { label:'Insurance',      category:'Insurance',   description:'Insurance premium' },
+    { label:'Cleaning',       category:'Maintenance', description:'Cleaning service' },
+  ];
   const [customCat,   setCustomCat]   = useState(''); // custom category name when 'Other' selected
   const [savingExp,   setSavingExp]   = useState(false);
   const [expError,    setExpError]    = useState('');

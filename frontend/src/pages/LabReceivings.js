@@ -438,10 +438,23 @@ export default function LabReceivings() {
           <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:C.navy,margin:0}}>🔬 Lab Receivings</h1>
           <p style={{fontSize:13,color:C.muted,margin:'3px 0 0'}}>All orders · enter bill amounts inline · pay in batches</p>
         </div>
-        <button onClick={()=>setQuickMode(q=>!q)}
-          style={{padding:'9px 18px',background:quickMode?C.navy:C.cream,color:quickMode?C.gold:C.navy,border:`1.5px solid ${quickMode?C.navy:C.border}`,borderRadius:10,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
-          {quickMode ? '⚡ Quick Mode ON — click to exit' : '⚡ Quick Entry Mode'}
-        </button>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={async ()=>{
+            const notSent = orders.filter(o=>(!o.lens_step||o.lens_step<1));
+            if(!notSent.length){ showToast('All orders already marked as sent'); return; }
+            if(!window.confirm(`Mark ${notSent.length} orders as Sent to Lab?`)) return;
+            await Promise.all(notSent.map(o=>apiPatch(`/orders/${o.id}`,{lens_step:1})));
+            showToast(`✓ ${notSent.length} orders marked as Sent`);
+            load();
+          }}
+            style={{padding:'9px 18px',background:'#1e40af',color:'white',border:'none',borderRadius:10,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+            📤 Mark All as Sent
+          </button>
+          <button onClick={()=>setQuickMode(q=>!q)}
+            style={{padding:'9px 18px',background:quickMode?C.navy:C.cream,color:quickMode?C.gold:C.navy,border:`1.5px solid ${quickMode?C.navy:C.border}`,borderRadius:10,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+            {quickMode ? '⚡ Quick Mode ON — click to exit' : '⚡ Quick Entry Mode'}
+          </button>
+        </div>
       </div>
 
       {quickMode && (

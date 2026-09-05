@@ -934,12 +934,19 @@ function BillOptionsModal({ selected, onClose, onPrint, C, fmtMoney }) {
 
 export default function Orders() {
   const [orders,    setOrders]    = useState([]);
-  const [filter,       setFilter]      = useState('all');
-  const [dateFilter,   setDateFilter]   = useState('all');
-  const [dateFrom,     setDateFrom]     = useState('');
-  const [dateTo,       setDateTo]       = useState('');
-  const [search,       setSearch]       = useState('');
+  const [filter,       setFilter]      = useState(()=>sessionStorage.getItem('ord_filter')||'all');
+  const [dateFilter,   setDateFilter]   = useState(()=>sessionStorage.getItem('ord_datefilter')||'all');
+  const [dateFrom,     setDateFrom]     = useState(()=>sessionStorage.getItem('ord_from')||'');
+  const [dateTo,       setDateTo]       = useState(()=>sessionStorage.getItem('ord_to')||'');
+  const [search,       setSearch]       = useState(()=>sessionStorage.getItem('ord_search')||'');
   const [missingCosts, setMissingCosts] = useState(false);
+
+  const saveFilter  = (k,v) => sessionStorage.setItem(k, v);
+  const setFilterP  = v => { setFilter(v);       saveFilter('ord_filter',v); };
+  const setDateFP   = v => { setDateFP(v);   saveFilter('ord_datefilter',v); };
+  const setFromP    = v => { setFromP(v);      saveFilter('ord_from',v); };
+  const setToP      = v => { setToP(v);        saveFilter('ord_to',v); };
+  const setSearchP  = v => { setSearch(v);        saveFilter('ord_search',v); };
 
   // Read URL params from dashboard KPI clicks and Warranty page
   useEffect(() => {
@@ -950,7 +957,7 @@ export default function Orders() {
     if (f === 'balance')   { setFilter('balance_due'); }
     if (f === 'active')    { setFilter('created'); }
     if (f === 'collected') { setFilter('delivered'); }
-    if (m)                 { setDateFilter('month'); }
+    if (m)                 { setDateFP('month'); }
     if (open) {
       // Wait for orders to load then open matching order
       const tryOpen = () => {
@@ -1218,7 +1225,7 @@ export default function Orders() {
 
       {/* Search */}
       <div style={{ marginBottom:10 }}>
-        <input value={search} onChange={e=>setSearch(e.target.value)}
+        <input value={search} onChange={e=>setSearchP(e.target.value)}
           placeholder="Search name, phone, order #..."
           style={{ ...INP, width:'100%' }}/>
       </div>
@@ -1226,7 +1233,7 @@ export default function Orders() {
       {/* Date filter chips */}
       <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap', alignItems:'center' }}>
         {DATE_FILTERS.map(df=>(
-          <button key={df.key} onClick={()=>{ setDateFilter(df.key); if(df.key!=='custom'){setDateFrom('');setDateTo('');} }}
+          <button key={df.key} onClick={()=>{ setDateFP(df.key); if(df.key!=='custom'){setFromP('');setToP('');} }}
             style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
               border:`1.5px solid ${dateFilter===df.key?C.navy:C.border}`,
               background:dateFilter===df.key?C.navy:'white',
@@ -1234,7 +1241,7 @@ export default function Orders() {
             {df.label}
           </button>
         ))}
-        <button onClick={()=>setDateFilter('custom')}
+        <button onClick={()=>setDateFP('custom')}
           style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
             border:`1.5px solid ${dateFilter==='custom'?C.gold:C.border}`,
             background:dateFilter==='custom'?'#fef9f0':'white',
@@ -1245,18 +1252,18 @@ export default function Orders() {
           <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', width:'100%', marginTop:6 }}>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               <span style={{ fontSize:12, color:C.muted, fontWeight:600 }}>From</span>
-              <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
+              <input type="date" value={dateFrom} onChange={e=>setFromP(e.target.value)}
                 style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:13,
                   fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy, cursor:'pointer' }}/>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               <span style={{ fontSize:12, color:C.muted, fontWeight:600 }}>To</span>
-              <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
+              <input type="date" value={dateTo} onChange={e=>setToP(e.target.value)}
                 style={{ padding:'6px 10px', border:`1.5px solid ${C.gold}`, borderRadius:8, fontSize:13,
                   fontFamily:'inherit', outline:'none', background:'#fef9f0', color:C.navy, cursor:'pointer' }}/>
             </div>
             {(dateFrom||dateTo) && (
-              <button onClick={()=>{ setDateFrom(''); setDateTo(''); }}
+              <button onClick={()=>{ setFromP(''); setToP(''); }}
                 style={{ padding:'5px 10px', background:'#fee2e2', border:'none', borderRadius:8,
                   fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.danger }}>
                 ✕ Clear
@@ -1283,7 +1290,7 @@ export default function Orders() {
       {/* Status filter chips */}
       <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:14 }}>
         {STATUSES.map(s=>(
-          <button key={s} onClick={()=>setFilter(s)}
+          <button key={s} onClick={()=>setFilterP(s)}
             style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
               border:`1.5px solid ${filter===s?C.gold:C.border}`,
               background:filter===s?C.gold:'white',

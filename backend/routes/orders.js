@@ -81,7 +81,19 @@ router.get('/', auth, async (req, res) => {
     }
     if (search) {
       params.push(`%${search}%`);
-      query += ` AND (c.name ILIKE $${params.length} OR c.phone ILIKE $${params.length} OR o.order_number ILIKE $${params.length} OR o.frame ILIKE $${params.length})`;
+      query += ` AND (c.name ILIKE $${params.length} OR c.phone ILIKE $${params.length} OR o.order_number ILIKE $${params.length} OR o.frame ILIKE $${params.length} OR o.lens_type ILIKE $${params.length} OR o.lens_coating ILIKE $${params.length} OR o.lens_company ILIKE $${params.length})`;
+    }
+    if (req.query.lens_type) {
+      params.push(`%${req.query.lens_type}%`);
+      query += ` AND o.lens_type ILIKE $${params.length}`;
+    }
+    if (req.query.from_date) {
+      params.push(req.query.from_date);
+      query += ` AND o.deliver_date >= $${params.length}`;
+    }
+    if (req.query.to_date) {
+      params.push(req.query.to_date);
+      query += ` AND o.deliver_date <= $${params.length}`;
     }
     query += ` ORDER BY o.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);

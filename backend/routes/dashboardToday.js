@@ -137,11 +137,9 @@ router.get('/', auth, async (req, res) => {
         FROM orders o
         JOIN customers c ON o.customer_id = c.id
         WHERE o.balance_amount > 0
-          AND o.status NOT IN ('cancelled','delivered')
-          AND o.deliver_date IS NOT NULL
-          AND o.deliver_date <= CURRENT_DATE + INTERVAL '7 days'
+          AND o.status != 'cancelled'
         ORDER BY o.deliver_date ASC
-        LIMIT 10
+        LIMIT 20
       `).catch(() => ({ rows: [] })),
 
       // 10: Balance payments collected TODAY from older orders
@@ -182,10 +180,18 @@ router.get('/', auth, async (req, res) => {
         WHERE o.status = 'delivered'
           AND (o.warranty_frame IS NOT NULL OR o.warranty_lens IS NOT NULL)
           AND o.deliver_date IS NOT NULL
-          AND o.deliver_date + INTERVAL '1 year' >= CURRENT_DATE - INTERVAL '7 days'
-          AND o.deliver_date + INTERVAL '1 year' <= CURRENT_DATE + INTERVAL '30 days'
+          AND (
+            o.deliver_date + (
+              CASE
+                WHEN o.warranty_frame ILIKE '%1 year%' OR o.warranty_lens ILIKE '%1 year%' THEN INTERVAL '1 year'
+                WHEN o.warranty_frame ILIKE '%6 month%' OR o.warranty_lens ILIKE '%6 month%' THEN INTERVAL '6 months'
+                WHEN o.warranty_frame ILIKE '%3 month%' OR o.warranty_lens ILIKE '%3 month%' THEN INTERVAL '3 months'
+                ELSE INTERVAL '1 year'
+              END
+            )
+          ) BETWEEN CURRENT_DATE - INTERVAL '7 days' AND CURRENT_DATE + INTERVAL '30 days'
         ORDER BY warranty_expires ASC
-        LIMIT 10
+        LIMIT 15
       `).catch(() => ({ rows: [] })),
 
       // 13: Overdue orders alert

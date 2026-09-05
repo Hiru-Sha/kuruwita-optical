@@ -145,29 +145,15 @@ router.post('/', auth, async (req, res) => {
     }
 
     // ----------------------------------------------------------
-    // Generate sale number
-    // ----------------------------------------------------------
+    // Generate sale number: QS-0001
     const lastRes = await pool.query(
-      `SELECT sale_number
-       FROM quick_sales
-       ORDER BY id DESC
-       LIMIT 1`
+      `SELECT sale_number FROM quick_sales ORDER BY id DESC LIMIT 1`
     );
-
     let saleNum = 'QS-0001';
-
-    if (
-      lastRes.rows.length &&
-      lastRes.rows[0].sale_number
-    ) {
+    if (lastRes.rows.length && lastRes.rows[0].sale_number) {
       const parts = lastRes.rows[0].sale_number.split('-');
-
-      const last =
-        parseInt(parts[parts.length - 1]) || 0;
-
-      saleNum =
-        'QS-' +
-        String(last + 1).padStart(4, '0');
+      const last  = parseInt(parts[parts.length - 1]) || 0;
+      saleNum = 'QS-' + String(last + 1).padStart(4, '0');
     }
 
     // ----------------------------------------------------------

@@ -83,8 +83,10 @@ export default function EndOfDay() {
       const qsCash    = todayQS.reduce((s,q)=>s+parseFloat(q.total||0),0);
 
       // Repairs today
-      const todayRep  = (Array.isArray(repairs)?repairs:[]).filter(r => r.created_at?.slice(0,10)===d);
+      const todayRep  = (Array.isArray(repairs)?repairs:[]).filter(r => r.created_at?.slice(0,10)===d && ['done','collected'].includes(r.status));
       const repCash   = todayRep.reduce((s,r)=>s+parseFloat(r.charge||0),0);
+      const repCashOnly = todayRep.filter(r=>!r.payment_method||r.payment_method==='cash').reduce((s,r)=>s+parseFloat(r.charge||0),0);
+      const repBank   = todayRep.filter(r=>r.payment_method&&r.payment_method!=='cash').reduce((s,r)=>s+parseFloat(r.charge||0),0);
 
       // Expenses today
       const todayExp  = (Array.isArray(expenses)?expenses:[]).filter(e => e.date?.slice(0,10)===d);
@@ -96,7 +98,8 @@ export default function EndOfDay() {
       const depCash   = dep.reduce((s,d)=>s+parseFloat(d.amount||0),0);
 
       const totalIn     = orderCash + orderBank + qsCash + repCash + balCash;
-      const cashOnlyIn  = orderCash + qsCash + repCash + balCashCash;
+      const qsCashOnly  = todayQS.filter(q=>!q.payment_method||q.payment_method==='cash').reduce((s,q)=>s+parseFloat(q.total||0),0);
+      const cashOnlyIn  = orderCash + qsCashOnly + repCashOnly + balCashCash;
       const cashInHand  = cashOnlyIn - expCash - depCash;
 
       setData({
