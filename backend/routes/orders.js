@@ -83,6 +83,10 @@ router.get('/', auth, async (req, res) => {
       params.push(`%${search}%`);
       query += ` AND (c.name ILIKE $${params.length} OR c.phone ILIKE $${params.length} OR o.order_number ILIKE $${params.length} OR o.frame ILIKE $${params.length} OR o.lens_type ILIKE $${params.length} OR o.lens_coating ILIKE $${params.length} OR o.lens_company ILIKE $${params.length})`;
     }
+    if (req.query.customer_id) {
+      params.push(parseInt(req.query.customer_id));
+      query += ` AND o.customer_id = $${params.length}`;
+    }
     if (req.query.lens_type) {
       params.push(`%${req.query.lens_type}%`);
       query += ` AND o.lens_type ILIKE $${params.length}`;

@@ -332,10 +332,17 @@ export default function NewOrder() {
     try {
       const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
       const token = localStorage.getItem('ko_token');
-      const res = await fetch(`${BASE}/refractions?customer_id=${c.id}&limit=1`, { headers:{ Authorization:`Bearer ${token}` } });
-      const data = await res.json();
-      const rx = Array.isArray(data) ? data[0] : null;
-      if (rx && (rx.r_sph || rx.l_sph)) setPrevRx(rx);
+      // Fetch most recent order for this customer that has refraction
+      const res = await fetch(`${BASE}/orders?customer_id=${c.id}&limit=10`, { headers:{ Authorization:`Bearer ${token}` } });
+      const orders = await res.json();
+      const arr = Array.isArray(orders) ? orders : [];
+      for (const o of arr) {
+        // Fetch full order to get refraction sub-object
+        const r2  = await fetch(`${BASE}/orders/${o.id}`, { headers:{ Authorization:`Bearer ${token}` } });
+        const full = await r2.json();
+        const rx   = full?.refraction;
+        if (rx && (rx.r_sph || rx.l_sph)) { setPrevRx(rx); break; }
+      }
     } catch(e) {}
   };
 
@@ -584,11 +591,29 @@ export default function NewOrder() {
                     <div style={{ fontSize:12, fontWeight:700, color:'#1e40af' }}>📋 Previous Prescription</div>
                     <div style={{ display:'flex', gap:8 }}>
                       <button type="button" onClick={()=>{
-                        if (prevRx.r_sph !== undefined) { document.querySelector('[data-rx="r_sph"]') && (document.querySelector('[data-rx="r_sph"]').value = prevRx.r_sph||''); }
-                        setRxForm(f=>({...f,
-                          r_sph:prevRx.r_sph||'', r_cyl:prevRx.r_cyl||'', r_axis:prevRx.r_axis||'', r_add:prevRx.r_add||'',
-                          l_sph:prevRx.l_sph||'', l_cyl:prevRx.l_cyl||'', l_axis:prevRx.l_axis||'', l_add:prevRx.l_add||'',
+                        // Parse stored refraction — values stored as e.g. "-2.50" or "+1.25"
+                        const parseRx = (val) => {
+                          if (!val || val === '0.00' || val === '0') return { s:'-', v:'0.00' };
+                          const str = String(val).trim();
+                          const sign = str.startsWith('+') ? '+' : '-';
+                          const num  = str.replace(/^[+-]/, '').trim() || '0.00';
+                          return { s:sign, v:num };
+                        };
+                        const rSph  = parseRx(prevRx.r_sph);
+                        const rCyl  = parseRx(prevRx.r_cyl);
+                        const lSph  = parseRx(prevRx.l_sph);
+                        const lCyl  = parseRx(prevRx.l_cyl);
+                        setRef(f=>({...f,
+                          r_sph_s: rSph.s, r_sph: rSph.v,
+                          r_cyl_s: rCyl.s, r_cyl: rCyl.v,
+                          r_axis:  prevRx.r_axis || '0',
+                          r_add:   prevRx.r_add  || '0.00',
+                          l_sph_s: lSph.s, l_sph: lSph.v,
+                          l_cyl_s: lCyl.s, l_cyl: lCyl.v,
+                          l_axis:  prevRx.l_axis || '0',
+                          l_add:   prevRx.l_add  || '0.00',
                         }));
+                        setHasRx(true);
                         setPrevRx(null);
                       }}
                         style={{ padding:'4px 12px', background:'#1e40af', color:'white', border:'none', borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>

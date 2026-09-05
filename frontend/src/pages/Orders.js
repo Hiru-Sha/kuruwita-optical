@@ -1354,6 +1354,9 @@ export default function Orders() {
                 <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
                   <span style={{ fontSize:12, color:C.muted }}>{o.phone}</span>
                   <span style={{ fontSize:12, color:C.muted }}>{o.frame||'—'}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:C.navy }}>
+                    Rs. {parseFloat(o.total_amount||0).toLocaleString()}
+                  </span>
                   <span style={{ fontSize:12, fontWeight:700, color:parseFloat(o.balance_amount)>0?C.danger:C.success }}>
                     Balance: {fmtMoney(o.balance_amount)}
                   </span>
