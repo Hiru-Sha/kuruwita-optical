@@ -7,15 +7,33 @@ const auth = require('../middleware/auth');
 // ============================================================
 router.get('/', auth, async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 100;
+    const limit  = parseInt(req.query.limit)  || 20;
+    const offset = parseInt(req.query.offset) || 0;
+    const search    = req.query.search    || '';
+    const from_date = req.query.from_date || '';
+    const to_date   = req.query.to_date   || '';
 
-    const result = await pool.query(
-      `SELECT *
-       FROM quick_sales
-       ORDER BY created_at DESC
-       LIMIT $1`,
-      [limit]
-    );
+    let where = 'WHERE 1=1';
+    const params = [];
+    if (search) {
+      params.push(`%${search}%`);
+      where += ` AND (sale_number ILIKE $${params.length} OR customer_name ILIKE $${params.length} OR customer_phone ILIKE $${params.length})`;
+    }
+    if (from_date) { params.push(from_date); where += ` AND created_at::date >= $${params.length}`; }
+    if (to_date)   { params.push(to_date);   where += ` AND created_at::date <= $${params.length}`; }
+    params.push(limit, offset);
+
+    const [result, countRes] = await Promise.all([
+      pool.query(
+        `SELECT * FROM quick_sales ${where} ORDER BY created_at DESC LIMIT $${params.length-1} OFFSET $${params.length}`,
+        params
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS total FROM quick_sales ${where}`,
+        params.slice(0, -2)
+      ),
+    ]);
+    const total = parseInt(countRes.rows[0].total);
 
     const rows = result.rows.map((r) => ({
       ...r,
@@ -30,7 +48,7 @@ router.get('/', auth, async (req, res) => {
       })(),
     }));
 
-    res.json(rows);
+    res.json({ data: rows, total, limit, offset });
   } catch (err) {
     console.error('Get quick sales error:', err);
     res.status(500).json({ error: err.message });
