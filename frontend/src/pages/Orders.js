@@ -192,6 +192,70 @@ function EditOrderModal({ order, onClose, onSave }) {
   const [saving,        setSaving]        = useState(false);
   const [error,         setError]         = useState('');
   const [tab,           setTab]           = useState('order');
+
+  const SPH_VALS = ['','+0.25','+0.50','+0.75','+1.00','+1.25','+1.50','+1.75','+2.00','+2.25','+2.50','+2.75','+3.00','+3.25','+3.50','+3.75','+4.00','+4.50','+5.00','+5.50','+6.00','+6.50','+7.00','+8.00','-0.25','-0.50','-0.75','-1.00','-1.25','-1.50','-1.75','-2.00','-2.25','-2.50','-2.75','-3.00','-3.25','-3.50','-3.75','-4.00','-4.50','-5.00','-5.50','-6.00','-6.50','-7.00','-8.00','-9.00','-10.00'];
+  const CYL_VALS = ['','-0.25','-0.50','-0.75','-1.00','-1.25','-1.50','-1.75','-2.00','-2.25','-2.50','-2.75','-3.00','-3.50','-4.00'];
+  const AX_VALS  = ['','0','5','10','15','20','25','30','35','40','45','50','55','60','65','70','75','80','85','90','95','100','105','110','115','120','125','130','135','140','145','150','155','160','165','170','175','180'];
+  const ADD_VALS = ['','+0.75','+1.00','+1.25','+1.50','+1.75','+2.00','+2.25','+2.50','+2.75','+3.00','+3.25','+3.50'];
+  const existRx  = order.refraction;
+  const [rxForm, setRxForm] = useState({
+    r_sph:existRx?.r_sph||'', r_cyl:existRx?.r_cyl||'', r_axis:existRx?.r_axis||'', r_add:existRx?.r_add||'', r_va:existRx?.r_va||'', r_pd:existRx?.r_pd||'',
+    l_sph:existRx?.l_sph||'', l_cyl:existRx?.l_cyl||'', l_axis:existRx?.l_axis||'', l_add:existRx?.l_add||'', l_va:existRx?.l_va||'', l_pd:existRx?.l_pd||'',
+    notes:existRx?.notes||'',
+  });
+  const [rxSaving, setRxSaving] = useState(false);
+  const [rxSaved,  setRxSaved]  = useState(false);
+  const setRx      = (k,v) => setRxForm(f=>({...f,[k]:v}));
+  const copyRtoL   = () => setRxForm(f=>({...f,l_sph:f.r_sph,l_cyl:f.r_cyl,l_axis:f.r_axis,l_add:f.r_add}));
+  const copyLtoR   = () => setRxForm(f=>({...f,r_sph:f.l_sph,r_cyl:f.l_cyl,r_axis:f.l_axis,r_add:f.l_add}));
+  const saveRx = async () => {
+    setRxSaving(true);
+    try {
+      const token  = localStorage.getItem('ko_token');
+      const method = existRx ? 'PUT' : 'POST';
+      const url    = existRx ? `${BASE}/refractions/${existRx.id}` : `${BASE}/refractions`;
+      await fetch(url, { method, headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
+        body: JSON.stringify({...rxForm, order_id:order.id, customer_id:order.customer_id}) });
+      setRxSaved(true); setTimeout(()=>setRxSaved(false),2500);
+    } catch(e) { alert('Failed to save Rx'); }
+    finally { setRxSaving(false); }
+  };
+
+  const SPH_VALS = ['','+0.25','+0.50','+0.75','+1.00','+1.25','+1.50','+1.75','+2.00','+2.25','+2.50','+2.75','+3.00','+3.25','+3.50','+3.75','+4.00','+4.25','+4.50','+4.75','+5.00','+5.50','+6.00','+6.50','+7.00','+8.00','-0.25','-0.50','-0.75','-1.00','-1.25','-1.50','-1.75','-2.00','-2.25','-2.50','-2.75','-3.00','-3.25','-3.50','-3.75','-4.00','-4.25','-4.50','-4.75','-5.00','-5.50','-6.00','-6.50','-7.00','-8.00','-9.00','-10.00'];
+  const CYL_VALS = ['','-0.25','-0.50','-0.75','-1.00','-1.25','-1.50','-1.75','-2.00','-2.25','-2.50','-2.75','-3.00','-3.50','-4.00'];
+  const AX_VALS  = ['','0','5','10','15','20','25','30','35','40','45','50','55','60','65','70','75','80','85','90','95','100','105','110','115','120','125','130','135','140','145','150','155','160','165','170','175','180'];
+  const ADD_VALS = ['','+0.75','+1.00','+1.25','+1.50','+1.75','+2.00','+2.25','+2.50','+2.75','+3.00','+3.25','+3.50'];
+
+  const existRx = order.refraction;
+  const [rxForm, setRxForm] = useState({
+    r_sph: existRx?.r_sph||'', r_cyl: existRx?.r_cyl||'', r_axis: existRx?.r_axis||'', r_add: existRx?.r_add||'', r_va: existRx?.r_va||'', r_pd: existRx?.r_pd||'',
+    l_sph: existRx?.l_sph||'', l_cyl: existRx?.l_cyl||'', l_axis: existRx?.l_axis||'', l_add: existRx?.l_add||'', l_va: existRx?.l_va||'', l_pd: existRx?.l_pd||'',
+    notes: existRx?.notes||'',
+  });
+  const [rxSaving, setRxSaving]   = useState(false);
+  const [rxSaved,  setRxSaved]    = useState(false);
+  const setRx = (k,v) => setRxForm(f=>({...f,[k]:v}));
+  const copyRtoL = () => setRxForm(f=>({...f, l_sph:f.r_sph, l_cyl:f.r_cyl, l_axis:f.r_axis, l_add:f.r_add }));
+  const copyLtoR = () => setRxForm(f=>({...f, r_sph:f.l_sph, r_cyl:f.l_cyl, r_axis:f.l_axis, r_add:f.l_add }));
+
+  const saveRx = async () => {
+    setRxSaving(true);
+    try {
+      const token = localStorage.getItem('ko_token');
+      const method = existRx ? 'PUT' : 'POST';
+      const url    = existRx
+        ? `${BASE}/refractions/${existRx.id}`
+        : `${BASE}/refractions`;
+      await fetch(url, {
+        method,
+        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+        body: JSON.stringify({ ...rxForm, order_id: order.id, customer_id: order.customer_id }),
+      });
+      setRxSaved(true);
+      setTimeout(()=>setRxSaved(false), 2500);
+    } catch(e) { alert('Failed to save Rx'); }
+    finally { setRxSaving(false); }
+  };
   // Frame search with image suggestions
   const [frameSearch,   setFrameSearch]   = useState(order.frame || '');
   const [frameResults,  setFrameResults]  = useState([]);
@@ -302,7 +366,7 @@ function EditOrderModal({ order, onClose, onSave }) {
 
         {/* Tabs */}
         <div style={{ display:'flex', gap:4, padding:'12px 24px', background:C.cream, borderBottom:`1px solid ${C.border}` }}>
-          {[['order','🕶️ Frame & Lens'],['payment','💳 Payment'],['notes','📝 Notes & Warranty']].map(([t,l])=>(
+          {[['order','🕶️ Frame & Lens'],['rx','👁️ Prescription'],['payment','💳 Payment'],['notes','📝 Notes & Warranty']].map(([t,l])=>(
             <button key={t} onClick={()=>setTab(t)} style={tabStyle(t)}>{l}</button>
           ))}
         </div>
@@ -1713,6 +1777,61 @@ export default function Orders() {
                   ? <span style={{ fontSize:11, color:C.success }}>Returned to customer</span>
                   : <button onClick={handleRxReturned} style={{ background:'#0369a1', color:'white', border:'none', borderRadius:7, padding:'5px 12px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Mark as Returned</button>
                 }
+              </div>
+            )}
+
+            {/* ── TAB: Prescription (editable) ── */}
+            {tab==='rx' && (
+              <div>
+                <div style={{fontSize:11,color:C.muted,marginBottom:14}}>
+                  {existRx ? 'Edit the existing prescription.' : '⚠️ No prescription saved yet. Add it below.'}
+                </div>
+                {[['Right Eye (R)','r'],['Left Eye (L)','l']].map(([eyeLabel,eye])=>(
+                  <div key={eye} style={{marginBottom:14,background:C.cream,borderRadius:10,padding:'12px 14px'}}>
+                    <div style={{fontSize:12,fontWeight:700,color:C.navy,marginBottom:10}}>{eyeLabel}</div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr',gap:8}}>
+                      {[['SPH',`${eye}_sph`,SPH_VALS],['CYL',`${eye}_cyl`,CYL_VALS],['AXIS',`${eye}_axis`,AX_VALS],['ADD',`${eye}_add`,ADD_VALS],['VA',`${eye}_va`,['','6/6','6/9','6/12','6/18','6/24','6/36','6/60','CF','HM','PL']]].map(([lbl,key,opts])=>(
+                        <div key={key}>
+                          <label style={{fontSize:9,fontWeight:700,textTransform:'uppercase',color:C.muted,display:'block',marginBottom:4}}>{lbl}</label>
+                          <select value={rxForm[key]} onChange={e=>setRx(key,e.target.value)}
+                            style={{...SEL,padding:'7px 8px',fontSize:12}}>
+                            {opts.map(v=><option key={v} value={v}>{v||'—'}</option>)}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                    {eye==='r' && (
+                      <div style={{display:'flex',gap:8,marginTop:10}}>
+                        <button type="button" onClick={copyRtoL}
+                          style={{padding:'5px 14px',background:C.navy,color:'white',border:'none',borderRadius:7,fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                          Copy R → L
+                        </button>
+                        <button type="button" onClick={copyLtoR}
+                          style={{padding:'5px 14px',background:C.navy,color:'white',border:'none',borderRadius:7,fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                          Copy L → R
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:16}}>
+                  <div>
+                    <label style={{fontSize:10,fontWeight:700,textTransform:'uppercase',color:C.muted,display:'block',marginBottom:4}}>R PD</label>
+                    <input value={rxForm.r_pd} onChange={e=>setRx('r_pd',e.target.value)} placeholder="e.g. 32" style={INP}/>
+                  </div>
+                  <div>
+                    <label style={{fontSize:10,fontWeight:700,textTransform:'uppercase',color:C.muted,display:'block',marginBottom:4}}>L PD</label>
+                    <input value={rxForm.l_pd} onChange={e=>setRx('l_pd',e.target.value)} placeholder="e.g. 32" style={INP}/>
+                  </div>
+                  <div>
+                    <label style={{fontSize:10,fontWeight:700,textTransform:'uppercase',color:C.muted,display:'block',marginBottom:4}}>Rx Notes</label>
+                    <input value={rxForm.notes} onChange={e=>setRx('notes',e.target.value)} placeholder="Any notes..." style={INP}/>
+                  </div>
+                </div>
+                <button onClick={saveRx} disabled={rxSaving}
+                  style={{padding:'10px 28px',background:rxSaved?C.success:rxSaving?C.muted:C.navy,color:'white',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                  {rxSaved?'✓ Saved!':rxSaving?'⏳ Saving...':existRx?'💾 Update Prescription':'💾 Save Prescription'}
+                </button>
               </div>
             )}
 
