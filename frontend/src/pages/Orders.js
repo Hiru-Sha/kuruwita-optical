@@ -650,6 +650,61 @@ function EditOrderModal({ order, onClose, onSave }) {
             </div>
           )}
 
+          {/* ── TAB: Prescription ── */}
+          {tab==='rx' && (
+            <div>
+              <div style={{fontSize:11,color:C.muted,marginBottom:14}}>
+                {existRx ? 'Edit the existing prescription.' : '⚠️ No prescription saved yet. Add it below.'}
+              </div>
+              {[['Right Eye (R)','r'],['Left Eye (L)','l']].map(([eyeLabel,eye])=>(
+                <div key={eye} style={{marginBottom:14,background:C.cream,borderRadius:10,padding:'12px 14px'}}>
+                  <div style={{fontSize:12,fontWeight:700,color:C.navy,marginBottom:10}}>{eyeLabel}</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr',gap:8}}>
+                    {[['SPH',`${eye}_sph`,SPH_VALS],['CYL',`${eye}_cyl`,CYL_VALS],['AXIS',`${eye}_axis`,AX_VALS],['ADD',`${eye}_add`,ADD_VALS],['VA',`${eye}_va`,['','6/6','6/9','6/12','6/18','6/24','6/36','6/60','CF','HM','PL']]].map(([lbl,key,opts])=>(
+                      <div key={key}>
+                        <label style={{fontSize:9,fontWeight:700,textTransform:'uppercase',color:C.muted,display:'block',marginBottom:4}}>{lbl}</label>
+                        <select value={rxForm[key]} onChange={e=>setRx(key,e.target.value)}
+                          style={{...SEL,padding:'7px 8px',fontSize:12}}>
+                          {opts.map(v=><option key={v} value={v}>{v||'—'}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                  {eye==='r' && (
+                    <div style={{display:'flex',gap:8,marginTop:10}}>
+                      <button type="button" onClick={copyRtoL}
+                        style={{padding:'5px 14px',background:C.navy,color:'white',border:'none',borderRadius:7,fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                        Copy R → L
+                      </button>
+                      <button type="button" onClick={copyLtoR}
+                        style={{padding:'5px 14px',background:C.navy,color:'white',border:'none',borderRadius:7,fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                        Copy L → R
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:16}}>
+                <div>
+                  <label style={{fontSize:10,fontWeight:700,textTransform:'uppercase',color:C.muted,display:'block',marginBottom:4}}>R PD</label>
+                  <input value={rxForm.r_pd} onChange={e=>setRx('r_pd',e.target.value)} placeholder="e.g. 32" style={INP}/>
+                </div>
+                <div>
+                  <label style={{fontSize:10,fontWeight:700,textTransform:'uppercase',color:C.muted,display:'block',marginBottom:4}}>L PD</label>
+                  <input value={rxForm.l_pd} onChange={e=>setRx('l_pd',e.target.value)} placeholder="e.g. 32" style={INP}/>
+                </div>
+                <div>
+                  <label style={{fontSize:10,fontWeight:700,textTransform:'uppercase',color:C.muted,display:'block',marginBottom:4}}>Rx Notes</label>
+                  <input value={rxForm.notes} onChange={e=>setRx('notes',e.target.value)} placeholder="Any notes..." style={INP}/>
+                </div>
+              </div>
+              <button onClick={saveRx} disabled={rxSaving}
+                style={{padding:'10px 28px',background:rxSaved?C.success:rxSaving?C.muted:C.navy,color:'white',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                {rxSaved?'✓ Saved!':rxSaving?'⏳ Saving...':existRx?'💾 Update Prescription':'💾 Save Prescription'}
+              </button>
+            </div>
+          )}
+
           {/* Save button */}
           <div style={{ display:'flex', gap:10, marginTop:20, paddingTop:16, borderTop:`1px solid ${C.cream}` }}>
             <button onClick={onClose}
@@ -1777,61 +1832,6 @@ export default function Orders() {
                   ? <span style={{ fontSize:11, color:C.success }}>Returned to customer</span>
                   : <button onClick={handleRxReturned} style={{ background:'#0369a1', color:'white', border:'none', borderRadius:7, padding:'5px 12px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Mark as Returned</button>
                 }
-              </div>
-            )}
-
-            {/* ── TAB: Prescription (editable) ── */}
-            {tab==='rx' && (
-              <div>
-                <div style={{fontSize:11,color:C.muted,marginBottom:14}}>
-                  {existRx ? 'Edit the existing prescription.' : '⚠️ No prescription saved yet. Add it below.'}
-                </div>
-                {[['Right Eye (R)','r'],['Left Eye (L)','l']].map(([eyeLabel,eye])=>(
-                  <div key={eye} style={{marginBottom:14,background:C.cream,borderRadius:10,padding:'12px 14px'}}>
-                    <div style={{fontSize:12,fontWeight:700,color:C.navy,marginBottom:10}}>{eyeLabel}</div>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr',gap:8}}>
-                      {[['SPH',`${eye}_sph`,SPH_VALS],['CYL',`${eye}_cyl`,CYL_VALS],['AXIS',`${eye}_axis`,AX_VALS],['ADD',`${eye}_add`,ADD_VALS],['VA',`${eye}_va`,['','6/6','6/9','6/12','6/18','6/24','6/36','6/60','CF','HM','PL']]].map(([lbl,key,opts])=>(
-                        <div key={key}>
-                          <label style={{fontSize:9,fontWeight:700,textTransform:'uppercase',color:C.muted,display:'block',marginBottom:4}}>{lbl}</label>
-                          <select value={rxForm[key]} onChange={e=>setRx(key,e.target.value)}
-                            style={{...SEL,padding:'7px 8px',fontSize:12}}>
-                            {opts.map(v=><option key={v} value={v}>{v||'—'}</option>)}
-                          </select>
-                        </div>
-                      ))}
-                    </div>
-                    {eye==='r' && (
-                      <div style={{display:'flex',gap:8,marginTop:10}}>
-                        <button type="button" onClick={copyRtoL}
-                          style={{padding:'5px 14px',background:C.navy,color:'white',border:'none',borderRadius:7,fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
-                          Copy R → L
-                        </button>
-                        <button type="button" onClick={copyLtoR}
-                          style={{padding:'5px 14px',background:C.navy,color:'white',border:'none',borderRadius:7,fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
-                          Copy L → R
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:16}}>
-                  <div>
-                    <label style={{fontSize:10,fontWeight:700,textTransform:'uppercase',color:C.muted,display:'block',marginBottom:4}}>R PD</label>
-                    <input value={rxForm.r_pd} onChange={e=>setRx('r_pd',e.target.value)} placeholder="e.g. 32" style={INP}/>
-                  </div>
-                  <div>
-                    <label style={{fontSize:10,fontWeight:700,textTransform:'uppercase',color:C.muted,display:'block',marginBottom:4}}>L PD</label>
-                    <input value={rxForm.l_pd} onChange={e=>setRx('l_pd',e.target.value)} placeholder="e.g. 32" style={INP}/>
-                  </div>
-                  <div>
-                    <label style={{fontSize:10,fontWeight:700,textTransform:'uppercase',color:C.muted,display:'block',marginBottom:4}}>Rx Notes</label>
-                    <input value={rxForm.notes} onChange={e=>setRx('notes',e.target.value)} placeholder="Any notes..." style={INP}/>
-                  </div>
-                </div>
-                <button onClick={saveRx} disabled={rxSaving}
-                  style={{padding:'10px 28px',background:rxSaved?C.success:rxSaving?C.muted:C.navy,color:'white',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
-                  {rxSaved?'✓ Saved!':rxSaving?'⏳ Saving...':existRx?'💾 Update Prescription':'💾 Save Prescription'}
-                </button>
               </div>
             )}
 
