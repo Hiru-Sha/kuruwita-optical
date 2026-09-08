@@ -942,11 +942,11 @@ export default function Orders() {
   const [missingCosts, setMissingCosts] = useState(false);
 
   const saveFilter  = (k,v) => sessionStorage.setItem(k, v);
-  const setFilterP  = v => { setFilter(v);       saveFilter('ord_filter',v); };
-  const setDateFP   = v => { setDateFP(v);   saveFilter('ord_datefilter',v); };
-  const setFromP    = v => { setFromP(v);      saveFilter('ord_from',v); };
-  const setToP      = v => { setToP(v);        saveFilter('ord_to',v); };
-  const setSearchP  = v => { setSearch(v);        saveFilter('ord_search',v); };
+  const setFilterP  = v => { setFilter(v);      saveFilter('ord_filter',v); };
+  const setDateFP   = v => { setDateFilter(v);  saveFilter('ord_datefilter',v); };
+  const setFromP    = v => { setDateFrom(v);     saveFilter('ord_from',v); };
+  const setToP      = v => { setDateTo(v);       saveFilter('ord_to',v); };
+  const setSearchP  = v => { setSearch(v);       saveFilter('ord_search',v); };
 
   // Read URL params from dashboard KPI clicks and Warranty page
   useEffect(() => {
