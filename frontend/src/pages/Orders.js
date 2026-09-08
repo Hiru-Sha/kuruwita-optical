@@ -221,41 +221,6 @@ function EditOrderModal({ order, onClose, onSave }) {
     finally { setRxSaving(false); }
   };
 
-  const SPH_VALS = ['','+0.25','+0.50','+0.75','+1.00','+1.25','+1.50','+1.75','+2.00','+2.25','+2.50','+2.75','+3.00','+3.25','+3.50','+3.75','+4.00','+4.25','+4.50','+4.75','+5.00','+5.50','+6.00','+6.50','+7.00','+8.00','-0.25','-0.50','-0.75','-1.00','-1.25','-1.50','-1.75','-2.00','-2.25','-2.50','-2.75','-3.00','-3.25','-3.50','-3.75','-4.00','-4.25','-4.50','-4.75','-5.00','-5.50','-6.00','-6.50','-7.00','-8.00','-9.00','-10.00'];
-  const CYL_VALS = ['','-0.25','-0.50','-0.75','-1.00','-1.25','-1.50','-1.75','-2.00','-2.25','-2.50','-2.75','-3.00','-3.50','-4.00'];
-  const AX_VALS  = ['','0','5','10','15','20','25','30','35','40','45','50','55','60','65','70','75','80','85','90','95','100','105','110','115','120','125','130','135','140','145','150','155','160','165','170','175','180'];
-  const ADD_VALS = ['','+0.75','+1.00','+1.25','+1.50','+1.75','+2.00','+2.25','+2.50','+2.75','+3.00','+3.25','+3.50'];
-
-  const existRx = order.refraction;
-  const [rxForm, setRxForm] = useState({
-    r_sph: existRx?.r_sph||'', r_cyl: existRx?.r_cyl||'', r_axis: existRx?.r_axis||'', r_add: existRx?.r_add||'', r_va: existRx?.r_va||'', r_pd: existRx?.r_pd||'',
-    l_sph: existRx?.l_sph||'', l_cyl: existRx?.l_cyl||'', l_axis: existRx?.l_axis||'', l_add: existRx?.l_add||'', l_va: existRx?.l_va||'', l_pd: existRx?.l_pd||'',
-    notes: existRx?.notes||'',
-  });
-  const [rxSaving, setRxSaving]   = useState(false);
-  const [rxSaved,  setRxSaved]    = useState(false);
-  const setRx = (k,v) => setRxForm(f=>({...f,[k]:v}));
-  const copyRtoL = () => setRxForm(f=>({...f, l_sph:f.r_sph, l_cyl:f.r_cyl, l_axis:f.r_axis, l_add:f.r_add }));
-  const copyLtoR = () => setRxForm(f=>({...f, r_sph:f.l_sph, r_cyl:f.l_cyl, r_axis:f.l_axis, r_add:f.l_add }));
-
-  const saveRx = async () => {
-    setRxSaving(true);
-    try {
-      const token = localStorage.getItem('ko_token');
-      const method = existRx ? 'PUT' : 'POST';
-      const url    = existRx
-        ? `${BASE}/refractions/${existRx.id}`
-        : `${BASE}/refractions`;
-      await fetch(url, {
-        method,
-        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-        body: JSON.stringify({ ...rxForm, order_id: order.id, customer_id: order.customer_id }),
-      });
-      setRxSaved(true);
-      setTimeout(()=>setRxSaved(false), 2500);
-    } catch(e) { alert('Failed to save Rx'); }
-    finally { setRxSaving(false); }
-  };
   // Frame search with image suggestions
   const [frameSearch,   setFrameSearch]   = useState(order.frame || '');
   const [frameResults,  setFrameResults]  = useState([]);
