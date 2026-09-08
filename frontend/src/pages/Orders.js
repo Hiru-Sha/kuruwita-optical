@@ -145,7 +145,7 @@ function PaymentModal({ order, onClose, onSave }) {
 
 
 // ── Edit Order Modal ─────────────────────────────────────────
-function EditOrderModal({ order, onClose, onSave }) {
+function EditOrderModal({ order, onClose, onSave, onRxSaved }) {
   const FRAME_TYPES  = ['Full rim','Half rim','Rimless','Sunglass'];
   const FRAME_MATS   = ['Plastic','Metal','TR90','Titanium','Acetate','Mixed'];
   const FRAME_COLORS = ['Black','Gold','Silver','Brown','Gunmetal','Blue','Red','Pink','Tortoise','Crystal','Other'];
@@ -216,7 +216,10 @@ function EditOrderModal({ order, onClose, onSave }) {
       const url    = existRx ? `${BASE}/refractions/${existRx.id}` : `${BASE}/refractions`;
       await fetch(url, { method, headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
         body: JSON.stringify({...rxForm, order_id:order.id, customer_id:order.customer_id}) });
-      setRxSaved(true); setTimeout(()=>setRxSaved(false),2500);
+      setRxSaved(true);
+      setTimeout(()=>setRxSaved(false), 2500);
+      // Reload order so refraction shows updated in detail panel + customer tab
+      if (onRxSaved) onRxSaved();
     } catch(e) { alert('Failed to save Rx'); }
     finally { setRxSaving(false); }
   };
@@ -2023,6 +2026,17 @@ export default function Orders() {
             setEditForm({});
             load();
             setSelected(s => s ? { ...s, ...updates } : s);
+          }}
+          onRxSaved={async () => {
+            // Reload full order with refraction without closing modal
+            try {
+              const BASE2 = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+              const token = localStorage.getItem('ko_token');
+              const r = await fetch(`${BASE2}/orders/${selected.id}`, { headers:{ Authorization:`Bearer ${token}` } });
+              const data = await r.json();
+              setSelected(data);
+              setEditForm(data);
+            } catch(e) {}
           }}
         />
       )}
