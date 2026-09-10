@@ -147,7 +147,7 @@ router.get('/profit', auth, async (req, res) => {
         COALESCE(SUM(balance_amount), 0) AS owed,
         COUNT(*) AS order_count
       FROM orders
-      WHERE created_at >= NOW() - INTERVAL '6 months'
+      WHERE created_at >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
         AND status != 'cancelled'
       GROUP BY DATE_TRUNC('month', created_at)
       ORDER BY DATE_TRUNC('month', created_at)
@@ -159,7 +159,7 @@ router.get('/profit', auth, async (req, res) => {
         COALESCE(SUM(total), 0) AS qs_revenue,
         COUNT(*) AS qs_count
       FROM quick_sales
-      WHERE created_at >= NOW() - INTERVAL '6 months'
+      WHERE created_at >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
       GROUP BY DATE_TRUNC('month', created_at)
     `);
 
@@ -169,7 +169,7 @@ router.get('/profit', auth, async (req, res) => {
         COALESCE(SUM(charge), 0) AS repair_revenue,
         COUNT(*) AS repair_count
       FROM repairs
-      WHERE created_at >= NOW() - INTERVAL '6 months'
+      WHERE created_at >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
         AND status IN ('done','collected','completed')
       GROUP BY DATE_TRUNC('month', created_at)
     `);
@@ -179,7 +179,7 @@ router.get('/profit', auth, async (req, res) => {
         TO_CHAR(date, 'YYYY-MM') AS month_key,
         COALESCE(SUM(CASE WHEN category != 'Lab Payment' THEN amount END), 0) AS total_expenses
       FROM expenses
-      WHERE date >= CURRENT_DATE - INTERVAL '6 months'
+      WHERE date >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
       GROUP BY TO_CHAR(date, 'YYYY-MM')
     `);
 
@@ -188,7 +188,7 @@ router.get('/profit', auth, async (req, res) => {
         TO_CHAR(date, 'YYYY-MM') AS month_key,
         COALESCE(SUM(CASE WHEN category = 'Lab Payment' THEN amount END), 0) AS lens_cogs
       FROM expenses
-      WHERE date >= CURRENT_DATE - INTERVAL '6 months'
+      WHERE date >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
       GROUP BY TO_CHAR(date, 'YYYY-MM')
     `);
 
