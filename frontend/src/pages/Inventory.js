@@ -69,7 +69,8 @@ const compressImage = (file, maxWidth=500, quality=0.7) => new Promise((resolve,
 const toBase64 = compressImage;  // alias so existing code still works
 const fmtDate   = (d) => new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 
-const CATS      = ['All','Frames','Sunglasses','Reading Glasses','Boxes','Sunglass Pouches','Glass Cleaner','Chains','Ear Tips','Old Stock','Out of Stock'];
+const DEFAULT_CATS = ['Frames','Sunglasses','Reading Glasses','Boxes','Sunglass Pouches','Glass Cleaner','Chains','Ear Tips','Old Stock','Out of Stock'];
+const CATS      = ['All',...DEFAULT_CATS];
 const CAT_ICON  = { Frames:'🕶️', Sunglasses:'😎', 'Reading Glasses':'👓', Boxes:'📦', 'Sunglass Pouches':'👜', 'Glass Cleaner':'🧴', Chains:'⛓️', 'Ear Tips':'🔧', 'Old Stock':'📦', 'Out of Stock':'❌' };
 const FR_SHAPES = ['Round','Oval','Rectangle','Square','Cat-eye','Aviator','Wayfarer','Butterfly','Hexagon','Geometric'];
 const FR_TYPES  = ['Full rim','Half rim','Rimless'];
@@ -1166,6 +1167,8 @@ export default function Inventory() {
   const [dupMatches,   setDupMatches]  = useState([]);
   const [dupChecking,  setDupChecking] = useState(false);
   const [addCat,       setAddCat]      = useState('');
+  const [customCatInput, setCustomCatInput] = useState('');
+  const [showCustomCat,  setShowCustomCat]  = useState(false);
   const [showAIScan,   setShowAIScan]  = useState(false);
   const [aiPhotos,     setAiPhotos]    = useState({ front:null, arm:null, tag:null });
   const [aiLoading,    setAiLoading]   = useState(false);
@@ -1912,6 +1915,64 @@ export default function Inventory() {
                     <span style={{ fontSize:12, fontWeight:700, color:C.navy, textAlign:'center', lineHeight:1.3 }}>{cat}</span>
                   </button>
                 ))}
+
+                {/* Custom category button */}
+                {!showCustomCat ? (
+                  <button onClick={()=>setShowCustomCat(true)}
+                    style={{ padding:'14px 10px', borderRadius:12, border:`2px dashed ${C.border}`,
+                      background:'white', cursor:'pointer', fontFamily:'inherit',
+                      display:'flex', flexDirection:'column', alignItems:'center', gap:6, transition:'all .15s' }}
+                    onMouseEnter={e=>{ e.currentTarget.style.border=`2px dashed ${C.navy}`; e.currentTarget.style.background='#f8f5ef'; }}
+                    onMouseLeave={e=>{ e.currentTarget.style.border=`2px dashed ${C.border}`; e.currentTarget.style.background='white'; }}>
+                    <span style={{ fontSize:28 }}>➕</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:C.muted, textAlign:'center', lineHeight:1.3 }}>Custom</span>
+                  </button>
+                ) : (
+                  <div style={{ gridColumn:'1 / -1', background:'#f0f4ff', border:`2px solid #1a56db`, borderRadius:12, padding:'14px 16px' }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#1e3a8a', marginBottom:10 }}>Enter Category Name</div>
+                    <div style={{ display:'flex', gap:8 }}>
+                      <input
+                        autoFocus
+                        value={customCatInput}
+                        onChange={e=>setCustomCatInput(e.target.value)}
+                        onKeyDown={e=>{
+                          if (e.key==='Enter' && customCatInput.trim()) {
+                            const cat = customCatInput.trim();
+                            setAddCat(cat);
+                            setForm(f=>({...f, category:cat}));
+                            setColorVariants([{color:'Black',qty:'1',image:null}]);
+                            setCustomCatInput('');
+                            setShowCustomCat(false);
+                            setAddStep('form');
+                          }
+                        }}
+                        placeholder="e.g. Contact Lenses, Lens Cases..."
+                        style={{ flex:1, padding:'9px 12px', border:`1.5px solid #93c5fd`, borderRadius:8,
+                          fontSize:13, fontFamily:'inherit', outline:'none', background:'white' }}
+                      />
+                      <button onClick={()=>{
+                        const cat = customCatInput.trim();
+                        if (!cat) return;
+                        setAddCat(cat);
+                        setForm(f=>({...f, category:cat}));
+                        setColorVariants([{color:'Black',qty:'1',image:null}]);
+                        setCustomCatInput('');
+                        setShowCustomCat(false);
+                        setAddStep('form');
+                      }}
+                        style={{ padding:'9px 18px', background:'#1a56db', color:'white', border:'none',
+                          borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                        Go →
+                      </button>
+                      <button onClick={()=>{ setShowCustomCat(false); setCustomCatInput(''); }}
+                        style={{ padding:'9px 12px', background:'white', border:`1.5px solid ${C.border}`,
+                          borderRadius:8, fontSize:13, cursor:'pointer', fontFamily:'inherit', color:C.muted }}>
+                        ✕
+                      </button>
+                    </div>
+                    <div style={{ fontSize:11, color:'#6b7280', marginTop:6 }}>Press Enter or click Go to continue</div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2091,12 +2152,12 @@ export default function Inventory() {
       )}
 
 
-      {/* Category tabs */}
+      {/* Category tabs — include custom categories from actual items */}
       <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, marginBottom:16, overflowX:'auto', background:'white', borderRadius:'12px 12px 0 0', padding:'0 4px' }}>
-        {CATS.map(c=>(
+        {[...new Set([...CATS, ...items.map(i=>i.category).filter(c=>c && !CATS.includes(c))])].map(c=>(
           <button key={c} onClick={()=>setActiveCat(c)}
             style={{ padding:'11px 16px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:activeCat===c?C.navy:C.muted, borderBottom:`3px solid ${activeCat===c?C.gold:'transparent'}`, marginBottom:-1, transition:'all .15s', display:'flex', alignItems:'center', gap:6 }}>
-            {c==='All'?'📋 All':`${CAT_ICON[c]} ${c}`}
+            {c==='All'?'📋 All':`${CAT_ICON[c]||'📦'} ${c}`}
           </button>
         ))}
       </div>
