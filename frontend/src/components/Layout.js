@@ -73,6 +73,7 @@ const NAV = [
   { to:'/kalutota',       icon:'balance',    label:'Kalutota A/C',   section:'inventory',perm:'kalutota' },
   { to:'/reports',        icon:'reports',    label:'Reports',        section:'finance',  roles:['admin'], perm:'reports' },
   { to:'/expenses',       icon:'expenses',   label:'Expenses',       section:'finance',  roles:['admin'], perm:'expenses' },
+  { to:'/lens-payment',   icon:'expenses',   label:'Lens Payment',   section:'finance',  roles:['admin'], perm:'expenses' },
   { to:'/end-of-day',     icon:'eod',        label:'End of Day',     section:'finance',  roles:['admin'] },
   { to:'/report-pdf',     icon:'rx',         label:'PDF Report',     section:'finance',  roles:['admin'] },
   { to:'/bulk-import',    icon:'import',     label:'Bulk Import',    section:'account',  roles:['admin'] },

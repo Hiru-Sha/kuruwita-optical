@@ -21,6 +21,7 @@ import QuickSale  from './pages/QuickSale';
 import Grinding   from './pages/Grinding';
 import Reports    from './pages/Reports';
 import Expenses   from './pages/Expenses';
+import LensPayment from './pages/LensPayment';
 import Settings        from './pages/Settings';
 import BalanceFollowUp from './pages/BalanceFollowUp';
 import RxTracker       from './pages/RxTracker';
@@ -119,6 +120,7 @@ export default function App() {
             <Route path="grinding"  element={<AdminOnly><Grinding /></AdminOnly>} />
             <Route path="reports"   element={<AdminOnly><Reports  /></AdminOnly>} />
             <Route path="expenses"  element={<AdminOnly><Expenses /></AdminOnly>} />
+            <Route path="lens-payment" element={<AdminOnly><LensPayment /></AdminOnly>} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
