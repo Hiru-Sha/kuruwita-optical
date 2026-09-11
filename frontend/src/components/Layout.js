@@ -171,14 +171,11 @@ export default function Layout() {
   const SidebarInner = ()=>(
     <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
       {/* Logo */}
-      <div style={{padding:'20px 16px 16px',borderBottom:'1px solid rgba(255,255,255,.08)',display:'flex',alignItems:'center',gap:10,cursor:'pointer',flexShrink:0}} onClick={()=>{navigate('/dashboard');setOpen(false);}}>
-        <div style={{width:36,height:36,borderRadius:10,background:'linear-gradient(135deg,#c9a84c,#e8c96a)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 12px rgba(201,168,76,.4)',flexShrink:0}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A1628" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/><line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/></svg>
-        </div>
-        <div>
-          <div style={{fontSize:13,fontWeight:700,color:'#fff',fontFamily:"'Playfair Display',serif"}}>Kuruwita Optical</div>
-          <div style={{fontSize:9,color:'rgba(201,168,76,.7)',letterSpacing:'1.5px',textTransform:'uppercase'}}>Management System</div>
-        </div>
+      <div style={{padding:'14px 16px 12px',borderBottom:'1px solid rgba(255,255,255,.08)',cursor:'pointer',flexShrink:0}} onClick={()=>{navigate('/dashboard');setOpen(false);}}>
+        <img src="/logo-ko-dark.webp" alt="Kuruwita Optical"
+          style={{height:48,width:'auto',objectFit:'contain',display:'block'}}
+          onError={e=>{e.target.style.display='none';}}/>
+        <div style={{fontSize:9,color:'rgba(201,168,76,.7)',letterSpacing:'1.5px',textTransform:'uppercase',marginTop:4}}>Management System</div>
       </div>
       {/* User */}
       <div style={{margin:'10px 12px 6px',background:'rgba(255,255,255,.06)',borderRadius:9,padding:'9px 12px',display:'flex',alignItems:'center',gap:8}}>

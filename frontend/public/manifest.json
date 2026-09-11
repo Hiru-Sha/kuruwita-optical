@@ -1,5 +1,5 @@
 {
-  "name": "Wickramakalutota Opticals",
+  "name": "Kuruwita Optical",
   "short_name": "KO Optical",
   "description": "Optical shop management system",
   "start_url": "/",
@@ -29,6 +29,9 @@
       "form_factor": "narrow"
     }
   ],
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "lang": "en"
 }
