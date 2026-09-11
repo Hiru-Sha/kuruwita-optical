@@ -24,6 +24,106 @@ const apiPost = (path, body) =>
 
 const INP_S = { padding:'6px 9px', border:`1.5px solid ${C.gold}`, borderRadius:7, fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:'none', background:'#fffbeb', fontWeight:700 };
 
+// ── Print Lab Payment Receipt (A5) ────────────────────────────
+function printLabReceipt({ orders, payDate, payMethod, paidAmount, lab }) {
+  const total = orders.reduce((s,o)=>s+parseFloat(o.lab_bill_amount||0),0);
+  const paid  = parseFloat(paidAmount) || total;
+  const bal   = total - paid;
+  const rows  = orders.map(o=>`
+    <tr>
+      <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#374151;">${o.order_number}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#374151;">${o.customer_name||'—'}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#374151;text-align:center;">${o.lens_company||lab||'—'}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;font-weight:700;color:#0f1f3d;text-align:right;">Rs. ${parseFloat(o.lab_bill_amount||0).toLocaleString()}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  @page { size: A5; margin: 10mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; color: #0f1f3d; background: white; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+  <!-- Header -->
+  <div style="border-bottom:3px solid #1a56db;padding-bottom:10px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-end;">
+    <div>
+      <div style="font-size:18px;font-weight:700;color:#0f1f3d;letter-spacing:0.3px;">Kuruwita Optical</div>
+      <div style="font-size:10px;color:#6b7280;margin-top:2px;">No.57, Kurunegala Road, Chilaw · 032 222 1211</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="background:#1a56db;color:white;font-size:9px;font-weight:700;padding:2px 10px;border-radius:20px;letter-spacing:1px;display:inline-block;margin-bottom:3px;">LAB PAYMENT RECEIPT</div>
+      <div style="font-size:11px;color:#6b7280;">${payDate}</div>
+    </div>
+  </div>
+
+  <!-- Lab & payment info -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+    <div style="background:#f8faff;border:1.5px solid #dbeafe;border-radius:8px;padding:10px 12px;">
+      <div style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Paid To (Lab)</div>
+      <div style="font-size:14px;font-weight:700;color:#0f1f3d;">${lab || 'Lab'}</div>
+    </div>
+    <div style="background:#f8faff;border:1.5px solid #dbeafe;border-radius:8px;padding:10px 12px;">
+      <div style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Payment Method</div>
+      <div style="font-size:14px;font-weight:700;color:#0f1f3d;">${payMethod==='cash'?'Cash':payMethod==='card'?'Card':'Bank Transfer'}</div>
+    </div>
+  </div>
+
+  <!-- Orders table -->
+  <table style="width:100%;border-collapse:collapse;border:1.5px solid #dbeafe;border-radius:8px;overflow:hidden;margin-bottom:14px;">
+    <thead>
+      <tr style="background:#1a56db;">
+        <th style="padding:7px 10px;color:white;font-size:10px;font-weight:700;text-align:left;letter-spacing:0.5px;">ORDER</th>
+        <th style="padding:7px 10px;color:white;font-size:10px;font-weight:700;text-align:left;letter-spacing:0.5px;">CUSTOMER</th>
+        <th style="padding:7px 10px;color:white;font-size:10px;font-weight:700;text-align:center;letter-spacing:0.5px;">LAB</th>
+        <th style="padding:7px 10px;color:white;font-size:10px;font-weight:700;text-align:right;letter-spacing:0.5px;">LENS COST</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <!-- Totals -->
+  <div style="margin-left:auto;width:200px;">
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:12px;">
+      <span style="color:#6b7280;">Total (${orders.length} orders)</span>
+      <span style="font-weight:700;color:#0f1f3d;">Rs. ${total.toLocaleString()}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:12px;">
+      <span style="color:#15803d;font-weight:700;">Amount Paid</span>
+      <span style="font-weight:700;color:#15803d;">Rs. ${paid.toLocaleString()}</span>
+    </div>
+    ${bal > 0 ? `<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px;">
+      <span style="color:#dc2626;font-weight:700;">Balance Due</span>
+      <span style="font-weight:700;color:#dc2626;">Rs. ${bal.toLocaleString()}</span>
+    </div>` : `<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px;">
+      <span style="color:#15803d;font-weight:700;">✓ Fully Paid</span>
+      <span style="font-weight:700;color:#15803d;">Rs. ${paid.toLocaleString()}</span>
+    </div>`}
+  </div>
+
+  <!-- Signature -->
+  <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div style="border-top:1px solid #d1d5db;padding-top:6px;">
+      <div style="font-size:10px;color:#6b7280;">Received by (Lab)</div>
+    </div>
+    <div style="border-top:1px solid #d1d5db;padding-top:6px;">
+      <div style="font-size:10px;color:#6b7280;">Paid by (Kuruwita Optical)</div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px;text-align:center;font-size:9px;color:#9ca3af;border-top:1px dashed #e5e7eb;padding-top:8px;">
+    Kuruwita Optical · Your Trusted Eye Care · Printed: ${new Date().toLocaleDateString('en-GB')}
+  </div>
+</body></html>`;
+
+  const w = window.open('','_blank','width=600,height=800');
+  w.document.write(html);
+  w.document.close();
+  w.onload = () => { w.focus(); w.print(); };
+}
+
 // ── Pay modal ─────────────────────────────────────────────────
 function PayModal({ orders, title, skipExpense, onClose, onDone }) {
   const total     = orders.reduce((s,o)=>s+parseFloat(o.lab_bill_amount||0), 0);
@@ -31,7 +131,10 @@ function PayModal({ orders, title, skipExpense, onClose, onDone }) {
   const [payMethod, setPayMethod] = useState('cash');
   const [notes,     setNotes]     = useState('');
   const [saving,    setSaving]    = useState(false);
+  const [paidAmt,   setPaidAmt]   = useState('');
   const INP = { padding:'9px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
+  // Detect lab from orders
+  const lab = orders.length ? (orders.find(o=>o.lens_company)?.lens_company || 'Lab') : 'Lab';
 
   const handlePay = async () => {
     if (!orders.length) return;
