@@ -66,7 +66,7 @@ function Sticker({ item, onReady, stickerNum }) {
  
   return (
     <div style={{
-      width:'25mm', height:'62mm',
+      width:'25mm', height:'55mm',
       display:'flex', flexDirection:'column',
       fontFamily:"'Arial',sans-serif",
       background:'white',
@@ -95,37 +95,27 @@ function Sticker({ item, onReady, stickerNum }) {
  
       {/* MIDDLE STRIP 12mm — wraps around arm, only sticky part */}
       <div style={{
-        height:'12mm', flexShrink:0,
+        height:'5mm', flexShrink:0,
         display:'flex', alignItems:'center', justifyContent:'center',
         boxSizing:'border-box',
         position:'relative',
         overflow:'hidden',
       }}>
-        {/* Dashed cut lines on left and right edges */}
+        {/* Dashed cut lines on left and right edges only */}
         <div style={{
-          position:'absolute', left:0, top:0, bottom:0, width:'2mm',
+          position:'absolute', left:0, top:0, bottom:0, width:'1.5mm',
           borderLeft:'0.4mm dashed #999',
-          borderRight:'0.3mm solid #ccc',
-          background:'#fafafa',
+          borderRight:'0.3mm solid #ddd',
+          background:'#f8f8f8',
         }}/>
         <div style={{
-          position:'absolute', right:0, top:0, bottom:0, width:'2mm',
+          position:'absolute', right:0, top:0, bottom:0, width:'1.5mm',
           borderRight:'0.4mm dashed #999',
-          borderLeft:'0.3mm solid #ccc',
-          background:'#fafafa',
+          borderLeft:'0.3mm solid #ddd',
+          background:'#f8f8f8',
         }}/>
-        {/* Centre content */}
-        <div style={{
-          display:'flex', flexDirection:'column',
-          alignItems:'center', justifyContent:'center', gap:'0.5mm',
-        }}>
-          <div style={{ fontSize:'3pt', color:'#bbb', letterSpacing:'0.6pt', textTransform:'uppercase' }}>wrap around arm</div>
-          <div style={{ display:'flex', gap:'1.5mm', alignItems:'center' }}>
-            <div style={{ width:'4mm', height:'0.3mm', background:'#ccc' }}/>
-            <div style={{ fontSize:'5pt', color:'#999' }}>✂</div>
-            <div style={{ width:'4mm', height:'0.3mm', background:'#ccc' }}/>
-          </div>
-        </div>
+        {/* Just a centre line */}
+        <div style={{ width:'100%', height:'0.2mm', background:'#e0e0e0' }}/>
       </div>
  
       {/* BOTTOM BOX 25mm — Details */}
