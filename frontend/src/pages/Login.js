@@ -60,17 +60,11 @@ export default function Login() {
 
         <div>
           {/* Logo */}
-          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:60 }}>
-            <div style={{ width:44, height:44, borderRadius:12, background:'linear-gradient(135deg, #C9A84C, #E8C96A)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 16px rgba(201,168,76,.4)' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0A1628" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/>
-                <line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/>
-              </svg>
-            </div>
-            <div>
-              <div style={{ fontFamily:'var(--font-display)', fontSize:18, color:'#fff', fontWeight:600 }}>Kuruwita Optical</div>
-              <div style={{ fontSize:11, color:'rgba(201,168,76,.7)', letterSpacing:'.06em' }}>MANAGEMENT SYSTEM</div>
-            </div>
+          <div style={{ marginBottom:60 }}>
+            <img src="/logo-ko-dark.webp" alt="Kuruwita Optical"
+              style={{ height:70, width:'auto', objectFit:'contain', display:'block' }}
+              onError={e=>{ e.target.style.display='none'; }}/>
+            <div style={{ fontSize:11, color:'rgba(201,168,76,.7)', letterSpacing:'.06em', marginTop:6 }}>MANAGEMENT SYSTEM</div>
           </div>
 
           <div style={{ fontFamily:'var(--font-display)', fontSize:32, color:'#fff', lineHeight:1.3, marginBottom:16, fontWeight:600 }}>
@@ -82,7 +76,7 @@ export default function Login() {
         </div>
 
         <div style={{ fontSize:12, color:'rgba(255,255,255,.25)' }}>
-          Wickramakalutota Opticals, Kuruwita
+          Kuruwita Optical, Chilaw
         </div>
       </div>
 
@@ -92,12 +86,9 @@ export default function Login() {
 
           {/* Logo mark */}
           <div style={{ textAlign:'center', marginBottom:40 }}>
-            <div style={{ width:56, height:56, borderRadius:16, background:'linear-gradient(135deg, #0A1628, #1a3060)', display:'inline-flex', alignItems:'center', justifyContent:'center', marginBottom:16, boxShadow:'var(--shadow-lg)' }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/>
-                <line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/>
-              </svg>
-            </div>
+            <img src="/logo-ko.webp" alt="Kuruwita Optical"
+              style={{ height:80, width:'auto', objectFit:'contain', display:'block', margin:'0 auto 16px' }}
+              onError={e=>{ e.target.style.display='none'; }}/>
             <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:600, color:'var(--text-primary)', marginBottom:4 }}>
               Welcome back
             </div>
@@ -147,7 +138,7 @@ export default function Login() {
           </form>
 
           <div style={{ textAlign:'center', marginTop:28, fontSize:11, color:'var(--text-muted)' }}>
-            Kuruwita (Wickramakalutota) Opticals
+            Kuruwita Optical
           </div>
         </div>
       </div>
