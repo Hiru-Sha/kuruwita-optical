@@ -1,19 +1,19 @@
 /* eslint-disable */
 import React, { useState, useEffect, useRef } from 'react';
- 
+
 const C = { navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef', border:'#e0ddd6', muted:'#6b7280' };
- 
+
 export const decodeQR = (raw) => { try { return JSON.parse(raw); } catch { return null; } };
 const encodeItem = (item) => String(item.id);
 const fmt = (n) => 'Rs.' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
- 
+
 // ── Track printed ─────────────────────────────────────────────
 const PRINTED_KEY = 'ko_printed_stickers';
 const getPrinted  = () => { try { return JSON.parse(localStorage.getItem(PRINTED_KEY)||'{}'); } catch { return {}; } };
 const markPrinted = (ids) => { const p=getPrinted(); ids.forEach(id=>{ p[String(id)]=new Date().toISOString(); }); localStorage.setItem(PRINTED_KEY,JSON.stringify(p)); };
 export const clearPrinted = () => localStorage.removeItem(PRINTED_KEY);
 export const isPrinted    = (id) => !!getPrinted()[String(id)];
- 
+
 // ── QR generation ─────────────────────────────────────────────
 function useQRDataUrl(text) {
   const [dataUrl, setDataUrl] = useState(null);
@@ -47,7 +47,7 @@ function useQRDataUrl(text) {
   }, [text]);
   return dataUrl;
 }
- 
+
 // ── Single sticker — dumbbell design ──────────────────────────
 // Physical size: 25mm wide × 62mm tall
 // TOP box (25×25mm)  : QR code — hangs on one side of arm
@@ -61,12 +61,12 @@ function Sticker({ item, onReady, stickerNum }) {
   const model  = item.frame_name || parts[1] || '';
   const color  = item.frame_color || parts[2] || '';
   const detail = [item.frame_type, item.sg_type, item.rg_lens_type, item.rg_power].filter(Boolean).join(' · ');
- 
+
   useEffect(() => { if (qrUrl && onReady) onReady(); }, [qrUrl]);
- 
+
   return (
     <div style={{
-      width:'25mm', height:'55mm',
+      width:'25mm', height:'62mm',
       display:'flex', flexDirection:'column',
       fontFamily:"'Arial',sans-serif",
       background:'white',
@@ -74,7 +74,7 @@ function Sticker({ item, onReady, stickerNum }) {
       pageBreakInside:'avoid',
       border:'0.3mm dashed #aaa',
     }}>
- 
+
       {/* TOP BOX 25mm — QR code */}
       <div style={{
         height:'25mm', flexShrink:0,
@@ -92,32 +92,45 @@ function Sticker({ item, onReady, stickerNum }) {
         <div style={{ position:'absolute', bottom:'1mm', right:'2mm',
           fontSize:'5pt', fontWeight:'bold', color:'#aaa' }}>{stickerNum}</div>
       </div>
- 
+
       {/* MIDDLE STRIP 12mm — wraps around arm, only sticky part */}
       <div style={{
-        height:'5mm', flexShrink:0,
+        height:'12mm', flexShrink:0,
         display:'flex', alignItems:'center', justifyContent:'center',
         boxSizing:'border-box',
         position:'relative',
         overflow:'hidden',
       }}>
-        {/* Dashed cut lines on left and right edges only */}
+        {/* Left blank area — cut away */}
         <div style={{
-          position:'absolute', left:0, top:0, bottom:0, width:'1.5mm',
-          borderLeft:'0.4mm dashed #999',
-          borderRight:'0.3mm solid #ddd',
-          background:'#f8f8f8',
+          position:'absolute', left:0, top:0, bottom:0,
+          width:'calc(50% - 2.5mm)',
+          borderTop:'0.3mm dashed #bbb',
+          borderBottom:'0.3mm dashed #bbb',
+          background:'#f0f0f0',
         }}/>
+        {/* Right blank area — cut away */}
         <div style={{
-          position:'absolute', right:0, top:0, bottom:0, width:'1.5mm',
-          borderRight:'0.4mm dashed #999',
-          borderLeft:'0.3mm solid #ddd',
-          background:'#f8f8f8',
+          position:'absolute', right:0, top:0, bottom:0,
+          width:'calc(50% - 2.5mm)',
+          borderTop:'0.3mm dashed #bbb',
+          borderBottom:'0.3mm dashed #bbb',
+          background:'#f0f0f0',
         }}/>
-        {/* Just a centre line */}
-        <div style={{ width:'100%', height:'0.2mm', background:'#e0e0e0' }}/>
+        {/* CENTER STRIP 5mm wide — the part that wraps arm */}
+        <div style={{
+          position:'absolute',
+          left:'calc(50% - 2.5mm)', width:'5mm',
+          top:0, bottom:0,
+          background:'white',
+          borderLeft:'0.4mm dashed #555',
+          borderRight:'0.4mm dashed #555',
+          display:'flex', alignItems:'center', justifyContent:'center',
+        }}>
+          <div style={{ fontSize:'2.5pt', color:'#bbb', writingMode:'vertical-rl', letterSpacing:'0.5pt' }}>✂ cut</div>
+        </div>
       </div>
- 
+
       {/* BOTTOM BOX 25mm — Details */}
       <div style={{
         flex:1,
@@ -136,7 +149,7 @@ function Sticker({ item, onReady, stickerNum }) {
           width:'100%', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
           textAlign:'center',
         }}>{brand}</div>
- 
+
         {/* Model */}
         {model ? (
           <div style={{
@@ -146,7 +159,7 @@ function Sticker({ item, onReady, stickerNum }) {
             textAlign:'center',
           }}>{model}</div>
         ) : null}
- 
+
         {/* Color + type */}
         {(color || detail) ? (
           <div style={{
@@ -155,7 +168,7 @@ function Sticker({ item, onReady, stickerNum }) {
             textAlign:'center',
           }}>{[color, detail].filter(Boolean).join(' · ')}</div>
         ) : null}
- 
+
         {/* Stock count */}
         <div style={{
           borderTop:'0.3mm solid #ddd', paddingTop:'1mm',
@@ -169,10 +182,10 @@ function Sticker({ item, onReady, stickerNum }) {
     </div>
   );
 }
- 
+
 // ── Categories that use ARM sticker (fold around arm) ────────
 const ARM_CATS = ['Frames','Sunglasses','Reading Glasses'];
- 
+
 // ── Flat label sticker for accessories ───────────────────────
 // 30mm × 15mm flat label — no color shown
 // 30mm × 15mm flat label — no color shown
@@ -180,9 +193,9 @@ function AccessorySticker({ item, onReady, stickerNum }) {
   const qrUrl = useQRDataUrl(encodeItem(item));
   const name  = item.item_name || item.brand || item.name?.split(' · ')[0] || item.name || '';
   const nameFontSize = name.length > 20 ? '4pt' : name.length > 14 ? '5pt' : '6.5pt';
- 
+
   useEffect(() => { if (qrUrl && onReady) onReady(); }, [qrUrl]);
- 
+
   return (
     <div style={{
       width:'30mm', height:'15mm',
@@ -239,7 +252,7 @@ function AccessorySticker({ item, onReady, stickerNum }) {
     </div>
   );
 }
- 
+
 // ── STICKER MODAL ─────────────────────────────────────────────
 // ── Price Update Sticker ─────────────────────────────────────
 // Tiny label — stick over old price on existing sticker
@@ -260,13 +273,13 @@ export function PriceUpdateModal({ items, onClose }) {
     return s;
   });
   const [size, setSize] = React.useState('small'); // small=20x10mm, medium=30x12mm
- 
+
   const selectedItems = items.filter(i => selected[i.id]);
- 
+
   const printPriceStickers = () => {
     const win = window.open('','_blank','width=900,height=700');
     if (!win) return alert('Allow popups to print');
- 
+
     // Build all sticker rows
     const stickers = [];
     selectedItems.forEach(item => {
@@ -276,21 +289,21 @@ export function PriceUpdateModal({ items, onClose }) {
         stickers.push({ item, price });
       }
     });
- 
+
     const w = size === 'small' ? '20mm' : '30mm';
     const h = size === 'small' ? '10mm' : '12mm';
     const cols = size === 'small' ? 10 : 6;
     const fontSize = size === 'small' ? '7pt' : '9pt';
     const priceSize = size === 'small' ? '11pt' : '14pt';
- 
+
     // Fill to complete rows
     while (stickers.length % cols !== 0) stickers.push(null);
- 
+
     const rows = [];
     for (let i = 0; i < stickers.length; i += cols) {
       rows.push(stickers.slice(i, i + cols));
     }
- 
+
     const html = `<!DOCTYPE html><html><head>
 <meta charset="UTF-8">
 <title>Price Update Stickers</title>
@@ -324,18 +337,18 @@ ${rows.map(row => `
   </div>`).join('')}
 <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
 </body></html>`;
- 
+
     win.document.write(html);
     win.document.close();
   };
- 
+
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.6)', zIndex:500,
       display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
       <div style={{ background:'white', borderRadius:16, width:'100%', maxWidth:560,
         maxHeight:'90vh', overflow:'auto', boxShadow:'0 24px 60px rgba(0,0,0,.3)',
         fontFamily:"'DM Sans',sans-serif" }}>
- 
+
         {/* Header */}
         <div style={{ background:'#0f1f3d', padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', borderRadius:'16px 16px 0 0' }}>
           <div>
@@ -347,9 +360,9 @@ ${rows.map(row => `
           <button onClick={onClose}
             style={{ background:'rgba(255,255,255,.15)', border:'none', color:'white', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:14 }}>✕</button>
         </div>
- 
+
         <div style={{ padding:'20px' }}>
- 
+
           {/* Size selector */}
           <div style={{ marginBottom:16 }}>
             <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:'#6b7280', marginBottom:8 }}>
@@ -371,17 +384,17 @@ ${rows.map(row => `
               ))}
             </div>
           </div>
- 
+
           {/* Item list */}
           <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:'#6b7280', marginBottom:8 }}>
             Items — set new price and quantity of stickers needed
           </div>
- 
+
           {items.map(item => (
             <div key={item.id} style={{ display:'flex', gap:10, alignItems:'center', padding:'10px 12px',
               background:selected[item.id]?'#f0f4ff':'#f9f9f9', borderRadius:10, marginBottom:8,
               border:`1.5px solid ${selected[item.id]?'#93c5fd':'#e0ddd6'}` }}>
- 
+
               {/* Checkbox */}
               <div onClick={()=>setSelected(s=>({...s,[item.id]:!s[item.id]}))}
                 style={{ width:20, height:20, borderRadius:5, border:`2px solid ${selected[item.id]?'#1e40af':'#d1d5db'}`,
@@ -389,7 +402,7 @@ ${rows.map(row => `
                   display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:12 }}>
                 {selected[item.id] ? '✓' : ''}
               </div>
- 
+
               {/* Item name */}
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:13, fontWeight:600, color:'#0f1f3d', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
@@ -400,7 +413,7 @@ ${rows.map(row => `
                   · Stock: {item.quantity}
                 </div>
               </div>
- 
+
               {/* New price */}
               <div style={{ flexShrink:0 }}>
                 <div style={{ fontSize:10, fontWeight:700, color:'#6b7280', marginBottom:3, textTransform:'uppercase' }}>New Price</div>
@@ -410,7 +423,7 @@ ${rows.map(row => `
                     fontSize:14, fontWeight:700, fontFamily:'inherit', outline:'none',
                     color:'#1e40af', background:'white', textAlign:'center' }}/>
               </div>
- 
+
               {/* Qty of stickers */}
               <div style={{ flexShrink:0 }}>
                 <div style={{ fontSize:10, fontWeight:700, color:'#6b7280', marginBottom:3, textTransform:'uppercase' }}>Stickers</div>
@@ -421,7 +434,7 @@ ${rows.map(row => `
               </div>
             </div>
           ))}
- 
+
           {/* Preview */}
           {selectedItems.length > 0 && (
             <div style={{ background:'#f8f5ef', borderRadius:10, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#6b7280' }}>
@@ -431,7 +444,7 @@ ${rows.map(row => `
               {' · '}{size === 'small' ? '20×10mm' : '30×12mm'} each
             </div>
           )}
- 
+
           {/* Buttons */}
           <div style={{ display:'flex', gap:10 }}>
             <button onClick={printPriceStickers} disabled={selectedItems.length===0}
@@ -452,7 +465,7 @@ ${rows.map(row => `
     </div>
   );
 }
- 
+
 export function StickerModal({ items, onClose }) {
   const sheetRef  = useRef();
   const [readyCount, setReadyCount] = useState(0);
@@ -465,7 +478,7 @@ export function StickerModal({ items, onClose }) {
   });
   const [showAll,    setShowAll]    = useState(true);
   const [stickerSearch, setStickerSearch] = useState('');
- 
+
   const printed       = getPrinted();
   const searchedItems = stickerSearch.trim().length > 0
     ? items.filter(item =>
@@ -477,7 +490,7 @@ export function StickerModal({ items, onClose }) {
     : items;
   const filteredItems = searchedItems.filter(item => showAll || !printed[String(item.id)]);
   const selectedItems = items.filter(item => selected[item.id]);
- 
+
   // Expand by quantity — per-item seq + global category seq
   // Global counter is CONTINUOUS across all items of same category group
   // e.g. all Polarised sunglasses: 1,2,3...59 — never resets
@@ -488,7 +501,7 @@ export function StickerModal({ items, onClose }) {
       if (item.category==='Frames')     return `FR-${item.frame_type||'All'}`;
       return item.category;
     };
- 
+
     // Sort: first by category group, then by item name within group
     // This ensures all Polarised sunglasses are together, all frames together etc
     const sorted = [...selectedItems]
@@ -498,9 +511,9 @@ export function StickerModal({ items, onClose }) {
         if (ka !== kb) return ka.localeCompare(kb);
         return (a.name||'').localeCompare(b.name||'');
       });
- 
+
     const globalCounters = {}; // key → running count
- 
+
     sorted.forEach(item => {
       const qty = Math.max(1, parseInt(item.quantity)||1);
       const key = getKey(item);
@@ -516,18 +529,18 @@ export function StickerModal({ items, onClose }) {
     });
     return result;
   };
- 
+
   const expanded = buildExpanded();
   const total    = expanded.length;  // both types
   const allReady = readyCount >= total && total > 0;
   // Split by sticker type
   const armItems  = expanded.filter(i => ARM_CATS.includes(i.category));
   const flatItems = expanded.filter(i => !ARM_CATS.includes(i.category));
- 
+
   const toggleItem  = (id) => setSelected(s => ({ ...s, [id]: !s[id] }));
   const selectAll   = () => { const s={}; filteredItems.forEach(i=>s[i.id]=true);  setSelected(s); };
   const deselectAll = () => { const s={}; filteredItems.forEach(i=>s[i.id]=false); setSelected(s); };
- 
+
   const handlePrint = () => {
     if (!sheetRef.current) return;
     const html = sheetRef.current.innerHTML.replace(/class="no-print[^"]*"/g,'style="display:none"');
@@ -542,16 +555,16 @@ export function StickerModal({ items, onClose }) {
     win.document.close();
     markPrinted(selectedItems.map(i => i.id));
   };
- 
+
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(15,31,61,.65)', zIndex:1000,
       display:'flex', alignItems:'flex-start', justifyContent:'center',
       overflowY:'auto', padding:'24px 16px', fontFamily:"'DM Sans',sans-serif" }}
       onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
- 
+
       <div style={{ background:'white', borderRadius:14, width:'100%', maxWidth:860,
         boxShadow:'0 24px 60px rgba(0,0,0,.3)' }}>
- 
+
         {/* Header */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
           padding:'14px 20px', borderBottom:`1px solid ${C.border}` }}>
@@ -576,14 +589,14 @@ export function StickerModal({ items, onClose }) {
                 fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
           </div>
         </div>
- 
+
         {/* Number legend */}
         <div style={{ padding:'8px 20px', background:'#fffbeb', borderBottom:`1px solid #fde68a`,
           fontSize:12, color:'#92400e', display:'flex', gap:20, flexWrap:'wrap' }}>
           <span><b>Bottom-left number</b> = per-item count (Gucci Brown: 1,2,3,4)</span>
           <span><b style={{ color:'#bbb' }}>Bottom-right (faint)</b> = global category count (all Polarised: 1..59)</span>
         </div>
- 
+
         {/* Item selector — search + grid */}
         <div style={{ padding:'12px 20px', borderBottom:`1px solid ${C.border}`, background:C.cream }}>
           {/* Search bar */}
@@ -659,7 +672,7 @@ export function StickerModal({ items, onClose }) {
             )}
           </div>
         </div>
- 
+
         {/* Instructions */}
         <div style={{ padding:'8px 20px', background:'#eff6ff', borderBottom:`1px solid #bae6fd`,
           fontSize:12, color:'#1e40af', display:'flex', gap:14, flexWrap:'wrap' }}>
@@ -668,7 +681,7 @@ export function StickerModal({ items, onClose }) {
           <span>3️⃣ Print → Cut dashed lines</span>
           <span>4️⃣ Fold at solid center line → wrap around frame arm</span>
         </div>
- 
+
         {/* Preview */}
         <div style={{ padding:20, maxHeight:560, overflowY:'auto', background:'#f3f4f6' }}>
           {expanded.length === 0
@@ -692,13 +705,13 @@ export function StickerModal({ items, onClose }) {
                           <Sticker key={`a-${item.id}-${pi}-${idx}`} item={item} stickerNum={item._seq} onReady={()=>setReadyCount(n=>n+1)}/>
                         ))}
                         {Array(Math.max(0,PER-pageItems.length)).fill(null).map((_,ei) => (
-                          <div key={`ae-${ei}`} style={{ width:'25mm', height:'55mm', border:'0.3mm dashed #eee', boxSizing:'border-box', background:'white' }}/>
+                          <div key={`ae-${ei}`} style={{ width:'25mm', height:'62mm', border:'0.3mm dashed #eee', boxSizing:'border-box', background:'white' }}/>
                         ))}
                       </div>
                     </div>
                   ));
                 })()}
- 
+
                 {/* FLAT LABELS — Boxes, Pouches, Chains, Cleaners, Ear Tips */}
                 {flatItems.length > 0 && (() => {
                   const PER = 72; // 6 cols × 12 rows at 30mm×15mm
@@ -723,7 +736,7 @@ export function StickerModal({ items, onClose }) {
               </div>
           }
         </div>
- 
+
         <div style={{ padding:'10px 20px', borderTop:`1px solid ${C.border}`, fontSize:12, color:C.muted }}>
           💡 After printing, items are marked as printed and hidden from next run.
         </div>
@@ -731,7 +744,7 @@ export function StickerModal({ items, onClose }) {
     </div>
   );
 }
- 
+
 // ── QR SCANNER ────────────────────────────────────────────────
 export function QRScanner({ onScan, onClose, title='Scan Frame QR Code' }) {
   const videoRef  = React.useRef(null);
@@ -739,9 +752,9 @@ export function QRScanner({ onScan, onClose, title='Scan Frame QR Code' }) {
   const [error,   setError]   = React.useState('');
   const [loading, setLoading] = React.useState(true);
   const [scanned, setScanned] = React.useState(false);
- 
+
   React.useEffect(()=>{ startCamera(); return ()=>stopCamera(); },[]);
- 
+
   const startCamera = async () => {
     setLoading(true); setError('');
     try {
@@ -768,7 +781,7 @@ export function QRScanner({ onScan, onClose, title='Scan Frame QR Code' }) {
     if(item){stopCamera();onScan(item);}
     else{setError('Invalid QR.');setScanned(false);}
   };
- 
+
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(15,31,61,.8)',zIndex:2000,
       display:'flex',alignItems:'center',justifyContent:'center',padding:16}}
