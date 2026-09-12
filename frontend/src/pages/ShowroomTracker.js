@@ -28,7 +28,7 @@ export default function ShowroomTracker() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`${BASE()}/inventory?limit=5000&no_images=1`, { headers: hdr() });
+      const res  = await fetch(`${BASE()}/inventory?limit=5000`, { headers: hdr() });
       const data = await res.json();
       const arr  = Array.isArray(data) ? data : (data.data || []);
       // Only frames/sunglasses/reading glasses — things that go in showroom
