@@ -24,6 +24,8 @@ const apiPost = (path, body) =>
 
 const INP_S = { padding:'6px 9px', border:`1.5px solid ${C.gold}`, borderRadius:7, fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:'none', background:'#fffbeb', fontWeight:700 };
 
+// ── Print Lab Payment Receipt (A5) ────────────────────────────
+
 // ── Pay modal ─────────────────────────────────────────────────
 function PayModal({ orders, title, skipExpense, onClose, onDone }) {
   const total     = orders.reduce((s,o)=>s+parseFloat(o.lab_bill_amount||0), 0);
@@ -32,6 +34,8 @@ function PayModal({ orders, title, skipExpense, onClose, onDone }) {
   const [notes,     setNotes]     = useState('');
   const [saving,    setSaving]    = useState(false);
   const INP = { padding:'9px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
+  // Detect lab from orders
+  const lab = orders.length ? (orders.find(o=>o.lens_company)?.lens_company || 'Lab') : 'Lab';
 
   const handlePay = async () => {
     if (!orders.length) return;
@@ -106,7 +110,6 @@ function PayModal({ orders, title, skipExpense, onClose, onDone }) {
               ✅ Lab payment expense will be auto-created — don't add separately in Expenses
             </div>
         }
-
         <div style={{display:'flex',gap:8}}>
           <button onClick={handlePay} disabled={saving||!orders.length}
             style={{flex:1,padding:'12px',background:saving?C.muted:C.success,color:'white',border:'none',borderRadius:9,fontSize:14,fontWeight:700,cursor:saving?'not-allowed':'pointer',fontFamily:'inherit'}}>

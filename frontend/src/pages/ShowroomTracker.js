@@ -272,6 +272,15 @@ export default function ShowroomTracker() {
                   {lc.label}
                 </div>
 
+                {/* Frame image */}
+                {item.image_url && (
+                  <div style={{ width:'100%', height:90, marginBottom:8, borderRadius:8, overflow:'hidden', background:'#f8f5ef', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <img src={item.image_url} alt={item.name}
+                      style={{ maxHeight:'100%', maxWidth:'100%', objectFit:'contain', padding:4 }}
+                      onError={e=>{ e.target.style.display='none'; }}/>
+                  </div>
+                )}
+
                 {/* Item info */}
                 <div style={{ marginBottom:10, paddingRight:70 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:2 }}>{item.name || item.brand || '—'}</div>
