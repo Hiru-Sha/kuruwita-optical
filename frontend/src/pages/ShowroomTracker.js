@@ -1,15 +1,15 @@
 /* eslint-disable */
 import React, { useState, useEffect, useCallback } from 'react';
-
+ 
 const BASE  = () => process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
+ 
 // ── Lazy image — loads only when card is visible ──────────────
 function LazyImage({ itemId, name, onFullscreen }) {
   const [src,     setSrc]     = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const ref = React.useRef(null);
-
+ 
   React.useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting && !src && !loading) {
@@ -27,7 +27,7 @@ function LazyImage({ itemId, name, onFullscreen }) {
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, [itemId]);
-
+ 
   return (
     <div ref={ref} style={{ width:'100%', height:90, marginBottom:8, borderRadius:8, overflow:'visible',
       background:'#f8f5ef', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', zIndex: hovered ? 100 : 1 }}>
@@ -59,7 +59,7 @@ function LazyImage({ itemId, name, onFullscreen }) {
     </div>
   );
 }
-
+ 
 // ── Fullscreen image modal ────────────────────────────────────
 function FullscreenModal({ src, name, onClose }) {
   React.useEffect(() => {
@@ -80,12 +80,12 @@ function FullscreenModal({ src, name, onClose }) {
 }
 const tok   = () => localStorage.getItem('ko_token');
 const hdr   = () => ({ 'Content-Type':'application/json', Authorization:`Bearer ${tok()}` });
-
+ 
 const C = {
   navy:'#0f1f3d', gold:'#c9a84c', cream:'#f8f5ef',
   border:'#e0ddd6', muted:'#6b7280', success:'#15803d', danger:'#dc2626',
 };
-
+ 
 export default function ShowroomTracker() {
   const [items,       setItems]       = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -98,9 +98,9 @@ export default function ShowroomTracker() {
   const [checkMode,   setCheckMode]   = useState(false); // weekly check mode
   const [mismatches,  setMismatches]  = useState([]); // items that don't match reality
   const [editQty,     setEditQty]     = useState({}); // { [id]: tempQty }
-
+ 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(''),3000); };
-
+ 
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -112,9 +112,9 @@ export default function ShowroomTracker() {
     } catch(e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
-
+ 
   useEffect(() => { load(); }, [load]);
-
+ 
   // Update location for one item
   const setLocation = async (id, location) => {
     setSaving(s => ({ ...s, [id]: true }));
@@ -129,7 +129,7 @@ export default function ShowroomTracker() {
     } catch(e) { showToast('Failed to update'); }
     finally { setSaving(s => ({ ...s, [id]: false })); }
   };
-
+ 
   // Update showroom quantity
   const setShowroomQty = async (id, qty) => {
     setSaving(s => ({ ...s, [id]: true }));
@@ -143,7 +143,7 @@ export default function ShowroomTracker() {
     } catch(e) {}
     finally { setSaving(s => ({ ...s, [id]: false })); }
   };
-
+ 
   // Update showroom quantity
   const updateShowroomQty = async (id, qty) => {
     const q = Math.max(0, parseInt(qty) || 0);
@@ -159,7 +159,7 @@ export default function ShowroomTracker() {
     } catch(e) { showToast('Failed to update'); }
     finally { setSaving(s => ({ ...s, [id]: false })); }
   };
-
+ 
   // Mark item as missing
   const markMissing = async (id) => {
     setSaving(s => ({ ...s, [id]: true }));
@@ -174,19 +174,19 @@ export default function ShowroomTracker() {
     } catch(e) {}
     finally { setSaving(s => ({ ...s, [id]: false })); }
   };
-
+ 
   // Move all showroom items to "needs check" for weekly audit
   const startWeeklyCheck = () => {
     setCheckMode(true);
     setMismatches([]);
     showToast('Check mode ON — scan or tick each frame you can see in showroom');
   };
-
+ 
   const confirmSeen = async (id) => {
     // Item physically confirmed in showroom
     await setLocation(id, 'showroom');
   };
-
+ 
   const finishCheck = () => {
     // Any showroom items not confirmed = potentially missing
     const notConfirmed = filtered.filter(i =>
@@ -195,13 +195,13 @@ export default function ShowroomTracker() {
     setCheckMode(false);
     showToast(`Check complete — ${notConfirmed.length} items not verified`);
   };
-
+ 
   // Stats
   const inShowroom  = items.filter(i => i.location === 'showroom').length;
   const inStock     = items.filter(i => i.location === 'stock' || !i.location).length;
   const missing     = items.filter(i => i.location === 'missing').length;
   const outOfStock  = items.filter(i => parseInt(i.quantity||0) === 0).length;
-
+ 
   // Filter
   const cats = ['All', ...new Set(items.map(i => i.category))];
   const filtered = items.filter(i => {
@@ -217,14 +217,14 @@ export default function ShowroomTracker() {
     )) return false;
     return true;
   });
-
+ 
   const locColor = (loc, qty) => {
     if (parseInt(qty||0) === 0) return { bg:'#f3f4f6', text:'#6b7280', label:'Out of Stock' };
     if (loc === 'showroom') return { bg:'#dcfce7', text:'#15803d', label:'Showroom' };
     if (loc === 'missing')  return { bg:'#fee2e2', text:'#dc2626', label:'Missing' };
     return { bg:'#eff6ff', text:'#1e40af', label:'Stock Room' };
   };
-
+ 
   return (
     <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
       {fullscreen && <FullscreenModal src={fullscreen.src} name={fullscreen.name} onClose={()=>setFullscreen(null)}/>}
@@ -234,7 +234,7 @@ export default function ShowroomTracker() {
           {toast}
         </div>
       )}
-
+ 
       {/* Header */}
       <div style={{ marginBottom:20 }}>
         <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:'1.5px', textTransform:'uppercase', marginBottom:4 }}>Inventory Management</div>
@@ -262,7 +262,7 @@ export default function ShowroomTracker() {
           </div>
         </div>
       </div>
-
+ 
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:20 }}>
         {[
@@ -280,7 +280,7 @@ export default function ShowroomTracker() {
           </div>
         ))}
       </div>
-
+ 
       {/* Check mode banner */}
       {checkMode && (
         <div style={{ background:'#fef9c3', border:'2px solid #f59e0b', borderRadius:12, padding:'12px 18px', marginBottom:16, display:'flex', alignItems:'center', gap:12 }}>
@@ -291,7 +291,7 @@ export default function ShowroomTracker() {
           </div>
         </div>
       )}
-
+ 
       {/* Missing items alert */}
       {missing > 0 && !checkMode && (
         <div style={{ background:'#fef2f2', border:'1.5px solid #fca5a5', borderRadius:12, padding:'12px 18px', marginBottom:16 }}>
@@ -305,7 +305,7 @@ export default function ShowroomTracker() {
           </div>
         </div>
       )}
-
+ 
       {/* Filters */}
       <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap', alignItems:'center' }}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
@@ -322,13 +322,13 @@ export default function ShowroomTracker() {
           ))}
         </div>
       </div>
-
+ 
       {/* Items count */}
       <div style={{ fontSize:12, color:C.muted, marginBottom:10 }}>
         Showing {filtered.length} items
         {filterLoc !== 'all' && <span style={{ marginLeft:6, color:C.gold, fontWeight:600 }}>· Filtered by: {filterLoc}</span>}
       </div>
-
+ 
       {/* Items grid */}
       {loading ? (
         <div style={{ textAlign:'center', padding:60, color:C.muted }}>Loading...</div>
@@ -338,20 +338,20 @@ export default function ShowroomTracker() {
             const qty   = parseInt(item.quantity || 0);
             const lc    = locColor(item.location, qty);
             const isSaving = saving[item.id];
-
+ 
             return (
               <div key={item.id} style={{ background:'white', border:`1.5px solid ${item.location==='missing'?'#fca5a5':item.location==='showroom'?'#86efac':C.border}`,
                 borderRadius:12, padding:'12px 14px', position:'relative' }}>
-
+ 
                 {/* Location badge */}
                 <div style={{ position:'absolute', top:10, right:10, background:lc.bg, color:lc.text,
                   fontSize:10, fontWeight:800, padding:'3px 10px', borderRadius:20 }}>
                   {lc.label}
                 </div>
-
+ 
                 {/* Frame image — lazy loaded */}
                 <LazyImage itemId={item.id} name={item.name} onFullscreen={(src,name)=>setFullscreen({src,name})}/>
-
+ 
                 {/* Item info */}
                 <div style={{ marginBottom:10, paddingRight:70 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:2 }}>{item.name || item.brand || '—'}</div>
@@ -365,7 +365,7 @@ export default function ShowroomTracker() {
                     {item.display_number && <span>Display #: <b>{item.display_number}</b></span>}
                   </div>
                 </div>
-
+ 
                 {/* Showroom quantity adjuster — only when in showroom */}
                 {item.location === 'showroom' && qty > 0 && (
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, background:'#f0fdf4', borderRadius:8, padding:'6px 10px' }}>
@@ -388,7 +388,7 @@ export default function ShowroomTracker() {
                     <span style={{ fontSize:10, color:'#86efac', marginLeft:2 }}>/ {qty} total</span>
                   </div>
                 )}
-
+ 
                 {/* Action buttons */}
                 {qty > 0 && (
                   checkMode ? (
@@ -445,7 +445,7 @@ export default function ShowroomTracker() {
                     </div>
                   )
                 )}
-
+ 
                 {qty === 0 && (
                   <div style={{ fontSize:11, color:C.muted, textAlign:'center', padding:'6px 0', fontStyle:'italic' }}>
                     Out of stock — not in showroom
