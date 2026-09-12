@@ -2,6 +2,82 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
 const BASE  = () => process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+// ── Lazy image — loads only when card is visible ──────────────
+function LazyImage({ itemId, name, onFullscreen }) {
+  const [src,     setSrc]     = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [hovered, setHovered] = React.useState(false);
+  const ref = React.useRef(null);
+
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !src && !loading) {
+        setLoading(true);
+        const BASE2 = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('ko_token');
+        fetch(`${BASE2}/inventory/${itemId}`, { headers:{ Authorization:`Bearer ${token}` } })
+          .then(r=>r.json())
+          .then(d=>{ if(d.image_url) setSrc(d.image_url); })
+          .catch(()=>{})
+          .finally(()=>setLoading(false));
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [itemId]);
+
+  return (
+    <div ref={ref} style={{ width:'100%', height:90, marginBottom:8, borderRadius:8, overflow:'visible',
+      background:'#f8f5ef', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', zIndex: hovered ? 100 : 1 }}>
+      {loading && <div style={{ fontSize:10, color:'#9ca3af' }}>⏳</div>}
+      {src ? (
+        <img src={src} alt={name}
+          onClick={()=>onFullscreen(src, name)}
+          onMouseEnter={()=>setHovered(true)}
+          onMouseLeave={()=>setHovered(false)}
+          style={{
+            maxHeight: hovered ? 220 : 82,
+            maxWidth:  hovered ? 280 : '100%',
+            objectFit:'contain',
+            padding:4,
+            cursor:'zoom-in',
+            borderRadius:8,
+            transition:'all 0.2s ease',
+            boxShadow: hovered ? '0 8px 32px rgba(0,0,0,.25)' : 'none',
+            background: hovered ? 'white' : 'transparent',
+            position: hovered ? 'absolute' : 'relative',
+            zIndex: hovered ? 200 : 1,
+            top: hovered ? '50%' : 'auto',
+            left: hovered ? '50%' : 'auto',
+            transform: hovered ? 'translate(-50%, -50%)' : 'none',
+          }}/>
+      ) : !loading ? (
+        <div style={{ fontSize:9, color:'#d1d5db' }}>No image</div>
+      ) : null}
+    </div>
+  );
+}
+
+// ── Fullscreen image modal ────────────────────────────────────
+function FullscreenModal({ src, name, onClose }) {
+  React.useEffect(() => {
+    const handler = e => { if(e.key==='Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+  return (
+    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.85)', zIndex:9999,
+      display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out', padding:20 }}>
+      <div onClick={e=>e.stopPropagation()} style={{ position:'relative', maxWidth:'90vw', maxHeight:'90vh' }}>
+        <img src={src} alt={name} style={{ maxWidth:'90vw', maxHeight:'85vh', objectFit:'contain', borderRadius:8, boxShadow:'0 8px 40px rgba(0,0,0,.5)' }}/>
+        <div style={{ position:'absolute', bottom:-32, left:0, right:0, textAlign:'center', color:'rgba(255,255,255,.7)', fontSize:13 }}>{name}</div>
+        <button onClick={onClose} style={{ position:'absolute', top:-16, right:-16, width:32, height:32, borderRadius:'50%', background:'white', border:'none', fontSize:16, cursor:'pointer', fontWeight:700, boxShadow:'0 2px 8px rgba(0,0,0,.3)' }}>✕</button>
+      </div>
+    </div>
+  );
+}
 const tok   = () => localStorage.getItem('ko_token');
 const hdr   = () => ({ 'Content-Type':'application/json', Authorization:`Bearer ${tok()}` });
 
@@ -28,7 +104,7 @@ export default function ShowroomTracker() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`${BASE()}/inventory?limit=5000`, { headers: hdr() });
+      const res  = await fetch(`${BASE()}/inventory?limit=5000&no_images=1`, { headers: hdr() });
       const data = await res.json();
       const arr  = Array.isArray(data) ? data : (data.data || []);
       // Only frames/sunglasses/reading glasses — things that go in showroom
@@ -151,6 +227,7 @@ export default function ShowroomTracker() {
 
   return (
     <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
+      {fullscreen && <FullscreenModal src={fullscreen.src} name={fullscreen.name} onClose={()=>setFullscreen(null)}/>}
       {/* Toast */}
       {toast && (
         <div style={{ position:'fixed', top:20, right:20, background:C.navy, color:'white', padding:'10px 18px', borderRadius:10, zIndex:999, fontSize:13, fontWeight:600 }}>
@@ -272,14 +349,8 @@ export default function ShowroomTracker() {
                   {lc.label}
                 </div>
 
-                {/* Frame image */}
-                {item.image_url && (
-                  <div style={{ width:'100%', height:90, marginBottom:8, borderRadius:8, overflow:'hidden', background:'#f8f5ef', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <img src={item.image_url} alt={item.name}
-                      style={{ maxHeight:'100%', maxWidth:'100%', objectFit:'contain', padding:4 }}
-                      onError={e=>{ e.target.style.display='none'; }}/>
-                  </div>
-                )}
+                {/* Frame image — lazy loaded */}
+                <LazyImage itemId={item.id} name={item.name} onFullscreen={(src,name)=>setFullscreen({src,name})}/>
 
                 {/* Item info */}
                 <div style={{ marginBottom:10, paddingRight:70 }}>
