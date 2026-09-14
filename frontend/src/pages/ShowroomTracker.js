@@ -26,7 +26,7 @@ function Thumb({ itemId, name, onFull }) {
   }, [itemId]);
 
   return (
-    <div ref={ref} style={{ width:52, height:40, borderRadius:6, background:'#f8f5ef', overflow:'hidden', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', cursor: src?'zoom-in':'default' }}
+    <div ref={ref} style={{ width:80, height:70, borderRadius:8, background:'#f8f5ef', overflow:'hidden', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', cursor: src?'zoom-in':'default' }}
       onClick={()=> src && onFull(src, name)}>
       {src
         ? <img src={src} alt={name} style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain' }}/>
@@ -206,7 +206,7 @@ export default function ShowroomTracker() {
       ) : (
         <div style={{ background:'white', border:`1.5px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
           {/* Table header */}
-          <div style={{ display:'grid', gridTemplateColumns:'52px 1fr 80px 160px 140px', gap:0,
+          <div style={{ display:'grid', gridTemplateColumns:'90px 1fr 80px 160px 140px', gap:0,
             background:C.navy, padding:'10px 16px', alignItems:'center' }}>
             <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.6)', textTransform:'uppercase', letterSpacing:'.5px' }}>Photo</div>
             <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.6)', textTransform:'uppercase', letterSpacing:'.5px' }}>Frame</div>
@@ -224,7 +224,7 @@ export default function ShowroomTracker() {
             const isSaving = saving[item.id];
 
             return (
-              <div key={item.id} style={{ display:'grid', gridTemplateColumns:'52px 1fr 80px 160px 140px',
+              <div key={item.id} style={{ display:'grid', gridTemplateColumns:'90px 1fr 80px 160px 140px',
                 gap:0, padding:'10px 16px', alignItems:'center',
                 borderBottom:`1px solid ${C.border}`,
                 background: idx%2===0 ? 'white' : '#fafaf9',
@@ -283,5 +283,4 @@ export default function ShowroomTracker() {
       )}
     </div>
   );
-
 }
