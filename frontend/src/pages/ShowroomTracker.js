@@ -26,7 +26,7 @@ function Thumb({ itemId, name, onFull }) {
   }, [itemId]);
 
   return (
-    <div ref={ref} style={{ width:80, height:70, borderRadius:8, background:'#f8f5ef', overflow:'hidden', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', cursor: src?'zoom-in':'default' }}
+    <div ref={ref} style={{ width:130, height:110, borderRadius:8, background:'#f8f5ef', overflow:'hidden', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', cursor: src?'zoom-in':'default' }}
       onClick={()=> src && onFull(src, name)}>
       {src
         ? <img src={src} alt={name} style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain' }}/>
@@ -70,6 +70,8 @@ export default function ShowroomTracker() {
   const [saving,     setSaving]     = useState({});
   const [toast,      setToast]      = useState('');
   const [fullImg,    setFullImg]    = useState(null);
+  const [checkMode,  setCheckMode]  = useState(false);
+  const [checkedIds, setCheckedIds] = useState(new Set());
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(''),2500); };
 
@@ -141,13 +143,38 @@ export default function ShowroomTracker() {
             <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:28, color:C.navy, margin:0 }}>Showroom Tracker</h1>
             <p style={{ fontSize:13, color:C.muted, margin:'4px 0 0' }}>Track which frames are in showroom, stock room, or missing</p>
           </div>
-          <button onClick={load} style={{ padding:'9px 18px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>
-            🔄 Refresh
-          </button>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={load} style={{ padding:'9px 18px', background:'white', border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:C.navy }}>
+              🔄 Refresh
+            </button>
+            <button onClick={()=>{ setCheckMode(m=>!m); setCheckedIds(new Set()); }}
+              style={{ padding:'9px 18px', background:checkMode?C.navy:'#fef9c3', border:`1.5px solid ${checkMode?C.navy:'#fde68a'}`,
+                borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', color:checkMode?'white':'#92400e' }}>
+              {checkMode ? '✕ Exit Weekly Check' : '✅ Start Weekly Check'}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Stats — clickable filters */}
+      {/* Weekly check mode banner */}
+      {checkMode && (
+        <div style={{ background:'#fef9c3', border:'1.5px solid #fde68a', borderRadius:12, padding:'12px 16px', marginBottom:16,
+          display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
+          <div>
+            <div style={{ fontSize:14, fontWeight:700, color:'#92400e' }}>📋 Weekly Check Mode</div>
+            <div style={{ fontSize:12, color:'#92400e', marginTop:2 }}>
+              Tap ✓ on each frame you can see in the showroom. <b>{checkedIds.size}</b> confirmed so far.
+            </div>
+          </div>
+          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+            <div style={{ background:'#15803d', color:'white', borderRadius:20, padding:'4px 14px', fontSize:12, fontWeight:700 }}>
+              {checkedIds.size} / {items.filter(i=>i.location==='showroom').length} confirmed
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stats — clickable filters */}}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:20 }}>
         {[
           { label:'In Showroom',  value:inShowroom, icon:'🏪', color:'#15803d', bg:'#f0fdf4', border:'#86efac', filter:'showroom' },
@@ -206,7 +233,7 @@ export default function ShowroomTracker() {
       ) : (
         <div style={{ background:'white', border:`1.5px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
           {/* Table header */}
-          <div style={{ display:'grid', gridTemplateColumns:'90px 1fr 80px 160px 140px', gap:0,
+          <div style={{ display:'grid', gridTemplateColumns:'140px 1fr 80px 160px 140px', gap:0,
             background:C.navy, padding:'10px 16px', alignItems:'center' }}>
             <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.6)', textTransform:'uppercase', letterSpacing:'.5px' }}>Photo</div>
             <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.6)', textTransform:'uppercase', letterSpacing:'.5px' }}>Frame</div>
@@ -224,10 +251,10 @@ export default function ShowroomTracker() {
             const isSaving = saving[item.id];
 
             return (
-              <div key={item.id} style={{ display:'grid', gridTemplateColumns:'90px 1fr 80px 160px 140px',
+              <div key={item.id} style={{ display:'grid', gridTemplateColumns:'140px 1fr 80px 160px 140px',
                 gap:0, padding:'10px 16px', alignItems:'center',
                 borderBottom:`1px solid ${C.border}`,
-                background: idx%2===0 ? 'white' : '#fafaf9',
+                background: idx%2===0 ? 'white' : '#fafaf9', position:'relative',
                 opacity: isSaving ? .6 : 1 }}>
 
                 {/* Photo */}
@@ -261,6 +288,27 @@ export default function ShowroomTracker() {
                     </button>
                   ))}
                 </div>
+
+                {/* Weekly check confirm button */}
+                {checkMode && item.location==='showroom' && (
+                  <div style={{ position:'absolute', inset:0, background:'rgba(255,255,255,.92)', borderRadius:8,
+                    display:'flex', alignItems:'center', justifyContent:'center', zIndex:10, gap:10 }}>
+                    {checkedIds.has(item.id) ? (
+                      <div style={{ fontSize:13, fontWeight:700, color:'#15803d' }}>✓ Confirmed</div>
+                    ) : (
+                      <button onClick={()=>setCheckedIds(s=>new Set([...s, item.id]))}
+                        style={{ padding:'10px 24px', background:'#15803d', color:'white', border:'none', borderRadius:10,
+                          fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                        ✓ Frame is here
+                      </button>
+                    )}
+                    <button onClick={()=>{ setLoc(item.id,'missing'); setCheckedIds(s=>new Set([...s, item.id])); }}
+                      style={{ padding:'10px 16px', background:'#fef9c3', border:'1px solid #fde68a', borderRadius:10,
+                        fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', color:'#92400e' }}>
+                      ⚠️ Missing
+                    </button>
+                  </div>
+                )}
 
                 {/* Showroom qty */}
                 <div style={{ display:'flex', alignItems:'center', gap:4, justifyContent:'center' }}>
