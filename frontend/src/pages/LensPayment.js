@@ -13,10 +13,10 @@ export default function LensPayment() {
   const [method, setMethod] = useState('cash');
   const [paid,   setPaid]   = useState('');
   const [rows,   setRows]   = useState([
-    { order_no_kuruwita:'', order_no_kalutota:'', price:'', lab:'Negombo Optical' }
+    { order_no_Wickramakalutota:'', order_no_kalutota:'', price:'', lab:'Negombo Optical' }
   ]);
 
-  const addRow    = () => setRows(r=>[...r,{ order_no_kuruwita:'', order_no_kalutota:'', price:'', lab:'Negombo Optical' }]);
+  const addRow    = () => setRows(r=>[...r,{ order_no_Wickramakalutota:'', order_no_kalutota:'', price:'', lab:'Negombo Optical' }]);
   const removeRow = i => setRows(r=>r.filter((_,idx)=>idx!==i));
   const setRow    = (i,k,v) => setRows(r=>r.map((row,idx)=>idx===i?{...row,[k]:v}:row));
 
@@ -35,7 +35,7 @@ export default function LensPayment() {
 
     const rowsHtml = validRows.map((r,i)=>`
       <tr style="background:${i%2===0?'white':'#f9fafb'}">
-        <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;font-weight:600;color:#0f1f3d;">${r.order_no_kuruwita||'—'}</td>
+        <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;font-weight:600;color:#0f1f3d;">${r.order_no_Wickramakalutota||'—'}</td>
         <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#374151;">${r.order_no_kalutota||'—'}</td>
         <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;text-align:center;">
           <span style="background:${r.lab.includes('Negombo')?'#dbeafe':r.lab.includes('Solex')?'#dcfce7':'#f3f4f6'};
@@ -61,7 +61,7 @@ export default function LensPayment() {
 <!-- Header -->
 <div style="border-bottom:3px solid #1a56db;padding-bottom:10px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;">
   <div>
-    <div style="font-size:17px;font-weight:700;color:#0f1f3d;">Kuruwita Optical</div>
+    <div style="font-size:17px;font-weight:700;color:#0f1f3d;">Wickramakalutota Optical</div>
     <div style="font-size:9px;color:#6b7280;margin-top:1px;">No.57, Kurunegala Road, Chilaw</div>
   </div>
   <div style="text-align:right;">
@@ -86,8 +86,8 @@ export default function LensPayment() {
 <table style="width:100%;border-collapse:collapse;border:1.5px solid #dbeafe;margin-bottom:12px;">
   <thead>
     <tr style="background:#1a56db;">
-      <th style="padding:6px 10px;color:white;font-size:9px;font-weight:700;text-align:left;letter-spacing:.5px;">KO ORDER</th>
-      <th style="padding:6px 10px;color:white;font-size:9px;font-weight:700;text-align:left;letter-spacing:.5px;">KALUTOTA ORDER</th>
+      <th style="padding:6px 10px;color:white;font-size:9px;font-weight:700;text-align:left;letter-spacing:.5px;">Order Number</th>
+      <th style="padding:6px 10px;color:white;font-size:9px;font-weight:700;text-align:left;letter-spacing:.5px;">Bill Number</th>
       <th style="padding:6px 10px;color:white;font-size:9px;font-weight:700;text-align:center;letter-spacing:.5px;">LAB</th>
       <th style="padding:6px 10px;color:white;font-size:9px;font-weight:700;text-align:right;letter-spacing:.5px;">LENS PRICE</th>
     </tr>
@@ -125,12 +125,12 @@ export default function LensPayment() {
     <div style="font-size:9px;color:#6b7280;">Received by (Kalutota Optical)</div>
   </div>
   <div style="border-top:1px solid #d1d5db;padding-top:6px;">
-    <div style="font-size:9px;color:#6b7280;">Paid by (Kuruwita Optical)</div>
+    <div style="font-size:9px;color:#6b7280;">Paid by (Wickramakalutota Optical)</div>
   </div>
 </div>
 
 <div style="margin-top:12px;text-align:center;font-size:8px;color:#9ca3af;border-top:1px dashed #e5e7eb;padding-top:7px;">
-  Kuruwita Optical · Printed: ${new Date().toLocaleDateString('en-GB')}
+  Wickramakalutota Optical · Printed: ${new Date().toLocaleDateString('en-GB')}
 </div>
 </body></html>`;
 
@@ -188,7 +188,7 @@ export default function LensPayment() {
 
           {rows.map((row,i)=>(
             <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr auto', gap:8, marginBottom:8 }}>
-              <input value={row.order_no_kuruwita} onChange={e=>setRow(i,'order_no_kuruwita',e.target.value)}
+              <input value={row.order_no_Wickramakalutota} onChange={e=>setRow(i,'order_no_Wickramakalutota',e.target.value)}
                 placeholder="KO-0119" style={INP}/>
               <input value={row.order_no_kalutota} onChange={e=>setRow(i,'order_no_kalutota',e.target.value)}
                 placeholder="KAL-0055" style={INP}/>
