@@ -76,7 +76,7 @@ export default function ShowroomTracker() {
     try {
       const data = await api('/inventory?limit=5000&no_images=1');
       const rows = Array.isArray(data) ? data : (data.data || []);
-      setItems(rows.filter(i=>i.category!=='Old Stock'));
+      setItems(rows.filter(i=>i.category!=='Old Stock' && parseInt(i.quantity||0)>0));
     } finally { setLoading(false); }
   }, []);
 
