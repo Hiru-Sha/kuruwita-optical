@@ -1231,7 +1231,8 @@ export default function Orders() {
       const token = localStorage.getItem('ko_token');
       const res   = await fetch(`${BASE}/inventory?search=${encodeURIComponent(q)}&limit=8&no_images=1`, { headers:{ Authorization:`Bearer ${token}` } });
       const data  = await res.json();
-      setGiftResults(Array.isArray(data)?data:data.data||[]);
+      const all = Array.isArray(data)?data:(data.data||[]);
+      setGiftResults(all.filter(i=>parseInt(i.quantity||0)>0));
     } catch { setGiftResults([]); }
   };
 
