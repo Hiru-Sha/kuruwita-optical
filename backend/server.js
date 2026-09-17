@@ -59,6 +59,7 @@ app.use('/api/cash-deposits',     require('./routes/cashDeposits'));
 app.use('/api/stock-adjustments', require('./routes/stockAdjustments'));
 app.use('/api/walkin-rx',         require('./routes/walkInRx'));
 app.use('/api/refractions',        require('./routes/refractions'));
+app.use('/api/lens-payments',       require('./routes/lensPayments'));
 app.use('/api/kalutota',          require('./routes/kalutota'));
 app.use('/api/dealer-purchases',  require('./routes/dealerPurchases'));
 app.use('/api/repairs',           require('./routes/repairs'));

@@ -231,9 +231,15 @@ export default function ShowroomTracker() {
                 boxShadow:'0 1px 6px rgba(0,0,0,.06)', opacity:isSaving?.6:1, position:'relative' }}>
 
                 {/* Location badge */}
-                <div style={{ position:'absolute', top:8, right:8, background:locStyle.bg, color:locStyle.color,
-                  fontSize:9, fontWeight:700, padding:'2px 8px', borderRadius:20, zIndex:2 }}>
-                  {locStyle.label}
+                <div style={{ position:'absolute', top:8, right:8, display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4, zIndex:2 }}>
+                  <div style={{ background:locStyle.bg, color:locStyle.color, fontSize:9, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>
+                    {locStyle.label}
+                  </div>
+                  {loc==='showroom' && sqty>0 && (
+                    <div style={{ background:C.navy, color:C.gold, fontSize:10, fontWeight:800, padding:'2px 8px', borderRadius:20, display:'flex', alignItems:'center', gap:3 }}>
+                      🏪 {sqty} in showroom
+                    </div>
+                  )}
                 </div>
 
                 {/* Image */}
