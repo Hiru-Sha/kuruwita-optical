@@ -315,7 +315,9 @@ export default function Expenses() {
         fetch(`${BASE}/expenses/summary?month=${month}`, { headers:{ Authorization:`Bearer ${token}` } }).then(r=>r.json()),
       ]);
       setAllExpenses(Array.isArray(exp)?exp:[]);
-      setAllDeposits(Array.isArray(dep)?dep:[]);
+      const allDep = Array.isArray(dep)?dep:[];
+      // Show balance payments separately — they are NOT real bank deposits
+      setAllDeposits(allDep.filter(d=>!d.order_id));
       setSummary(sum);
     } catch(e) { console.error(e); }
     finally { setLoading(false); }

@@ -93,8 +93,10 @@ export default function EndOfDay() {
       const expCash   = todayExp.filter(e=>e.payment_method!=='bank').reduce((s,e)=>s+parseFloat(e.amount||0),0);
       const expBank   = todayExp.filter(e=>e.payment_method==='bank').reduce((s,e)=>s+parseFloat(e.amount||0),0);
 
-      // Deposits today
-      const dep       = Array.isArray(deposits)?deposits:[];
+      // Deposits today — exclude balance payments (those linked to orders)
+      // Balance payments are already counted in orderCash/balCash above
+      const allDep    = Array.isArray(deposits)?deposits:[];
+      const dep       = allDep.filter(d=>!d.order_id); // only manual bank deposits
       const depCash   = dep.reduce((s,d)=>s+parseFloat(d.amount||0),0);
 
       const totalIn     = orderCash + orderBank + qsCash + repCash + balCash;
