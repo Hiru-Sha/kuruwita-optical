@@ -111,6 +111,7 @@ export default function EndOfDay() {
         repairs:     { list:todayRep,    cash:repCash,   count:todayRep.length },
         expenses:    { list:todayExp,    cashOut:expCash, bankOut:expBank },
         deposits:    { list:dep,         total:depCash,  count:dep.length },
+        balPayments: { list:balPayments,  cash:balCashCash, bank:balCashBank, total:balCash },
         summary: {
           totalIn, cashInHand, bankToday: orderBank,
           toDeposit: Math.max(0, cashInHand),
@@ -410,20 +411,39 @@ ${data.orders.outstanding > 0 ? `
             </div>
           )}
 
+          {/* Balance payments received today */}
+          {data.balPayments?.list?.length > 0 && (
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
+              <div style={{ padding:'11px 16px', background:'#f0fdf4', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:'#15803d', display:'flex', justifyContent:'space-between' }}>
+                <span>💰 Balance Payments Received ({data.balPayments.list.length})</span>
+                <span>{fmt(data.balPayments.total)}</span>
+              </div>
+              {data.balPayments.list.map(o=>(
+                <Row key={o.id}
+                  label={`Balance payment — ${o.order_number}`}
+                  sub={`via ${o.last_payment_method||'cash'}`}
+                  value={fmt(o.last_payment_amount)}
+                  color='#15803d'
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Manual bank deposits only */}
           {data.deposits.list.length > 0 && (
             <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', marginBottom:12 }}>
-              <div style={{ padding:'11px 16px', background:'#eff6ff', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:'#1e40af' }}>
-                🏦 Deposits & Balance Payments — {fmt(data.deposits.total)}
+              <div style={{ padding:'11px 16px', background:'#eff6ff', borderBottom:`1px solid ${C.border}`, fontSize:13, fontWeight:700, color:'#1e40af', display:'flex', justifyContent:'space-between' }}>
+                <span>🏦 Bank Deposits ({data.deposits.count})</span>
+                <span>{fmt(data.deposits.total)}</span>
               </div>
               {data.deposits.list.map(d=>{
-                const isBalPay = (d.notes||'').startsWith('Balance payment');
-                const isCash   = d.payment_type === 'cash';
+                const isCash = d.payment_type==='cash';
                 return (
                   <Row key={d.id}
-                    label={isBalPay ? d.notes : (d.bank_name || (isCash ? 'Cash Deposit' : 'Bank Deposit'))}
-                    sub={d.reference ? `Ref: ${d.reference}` : (d.payment_type ? `via ${d.payment_type}` : '')}
+                    label={d.bank_name||(isCash?'Cash Deposit':'Bank Deposit')}
+                    sub={d.reference?`Ref: ${d.reference}`:(d.payment_type?`via ${d.payment_type}`:'')}
                     value={fmt(d.amount)}
-                    color={isCash && !isBalPay ? C.success : '#2563eb'}
+                    color='#2563eb'
                   />
                 );
               })}
