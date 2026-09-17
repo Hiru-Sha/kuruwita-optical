@@ -2,19 +2,23 @@ const router = require('express').Router();
 const pool   = require('../db/pool');
 const auth   = require('../middleware/auth');
 
-// Auto-create table
-pool.query(`
-  CREATE TABLE IF NOT EXISTS lens_payments (
-    id          SERIAL PRIMARY KEY,
-    date        DATE NOT NULL,
-    pay_method  VARCHAR(20) DEFAULT 'cash',
-    total       DECIMAL(10,2) DEFAULT 0,
-    paid_amount DECIMAL(10,2) DEFAULT 0,
-    rows        JSONB NOT NULL DEFAULT '[]',
-    created_by  INTEGER,
-    created_at  TIMESTAMP DEFAULT NOW()
-  )
-`).catch(()=>{});
+// Auto-create table (safe — never crashes server)
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS lens_payments (
+        id          SERIAL PRIMARY KEY,
+        date        DATE NOT NULL,
+        pay_method  VARCHAR(20) DEFAULT 'cash',
+        total       DECIMAL(10,2) DEFAULT 0,
+        paid_amount DECIMAL(10,2) DEFAULT 0,
+        rows        JSONB NOT NULL DEFAULT '[]',
+        created_by  INTEGER,
+        created_at  TIMESTAMP DEFAULT NOW()
+      )
+    `);
+  } catch(e) { console.log('lens_payments table init skipped:', e.message); }
+})();
 
 // GET all payments
 router.get('/', auth, async (req, res) => {
