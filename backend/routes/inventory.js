@@ -21,7 +21,7 @@ router.get('/', auth, async (req, res) => {
              frame_type, frame_color, frame_shape, frame_material, frame_size,
              sg_type, rg_lens_type, rg_material, rg_power, item_name,
              cost_price, sell_price, quantity, min_quantity,
-             ${imageCol}, display_number, stock_number, location, created_at, updated_at
+             ${imageCol}, display_number, stock_number, location, showroom_qty, created_at, updated_at
       FROM inventory
       WHERE 1=1
     `;
