@@ -142,6 +142,7 @@ router.get('/profit', auth, async (req, res) => {
         COALESCE(SUM(total_amount), 0) AS revenue,
         COALESCE(SUM(
           CASE WHEN customer_own_frame THEN 0 ELSE COALESCE(frame_buy_price,0) END
+          + COALESCE(lens_buy_price, 0)
         ), 0) AS cost_of_goods,
         COALESCE(SUM(advance_amount), 0) AS collected,
         COALESCE(SUM(balance_amount), 0) AS owed,
@@ -155,18 +156,34 @@ router.get('/profit', auth, async (req, res) => {
 
     const qsSales = await safeQuery(`
       SELECT
-        TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month_key,
-        COALESCE(SUM(total), 0) AS qs_revenue,
-        COUNT(*) AS qs_count
-      FROM quick_sales
-      WHERE created_at >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
-      GROUP BY DATE_TRUNC('month', created_at)
+        TO_CHAR(DATE_TRUNC('month', qs.created_at), 'YYYY-MM') AS month_key,
+        COALESCE(SUM(qs.total), 0) AS qs_revenue,
+        COUNT(*) AS qs_count,
+        COALESCE(SUM((
+          SELECT COALESCE(SUM(
+            (item_data->>'qty')::NUMERIC *
+            COALESCE(
+              NULLIF((item_data->>'cost_price'),'')::NUMERIC,
+              (SELECT cost_price FROM inventory WHERE id=(item_data->>'inventory_id')::INTEGER LIMIT 1),
+              0
+            )
+          ), 0)
+          FROM jsonb_array_elements(
+            CASE WHEN qs.items IS NOT NULL AND qs.items::text NOT IN ('null','[]','')
+            THEN qs.items::jsonb ELSE '[]'::jsonb END
+          ) AS item_data
+          WHERE (item_data->>'qty') ~ '^[0-9.]+$'
+        )), 0) AS qs_cogs
+      FROM quick_sales qs
+      WHERE qs.created_at >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
+      GROUP BY DATE_TRUNC('month', qs.created_at)
     `);
 
     const repairsQ = await safeQuery(`
       SELECT
         TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month_key,
         COALESCE(SUM(charge), 0) AS repair_revenue,
+        COALESCE(SUM(COALESCE(repair_cost,0)), 0) AS repair_cogs,
         COUNT(*) AS repair_count
       FROM repairs
       WHERE created_at >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
@@ -213,10 +230,18 @@ router.get('/profit', auth, async (req, res) => {
       LIMIT 10
     `);
 
-    const qsMap   = {};
-    qsSales.rows.forEach(r => { qsMap[r.month_key]  = parseFloat(r.qs_revenue||0); });
-    const repMap  = {};
-    repairsQ.rows.forEach(r => { repMap[r.month_key] = parseFloat(r.repair_revenue||0); });
+    const qsMap     = {};
+    const qsCogsMap = {};
+    qsSales.rows.forEach(r => {
+      qsMap[r.month_key]     = parseFloat(r.qs_revenue||0);
+      qsCogsMap[r.month_key] = parseFloat(r.qs_cogs||0);
+    });
+    const repMap     = {};
+    const repCogsMap = {};
+    repairsQ.rows.forEach(r => {
+      repMap[r.month_key]     = parseFloat(r.repair_revenue||0);
+      repCogsMap[r.month_key] = parseFloat(r.repair_cogs||0);
+    });
     const expMap  = {};
     expByMonth.rows.forEach(r => { expMap[r.month_key] = parseFloat(r.total_expenses||0); });
     const lensMap = {};
@@ -224,12 +249,13 @@ router.get('/profit', auth, async (req, res) => {
 
     const merged = monthly.rows.map(m => {
       const orderRev     = parseFloat(m.revenue||0);
-      const qsRev        = qsMap[m.month_key]   || 0;
-      const repRev       = repMap[m.month_key]  || 0;
+      const qsRev        = qsMap[m.month_key]     || 0;
+      const repRev       = repMap[m.month_key]    || 0;
       const totalRevenue = orderRev + qsRev + repRev;
-      const frameCOGS    = parseFloat(m.cost_of_goods||0);
-      const lensCOGS     = lensMap[m.month_key] || 0;
-      const costOfGoods  = frameCOGS + lensCOGS;
+      const frameCOGS    = parseFloat(m.cost_of_goods||0); // includes lens_buy_price
+      const qsCOGS       = qsCogsMap[m.month_key]  || 0;
+      const repairCOGS   = repCogsMap[m.month_key] || 0;
+      const costOfGoods  = frameCOGS + qsCOGS + repairCOGS;
       const grossProfit  = totalRevenue - costOfGoods;
       const expenses     = expMap[m.month_key]  || 0;
       const netProfit    = grossProfit - expenses;

@@ -93,14 +93,29 @@ router.get('/', auth, async (req, res) => {
         WHERE created_at::date BETWEEN $1 AND $2
       `, [from, to]),
 
-      // ── Quick sales list ─────────────────────────────────────
+      // ── Quick sales list with per-sale COGS ─────────────────
       pool.query(`
-        SELECT sale_number, created_at::date AS date,
-               TO_CHAR(created_at,'HH24:MI') AS time,
-               customer_name, items, total, discount, payment_method
-        FROM quick_sales
-        WHERE created_at::date BETWEEN $1 AND $2
-        ORDER BY created_at DESC
+        SELECT qs.sale_number, qs.created_at::date AS date,
+               TO_CHAR(qs.created_at,'HH24:MI') AS time,
+               qs.customer_name, qs.items, qs.total, qs.discount, qs.payment_method,
+               COALESCE((
+                 SELECT SUM(
+                   (item_data->>'qty')::NUMERIC *
+                   COALESCE(
+                     NULLIF((item_data->>'cost_price'),'')::NUMERIC,
+                     (SELECT cost_price FROM inventory WHERE id=(item_data->>'inventory_id')::INTEGER LIMIT 1),
+                     0
+                   )
+                 )
+                 FROM jsonb_array_elements(
+                   CASE WHEN qs.items IS NOT NULL AND qs.items::text NOT IN ('null','[]','')
+                   THEN qs.items::jsonb ELSE '[]'::jsonb END
+                 ) AS item_data
+                 WHERE (item_data->>'qty') ~ '^[0-9.]+$'
+               ), 0) AS qs_cogs
+        FROM quick_sales qs
+        WHERE qs.created_at::date BETWEEN $1 AND $2
+        ORDER BY qs.created_at DESC
       `, [from, to]),
 
       // ── Quick sale COGS (cost_price × qty for each item sold) ─
