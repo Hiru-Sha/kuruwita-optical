@@ -135,7 +135,7 @@ router.get('/revenue', auth, async (req, res) => {
 // Fix G: AND status != 'cancelled' added to all order queries
 router.get('/profit', auth, async (req, res) => {
   try {
-    const monthly = await pool.query(`
+    const monthly = await safeQuery(`
       SELECT
         TO_CHAR(DATE_TRUNC('month', created_at), 'Mon YY')  AS month,
         TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month_key,
@@ -156,27 +156,13 @@ router.get('/profit', auth, async (req, res) => {
 
     const qsSales = await safeQuery(`
       SELECT
-        TO_CHAR(DATE_TRUNC('month', qs.created_at), 'YYYY-MM') AS month_key,
-        COALESCE(SUM(qs.total), 0) AS qs_revenue,
+        TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month_key,
+        COALESCE(SUM(total), 0) AS qs_revenue,
         COUNT(*) AS qs_count,
-        COALESCE(SUM((
-          SELECT COALESCE(SUM(
-            (item_data->>'qty')::NUMERIC *
-            COALESCE(
-              NULLIF((item_data->>'cost_price'),'')::NUMERIC,
-              (SELECT cost_price FROM inventory WHERE id=(item_data->>'inventory_id')::INTEGER LIMIT 1),
-              0
-            )
-          ), 0)
-          FROM jsonb_array_elements(
-            CASE WHEN qs.items IS NOT NULL AND qs.items::text NOT IN ('null','[]','')
-            THEN qs.items::jsonb ELSE '[]'::jsonb END
-          ) AS item_data
-          WHERE (item_data->>'qty') ~ '^[0-9.]+$'
-        )), 0) AS qs_cogs
-      FROM quick_sales qs
-      WHERE qs.created_at >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
-      GROUP BY DATE_TRUNC('month', qs.created_at)
+        0 AS qs_cogs
+      FROM quick_sales
+      WHERE created_at >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
+      GROUP BY DATE_TRUNC('month', created_at)
     `);
 
     const repairsQ = await safeQuery(`
