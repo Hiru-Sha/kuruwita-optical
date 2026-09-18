@@ -73,7 +73,7 @@ router.get('/', auth, async (req, res) => {
                o.customer_own_frame,
                (o.total_amount
                 - CASE WHEN o.customer_own_frame THEN 0 ELSE COALESCE(o.frame_buy_price,0) END
-                - COALESCE(o.lab_bill_amount, 0)
+                - COALESCE(o.lens_buy_price, 0)
                 - COALESCE(o.gift_cost, 0)
                ) AS order_profit
         FROM orders o
@@ -186,23 +186,18 @@ router.get('/', auth, async (req, res) => {
         ORDER BY created_at DESC
       `, [from, to]),
 
-      // ── LENS COGS: from Lab Receivings expenses ──────────────
-      // These are auto-created when paying lab bills
-      pool.query(`
-        SELECT COALESCE(SUM(amount), 0) AS lens_cogs
-        FROM expenses
-        WHERE category = 'Lab Payment'
-          AND date BETWEEN $1 AND $2
-      `, [from, to]),
+      // ── LENS COGS: from lens_buy_price per order ─────────────
+      // lens_buy_price already in frameCOGS query above as lens_from_orders
+      // Return 0 here to avoid double counting with Lab Payment expenses
+      Promise.resolve({ rows: [{ lens_cogs: '0' }] }),
 
-      // ── FRAME COGS: frame_buy_price on orders sold ───────────
-      // This is the actual frame cost per order (NOT dealer purchase total)
+      // ── ORDER COGS: frame_buy_price + lens_buy_price per order ─
       pool.query(`
-        SELECT COALESCE(SUM(
-          CASE WHEN customer_own_frame THEN 0
-               ELSE COALESCE(frame_buy_price, 0)
-          END
-        ), 0) AS frame_cogs
+        SELECT
+          COALESCE(SUM(
+            CASE WHEN customer_own_frame THEN 0 ELSE COALESCE(frame_buy_price, 0) END
+          ), 0) AS frame_cogs,
+          COALESCE(SUM(COALESCE(lens_buy_price, 0)), 0) AS lens_from_orders
         FROM orders
         WHERE created_at::date BETWEEN $1 AND $2
           AND status != 'cancelled'
@@ -231,7 +226,7 @@ router.get('/', auth, async (req, res) => {
           COALESCE(SUM(amount), 0)   AS total_amount
         FROM expenses
         WHERE date BETWEEN $1 AND $2
-          AND category != 'Lab Payment'
+          AND category NOT IN ('Lab Payment','Lens Purchase')
       `, [from, to]),
 
       // ── Expenses by category (for breakdown) ─────────────────
@@ -376,7 +371,7 @@ router.get('/', auth, async (req, res) => {
                              + parseFloat(rs.revenue||0);
 
     const frameCOGSAmt       = parseFloat(frameCOGS.rows[0]?.frame_cogs||0);
-    const lensCOGSAmt        = parseFloat(lensCOGS.rows[0]?.lens_cogs||0);
+    const lensCOGSAmt        = parseFloat(frameCOGS.rows[0]?.lens_from_orders||0); // lens_buy_price per order
     const qsCOGSAmt          = parseFloat(qsCOGS.rows[0]?.qs_cogs||0);
     const giftCOGSAmt        = parseFloat(giftCOGS.rows[0]?.gift_cogs||0);
     const repairCOGSAmt      = parseFloat(rs.repair_cogs||0);

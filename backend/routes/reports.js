@@ -180,7 +180,7 @@ router.get('/profit', auth, async (req, res) => {
     const expByMonth = await safeQuery(`
       SELECT
         TO_CHAR(date, 'YYYY-MM') AS month_key,
-        COALESCE(SUM(CASE WHEN category != 'Lab Payment' THEN amount END), 0) AS total_expenses
+        COALESCE(SUM(CASE WHEN category NOT IN ('Lab Payment','Lens Purchase') THEN amount END), 0) AS total_expenses
       FROM expenses
       WHERE date >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
       GROUP BY TO_CHAR(date, 'YYYY-MM')

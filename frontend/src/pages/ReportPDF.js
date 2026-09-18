@@ -254,8 +254,9 @@ function buildReportHTML(data, from, to) {
   const orderRows = o.list.map(or=>{
     const rev      = parseFloat(or.total_amount||0);
     const frameBuy = parseFloat(or.frame_buy_price||0);
-    const lensBuy  = parseFloat(or.lens_buy_price||or.lab_bill_amount||0);
+    const lensBuy  = parseFloat(or.lens_buy_price||or.lab_bill_amount||0); // shown as info only
     const giftCost = parseFloat(or.gift_cost||0);
+    // Lens cost is tracked via Lab Payment expenses (monthly) — do NOT deduct per order (double counting)
     const cogs     = frameBuy + lensBuy + giftCost;
     const profit   = parseFloat(or.order_profit||0) || (rev - cogs);
     const margin   = rev > 0 ? Math.round(profit/rev*100) : 0;
