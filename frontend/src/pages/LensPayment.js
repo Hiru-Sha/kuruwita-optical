@@ -81,8 +81,8 @@ export default function LensPayment() {
 </div>
 <table style="width:100%;border-collapse:collapse;border:1.5px solid #dbeafe;margin-bottom:12px;">
   <thead><tr style="background:#1a56db;">
-    <th style="padding:6px 10px;color:white;font-size:9px;font-weight:700;text-align:left;">KO ORDER</th>
-    <th style="padding:6px 10px;color:white;font-size:9px;font-weight:700;text-align:left;">KALUTOTA ORDER</th>
+    <th style="padding:6px 10px;color:white;font-size:9px;font-weight:700;text-align:left;">ORDER Number</th>
+    <th style="padding:6px 10px;color:white;font-size:9px;font-weight:700;text-align:left;">Bill Number </th>
     <th style="padding:6px 10px;color:white;font-size:9px;font-weight:700;text-align:center;">LAB</th>
     <th style="padding:6px 10px;color:white;font-size:9px;font-weight:700;text-align:right;">LENS PRICE</th>
   </tr></thead>
@@ -203,7 +203,7 @@ export default function LensPayment() {
 
           {/* Column headers */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr auto', gap:8, marginBottom:6 }}>
-            {['KO Order No.','Kalutota Order No.','Lab','Lens Price (Rs.)',''].map((l,i)=>(
+            {['Order Number No.','Bill No.','Lab','Lens Price (Rs.)',''].map((l,i)=>(
               <div key={i} style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted }}>{l}</div>
             ))}
           </div>
@@ -315,7 +315,7 @@ export default function LensPayment() {
                     <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
                       <thead>
                         <tr style={{ background:C.navy }}>
-                          {['KO Order','Kalutota Order','Lab','Price'].map(h=>(
+                          {['Order Number','Bill Number','Lab','Price'].map(h=>(
                             <th key={h} style={{ padding:'5px 10px', color:'white', fontWeight:700, textAlign:'left', fontSize:10, letterSpacing:'.5px' }}>{h}</th>
                           ))}
                         </tr>
