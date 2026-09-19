@@ -277,7 +277,7 @@ export default function Reports() {
     Promise.all([
       api(`/reports/revenue?month=${month}`),
       api('/reports/topsellers'),
-      api('/reports/lensjobs'),
+      api(`/reports/lensjobs?month=${month}`),
       api('/reports/profit'),
       api(`/reports/comparison?month=${month}`),
     ]).then(([rev,top,jobs,prof,cmp])=>{ setRevenue(rev); setTop(top); setLensJobs(jobs); setProfit(prof); setCompare(cmp); })
@@ -722,6 +722,100 @@ export default function Reports() {
         </div>
       )}
 
+
+      {/* ── LENS JOBS TAB ─────────────────────────────────────── */}
+      {!loading && activeTab==='lensjobs' && (
+        <div>
+          {/* Summary cards */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:20}}>
+            {[
+              { label:'Total Orders', value: lensJobs?.totals?.orders || 0, icon:'📦', color:C.navy, fmt:'num' },
+              { label:'Lab Bills Total', value: lensJobs?.totals?.billed || 0, icon:'🧾', color:C.gold, fmt:'cur' },
+              { label:'Paid to Labs', value: lensJobs?.totals?.paid || 0, icon:'✅', color:C.success, fmt:'cur' },
+              { label:'Unpaid to Labs', value: lensJobs?.totals?.unpaid || 0, icon:'⏳', color:C.danger, fmt:'cur' },
+              { label:'Active Jobs', value: lensJobs?.active?.length || 0, icon:'🔬', color:'#7c3aed', fmt:'num' },
+            ].map((card,i)=>(
+              <div key={i} style={{background:C.surface,borderRadius:14,padding:'16px 18px',boxShadow:'0 2px 8px rgba(0,0,0,.05)',border:`1.5px solid ${C.border}`}}>
+                <div style={{fontSize:20,marginBottom:6}}>{card.icon}</div>
+                <div style={{fontSize:20,fontWeight:800,color:card.color}}>
+                  {card.fmt==='cur' ? fmt(card.value) : card.value}
+                </div>
+                <div style={{fontSize:11,color:C.muted,fontWeight:600,marginTop:2}}>{card.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
+            {/* By Lab breakdown */}
+            <SectionCard title="🏭 By Lab" subtitle={`Orders placed ${lensJobs?.from||''} → ${lensJobs?.to||''}`}>
+              {!lensJobs?.byLab?.length
+                ? <div style={{textAlign:'center',padding:20,color:C.muted,fontSize:13}}>No lens orders for this month</div>
+                : lensJobs.byLab.map((lab,i)=>(
+                  <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<lensJobs.byLab.length-1?`1px solid ${C.cream}`:'none'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                      <span style={{fontSize:14,fontWeight:700,color:C.navy}}>{lab.lens_company}</span>
+                      <span style={{fontSize:13,fontWeight:700,color:C.gold}}>{fmt(lab.lab_total)}</span>
+                    </div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,fontSize:12}}>
+                      <div style={{background:C.cream,borderRadius:8,padding:'6px 10px',textAlign:'center'}}>
+                        <div style={{fontWeight:700,color:C.navy}}>{lab.total_orders}</div>
+                        <div style={{color:C.muted,fontSize:11}}>orders</div>
+                      </div>
+                      <div style={{background:'#f0fdf4',borderRadius:8,padding:'6px 10px',textAlign:'center'}}>
+                        <div style={{fontWeight:700,color:C.success}}>{fmt(lab.total_paid)}</div>
+                        <div style={{color:C.muted,fontSize:11}}>paid</div>
+                      </div>
+                      <div style={{background:'#fff7ed',borderRadius:8,padding:'6px 10px',textAlign:'center'}}>
+                        <div style={{fontWeight:700,color:C.danger}}>{fmt(lab.total_unpaid)}</div>
+                        <div style={{color:C.muted,fontSize:11}}>unpaid</div>
+                      </div>
+                    </div>
+                    {parseFloat(lab.lens_cost_total) > 0 && (
+                      <div style={{fontSize:11,color:C.muted,marginTop:6}}>
+                        Lens buy price recorded: <b style={{color:C.navy}}>{fmt(lab.lens_cost_total)}</b>
+                        {parseFloat(lab.avg_lens_cost) > 0 && <> · avg {fmt(lab.avg_lens_cost)}</>}
+                      </div>
+                    )}
+                  </div>
+                ))
+              }
+            </SectionCard>
+
+            {/* Active / pending jobs */}
+            <SectionCard title="⏳ Pending Jobs" subtitle="Orders with lens not yet received (all time)">
+              {!lensJobs?.active?.length
+                ? <div style={{textAlign:'center',padding:20,color:C.muted,fontSize:13}}>No pending lens jobs 🎉</div>
+                : <div style={{maxHeight:380,overflowY:'auto'}}>
+                  {lensJobs.active.map((job,i)=>(
+                    <div key={i} style={{padding:'10px 0',borderBottom:i<lensJobs.active.length-1?`1px solid ${C.cream}`:'none'}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:3}}>
+                        <span style={{fontSize:13,fontWeight:700,color:C.navy}}>#{job.order_number}</span>
+                        <span style={{fontSize:12,fontWeight:600,padding:'2px 8px',borderRadius:20,
+                          background: job.lens_step===2?'#fef3c7':job.lens_step===1?'#dbeafe':'#f3f4f6',
+                          color: job.lens_step===2?'#92400e':job.lens_step===1?'#1e40af':C.muted}}>
+                          {job.lens_step===1?'Sent to Lab':job.lens_step===2?'At Lab':'Pending'}
+                        </span>
+                      </div>
+                      <div style={{fontSize:12,color:C.muted}}>{job.customer_name} · {job.lens_company}</div>
+                      {job.deliver_date && (
+                        <div style={{fontSize:11,color:new Date(job.deliver_date)<new Date()?C.danger:C.muted,marginTop:2}}>
+                          Due: {new Date(job.deliver_date).toLocaleDateString('en-GB')}
+                          {new Date(job.deliver_date)<new Date() && ' ⚠️ Overdue'}
+                        </div>
+                      )}
+                      {job.lab_bill_amount > 0 && (
+                        <div style={{fontSize:11,color:C.muted,marginTop:2}}>
+                          Bill: {fmt(job.lab_bill_amount)} · {job.lab_paid?'✅ Paid':'⏳ Unpaid'}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              }
+            </SectionCard>
+          </div>
+        </div>
+      )}
 
       {!loading && activeTab==='topsellers' && (
         <div>

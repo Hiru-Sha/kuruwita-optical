@@ -286,18 +286,70 @@ router.get('/profit', auth, async (req, res) => {
 });
 
 // ── GET /api/reports/lensjobs ─────────────────────────────────
+// Returns monthly lab stats for the given month (YYYY-MM)
+// Also returns active jobs (step < 3) for live tracking
 router.get('/lensjobs', auth, async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT o.*, c.name AS customer_name, c.phone
+    const { month } = req.query;
+    // Determine date range: if month given use that month, else last 30 days
+    let from, to;
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      from = `${month}-01`;
+      // last day of month
+      const d = new Date(month + '-01');
+      d.setMonth(d.getMonth() + 1);
+      d.setDate(d.getDate() - 1);
+      to = d.toISOString().split('T')[0];
+    } else {
+      const now = new Date();
+      to = now.toISOString().split('T')[0];
+      const past = new Date(now); past.setDate(past.getDate() - 30);
+      from = past.toISOString().split('T')[0];
+    }
+
+    // Monthly stats by lab
+    const byLab = await pool.query(`
+      SELECT
+        lens_company,
+        COUNT(*)                                                      AS total_orders,
+        COALESCE(SUM(lab_bill_amount), 0)                             AS lab_total,
+        COALESCE(SUM(CASE WHEN lab_paid THEN lab_bill_amount END), 0) AS total_paid,
+        COALESCE(SUM(CASE WHEN NOT COALESCE(lab_paid,false) AND COALESCE(lab_bill_amount,0) > 0
+                          THEN lab_bill_amount END), 0)               AS total_unpaid,
+        COUNT(CASE WHEN COALESCE(lab_bill_amount,0) > 0 THEN 1 END)  AS orders_with_bill,
+        COALESCE(SUM(lens_buy_price), 0)                              AS lens_cost_total,
+        COALESCE(AVG(NULLIF(lens_buy_price, 0)), 0)                   AS avg_lens_cost
+      FROM orders
+      WHERE created_at::date BETWEEN $1 AND $2
+        AND lens_company IS NOT NULL
+        AND status != 'cancelled'
+      GROUP BY lens_company
+      ORDER BY total_orders DESC
+    `, [from, to]);
+
+    // Active pending jobs (for reference)
+    const active = await pool.query(`
+      SELECT o.order_number, o.lens_company, o.lens_type, o.lens_step,
+             o.deliver_date, o.lab_bill_amount, o.lab_paid,
+             c.name AS customer_name, c.phone
       FROM orders o JOIN customers c ON o.customer_id = c.id
       WHERE o.lens_company IS NOT NULL
-        AND o.lens_step IS NOT NULL
-        AND o.lens_step < 3
+        AND COALESCE(o.lens_step, 0) < 3
+        AND o.status != 'cancelled'
       ORDER BY o.deliver_date ASC NULLS LAST
       LIMIT 50
     `);
-    res.json(result.rows);
+
+    // Summary totals
+    const totals = byLab.rows.reduce((acc, r) => ({
+      orders:   acc.orders   + parseInt(r.total_orders || 0),
+      billed:   acc.billed   + parseFloat(r.lab_total  || 0),
+      paid:     acc.paid     + parseFloat(r.total_paid || 0),
+      unpaid:   acc.unpaid   + parseFloat(r.total_unpaid || 0),
+      lensCost: acc.lensCost + parseFloat(r.lens_cost_total || 0),
+    }), { orders: 0, billed: 0, paid: 0, unpaid: 0, lensCost: 0 });
+
+    res.json({ byLab: byLab.rows, active: active.rows, totals, from, to });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
