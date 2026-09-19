@@ -593,14 +593,14 @@ router.get('/patterns', auth, async (req, res) => {
           TRIM(TO_CHAR(created_at, 'Day'))              AS day_name,
           TO_CHAR(created_at, 'Mon YY')                 AS month_label,
           TO_CHAR(created_at, 'YYYY-MM')                AS month_key,
-          COUNT(*)::int                                  AS order_count,
-          COALESCE(SUM(total_amount),0)::float           AS revenue
+          COUNT(*)                                       AS order_count,
+          COALESCE(SUM(total_amount),0)                  AS revenue
         FROM orders
         WHERE created_at >= NOW() - INTERVAL '${months} months'
           AND status != 'cancelled'
         GROUP BY created_at::date
-        ORDER BY revenue DESC
-      `).catch(() => ({ rows: [] })),
+        ORDER BY SUM(total_amount) DESC NULLS LAST
+      `).catch(e => { console.error('dailyBest query error:', e.message); return { rows: [] }; }),
     ]);
 
     // Day of week
