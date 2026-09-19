@@ -557,7 +557,7 @@ router.get('/patterns', auth, async (req, res) => {
   const months = parseInt(req.query.months) || 6;
   try {
     // Run all queries with individual catches so one failure doesn't break everything
-    const [dayOfWeek, dateOfMonth, dailyBest, monthlyDays] = await Promise.all([
+    const [dayOfWeek, dateOfMonth, dailyBest] = await Promise.all([
 
       pool.query(`
         SELECT
@@ -585,41 +585,21 @@ router.get('/patterns', auth, async (req, res) => {
         ORDER BY dom
       `).catch(() => ({ rows: [] })),
 
+      // All daily totals (we'll derive best/worst in JS to avoid complex subqueries)
       pool.query(`
         SELECT
-          created_at::date                        AS sale_date,
-          TO_CHAR(created_at, 'DD Mon YYYY')      AS date_label,
-          TRIM(TO_CHAR(created_at, 'Day'))        AS day_name,
-          COUNT(*)                                 AS order_count,
-          COALESCE(SUM(total_amount),0)            AS revenue
+          created_at::date                              AS sale_date,
+          TO_CHAR(created_at, 'DD Mon YYYY')            AS date_label,
+          TRIM(TO_CHAR(created_at, 'Day'))              AS day_name,
+          TO_CHAR(created_at, 'Mon YY')                 AS month_label,
+          TO_CHAR(created_at, 'YYYY-MM')                AS month_key,
+          COUNT(*)::int                                  AS order_count,
+          COALESCE(SUM(total_amount),0)::float           AS revenue
         FROM orders
         WHERE created_at >= NOW() - INTERVAL '${months} months'
           AND status != 'cancelled'
         GROUP BY created_at::date
         ORDER BY revenue DESC
-        LIMIT 20
-      `).catch(() => ({ rows: [] })),
-
-      pool.query(`
-        SELECT
-          TO_CHAR(DATE_TRUNC('month', created_at), 'Mon YY')   AS month,
-          TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM')  AS month_key,
-          MAX(daily_rev)  AS best_day_revenue,
-          MIN(daily_rev)  AS worst_day_revenue,
-          (ARRAY_AGG(sale_date ORDER BY daily_rev DESC))[1]    AS best_date,
-          (ARRAY_AGG(sale_date ORDER BY daily_rev ASC))[1]     AS worst_date
-        FROM (
-          SELECT
-            created_at::date                     AS sale_date,
-            DATE_TRUNC('month', created_at)      AS month_start,
-            COALESCE(SUM(total_amount),0)        AS daily_rev
-          FROM orders
-          WHERE created_at >= NOW() - INTERVAL '${months} months'
-            AND status != 'cancelled'
-          GROUP BY created_at::date
-        ) d
-        GROUP BY DATE_TRUNC('month', created_at)
-        ORDER BY DATE_TRUNC('month', created_at) DESC
       `).catch(() => ({ rows: [] })),
     ]);
 
@@ -639,7 +619,7 @@ router.get('/patterns', auth, async (req, res) => {
     const bestDay   = dowData.reduce((a,b) => b.revenue > a.revenue ? b : a, dowData[0]);
     const worstDay  = [...dowData].filter(d => d.order_count > 0).sort((a,b) => a.revenue - b.revenue)[0] || dowData[0];
 
-    // Date of month groups
+    // Date of month groups — derived from daily data
     const domGroups = { '1–10': {count:0,rev:0}, '11–20': {count:0,rev:0}, '21–31': {count:0,rev:0} };
     const domPerDay = {};
     dateOfMonth.rows.forEach(r => {
@@ -653,6 +633,39 @@ router.get('/patterns', auth, async (req, res) => {
     const bestDom   = [...domEntries].sort((a,b) => b.rev - a.rev)[0];
     const worstDom  = [...domEntries].filter(d => d.count > 0).sort((a,b) => a.rev - b.rev)[0];
 
+    // Derive monthly best/worst from the daily data (cast to float for safe sort)
+    const allDailyRows = dailyBest.rows.map(r => ({
+      ...r,
+      revenue:     parseFloat(r.revenue || 0),
+      order_count: parseInt(r.order_count || 0),
+    }));
+    // Sort: best first (already sorted DESC from DB), worst last
+    const dailyBestTop  = allDailyRows.slice(0, 10);
+    const dailyWorstTop = [...allDailyRows].sort((a,b) => a.revenue - b.revenue).slice(0, 5);
+
+    // Monthly best & worst: group by month_key
+    const monthMap = {};
+    allDailyRows.forEach(r => {
+      const mk = r.month_key;
+      if (!monthMap[mk]) monthMap[mk] = { month: r.month_label, month_key: mk, days: [] };
+      monthMap[mk].days.push(r);
+    });
+    const monthlyDaysCalc = Object.values(monthMap)
+      .sort((a,b) => b.month_key.localeCompare(a.month_key))
+      .map(m => {
+        const sorted = [...m.days].sort((a,b) => b.revenue - a.revenue);
+        const best   = sorted[0];
+        const worst  = sorted[sorted.length - 1];
+        return {
+          month:             m.month,
+          month_key:         m.month_key,
+          best_date:         best?.date_label  || '',
+          best_day_revenue:  best?.revenue     || 0,
+          worst_date:        worst?.date_label || '',
+          worst_day_revenue: worst?.revenue    || 0,
+        };
+      });
+
     res.json({
       day_of_week:       dowData,
       max_rev_dow:       maxRevDow,
@@ -661,9 +674,9 @@ router.get('/patterns', auth, async (req, res) => {
       date_of_month:     Object.entries(domGroups).map(([k,v]) => ({ period:k, count:v.count, rev:v.rev })),
       best_dom:          bestDom,
       worst_dom:         worstDom,
-      daily_best:        dailyBest.rows.slice(0, 10),
-      daily_worst:       [...dailyBest.rows].sort((a,b) => a.revenue - b.revenue).slice(0, 5),
-      monthly_days:      monthlyDays.rows,
+      daily_best:        dailyBestTop,
+      daily_worst:       dailyWorstTop,
+      monthly_days:      monthlyDaysCalc,
       months_analyzed:   parseInt(months),
     });
   } catch (err) {
