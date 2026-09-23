@@ -66,17 +66,23 @@ export default function EndOfDay() {
       const orderBank   = todayOrders.filter(o=>o.payment_method&&o.payment_method!=='cash').reduce((s,o)=>s+parseFloat(o.advance_amount||0),0);
       const orderBal    = todayOrders.reduce((s,o)=>s+parseFloat(o.balance_amount||0),0);
 
-      // Balance payments received today (orders created earlier, paid today)
-      const balPayments = (Array.isArray(orders)?orders:[]).filter(o =>
-        o.last_payment_date === d && o.created_at?.slice(0,10) !== d
-      );
-      // Use last_payment_amount (correct) — falls back to 0 if column missing
-      const balCash = balPayments.reduce((s,o)=>{
-        const amt = parseFloat(o.last_payment_amount||0);
-        return s + amt;
-      }, 0);
-      const balCashCash = balPayments.filter(o=>!o.last_payment_method||o.last_payment_method==='cash').reduce((s,o)=>s+parseFloat(o.last_payment_amount||0),0);
-      const balCashBank = balPayments.filter(o=>o.last_payment_method&&o.last_payment_method!=='cash').reduce((s,o)=>s+parseFloat(o.last_payment_amount||0),0);
+      // Balance payments received today — from cash_deposits with order_id set
+      // These are payments on old orders recorded today (not new order advances)
+      const allDep0    = Array.isArray(deposits) ? deposits : (deposits?.data || []);
+      const balPayDeps = allDep0.filter(dep => dep.order_id);
+      const balCash    = balPayDeps.reduce((s,dep) => s + parseFloat(dep.amount||0), 0);
+      const balCashCash = balPayDeps.filter(dep => !dep.payment_type || dep.payment_type==='cash').reduce((s,dep)=>s+parseFloat(dep.amount||0),0);
+      const balCashBank = balPayDeps.filter(dep => dep.payment_type && dep.payment_type!=='cash').reduce((s,dep)=>s+parseFloat(dep.amount||0),0);
+      // Build balPayments list compatible with existing render code (uses order_number, customer_name, etc.)
+      const balPayments = balPayDeps.map(dep => ({
+        id:                  dep.id,
+        order_number:        dep.order_number || dep.order_id,
+        customer_name:       dep.customer_name || 'Customer',
+        last_payment_amount: dep.amount,
+        last_payment_method: dep.payment_type,
+        bank_name:           dep.bank_name,
+        notes:               dep.notes,
+      }));
 
       // Quick sales today
       const todayQS   = (Array.isArray(qsales)?qsales:[]).filter(s => s.created_at?.slice(0,10)===d);
