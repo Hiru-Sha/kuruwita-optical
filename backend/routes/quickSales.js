@@ -7,22 +7,32 @@ const auth = require('../middleware/auth');
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS quick_sales (
-        id            SERIAL PRIMARY KEY,
-        sale_number   TEXT,
-        customer_name TEXT,
+        id             SERIAL PRIMARY KEY,
+        sale_number    TEXT,
+        customer_name  TEXT,
         customer_phone TEXT,
-        items         JSONB DEFAULT '[]',
-        subtotal      DECIMAL(10,2) DEFAULT 0,
-        discount      DECIMAL(10,2) DEFAULT 0,
-        total         DECIMAL(10,2) DEFAULT 0,
+        items          JSONB DEFAULT '[]',
+        subtotal       DECIMAL(10,2) DEFAULT 0,
+        discount       DECIMAL(10,2) DEFAULT 0,
+        total          DECIMAL(10,2) DEFAULT 0,
         payment_method TEXT DEFAULT 'cash',
-        amount_received DECIMAL(10,2) DEFAULT 0,
-        change_given  DECIMAL(10,2) DEFAULT 0,
-        branch        TEXT DEFAULT 'main',
-        added_by      INTEGER,
-        created_at    TIMESTAMPTZ DEFAULT NOW()
+        amount_paid    DECIMAL(10,2) DEFAULT 0,
+        change_given   DECIMAL(10,2) DEFAULT 0,
+        notes          TEXT,
+        served_by      INTEGER,
+        branch         TEXT DEFAULT 'main',
+        created_at     TIMESTAMPTZ DEFAULT NOW()
       )
     `);
+    // Add missing columns if table already existed with old schema
+    const alterCols = [
+      `ALTER TABLE quick_sales ADD COLUMN IF NOT EXISTS amount_paid DECIMAL(10,2) DEFAULT 0`,
+      `ALTER TABLE quick_sales ADD COLUMN IF NOT EXISTS notes TEXT`,
+      `ALTER TABLE quick_sales ADD COLUMN IF NOT EXISTS served_by INTEGER`,
+    ];
+    for (const sql of alterCols) {
+      await pool.query(sql).catch(() => {});
+    }
   } catch(e) { console.log('quick_sales table init skipped:', e.message); }
 })();
 
