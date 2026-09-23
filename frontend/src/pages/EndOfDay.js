@@ -51,9 +51,9 @@ export default function EndOfDay() {
       const token = localStorage.getItem('ko_token');
 
       const [orders, qsales, repairs, expenses, deposits] = await Promise.all([
-        fetch(`${BASE}/orders?limit=200`,         { headers:{ Authorization:`Bearer ${token}` } }).then(r=>r.json()),
-        fetch(`${BASE}/quick-sales?limit=200`,    { headers:{ Authorization:`Bearer ${token}` } }).then(r=>r.json()).catch(()=>[]),
-        fetch(`${BASE}/repairs?limit=200`,         { headers:{ Authorization:`Bearer ${token}` } }).then(r=>r.json()).catch(()=>[]),
+        fetch(`${BASE}/orders?limit=500&from_date=${viewDate}&to_date=${viewDate}`, { headers:{ Authorization:`Bearer ${token}` } }).then(r=>r.json()),
+        fetch(`${BASE}/quick-sales?limit=500&from_date=${viewDate}&to_date=${viewDate}`, { headers:{ Authorization:`Bearer ${token}` } }).then(r=>r.json()).catch(()=>[]),
+        fetch(`${BASE}/repairs?limit=500&month=${viewDate.slice(0,7)}`,              { headers:{ Authorization:`Bearer ${token}` } }).then(r=>r.json()).catch(()=>[]),
         apiGet(`/expenses?month=${viewDate.slice(0,7)}`),
         apiGet(`/cash-deposits?date=${viewDate}`),
       ]);
@@ -84,8 +84,9 @@ export default function EndOfDay() {
         notes:               dep.notes,
       }));
 
-      // Quick sales today
-      const todayQS   = (Array.isArray(qsales)?qsales:[]).filter(s => s.created_at?.slice(0,10)===d);
+      // Quick sales today — API returns { data:[...] } wrapper
+      const qsArr   = Array.isArray(qsales) ? qsales : (Array.isArray(qsales?.data) ? qsales.data : []);
+      const todayQS   = qsArr.filter(s => s.created_at?.slice(0,10)===d);
       const qsCash    = todayQS.reduce((s,q)=>s+parseFloat(q.total||0),0);
 
       // Repairs today
