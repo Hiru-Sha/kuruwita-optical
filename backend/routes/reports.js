@@ -142,6 +142,7 @@ router.get('/profit', auth, async (req, res) => {
         COALESCE(SUM(total_amount), 0) AS revenue,
         COALESCE(SUM(
           CASE WHEN customer_own_frame THEN 0 ELSE COALESCE(frame_buy_price,0) END
+          + COALESCE(lens_buy_price,0)
         ), 0) AS cost_of_goods,
         COALESCE(SUM(advance_amount), 0) AS collected,
         COALESCE(SUM(balance_amount), 0) AS owed,
@@ -248,7 +249,7 @@ router.get('/profit', auth, async (req, res) => {
       const qsRev        = qsMap[m.month_key]     || 0;
       const repRev       = repMap[m.month_key]    || 0;
       const totalRevenue = orderRev + qsRev + repRev;
-      const frameCOGS    = parseFloat(m.cost_of_goods||0); // includes lens_buy_price
+      const frameCOGS    = parseFloat(m.cost_of_goods||0); // frame_buy_price + lens_buy_price from orders
       const qsCOGS       = qsCogsMap[m.month_key]  || 0;
       const repairCOGS   = repCogsMap[m.month_key] || 0;
       const costOfGoods  = frameCOGS + qsCOGS + repairCOGS;
