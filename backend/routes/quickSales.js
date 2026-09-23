@@ -2,6 +2,30 @@ const router = require('express').Router();
 const pool = require('../db/pool');
 const auth = require('../middleware/auth');
 
+// Auto-create quick_sales table if missing
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS quick_sales (
+        id            SERIAL PRIMARY KEY,
+        sale_number   TEXT,
+        customer_name TEXT,
+        customer_phone TEXT,
+        items         JSONB DEFAULT '[]',
+        subtotal      DECIMAL(10,2) DEFAULT 0,
+        discount      DECIMAL(10,2) DEFAULT 0,
+        total         DECIMAL(10,2) DEFAULT 0,
+        payment_method TEXT DEFAULT 'cash',
+        amount_received DECIMAL(10,2) DEFAULT 0,
+        change_given  DECIMAL(10,2) DEFAULT 0,
+        branch        TEXT DEFAULT 'main',
+        added_by      INTEGER,
+        created_at    TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+  } catch(e) { console.log('quick_sales table init skipped:', e.message); }
+})();
+
 // ============================================================
 // GET / - List quick sales
 // ============================================================

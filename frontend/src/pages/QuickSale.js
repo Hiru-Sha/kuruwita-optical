@@ -215,10 +215,11 @@ export default function QuickSale() {
       if (to)       params.set('to_date', to);
       const res  = await fetch(`${BASE}/quick-sales?${params}`, { headers:{ Authorization:`Bearer ${token}` } });
       const data = await res.json();
+      if (data?.error) { console.error('Quick sales API error:', data.error); }
       const arr  = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
       setHistTotal(data.total || arr.length);
       setHistory(arr);
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error('loadHistory error:', e); }
     finally { setHistLoad(false); }
   };
 
