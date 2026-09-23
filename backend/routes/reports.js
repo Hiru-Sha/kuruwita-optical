@@ -155,13 +155,24 @@ router.get('/profit', auth, async (req, res) => {
 
     const qsSales = await safeQuery(`
       SELECT
-        TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month_key,
-        COALESCE(SUM(total), 0) AS qs_revenue,
+        TO_CHAR(DATE_TRUNC('month', qs.created_at), 'YYYY-MM') AS month_key,
+        COALESCE(SUM(qs.total), 0) AS qs_revenue,
         COUNT(*) AS qs_count,
-        0 AS qs_cogs
-      FROM quick_sales
-      WHERE created_at >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
-      GROUP BY DATE_TRUNC('month', created_at)
+        COALESCE(SUM(
+          (SELECT COALESCE(SUM(
+            (item->>'cost_price')::numeric * COALESCE((item->>'qty')::numeric, 1)
+          ), 0)
+           FROM jsonb_array_elements(
+             CASE WHEN qs.items IS NOT NULL AND qs.items::text NOT IN ('null','[]','')
+             THEN qs.items::jsonb ELSE '[]'::jsonb END
+           ) AS item
+           WHERE (item->>'cost_price') IS NOT NULL
+             AND (item->>'cost_price')::numeric > 0
+          )
+        ), 0) AS qs_cogs
+      FROM quick_sales qs
+      WHERE qs.created_at >= DATE_TRUNC('month', NOW() - INTERVAL '5 months')
+      GROUP BY DATE_TRUNC('month', qs.created_at)
     `);
 
     const repairsQ = await safeQuery(`
