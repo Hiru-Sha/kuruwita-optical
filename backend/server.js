@@ -249,7 +249,7 @@ const pool = require('./db/pool');
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_hist_name  ON historical_records(customer_name)`).catch(()=>{});
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_hist_phone ON historical_records(phone)`).catch(()=>{});
     await pool.query(`ALTER TABLE inventory ADD COLUMN IF NOT EXISTS showroom_qty INTEGER DEFAULT 0`).catch(()=>{});
-    await pool.query(`ALTER TABLE inventory ADD COLUMN IF NOT EXISTS showroom_qty INTEGER DEFAULT 0`).catch(()=>{});
+    await pool.query(`ALTER TABLE inventory ADD COLUMN IF NOT EXISTS missing_qty  INTEGER DEFAULT 0`).catch(()=>{});
     // Activity log table
     await pool.query(`CREATE TABLE IF NOT EXISTS activity_log (
       id          SERIAL PRIMARY KEY,

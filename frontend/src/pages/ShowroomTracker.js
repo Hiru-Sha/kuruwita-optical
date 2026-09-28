@@ -28,12 +28,12 @@ function Thumb({ itemId, name, onFull }) {
   return (
     <div ref={ref}
       onClick={()=> src && onFull(src, name)}
-      style={{ width:'100%', height:160, borderRadius:10, background:'#f0f2f5',
+      style={{ width:'100%', height:150, borderRadius:10, background:'#f0f2f5',
         display:'flex', alignItems:'center', justifyContent:'center',
-        cursor: src?'zoom-in':'default', overflow:'hidden', marginBottom:10 }}>
+        cursor: src?'zoom-in':'default', overflow:'hidden', marginBottom:8 }}>
       {src
         ? <img src={src} alt={name} style={{ width:'100%', height:'100%', objectFit:'contain', padding:6 }}/>
-        : <span style={{ fontSize:36, opacity:.3 }}>👓</span>
+        : <span style={{ fontSize:32, opacity:.3 }}>👓</span>
       }
     </div>
   );
@@ -57,6 +57,21 @@ function FullImg({ src, name, onClose }) {
   );
 }
 
+// ── Small qty stepper ─────────────────────────────────────────
+function Stepper({ value, max, min=0, onChange, disabled, color='#0f1f3d' }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+      <button onClick={()=>onChange(Math.max(min,value-1))} disabled={disabled||value<=min}
+        style={{ width:24, height:24, borderRadius:6, border:`1px solid ${C.border}`, background:'white',
+          color, fontWeight:700, cursor:'pointer', fontSize:13, opacity:value<=min?.4:1, lineHeight:1 }}>−</button>
+      <span style={{ fontSize:15, fontWeight:800, color, minWidth:18, textAlign:'center' }}>{value}</span>
+      <button onClick={()=>onChange(Math.min(max,value+1))} disabled={disabled||value>=max}
+        style={{ width:24, height:24, borderRadius:6, border:`1px solid ${C.border}`, background:'white',
+          color, fontWeight:700, cursor:'pointer', fontSize:13, opacity:value>=max?.4:1, lineHeight:1 }}>+</button>
+    </div>
+  );
+}
+
 export default function ShowroomTracker() {
   const [items,      setItems]      = useState([]);
   const [loading,    setLoading]    = useState(true);
@@ -76,41 +91,65 @@ export default function ShowroomTracker() {
     try {
       const data = await api('/inventory?limit=5000&no_images=1');
       const rows = Array.isArray(data) ? data : (data.data || []);
-      setItems(rows.filter(i=>i.category!=='Old Stock' && parseInt(i.quantity||0)>0));
+      // Show ALL items including out-of-stock (so missing items still appear)
+      setItems(rows.filter(i => i.category !== 'Old Stock'));
     } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const setLoc = async (id, loc) => {
+  // Save a numeric field
+  const saveField = async (id, patch) => {
     setSaving(s=>({...s,[id]:true}));
     try {
-      await api(`/inventory/${id}`, 'PATCH', { location: loc });
-      setItems(prev => prev.map(i => i.id===id ? {...i, location:loc} : i));
-      showToast(`✓ Moved to ${loc}`);
+      await api(`/inventory/${id}`, 'PATCH', patch);
+      setItems(prev => prev.map(i => i.id===id ? {...i,...patch} : i));
+    } catch(e) {
+      showToast('⚠️ Save failed');
     } finally { setSaving(s=>({...s,[id]:false})); }
   };
 
-  const setShowroomQty = async (id, qty, total) => {
-    const q = Math.max(0, Math.min(parseInt(total)||0, parseInt(qty)||0));
-    setSaving(s=>({...s,[id]:true}));
-    try {
-      await api(`/inventory/${id}`, 'PATCH', { showroom_qty: q });
-      setItems(prev => prev.map(i => i.id===id ? {...i, showroom_qty:q} : i));
-    } finally { setSaving(s=>({...s,[id]:false})); }
+  const setShowroomQty = (id, qty, item) => {
+    const total   = parseInt(item.quantity||0);
+    const missing = parseInt(item.missing_qty||0);
+    const maxSR   = Math.max(0, total - missing); // can't put more in showroom than available
+    const q = Math.max(0, Math.min(maxSR, qty));
+    saveField(id, { showroom_qty: q });
+    showToast(`🏪 Showroom: ${q}`);
   };
 
-  const inShowroom = items.filter(i=>i.location==='showroom').length;
-  const inStock    = items.filter(i=>i.location==='stock'||!i.location).length;
-  const missing    = items.filter(i=>i.location==='missing').length;
-  const outOfStock = items.filter(i=>parseInt(i.quantity||0)===0).length;
-  const cats       = ['All',...new Set(items.map(i=>i.category).filter(Boolean))];
+  const setMissingQty = (id, qty, item) => {
+    const total   = parseInt(item.quantity||0);
+    const showroom= parseInt(item.showroom_qty||0);
+    const maxMs   = Math.max(0, total - showroom);
+    const q = Math.max(0, Math.min(maxMs, qty));
+    saveField(id, { missing_qty: q });
+    showToast(`⚠️ Missing: ${q}`);
+  };
 
+  // Derived status for an item
+  const getStatus = (item) => {
+    const qty     = parseInt(item.quantity||0);
+    const sqty    = parseInt(item.showroom_qty||0);
+    const mqty    = parseInt(item.missing_qty||0);
+    const inStock = Math.max(0, qty - sqty - mqty);
+    return { qty, sqty, mqty, inStock };
+  };
+
+  // Summary counts
+  const totalInShowroom  = items.reduce((s,i)=>s+Math.max(0,parseInt(i.showroom_qty||0)),0);
+  const totalMissing     = items.reduce((s,i)=>s+Math.max(0,parseInt(i.missing_qty||0)),0);
+  const totalInStock     = items.reduce((s,i)=>{ const {qty,sqty,mqty}=getStatus(i); return s+Math.max(0,qty-sqty-mqty); },0);
+  const totalOutOfStock  = items.filter(i=>parseInt(i.quantity||0)===0).length;
+  const hasMissingItems  = items.filter(i=>parseInt(i.missing_qty||0)>0).length;
+  const cats = ['All',...new Set(items.map(i=>i.category).filter(Boolean))];
+
+  // Filter
   const filtered = items.filter(i => {
-    const qty = parseInt(i.quantity||0);
-    if (filterLoc==='showroom'   && i.location!=='showroom') return false;
-    if (filterLoc==='stock'      && (i.location==='showroom'||i.location==='missing')) return false;
-    if (filterLoc==='missing'    && i.location!=='missing') return false;
+    const { qty, sqty, mqty, inStock } = getStatus(i);
+    if (filterLoc==='showroom'   && sqty===0) return false;
+    if (filterLoc==='stock'      && inStock===0) return false;
+    if (filterLoc==='missing'    && mqty===0) return false;
     if (filterLoc==='outofstock' && qty>0) return false;
     if (filterCat!=='All'        && i.category!==filterCat) return false;
     if (search) {
@@ -121,6 +160,8 @@ export default function ShowroomTracker() {
     }
     return true;
   });
+
+  const checkItems = filtered.filter(i=>parseInt(i.showroom_qty||0)>0);
 
   return (
     <div style={{ fontFamily:"'DM Sans',sans-serif", paddingBottom:40 }}>
@@ -144,33 +185,46 @@ export default function ShowroomTracker() {
         </div>
       </div>
 
+      {/* Missing alert banner */}
+      {totalMissing > 0 && !checkMode && (
+        <div onClick={()=>setFilterLoc(f=>f==='missing'?'all':'missing')}
+          style={{ background:'#fef3c7', border:'2px solid #fbbf24', borderRadius:12, padding:'10px 14px',
+            marginBottom:12, cursor:'pointer', display:'flex', alignItems:'center', gap:10 }}>
+          <span style={{ fontSize:22 }}>⚠️</span>
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:'#92400e' }}>{totalMissing} unit{totalMissing!==1?'s':''} marked missing across {hasMissingItems} item{hasMissingItems!==1?'s':''}</div>
+            <div style={{ fontSize:11, color:'#b45309' }}>Tap to view missing items</div>
+          </div>
+        </div>
+      )}
+
       {/* Weekly check banner */}
       {checkMode && (
         <div style={{ background:'#fef9c3', border:'1.5px solid #fde68a', borderRadius:12, padding:'12px 14px', marginBottom:14 }}>
           <div style={{ fontSize:14, fontWeight:700, color:'#92400e', marginBottom:2 }}>📋 Weekly Check Mode</div>
           <div style={{ fontSize:12, color:'#92400e' }}>
-            Tap each showroom frame to confirm or mark missing.
-            <b> {checkedIds.size}/{inShowroom}</b> confirmed.
+            Check each item's showroom qty. Mark missing units with ⚠️ stepper.
+            <b> {checkedIds.size}/{checkItems.length}</b> confirmed.
           </div>
           <div style={{ marginTop:8, background:'white', borderRadius:8, height:8, overflow:'hidden' }}>
-            <div style={{ height:'100%', background:'#15803d', width:`${inShowroom>0?(checkedIds.size/inShowroom*100):0}%`, transition:'width .3s' }}/>
+            <div style={{ height:'100%', background:'#15803d', width:`${checkItems.length>0?(checkedIds.size/checkItems.length*100):0}%`, transition:'width .3s' }}/>
           </div>
         </div>
       )}
 
-      {/* Stats */}
+      {/* Stats — 4 tiles */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
         {[
-          { label:'Showroom',    value:inShowroom, icon:'🏪', color:'#15803d', bg:'#f0fdf4', border:'#86efac', f:'showroom' },
-          { label:'Stock Room',  value:inStock,    icon:'📦', color:'#1e40af', bg:'#eff6ff', border:'#93c5fd', f:'stock' },
-          { label:'Missing',     value:missing,    icon:'⚠️', color:'#92400e', bg:'#fef9c3', border:'#fde68a', f:'missing' },
-          { label:'Out of Stock',value:outOfStock, icon:'❌', color:C.danger,  bg:'#fef2f2', border:'#fca5a5', f:'outofstock' },
+          { label:'In Showroom', value:totalInShowroom, icon:'🏪', color:'#15803d', bg:'#f0fdf4', border:'#86efac', f:'showroom' },
+          { label:'In Stock Room', value:totalInStock,  icon:'📦', color:'#1e40af', bg:'#eff6ff', border:'#93c5fd', f:'stock' },
+          { label:'Missing',     value:totalMissing,    icon:'⚠️', color:'#92400e', bg:'#fef9c3', border:'#fde68a', f:'missing' },
+          { label:'Out of Stock',value:totalOutOfStock, icon:'❌', color:C.danger,  bg:'#fef2f2', border:'#fca5a5', f:'outofstock' },
         ].map(s=>(
           <div key={s.f} onClick={()=>setFilterLoc(f=>f===s.f?'all':s.f)}
             style={{ background:filterLoc===s.f?s.bg:'white', border:`2px solid ${filterLoc===s.f?s.border:C.border}`,
-              borderRadius:12, padding:'12px 14px', cursor:'pointer' }}>
+              borderRadius:12, padding:'12px 14px', cursor:'pointer', transition:'all .15s' }}>
             <div style={{ fontSize:22, marginBottom:2 }}>{s.icon}</div>
-            <div style={{ fontSize:20, fontWeight:800, color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:22, fontWeight:800, color:s.color }}>{s.value}</div>
             <div style={{ fontSize:11, color:C.muted, fontWeight:600 }}>{s.label}</div>
           </div>
         ))}
@@ -197,7 +251,7 @@ export default function ShowroomTracker() {
 
       {/* Count */}
       <div style={{ fontSize:12, color:C.muted, marginBottom:12 }}>
-        <b style={{color:C.navy}}>{filtered.length}</b> frames
+        <b style={{color:C.navy}}>{filtered.length}</b> items
         {filterLoc!=='all' && <span style={{ color:C.gold }}> · {filterLoc}</span>}
         {search && <span style={{ color:C.gold }}> · "{search}"</span>}
       </div>
@@ -208,39 +262,24 @@ export default function ShowroomTracker() {
       ) : filtered.length===0 ? (
         <div style={{ textAlign:'center', padding:60, color:C.muted }}>
           <div style={{ fontSize:40, marginBottom:8 }}>🔍</div>
-          <div style={{ fontSize:14, fontWeight:600, color:C.navy }}>No frames found</div>
+          <div style={{ fontSize:14, fontWeight:600, color:C.navy }}>No items found</div>
         </div>
       ) : (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:10 }}>
           {filtered.map(item => {
-            const qty     = parseInt(item.quantity||0);
-            const sqty    = parseInt(item.showroom_qty||0);
-            const loc     = item.location || 'stock';
-            const isSaving = saving[item.id];
+            const { qty, sqty, mqty, inStock } = getStatus(item);
+            const isSaving  = saving[item.id];
             const isChecked = checkedIds.has(item.id);
 
-            const locStyle = {
-              showroom:{ bg:'#dcfce7', color:'#15803d', label:'🏪 Showroom' },
-              stock:   { bg:'#eff6ff', color:'#1e40af', label:'📦 Stock' },
-              missing: { bg:'#fef9c3', color:'#92400e', label:'⚠️ Missing' },
-            }[loc] || { bg:'#eff6ff', color:'#1e40af', label:'📦 Stock' };
+            // Card border colour: red if any missing, green if any in showroom, default otherwise
+            const borderColor = mqty>0 ? '#fbbf24' : sqty>0 ? '#86efac' : C.border;
+            const cardBg      = mqty>0 ? '#fffbeb' : 'white';
 
             return (
-              <div key={item.id} style={{ background:'white', borderRadius:14, overflow:'hidden',
-                border:`2px solid ${loc==='missing'?'#fde68a':loc==='showroom'?'#86efac':C.border}`,
-                boxShadow:'0 1px 6px rgba(0,0,0,.06)', opacity:isSaving?.6:1, position:'relative' }}>
-
-                {/* Location badge */}
-                <div style={{ position:'absolute', top:8, right:8, display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4, zIndex:2 }}>
-                  <div style={{ background:locStyle.bg, color:locStyle.color, fontSize:9, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>
-                    {locStyle.label}
-                  </div>
-                  {loc==='showroom' && sqty>0 && (
-                    <div style={{ background:C.navy, color:C.gold, fontSize:10, fontWeight:800, padding:'2px 8px', borderRadius:20, display:'flex', alignItems:'center', gap:3 }}>
-                      🏪 {sqty} in showroom
-                    </div>
-                  )}
-                </div>
+              <div key={item.id} style={{ background:cardBg, borderRadius:14, overflow:'hidden',
+                border:`2px solid ${borderColor}`,
+                boxShadow:'0 1px 6px rgba(0,0,0,.06)', opacity:isSaving?.7:1, position:'relative',
+                transition:'opacity .15s' }}>
 
                 {/* Image */}
                 <div style={{ padding:'10px 10px 0' }}>
@@ -252,57 +291,104 @@ export default function ShowroomTracker() {
                   <div style={{ fontSize:13, fontWeight:700, color:C.navy, lineHeight:1.3, marginBottom:3 }}>
                     {item.name || item.brand || '—'}
                   </div>
-                  <div style={{ fontSize:11, color:C.muted, marginBottom:2 }}>
-                    {[item.frame_color, item.frame_material, item.frame_size].filter(Boolean).join(' · ')}
-                  </div>
-                  <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:8 }}>
-                    <span style={{ fontSize:11, color:C.muted }}>Stock:</span>
-                    <span style={{ fontSize:14, fontWeight:800, color:qty===0?C.danger:qty<=2?'#f59e0b':C.success }}>{qty}</span>
-                    {item.display_number && <span style={{ fontSize:10, color:C.gold, fontWeight:600 }}>#{item.display_number}</span>}
+                  <div style={{ fontSize:11, color:C.muted, marginBottom:6 }}>
+                    {[item.frame_color, item.frame_material].filter(Boolean).join(' · ')}
+                    {item.display_number ? <span style={{ color:C.gold, fontWeight:600 }}> #{item.display_number}</span> : null}
                   </div>
 
-                  {/* Weekly check overlay */}
-                  {checkMode && loc==='showroom' ? (
-                    isChecked ? (
-                      <div style={{ background:'#dcfce7', borderRadius:8, padding:'8px', textAlign:'center', fontSize:12, fontWeight:700, color:'#15803d' }}>
-                        ✓ Confirmed
+                  {/* Stock breakdown row */}
+                  <div style={{ display:'flex', gap:4, marginBottom:8, flexWrap:'wrap' }}>
+                    {/* Total */}
+                    <div style={{ display:'flex', alignItems:'center', gap:3, background:'#f1f5f9', borderRadius:6, padding:'3px 7px' }}>
+                      <span style={{ fontSize:9, color:C.muted, fontWeight:600 }}>TOTAL</span>
+                      <span style={{ fontSize:13, fontWeight:800, color: qty===0?C.danger:C.navy }}>{qty}</span>
+                    </div>
+                    {/* Showroom */}
+                    {sqty > 0 && (
+                      <div style={{ display:'flex', alignItems:'center', gap:3, background:'#dcfce7', borderRadius:6, padding:'3px 7px' }}>
+                        <span style={{ fontSize:9, color:'#15803d', fontWeight:600 }}>🏪</span>
+                        <span style={{ fontSize:13, fontWeight:800, color:'#15803d' }}>{sqty}</span>
                       </div>
+                    )}
+                    {/* Stock room */}
+                    {inStock > 0 && (
+                      <div style={{ display:'flex', alignItems:'center', gap:3, background:'#eff6ff', borderRadius:6, padding:'3px 7px' }}>
+                        <span style={{ fontSize:9, color:'#1e40af', fontWeight:600 }}>📦</span>
+                        <span style={{ fontSize:13, fontWeight:800, color:'#1e40af' }}>{inStock}</span>
+                      </div>
+                    )}
+                    {/* Missing */}
+                    {mqty > 0 && (
+                      <div style={{ display:'flex', alignItems:'center', gap:3, background:'#fef3c7', borderRadius:6, padding:'3px 7px' }}>
+                        <span style={{ fontSize:9, color:'#92400e', fontWeight:600 }}>⚠️</span>
+                        <span style={{ fontSize:13, fontWeight:800, color:'#92400e' }}>{mqty}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Weekly check mode */}
+                  {checkMode ? (
+                    sqty > 0 ? (
+                      isChecked ? (
+                        <div style={{ background:'#dcfce7', borderRadius:8, padding:'8px', textAlign:'center', fontSize:12, fontWeight:700, color:'#15803d' }}>
+                          ✓ Confirmed
+                        </div>
+                      ) : (
+                        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                          <button onClick={()=>{ setCheckedIds(s=>new Set([...s,item.id])); showToast('✓ Confirmed'); }}
+                            style={{ padding:'8px', background:'#15803d', color:'white', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                            ✓ All Here ({sqty})
+                          </button>
+                          {/* Quick missing button — marks 1 missing */}
+                          <button onClick={()=>{ setMissingQty(item.id, mqty+1, item); setCheckedIds(s=>new Set([...s,item.id])); }}
+                            disabled={mqty >= sqty}
+                            style={{ padding:'8px', background:'#fef9c3', border:'1px solid #fde68a', borderRadius:8, fontSize:12, fontWeight:700,
+                              cursor:mqty>=sqty?'not-allowed':'pointer', fontFamily:'inherit', color:'#92400e', opacity:mqty>=sqty?.4:1 }}>
+                            ⚠️ +1 Missing
+                          </button>
+                        </div>
+                      )
                     ) : (
-                      <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                        <button onClick={()=>setCheckedIds(s=>new Set([...s,item.id]))}
-                          style={{ padding:'8px', background:'#15803d', color:'white', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                          ✓ Frame is here
-                        </button>
-                        <button onClick={()=>{ setLoc(item.id,'missing'); setCheckedIds(s=>new Set([...s,item.id])); }}
-                          style={{ padding:'8px', background:'#fef9c3', border:'1px solid #fde68a', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', color:'#92400e' }}>
-                          ⚠️ Missing
-                        </button>
-                      </div>
+                      <div style={{ fontSize:11, color:C.muted, textAlign:'center', padding:'6px 0' }}>Not in showroom</div>
                     )
                   ) : (
                     <>
-                      {/* Location buttons */}
-                      <div style={{ display:'flex', gap:4, marginBottom:8 }}>
-                        {[['showroom','🏪'],['stock','📦'],['missing','⚠️']].map(([l,icon])=>(
-                          <button key={l} onClick={()=>loc!==l&&setLoc(item.id,l)} disabled={isSaving}
-                            style={{ flex:1, padding:'6px 4px', borderRadius:8,
-                              border:`1.5px solid ${loc===l?({showroom:'#86efac',stock:'#93c5fd',missing:'#fde68a'}[l]||C.border):C.border}`,
-                              background:loc===l?({showroom:'#dcfce7',stock:'#eff6ff',missing:'#fef9c3'}[l]||'white'):'white',
-                              fontSize:14, cursor:loc===l?'default':'pointer', fontFamily:'inherit' }}>
-                            {icon}
-                          </button>
-                        ))}
+                      {/* Showroom qty stepper */}
+                      <div style={{ background:'#f0fdf4', border:'1px solid #86efac', borderRadius:8, padding:'6px 8px', marginBottom:6 }}>
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                          <span style={{ fontSize:10, color:'#15803d', fontWeight:700 }}>🏪 Showroom</span>
+                          <Stepper
+                            value={sqty}
+                            max={Math.max(0, qty - mqty)}
+                            min={0}
+                            disabled={isSaving}
+                            color='#15803d'
+                            onChange={v=>setShowroomQty(item.id, v, item)}
+                          />
+                        </div>
                       </div>
 
-                      {/* Showroom qty */}
-                      <div style={{ display:'flex', alignItems:'center', gap:6, background:'#f8f5ef', borderRadius:8, padding:'6px 8px' }}>
-                        <span style={{ fontSize:10, color:C.muted, flex:1 }}>🏪 Showroom qty</span>
-                        <button onClick={()=>setShowroomQty(item.id,sqty-1,qty)} disabled={isSaving||sqty<=0}
-                          style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`, background:'white', color:C.navy, fontWeight:700, cursor:'pointer', fontSize:14, opacity:sqty<=0?.4:1 }}>−</button>
-                        <span style={{ fontSize:15, fontWeight:800, color:C.navy, minWidth:20, textAlign:'center' }}>{sqty}</span>
-                        <button onClick={()=>setShowroomQty(item.id,sqty+1,qty)} disabled={isSaving||sqty>=qty}
-                          style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`, background:'white', color:C.navy, fontWeight:700, cursor:'pointer', fontSize:14, opacity:sqty>=qty?.4:1 }}>+</button>
+                      {/* Missing qty stepper */}
+                      <div style={{ background:'#fffbeb', border:`1px solid ${mqty>0?'#fbbf24':'#e0ddd6'}`, borderRadius:8, padding:'6px 8px' }}>
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                          <span style={{ fontSize:10, color:'#92400e', fontWeight:700 }}>⚠️ Missing</span>
+                          <Stepper
+                            value={mqty}
+                            max={Math.max(0, qty - sqty)}
+                            min={0}
+                            disabled={isSaving}
+                            color='#92400e'
+                            onChange={v=>setMissingQty(item.id, v, item)}
+                          />
+                        </div>
                       </div>
+
+                      {/* Stock room count (derived) */}
+                      {inStock > 0 && (
+                        <div style={{ marginTop:5, fontSize:10, color:C.muted, textAlign:'right' }}>
+                          📦 {inStock} in stock room
+                        </div>
+                      )}
                     </>
                   )}
                 </div>

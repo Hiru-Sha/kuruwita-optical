@@ -21,7 +21,7 @@ router.get('/', auth, async (req, res) => {
              frame_type, frame_color, frame_shape, frame_material, frame_size,
              sg_type, rg_lens_type, rg_material, rg_power, item_name,
              cost_price, sell_price, quantity, min_quantity,
-             ${imageCol}, display_number, stock_number, location, showroom_qty, created_at, updated_at
+             ${imageCol}, display_number, stock_number, location, showroom_qty, missing_qty, created_at, updated_at
       FROM inventory
       WHERE 1=1
     `;
@@ -128,7 +128,7 @@ router.patch('/:id', auth, async (req, res) => {
     'frame_color', 'frame_type', 'frame_shape', 'frame_material', 'frame_size',
     'sg_type', 'rg_lens_type', 'rg_material', 'rg_power', 'item_name',
     'sell_price', 'cost_price', 'quantity', 'min_quantity', 'image_url',
-    'display_number', 'stock_number', 'location', 'showroom_qty', 'notes',
+    'display_number', 'stock_number', 'location', 'showroom_qty', 'missing_qty', 'notes',
   ];
 
   const fields = [];
