@@ -341,8 +341,8 @@ router.get('/lensjobs', auth, async (req, res) => {
 
     // Active pending jobs (for reference)
     const active = await pool.query(`
-      SELECT o.order_number, o.lens_company, o.lens_type, o.lens_step,
-             o.deliver_date, o.lab_bill_amount, o.lab_paid,
+      SELECT o.id, o.order_number, o.lens_company, o.lens_type, o.lens_step,
+             o.lens_coating, o.frame, o.deliver_date, o.lab_bill_amount, o.lab_paid,
              c.name AS customer_name, c.phone
       FROM orders o JOIN customers c ON o.customer_id = c.id
       WHERE o.lens_company IS NOT NULL

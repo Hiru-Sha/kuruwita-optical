@@ -40,8 +40,9 @@ export default function Grinding() {
         api('/reports/lensjobs'),
       ]);
       // Backend returns { data: [...] } for orders
-      const allRows  = Array.isArray(all)       ? all       : (Array.isArray(all?.data)  ? all.data  : []);
-      const jobsRows = Array.isArray(jobs)       ? jobs      : (Array.isArray(jobs?.data) ? jobs.data : []);
+      const allRows  = Array.isArray(all)        ? all        : (Array.isArray(all?.data)   ? all.data   : []);
+      // /reports/lensjobs returns { active: [...], byLab: [...], totals: {} }
+      const jobsRows = Array.isArray(jobs?.active) ? jobs.active : (Array.isArray(jobs) ? jobs : []);
       // Unassigned = orders with no lens_company set
       setUnassigned(allRows.filter(o => !o.lens_company || o.lens_company === ''));
       setAssigned(jobsRows);
