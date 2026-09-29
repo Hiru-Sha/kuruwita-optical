@@ -275,6 +275,8 @@ export default function Reports() {
   const [beFixed,    setBeFixed]   = useState('');
   const [beMargin,   setBeMargin]  = useState('');
   const [beAvgSale,  setBeAvgSale] = useState('');
+  const [beMode,     setBeMode]    = useState('all');   // 'all' | 'month'
+  const [beMonth,    setBeMonth]   = useState(thisMonth());
 
   useEffect(()=>{
     setLoading(true);
@@ -291,18 +293,6 @@ export default function Reports() {
       .then(pat => setPatterns(pat && !pat.error ? pat : null))
       .catch(() => setPatterns(null));
   },[month]);
-
-  // Auto-fill break-even fixed costs from last month's expenses when profit data loads
-  useEffect(() => {
-    if (profit?.monthly?.length && !beFixed) {
-      const lastMonth = profit.monthly[profit.monthly.length - 1];
-      if (lastMonth?.expenses) setBeFixed(Math.round(parseFloat(lastMonth.expenses)).toString());
-      if (lastMonth?.revenue && lastMonth?.cost_of_goods && parseFloat(lastMonth.revenue) > 0) {
-        const margin = Math.round((1 - parseFloat(lastMonth.cost_of_goods) / parseFloat(lastMonth.revenue)) * 100);
-        setBeMargin(Math.max(margin, 0).toString());
-      }
-    }
-  }, [profit]);
 
   const TABS = [
     { key:'profit',     label:'Profit & Loss', icon:'📈' },
@@ -1059,38 +1049,110 @@ export default function Reports() {
 
       {/* ── BREAK-EVEN TAB ─────────────────────────────────────── */}
       {!loading && activeTab==='breakeven' && (() => {
-        const fixed    = parseFloat(beFixed)  || 0;
-        const margin   = parseFloat(beMargin) || 0;
-        const avgSale  = parseFloat(beAvgSale) || 0;
+        // Determine which month data to use for auto-fill
+        const beMonthData = beMode === 'month'
+          ? profit?.monthly?.find(m => m.month_key === beMonth)
+          : null;
+        // For 'all' mode, sum all 6 months; for 'month', use that month
+        const autoExpenses = beMode === 'all'
+          ? Math.round((profit?.monthly||[]).reduce((s,m)=>s+(parseFloat(m.expenses)||0),0) / Math.max((profit?.monthly||[]).length,1))
+          : beMonthData ? Math.round(parseFloat(beMonthData.expenses)||0) : 0;
+        const autoMargin = (() => {
+          const rows = beMode === 'all' ? (profit?.monthly||[]) : (beMonthData ? [beMonthData] : []);
+          const totalRev = rows.reduce((s,m)=>s+(parseFloat(m.revenue)||0),0);
+          const totalCogs = rows.reduce((s,m)=>s+(parseFloat(m.cost_of_goods)||0),0);
+          return totalRev > 0 ? Math.max(Math.round((1 - totalCogs/totalRev)*100), 0) : 0;
+        })();
+
+        const fixed   = parseFloat(beFixed)  || autoExpenses;
+        const margin  = parseFloat(beMargin) || autoMargin;
+        const avgSale = parseFloat(beAvgSale) || 0;
         const beRevenue    = margin > 0 ? Math.round(fixed / (margin / 100)) : 0;
         const beSales      = avgSale > 0 ? Math.ceil(beRevenue / avgSale) : 0;
         const beDailyRev   = Math.round(beRevenue / 30);
         const beDailySales = Math.ceil(beSales / 30);
-        const currRev    = parseFloat(compare?.thisMonth?.revenue || profit?.monthly?.[profit.monthly.length-1]?.revenue || 0);
-        const safetyPct  = beRevenue > 0 ? Math.min(Math.round(currRev / beRevenue * 100), 200) : 0;
+
+        // Current revenue to compare against break-even
+        const currRev = beMode === 'month'
+          ? parseFloat(beMonthData?.revenue || 0)
+          : parseFloat(compare?.thisMonth?.revenue || profit?.monthly?.[profit.monthly.length-1]?.revenue || 0);
+        const safetyPct = beRevenue > 0 ? Math.min(Math.round(currRev / beRevenue * 100), 200) : 0;
+
         const inputStyle = { padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:15, fontFamily:'inherit', outline:'none', background:C.cream, color:C.navy, width:'100%', boxSizing:'border-box' };
         const labelStyle = { fontSize:12, fontWeight:700, color:C.muted, display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.8px' };
+        const modeBtn = (val, label, icon) => (
+          <button onClick={()=>{ setBeMode(val); setBeFixed(''); setBeMargin(''); }}
+            style={{ padding:'9px 20px', borderRadius:10, border:`2px solid ${beMode===val?C.navy:C.border}`,
+              background:beMode===val?C.navy:C.surface, color:beMode===val?'white':C.muted,
+              fontWeight:700, fontSize:13, fontFamily:'inherit', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+            <span>{icon}</span>{label}
+          </button>
+        );
+
         return (
           <div>
             <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:C.navy,marginBottom:4}}>⚖️ Break-Even Calculator</div>
-            <div style={{fontSize:13,color:C.muted,marginBottom:20}}>Enter your monthly fixed costs to find out how much revenue (and how many sales) you need to cover all expenses.</div>
+            <div style={{fontSize:13,color:C.muted,marginBottom:20}}>Find out how much revenue you need to cover all your costs — choose a specific month or use the 6-month average.</div>
+
+            {/* Mode selector */}
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,flexWrap:'wrap'}}>
+              <span style={{fontSize:13,fontWeight:700,color:C.navy}}>Calculate for:</span>
+              {modeBtn('all',  'All Months (6-mo avg)', '📊')}
+              {modeBtn('month','Specific Month', '📅')}
+              {beMode==='month' && (
+                <input type="month" value={beMonth}
+                  onChange={e=>{ setBeMonth(e.target.value); setBeFixed(''); setBeMargin(''); }}
+                  style={{padding:'9px 14px',border:`2px solid ${C.navy}`,borderRadius:10,fontSize:13,fontFamily:'inherit',outline:'none',background:C.cream,color:C.navy,fontWeight:700}}/>
+              )}
+              {beMode==='month' && beMonthData && (
+                <span style={{fontSize:12,background:'#dcfce7',color:C.success,padding:'5px 12px',borderRadius:20,fontWeight:700}}>
+                  ✅ Data found for {beMonthData.month}
+                </span>
+              )}
+              {beMode==='month' && !beMonthData && beMonth && (
+                <span style={{fontSize:12,background:'#fef9c3',color:'#92400e',padding:'5px 12px',borderRadius:20,fontWeight:700}}>
+                  ⚠️ No data for this month
+                </span>
+              )}
+            </div>
+
+            {/* Auto-fill notice */}
+            {profit?.monthly?.length > 0 && (autoExpenses > 0 || autoMargin > 0) && (
+              <div style={{background:`${C.gold}18`,border:`1.5px solid ${C.gold}55`,borderRadius:12,padding:'12px 16px',marginBottom:20,fontSize:12,color:C.navy,display:'flex',alignItems:'center',gap:10}}>
+                <span style={{fontSize:18}}>💡</span>
+                <span>
+                  {beMode==='all'
+                    ? `Auto-filled from your 6-month average — Expenses: Rs. ${autoExpenses.toLocaleString()}/mo, Gross Margin: ${autoMargin}%. Adjust below if needed.`
+                    : beMonthData
+                      ? `Auto-filled from ${beMonthData.month} — Expenses: Rs. ${autoExpenses.toLocaleString()}, Gross Margin: ${autoMargin}%. Adjust below if needed.`
+                      : `Select a month with data to auto-fill.`}
+                </span>
+              </div>
+            )}
+
+            {/* Inputs */}
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16,marginBottom:24}}>
               <div>
                 <label style={labelStyle}>Monthly Fixed Costs (Rs.)</label>
-                <input type="number" value={beFixed} onChange={e=>setBeFixed(e.target.value)} placeholder="e.g. 150000" style={inputStyle}/>
+                <input type="number" value={beFixed || autoExpenses || ''} onChange={e=>setBeFixed(e.target.value)}
+                  placeholder={autoExpenses ? autoExpenses.toString() : 'e.g. 150000'} style={inputStyle}/>
                 <div style={{fontSize:11,color:C.muted,marginTop:5}}>Rent + Salaries + Electricity + Other fixed expenses</div>
               </div>
               <div>
                 <label style={labelStyle}>Gross Margin % (after COGS)</label>
-                <input type="number" value={beMargin} onChange={e=>setBeMargin(e.target.value)} placeholder="e.g. 40" min="1" max="100" style={inputStyle}/>
-                <div style={{fontSize:11,color:C.muted,marginTop:5}}>{profit?.monthly?.length ? `Auto-filled from last month's data. Adjust if needed.` : `% of revenue left after paying for frames & lenses`}</div>
+                <input type="number" value={beMargin || autoMargin || ''} onChange={e=>setBeMargin(e.target.value)}
+                  placeholder={autoMargin ? autoMargin.toString() : 'e.g. 40'} min="1" max="100" style={inputStyle}/>
+                <div style={{fontSize:11,color:C.muted,marginTop:5}}>% of revenue left after paying for frames &amp; lenses</div>
               </div>
               <div>
                 <label style={labelStyle}>Average Sale Value (Rs.) — optional</label>
-                <input type="number" value={beAvgSale} onChange={e=>setBeAvgSale(e.target.value)} placeholder="e.g. 8000" style={inputStyle}/>
-                <div style={{fontSize:11,color:C.muted,marginTop:5}}>Used to calculate number of sales needed. Leave blank to skip.</div>
+                <input type="number" value={beAvgSale} onChange={e=>setBeAvgSale(e.target.value)}
+                  placeholder="e.g. 8000" style={inputStyle}/>
+                <div style={{fontSize:11,color:C.muted,marginTop:5}}>Used to calculate number of sales needed</div>
               </div>
             </div>
+
+            {/* Results */}
             {fixed > 0 && margin > 0 ? (
               <div>
                 <div style={{display:'grid',gridTemplateColumns:`repeat(${beSales>0?4:2},1fr)`,gap:12,marginBottom:20}}>
@@ -1117,10 +1179,12 @@ export default function Reports() {
                     </div>
                   </>}
                 </div>
+
+                {/* Safety margin vs selected period */}
                 {currRev > 0 && (
-                  <SectionCard title="📍 This Month vs Break-Even" subtitle="How close are you to covering all fixed costs?">
+                  <SectionCard title={`📍 ${beMode==='month'&&beMonthData ? beMonthData.month : 'This Month'} vs Break-Even`} subtitle="How close are you to covering all fixed costs?">
                     <div style={{display:'flex',justifyContent:'space-between',marginBottom:10,flexWrap:'wrap',gap:8}}>
-                      <div><div style={{fontSize:13,color:C.muted}}>This month revenue</div><div style={{fontSize:20,fontWeight:800,color:C.navy}}>{fmt(currRev)}</div></div>
+                      <div><div style={{fontSize:13,color:C.muted}}>Actual revenue</div><div style={{fontSize:20,fontWeight:800,color:C.navy}}>{fmt(currRev)}</div></div>
                       <div style={{textAlign:'right'}}><div style={{fontSize:13,color:C.muted}}>Break-even target</div><div style={{fontSize:20,fontWeight:800,color:safetyPct>=100?C.success:C.danger}}>{fmt(beRevenue)}</div></div>
                     </div>
                     <div style={{height:24,background:'#f3f4f6',borderRadius:12,overflow:'hidden',marginBottom:10}}>
@@ -1131,30 +1195,38 @@ export default function Reports() {
                     <div style={{fontSize:13,fontWeight:700,color:safetyPct>=100?C.success:C.danger}}>
                       {safetyPct>=100
                         ? `✅ Passed break-even by ${fmt(currRev-beRevenue)}! (+${safetyPct-100}% safety margin)`
-                        : `⚠️ Need ${fmt(beRevenue-currRev)} more to break even this month (${100-safetyPct}% to go)`}
+                        : `⚠️ Need ${fmt(beRevenue-currRev)} more to break even (${100-safetyPct}% to go)`}
                     </div>
                   </SectionCard>
                 )}
+
+                {/* Month-by-month comparison table — always shown */}
                 {profit?.monthly?.length > 0 && (
-                  <SectionCard title="📅 Month-by-Month vs Break-Even" subtitle="Did you cover fixed costs each month?">
+                  <SectionCard title="📅 All Months vs Break-Even" subtitle="See how every month performed against this break-even target">
                     <div style={{overflowX:'auto'}}>
                       <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                         <thead>
                           <tr style={{background:C.cream}}>
-                            {['Month','Revenue','Break-Even','Gap','Status'].map(h=>(
+                            {['Month','Revenue','Expenses','Break-Even','Gap','Status'].map(h=>(
                               <th key={h} style={{padding:'10px 12px',textAlign:'left',fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:C.muted,borderBottom:`1px solid ${C.border}`}}>{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
                           {profit.monthly.map((m,i)=>{
-                            const rev=parseFloat(m.revenue)||0, gap=rev-beRevenue, pct=beRevenue>0?Math.round(rev/beRevenue*100):0, ok=gap>=0;
+                            const rev=parseFloat(m.revenue)||0, exp=parseFloat(m.expenses)||0, gap=rev-beRevenue, pct=beRevenue>0?Math.round(rev/beRevenue*100):0, ok=gap>=0;
+                            const isSelected = beMode==='month' && m.month_key===beMonth;
+                            const isCurr = m.month_key===month;
                             return (
-                              <tr key={i} style={{background:m.month_key===month?'#f0f9ff':i%2===0?C.surface:'#fafaf9',borderBottom:`1px solid ${C.border}`}}>
+                              <tr key={i} style={{background:isSelected?'#fef9c3':isCurr?'#f0f9ff':i%2===0?C.surface:'#fafaf9',borderBottom:`1px solid ${C.border}`,
+                                outline:isSelected?`2px solid ${C.gold}`:'none'}}>
                                 <td style={{padding:'11px 12px',fontWeight:700,color:C.navy,whiteSpace:'nowrap'}}>
-                                  {m.month}{m.month_key===month&&<span style={{marginLeft:6,background:C.gold,color:C.navy,fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:20}}>Current</span>}
+                                  {m.month}
+                                  {isSelected&&<span style={{marginLeft:6,background:C.gold,color:C.navy,fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:20}}>Selected</span>}
+                                  {!isSelected&&isCurr&&<span style={{marginLeft:6,background:'#dbeafe',color:'#1d4ed8',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:20}}>Current</span>}
                                 </td>
                                 <td style={{padding:'11px 12px',fontWeight:600,color:C.navy}}>{fmt(rev)}</td>
+                                <td style={{padding:'11px 12px',color:'#f97316'}}>{exp>0?`−${fmt(exp)}`:'—'}</td>
                                 <td style={{padding:'11px 12px',color:C.muted}}>{fmt(beRevenue)}</td>
                                 <td style={{padding:'11px 12px',fontWeight:700,color:ok?C.success:C.danger}}>{ok?'+':''}{fmt(gap)}</td>
                                 <td style={{padding:'11px 12px'}}>
@@ -1173,6 +1245,7 @@ export default function Reports() {
                     </div>
                   </SectionCard>
                 )}
+
                 <div style={{background:`${C.gold}18`,border:`1.5px solid ${C.gold}55`,borderRadius:14,padding:'16px 20px',fontSize:13,color:C.navy}}>
                   <b>📐 Formula:</b> Break-Even Revenue = Fixed Costs ÷ Gross Margin %<br/>
                   <span style={{color:C.muted,fontSize:12}}>= {fmt(fixed)} ÷ {margin}% = <b style={{color:C.navy}}>{fmt(beRevenue)}</b> needed per month</span>
@@ -1182,11 +1255,8 @@ export default function Reports() {
             ) : (
               <div style={{textAlign:'center',padding:60,color:C.muted,background:C.cream,borderRadius:16,border:`1.5px dashed ${C.border}`}}>
                 <div style={{fontSize:48,marginBottom:12}}>⚖️</div>
-                <div style={{fontSize:16,fontWeight:700,color:C.navy,marginBottom:8}}>Enter your fixed costs above</div>
-                <div style={{fontSize:13}}>Fill in Monthly Fixed Costs and Gross Margin % to see your break-even point</div>
-                {profit?.monthly?.length > 0 && (
-                  <div style={{marginTop:12,fontSize:12,color:C.gold}}>💡 Fixed costs and margin have been auto-filled from last month's data — check and adjust if needed</div>
-                )}
+                <div style={{fontSize:16,fontWeight:700,color:C.navy,marginBottom:8}}>Waiting for data…</div>
+                <div style={{fontSize:13}}>{beMode==='month'&&!beMonthData?'No data found for this month. Try a different month or switch to All Months.':'Fill in Monthly Fixed Costs and Gross Margin % to see your break-even point.'}</div>
               </div>
             )}
           </div>
