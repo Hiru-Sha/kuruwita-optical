@@ -92,6 +92,7 @@ const GENDER_OPTIONS = [
   { value:'ladies', label:'👩 Ladies', color:'#db2777' },
   { value:'gents',  label:'👨 Gents',  color:'#2563eb' },
   { value:'kids',   label:'🧒 Kids',   color:'#7c3aed' },
+  { value:'unisex', label:'🔄 Unisex', color:'#0891b2' },
 ];
 
 const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%' };
@@ -259,8 +260,10 @@ function ItemCard({ item, onClick, onSticker }) {
         {isLow&&!isOut&&<span style={{ position:'absolute', top:7, right:7, background:'#fee2e2', color:C.danger, fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:20 }}>Low</span>}
         <span style={{ position:'absolute', bottom:7, left:7, background:'rgba(15,31,61,.7)', color:'white', fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:20 }}>{cat} {item.category}</span>
         {item.target_for && item.target_for !== 'all' && (
-          <span style={{ position:'absolute', bottom:7, right:7, background: item.target_for==='ladies'?'#db2777':item.target_for==='gents'?'#2563eb':'#7c3aed', color:'white', fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:20 }}>
-            {item.target_for==='ladies'?'👩 L':item.target_for==='gents'?'👨 G':'🧒 K'}
+          <span style={{ position:'absolute', bottom:7, right:7,
+            background: item.target_for==='ladies'?'#db2777':item.target_for==='gents'?'#2563eb':item.target_for==='unisex'?'#0891b2':'#7c3aed',
+            color:'white', fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:20 }}>
+            {item.target_for==='ladies'?'👩 L':item.target_for==='gents'?'👨 G':item.target_for==='unisex'?'🔄 U':'🧒 K'}
           </span>
         )}
       </div>
@@ -2442,9 +2445,18 @@ export default function Inventory() {
                 if (filterDateFrom && new Date(item.created_at) < new Date(filterDateFrom)) return false;
                 if (filterDateTo   && new Date(item.created_at) > new Date(filterDateTo + 'T23:59:59')) return false;
                 // Gender filter
+                // all-items (tf='all') always pass
+                // When filtering by ladies/gents/kids → also show unisex items
+                // When filtering by unisex → show only unisex
                 if (genderFilter !== 'all') {
                   const tf = item.target_for || 'all';
-                  if (tf !== 'all' && tf !== genderFilter) return false;
+                  if (tf === 'all') { /* always passes */ }
+                  else if (genderFilter === 'unisex') {
+                    if (tf !== 'unisex') return false;
+                  } else {
+                    // ladies / gents / kids filter: exact match OR unisex
+                    if (tf !== genderFilter && tf !== 'unisex') return false;
+                  }
                 }
 
                 return true;
