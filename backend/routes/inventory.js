@@ -90,7 +90,7 @@ router.post('/', auth, async (req, res) => {
     frame_type, frame_color, frame_shape, frame_material, frame_size,
     sg_type, rg_lens_type, rg_material, rg_power, item_name,
     cost_price, sell_price, quantity, min_quantity, image_url,
-    display_number, stock_number, location,
+    display_number, stock_number, location, target_for,
   } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Name required' });
   try {
@@ -100,8 +100,8 @@ router.post('/', auth, async (req, res) => {
         frame_type, frame_color, frame_shape, frame_material, frame_size,
         sg_type, rg_lens_type, rg_material, rg_power, item_name,
         cost_price, sell_price, quantity, min_quantity, image_url,
-        display_number, stock_number, location
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+        display_number, stock_number, location, target_for
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
       RETURNING *`,
       [name.trim(), category||null, brand||null, dealer||null,
        frame_type||null, frame_color||null, frame_shape||null,
@@ -109,7 +109,7 @@ router.post('/', auth, async (req, res) => {
        rg_lens_type||null, rg_material||null, rg_power||null, item_name||null,
        parseFloat(cost_price)||0, parseFloat(sell_price)||0,
        parseInt(quantity)||0, parseInt(min_quantity)||2, image_url||null,
-       display_number||null, stock_number||null, location||'stock']
+       display_number||null, stock_number||null, location||'stock', target_for||'all']
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
@@ -129,6 +129,7 @@ router.patch('/:id', auth, async (req, res) => {
     'sg_type', 'rg_lens_type', 'rg_material', 'rg_power', 'item_name',
     'sell_price', 'cost_price', 'quantity', 'min_quantity', 'image_url',
     'display_number', 'stock_number', 'location', 'showroom_qty', 'missing_qty', 'notes',
+    'target_for',
   ];
 
   const fields = [];
@@ -200,6 +201,60 @@ router.get('/:id/history', auth, async (req, res) => {
     });
   } catch (err) {
     console.error('History error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/inventory/:id/item-history — combined: sold orders + stock adjustments
+router.get('/:id/item-history', auth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    // Sold orders that used this frame
+    const sold = await pool.query(`
+      SELECT o.id, o.order_number, o.created_at AS date,
+             c.name AS customer_name, c.phone,
+             o.total_amount, o.status,
+             'sold' AS event_type,
+             o.frame AS item_name
+      FROM orders o
+      JOIN customers c ON o.customer_id = c.id
+      WHERE o.frame_inventory_id = $1
+        AND o.status != 'cancelled'
+      ORDER BY o.created_at DESC
+      LIMIT 50
+    `, [id]);
+
+    // Stock adjustment log (add / remove / correction / missing)
+    const adj = await pool.query(`
+      SELECT sa.id, sa.created_at AS date,
+             sa.change_type, sa.quantity_change, sa.quantity_before, sa.quantity_after,
+             sa.reason, sa.notes,
+             COALESCE(sa.adjusted_by_name, u.full_name, 'System') AS user_name,
+             CASE
+               WHEN sa.reason ILIKE '%missing%' OR sa.reason ILIKE '%lost%' THEN 'missing'
+               WHEN sa.change_type = 'add' THEN 'stock_in'
+               WHEN sa.change_type = 'remove' THEN 'removed'
+               ELSE 'correction'
+             END AS event_type
+      FROM stock_adjustments sa
+      LEFT JOIN users u ON sa.adjusted_by = u.id
+      WHERE sa.inventory_id = $1
+      ORDER BY sa.created_at DESC
+      LIMIT 100
+    `, [id]);
+
+    // Summary stats
+    const totalSold    = sold.rows.length;
+    const totalMissing = adj.rows.filter(r => r.event_type === 'missing').reduce((s,r) => s + Math.abs(parseInt(r.quantity_change||0)), 0);
+    const totalAdded   = adj.rows.filter(r => r.event_type === 'stock_in').reduce((s,r) => s + parseInt(r.quantity_change||0), 0);
+
+    res.json({
+      sold:    sold.rows,
+      adjustments: adj.rows,
+      stats: { totalSold, totalMissing, totalAdded },
+    });
+  } catch (err) {
+    console.error('item-history error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

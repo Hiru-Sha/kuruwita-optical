@@ -87,6 +87,13 @@ const REASONS = [
   'Wrong count correction','Expired / spoiled','Given as sample','Other',
 ];
 
+const GENDER_OPTIONS = [
+  { value:'all',    label:'👥 All',    color:'#6b7280' },
+  { value:'ladies', label:'👩 Ladies', color:'#db2777' },
+  { value:'gents',  label:'👨 Gents',  color:'#2563eb' },
+  { value:'kids',   label:'🧒 Kids',   color:'#7c3aed' },
+];
+
 const INP = { padding:'10px 13px', border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none', background:C.cream, color:C.navy, width:'100%' };
 const SEL = { ...INP, cursor:'pointer' };
 const LBL = { fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.9px', color:C.muted, marginBottom:5, display:'block' };
@@ -108,7 +115,7 @@ function apiAdj(path, method='GET', body=null) {
 }
 
 const defaults = (cat) => {
-  const base = { category:cat, brand:'', dealer:'', cost_price:'', sell_price:'', quantity:'', min_quantity:'2' };
+  const base = { category:cat, brand:'', dealer:'', cost_price:'', sell_price:'', quantity:'', min_quantity:'2', target_for:'all' };
   switch(cat) {
     case 'Frames':           return { ...base, frame_name:'', frame_shape:'Rectangle', frame_type:'Full rim', frame_material:'Plastic', frame_color:'Black', frame_size:'Medium' };
     case 'Sunglasses':       return { ...base, frame_name:'', frame_shape:'Aviator', frame_material:'Plastic', frame_color:'Black', frame_size:'Medium', sg_type:'Polarised' };
@@ -155,6 +162,22 @@ function CategoryFields({ form, set, suggestions }) {
   );
   const auto = (key, placeholder, sugg) =>
     <AutoInput value={form[key]||''} onChange={v=>set(f=>({...f,[key]:v}))} placeholder={placeholder} style={INP} suggestions={sugg||[]}/>;
+  const genderField = () => (
+    <Field label="For">
+      <div style={{ display:'flex', gap:6 }}>
+        {GENDER_OPTIONS.map(g => (
+          <button key={g.value} type="button"
+            onClick={() => set(f=>({...f, target_for: g.value}))}
+            style={{ flex:1, padding:'8px 4px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer',
+              fontFamily:'inherit', border:`1.5px solid ${(form.target_for||'all')===g.value ? g.color : C.border}`,
+              background:(form.target_for||'all')===g.value ? g.color : 'white',
+              color:(form.target_for||'all')===g.value ? 'white' : C.muted }}>
+            {g.label}
+          </button>
+        ))}
+      </div>
+    </Field>
+  );
   const common = (sugg) => <>
     <Field label="Brand">
       {auto('brand','e.g. Tom Ford, Ray-Ban', sugg?.brands||[])}
@@ -162,6 +185,7 @@ function CategoryFields({ form, set, suggestions }) {
     <Field label="Dealer / Supplier">
       {auto('dealer','e.g. Negombo Optical', sugg?.dealers||[])}
     </Field>
+    {genderField()}
   </>;
   switch(form.category) {
     case 'Frames': return <>{common(suggestions)}
@@ -189,6 +213,7 @@ function CategoryFields({ form, set, suggestions }) {
     default: return <>{common(suggestions)}
       <Field label="Name / Type">{auto('item_name','Item name', suggestions?.names||[])}</Field>
       {['Boxes','Sunglass Pouches','Chains'].includes(form.category)&&<Field label="Color">{sel('frame_color',FR_COLORS)}</Field>}
+      {!['Boxes','Sunglass Pouches','Chains','Glass Cleaner','Ear Tips'].includes(form.category) && genderField()}
     </>;
   }
 }
@@ -233,6 +258,11 @@ function ItemCard({ item, onClick, onSticker }) {
         {isOut&&<span style={{ position:'absolute', top:7, right:7, background:'#f3f4f6', color:'#6b7280', fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:20 }}>Out</span>}
         {isLow&&!isOut&&<span style={{ position:'absolute', top:7, right:7, background:'#fee2e2', color:C.danger, fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:20 }}>Low</span>}
         <span style={{ position:'absolute', bottom:7, left:7, background:'rgba(15,31,61,.7)', color:'white', fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:20 }}>{cat} {item.category}</span>
+        {item.target_for && item.target_for !== 'all' && (
+          <span style={{ position:'absolute', bottom:7, right:7, background: item.target_for==='ladies'?'#db2777':item.target_for==='gents'?'#2563eb':'#7c3aed', color:'white', fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:20 }}>
+            {item.target_for==='ladies'?'👩 L':item.target_for==='gents'?'👨 G':'🧒 K'}
+          </span>
+        )}
       </div>
       <div onClick={onClick} style={{ padding:'10px 12px 6px' }}>
         <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:2, lineHeight:1.3 }}>{item.name}</div>
@@ -1124,6 +1154,7 @@ export default function Inventory() {
   const [dealers,       setDealers]       = useState([]);
   const [showDealerDrop,setShowDealerDrop]= useState(false);
   const [stockFilter,   setStockFilter]   = useState('all');
+  const [genderFilter,  setGenderFilter]  = useState('all');
   const [subFilter,     setSubFilter]     = useState('');
   // Advanced filters
   const [filterMaterial, setFilterMaterial] = useState('');
@@ -1138,6 +1169,22 @@ export default function Inventory() {
   const [panelTab,     setPanelTab]    = useState('details');
   const [stockHistory, setStockHistory] = useState([]);
   const [histLoading,  setHistLoading]  = useState(false);
+  const [itemHistory,  setItemHistory]  = useState(null);  // { sold, adjustments, stats }
+  const [itemHistLoading, setItemHistLoading] = useState(false);
+
+  const loadItemHistory = async (id) => {
+    setItemHistLoading(true);
+    try {
+      const BASE  = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('ko_token');
+      const res = await fetch(`${BASE}/inventory/${id}/item-history`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setItemHistory(data);
+    } catch { setItemHistory(null); }
+    finally { setItemHistLoading(false); }
+  };
 
   // Load history for the History tab in main panel
   const loadHistory = async (id) => {
@@ -1549,6 +1596,7 @@ export default function Inventory() {
                 quantity: parseInt(vc.qty)||0,
                 min_quantity: parseInt(form.min_quantity)||2,
                 image_url: vc.image||imgData||null,
+                target_for: form.target_for||'all',
               }),
             });
           }
@@ -1590,6 +1638,7 @@ export default function Inventory() {
       min_quantity:   parseInt(local.min_quantity)||2,
       display_number: local.display_number ? parseInt(local.display_number) : null,
       stock_number:   local.stock_number   ? parseInt(local.stock_number)   : null,
+      target_for:     local.target_for || 'all',
     });
     load(); setSelected(null);
   };
@@ -1789,6 +1838,25 @@ export default function Inventory() {
                 </button>
               </div>
             )}
+
+            {/* ── Gender filter bar ── */}
+            <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap' }}>
+              {GENDER_OPTIONS.map(g=>(
+                <button key={g.value} onClick={()=>setGenderFilter(g.value)}
+                  style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer',
+                    fontFamily:'inherit', border:`1.5px solid ${genderFilter===g.value ? g.color : C.border}`,
+                    background:genderFilter===g.value ? g.color : 'white',
+                    color:genderFilter===g.value ? 'white' : C.muted }}>
+                  {g.label}
+                </button>
+              ))}
+              {genderFilter !== 'all' && (
+                <span style={{ fontSize:11, color:C.muted, alignSelf:'center', marginLeft:4 }}>
+                  — showing {genderFilter} items only
+                  <button onClick={()=>setGenderFilter('all')} style={{ marginLeft:8, background:'none', border:'none', color:C.danger, cursor:'pointer', fontSize:11, fontWeight:700 }}>✕</button>
+                </span>
+              )}
+            </div>
 
             {/* Category count chips — click to filter */}
             <div style={{ background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:14, padding:'14px 16px', boxShadow:'0 1px 4px rgba(0,0,0,.04)' }}>
@@ -2373,6 +2441,11 @@ export default function Inventory() {
                 if (filterColor    && !(item.frame_color||'').toLowerCase().includes(filterColor.toLowerCase()))   return false;
                 if (filterDateFrom && new Date(item.created_at) < new Date(filterDateFrom)) return false;
                 if (filterDateTo   && new Date(item.created_at) > new Date(filterDateTo + 'T23:59:59')) return false;
+                // Gender filter
+                if (genderFilter !== 'all') {
+                  const tf = item.target_for || 'all';
+                  if (tf !== 'all' && tf !== genderFilter) return false;
+                }
 
                 return true;
               }).map(item=>(
@@ -2462,14 +2535,15 @@ export default function Inventory() {
               {/* Panel tabs */}
               <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, margin:'0 -22px', padding:'0 22px' }}>
                 {[
-                  { key:'details',    label:'📋 Details'    },
-                  { key:'adjust',     label:'📦 Adjust Stock'},
-                  { key:'history',    label:'📜 History'     },
-                  { key:'variant',    label:'🎨 Add Colour'  },
+                  { key:'details',      label:'📋 Details'      },
+                  { key:'adjust',       label:'📦 Adjust Stock'  },
+                  { key:'item-history', label:'📊 Item History'  },
+                  { key:'history',      label:'📜 Stock Log'     },
+                  { key:'variant',      label:'🎨 Add Colour'    },
                 ].map(t=>(
-                  <button key={t.key} onClick={()=>setPanelTab(t.key)}
+                  <button key={t.key}
                     style={{ padding:'10px 14px', fontSize:13, fontWeight:600, cursor:'pointer', background:'none', border:'none', fontFamily:'inherit', whiteSpace:'nowrap', color:panelTab===t.key?C.navy:C.muted, borderBottom:`2.5px solid ${panelTab===t.key?C.gold:'transparent'}`, marginBottom:-1 }}
-                    onClick={()=>{ setPanelTab(t.key); if(t.key==='history'&&selected?.id) loadHistory(selected.id); }}>
+                    onClick={()=>{ setPanelTab(t.key); if(t.key==='history'&&selected?.id) loadHistory(selected.id); if(t.key==='item-history'&&selected?.id) loadItemHistory(selected.id); }}>
                     {t.label}
                   </button>
                 ))}
@@ -2548,6 +2622,23 @@ export default function Inventory() {
                       </div>
                     </div>
                   )}
+                  {/* ── For (Gender) ── */}
+                  <div style={{ marginBottom:14 }}>
+                    <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:8, paddingBottom:5, borderBottom:`1px solid ${C.cream}` }}>For</div>
+                    <div style={{ display:'flex', gap:6 }}>
+                      {GENDER_OPTIONS.map(g=>(
+                        <button key={g.value} type="button"
+                          onClick={()=>setSelected(s=>({...s, target_for:g.value}))}
+                          style={{ flex:1, padding:'8px 4px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer',
+                            fontFamily:'inherit', border:`1.5px solid ${(selected.target_for||'all')===g.value ? g.color : C.border}`,
+                            background:(selected.target_for||'all')===g.value ? g.color : 'white',
+                            color:(selected.target_for||'all')===g.value ? 'white' : C.muted }}>
+                          {g.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* ── Pricing ── */}
                   <div style={{ marginBottom:14 }}>
                     <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', color:C.muted, marginBottom:8, paddingBottom:5, borderBottom:`1px solid ${C.cream}` }}>Pricing & Stock</div>
@@ -2666,6 +2757,109 @@ export default function Inventory() {
                         );
                       })}
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── ITEM HISTORY TAB — sold, missing, stock ── */}
+              {panelTab==='item-history' && (
+                <div>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                    <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>📊 Item History</div>
+                    <button onClick={()=>loadItemHistory(selected.id)}
+                      style={{ padding:'6px 12px', background:C.cream, border:`1px solid ${C.border}`, borderRadius:7, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                      🔄 Refresh
+                    </button>
+                  </div>
+
+                  {itemHistLoading ? (
+                    <div style={{ textAlign:'center', padding:24, color:C.muted }}>Loading...</div>
+                  ) : !itemHistory ? (
+                    <div style={{ textAlign:'center', padding:24, color:C.muted }}>
+                      <div style={{ fontSize:28, marginBottom:8 }}>📊</div>
+                      <div>No history found</div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Stats summary */}
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:20 }}>
+                        {[
+                          { l:'Sold',        v: itemHistory.stats.totalSold,    col:C.success,  icon:'🛍️' },
+                          { l:'Missing',     v: itemHistory.stats.totalMissing, col:C.danger,   icon:'❓' },
+                          { l:'Stock Added', v: itemHistory.stats.totalAdded,   col:'#2563eb',  icon:'📥' },
+                        ].map(s=>(
+                          <div key={s.l} style={{ background:C.cream, borderRadius:12, padding:'14px 10px', textAlign:'center' }}>
+                            <div style={{ fontSize:22 }}>{s.icon}</div>
+                            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26, fontWeight:700, color:s.col }}>{s.v}</div>
+                            <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.7px', color:C.muted }}>{s.l}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Sold orders */}
+                      {itemHistory.sold.length > 0 && (
+                        <div style={{ marginBottom:20 }}>
+                          <div style={{ fontSize:12, fontWeight:700, color:C.success, textTransform:'uppercase', letterSpacing:'1px', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>
+                            <span style={{ background:'#dcfce7', borderRadius:20, padding:'3px 10px' }}>🛍️ Sold Orders ({itemHistory.sold.length})</span>
+                          </div>
+                          {itemHistory.sold.map(o=>(
+                            <div key={o.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 12px', background:'white', border:`1px solid ${C.border}`, borderRadius:10, marginBottom:6 }}>
+                              <div>
+                                <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{o.customer_name}</div>
+                                <div style={{ fontSize:11, color:C.muted }}>
+                                  {o.order_number} · {new Date(o.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+                                </div>
+                                <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, background: o.status==='completed'?'#dcfce7':o.status==='created'?'#fef9c3':'#f3f4f6', color: o.status==='completed'?C.success:o.status==='created'?'#92400e':C.muted }}>
+                                  {o.status}
+                                </span>
+                              </div>
+                              <div style={{ textAlign:'right' }}>
+                                <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{fmtMoney(o.total_amount)}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Stock adjustments */}
+                      {itemHistory.adjustments.length > 0 && (
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'1px', marginBottom:10 }}>
+                            📋 Stock Adjustments ({itemHistory.adjustments.length})
+                          </div>
+                          {itemHistory.adjustments.map(a=>{
+                            const evtColor = a.event_type==='missing'?C.danger:a.event_type==='stock_in'?'#2563eb':a.event_type==='removed'?'#dc2626':C.muted;
+                            const evtIcon  = a.event_type==='missing'?'❓':a.event_type==='stock_in'?'📥':a.event_type==='removed'?'📤':'✏️';
+                            return (
+                              <div key={a.id} style={{ display:'flex', gap:10, padding:'10px 0', borderBottom:`1px solid ${C.cream}`, alignItems:'flex-start' }}>
+                                <div style={{ width:30, height:30, borderRadius:8, background:evtColor+'22', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, flexShrink:0 }}>
+                                  {evtIcon}
+                                </div>
+                                <div style={{ flex:1 }}>
+                                  <div style={{ display:'flex', justifyContent:'space-between' }}>
+                                    <span style={{ fontSize:13, fontWeight:600, color:evtColor }}>{a.reason}</span>
+                                    <span style={{ fontSize:13, fontWeight:700, color:parseInt(a.quantity_change)>0?'#2563eb':C.danger }}>
+                                      {parseInt(a.quantity_change)>0?'+':''}{a.quantity_change}
+                                    </span>
+                                  </div>
+                                  {a.notes && <div style={{ fontSize:11, color:C.muted, fontStyle:'italic' }}>{a.notes}</div>}
+                                  <div style={{ fontSize:10, color:'#9ca3af', marginTop:2 }}>
+                                    {a.quantity_before} → {a.quantity_after} · {a.user_name} · {new Date(a.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {itemHistory.sold.length === 0 && itemHistory.adjustments.length === 0 && (
+                        <div style={{ textAlign:'center', padding:'30px 0', color:C.muted }}>
+                          <div style={{ fontSize:32, marginBottom:8 }}>📭</div>
+                          <div>No history recorded yet for this item.</div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
