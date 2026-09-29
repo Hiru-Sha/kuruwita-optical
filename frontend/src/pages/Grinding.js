@@ -39,9 +39,12 @@ export default function Grinding() {
         api('/orders?status=created&limit=100'),
         api('/reports/lensjobs'),
       ]);
+      // Backend returns { data: [...] } for orders
+      const allRows  = Array.isArray(all)       ? all       : (Array.isArray(all?.data)  ? all.data  : []);
+      const jobsRows = Array.isArray(jobs)       ? jobs      : (Array.isArray(jobs?.data) ? jobs.data : []);
       // Unassigned = orders with no lens_company set
-      setUnassigned((all||[]).filter(o => !o.lens_company || o.lens_company === ''));
-      setAssigned(jobs||[]);
+      setUnassigned(allRows.filter(o => !o.lens_company || o.lens_company === ''));
+      setAssigned(jobsRows);
     } catch(e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
