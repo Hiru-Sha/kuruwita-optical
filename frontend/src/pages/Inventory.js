@@ -1852,13 +1852,13 @@ export default function Inventory() {
             {/* ── Gender filter bar ── */}
             <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap' }}>
               {GENDER_OPTIONS.map(g=>(
-                <button key={g.value} onClick={()=>{
-                  console.log('[Inventory] gender button clicked:', g.value);
+                <button key={g.value} onClick={(e)=>{
+                  // Ignore non-human clicks (detail=0 means programmatic)
+                  if (e.detail === 0) return;
                   setGenderFilter(g.value);
                   try {
                     localStorage.setItem('inv_genderFilter', g.value);
-                    console.log('[Inventory] saved to localStorage:', localStorage.getItem('inv_genderFilter'));
-                  } catch(e) { console.log('[Inventory] localStorage error:', e); }
+                  } catch(err) {}
                 }}
                   style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer',
                     fontFamily:'inherit', border:`1.5px solid ${genderFilter===g.value ? g.color : C.border}`,
