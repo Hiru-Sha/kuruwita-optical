@@ -1159,8 +1159,9 @@ export default function Inventory() {
   const [stockFilter,   setStockFilter]   = useState('all');
   const [genderFilter,  setGenderFilter]  = useState(()=>{
     try {
-      const p = new URLSearchParams(window.location.search);
-      return p.get('gender') || localStorage.getItem('inv_genderFilter') || 'all';
+      const saved = localStorage.getItem('inv_genderFilter');
+      console.log('[Inventory] genderFilter init from localStorage:', saved);
+      return saved || 'all';
     } catch(e) { return 'all'; }
   });
   const [subFilter,     setSubFilter]     = useState('');
@@ -1286,6 +1287,7 @@ export default function Inventory() {
   },[search,activeCat,dealerFilter]);
 
   useEffect(()=>{ load(); },[load]);
+
 
   // Load unique dealer names for filter dropdown
   useEffect(()=>{
