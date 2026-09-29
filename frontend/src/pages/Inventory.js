@@ -2444,19 +2444,15 @@ export default function Inventory() {
                 if (filterColor    && !(item.frame_color||'').toLowerCase().includes(filterColor.toLowerCase()))   return false;
                 if (filterDateFrom && new Date(item.created_at) < new Date(filterDateFrom)) return false;
                 if (filterDateTo   && new Date(item.created_at) > new Date(filterDateTo + 'T23:59:59')) return false;
-                // Gender filter
-                // all-items (tf='all') always pass
-                // When filtering by ladies/gents/kids → also show unisex items
-                // When filtering by unisex → show only unisex
+                // Gender filter — only show exact match + unisex when filter active
                 if (genderFilter !== 'all') {
-                  const tf = item.target_for || 'all';
-                  if (tf === 'all') { /* always passes */ }
-                  else if (genderFilter === 'unisex') {
-                    if (tf !== 'unisex') return false;
-                  } else {
-                    // ladies / gents / kids filter: exact match OR unisex
-                    if (tf !== genderFilter && tf !== 'unisex') return false;
-                  }
+                  const tf = item.target_for;
+                  // item has no tag or tagged 'all' → hidden when any specific filter is active
+                  if (!tf || tf === 'all') return false;
+                  // filtering by unisex → show only unisex
+                  if (genderFilter === 'unisex' && tf !== 'unisex') return false;
+                  // filtering by ladies/gents/kids → exact match or unisex
+                  if (genderFilter !== 'unisex' && tf !== genderFilter && tf !== 'unisex') return false;
                 }
 
                 return true;
