@@ -1157,7 +1157,7 @@ export default function Inventory() {
   const [dealers,       setDealers]       = useState([]);
   const [showDealerDrop,setShowDealerDrop]= useState(false);
   const [stockFilter,   setStockFilter]   = useState('all');
-  const [genderFilter,  setGenderFilter]  = useState('all');
+  const [genderFilter,  setGenderFilter]  = useState(()=>{ try{ return localStorage.getItem('inv_genderFilter')||'all'; }catch(e){ return 'all'; } });
   const [subFilter,     setSubFilter]     = useState('');
   // Advanced filters
   const [filterMaterial, setFilterMaterial] = useState('');
@@ -1845,7 +1845,7 @@ export default function Inventory() {
             {/* ── Gender filter bar ── */}
             <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap' }}>
               {GENDER_OPTIONS.map(g=>(
-                <button key={g.value} onClick={()=>setGenderFilter(g.value)}
+                <button key={g.value} onClick={()=>{ setGenderFilter(g.value); try{ localStorage.setItem('inv_genderFilter',g.value); }catch(e){} }}
                   style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer',
                     fontFamily:'inherit', border:`1.5px solid ${genderFilter===g.value ? g.color : C.border}`,
                     background:genderFilter===g.value ? g.color : 'white',
@@ -1856,7 +1856,7 @@ export default function Inventory() {
               {genderFilter !== 'all' && (
                 <span style={{ fontSize:11, color:C.muted, alignSelf:'center', marginLeft:4 }}>
                   — showing {genderFilter} items only
-                  <button onClick={()=>setGenderFilter('all')} style={{ marginLeft:8, background:'none', border:'none', color:C.danger, cursor:'pointer', fontSize:11, fontWeight:700 }}>✕</button>
+                  <button onClick={()=>{ setGenderFilter('all'); try{ localStorage.setItem('inv_genderFilter','all'); }catch(e){} }} style={{ marginLeft:8, background:'none', border:'none', color:C.danger, cursor:'pointer', fontSize:11, fontWeight:700 }}>✕</button>
                 </span>
               )}
             </div>
