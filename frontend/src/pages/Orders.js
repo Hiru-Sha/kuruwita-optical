@@ -1186,8 +1186,9 @@ export default function Orders() {
       if (lensCostForm.company)         updates.lens_company    = lensCostForm.company;
       if (!Object.keys(updates).length) return;
       await updateOrder(selected.id, updates);
-      // Recalculate total if lens sell price changed
-      if (updates.lens_sell_price) {
+      // Only recalculate total if no total has been set yet (order created without a total)
+      // NEVER overwrite an existing total — it may include discounts
+      if (updates.lens_sell_price && !(parseFloat(selected.total_amount) > 0)) {
         const newTotal   = parseFloat(selected.frame_sell_price||0) + parseFloat(updates.lens_sell_price);
         const newBalance = Math.max(0, newTotal - parseFloat(selected.advance_amount||0));
         await updateOrder(selected.id, { total_amount: newTotal, balance_amount: newBalance });
