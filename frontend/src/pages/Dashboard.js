@@ -400,7 +400,7 @@ export default function Dashboard() {
           sub={`${mr.order_count||0} orders · ${mr.qs_count||0} sales · ${mr.repair_count||0} repairs`}
           onClick={()=>navigate('/activity?view=month&month='+new Date().toISOString().slice(0,7))}/>
         <StatCard label="Collected" accent="var(--success)" icon={<span style={{fontSize:16}}>✅</span>}
-          value={fmt((parseFloat(mr.collected||0))+(parseFloat(mr.qs_total||0))+(parseFloat(mr.repair_total||0)))}
+          value={fmt(parseFloat(mr.collected||0))}
           sub="Orders + Sales + Repairs" onClick={()=>navigate('/activity?view=collected')}/>
         <StatCard label="Balance Due" accent="var(--danger)" icon={<span style={{fontSize:16}}>⏳</span>}
           value={fmt(data?.total_balance||0)} sub="Outstanding" onClick={()=>navigate('/balance')}/>
@@ -453,7 +453,7 @@ export default function Dashboard() {
         <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:1,background:'var(--border)'}} className="kpi-grid">
           {[
             {l:'Total billed',  v:fmt(mr.grand_total||mr.total||0),                                                                          c:'var(--text-primary)'},
-            {l:'Collected',     v:fmt((parseFloat(mr.collected||0))+(parseFloat(mr.qs_total||0))+(parseFloat(mr.repair_total||0))),           c:'var(--success)'},
+            {l:'Collected',     v:fmt(parseFloat(mr.collected||0)),           c:'var(--success)'},
             {l:'Still owed',    v:fmt(mr.owed||0),                                                                                           c:'var(--danger)'},
             {l:'Activity',      v:`${mr.order_count||0} ord · ${mr.qs_count||0} QS · ${mr.repair_count||0} rep`,                            c:'var(--info)'},
           ].map(item=>(
