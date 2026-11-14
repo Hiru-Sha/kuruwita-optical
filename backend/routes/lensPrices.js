@@ -46,8 +46,8 @@ router.get('/match', auth, async (req, res) => {
     `;
     const params = [lens_type];
 
-    if (brand) { params.push(brand); query += ` AND brand = ${params.length}`; }
-    if (lens_index) { params.push(lens_index); query += ` AND lens_index = ${params.length}`; }
+    if (brand) { params.push(brand); query += ` AND brand = $${params.length}`; }
+    if (lens_index) { params.push(lens_index); query += ` AND lens_index = $${params.length}`; }
     if (color) { params.push(color); query += ` AND color ILIKE $${params.length}`; }
 
     // Try to match coating
