@@ -44,7 +44,7 @@ const COATING_PRINT_NAME = {
   'Blue Cut + Photo Gray + HMC':'Blue Filter + Photochromic + HMC',
 };
 const LENS_INDEXES = ['CR39','1.49','1.56','1.59','1.6','1.61','1.67','1.74','Poly'];
-const LENS_COMPANIES = ['Negombo Optical','Solex','Other'];
+const LENS_COMPANIES = ['Negombo Optical','Murano','Solex','Other'];
 
 const fmtMoney = (n) => 'Rs. '+parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0});
 const pct = (a,b) => b>0 ? Math.round((a/b)*100) : 0;
@@ -297,7 +297,7 @@ export default function NewOrder() {
     }
 
     // For reference-only suppliers (or if DB has no match) — use hardcoded reference price
-    const sp = findSupplierPrice(company, type, lens_index, coating);
+    const sp = isRefOnly ? findSupplierPrice(company, type, lens_index, coating) : null;
     if (sp) {
       setLensDetails(l => ({ ...l, type, coating, lens_index:lens_index||l.lens_index, lens_company:company||l.lens_company, color:detColor,
         buyPrice:0, sellPrice:sp,
