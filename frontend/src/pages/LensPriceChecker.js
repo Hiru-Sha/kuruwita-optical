@@ -85,7 +85,12 @@ export function LensPriceCheckerCore({ onSelectPrice, compact = false }) {
 
   // Group prices: coating rows × brand columns
   const filteredPrices = suggested.length > 0
-    ? prices.filter(p => suggested.includes(p.lens_index))
+    ? prices.filter(p => {
+        const index = String(p.lens_index || '').trim().toUpperCase();
+        // CR39 and the supplier's 1.49 / 1.498 labels are equivalent for lookup.
+        const isCr39Alias = ['CR39', '1.49', '1.498'].includes(index);
+        return suggested.includes(p.lens_index) || (suggested.includes('CR39') && isCr39Alias);
+      })
     : prices;
 
   const displayBrands   = [...new Set(filteredPrices.map(p => p.brand))].sort();
