@@ -312,6 +312,15 @@ export default function NewOrder() {
   }, []);
 
   const availableLensSeries = [...new Set(lensPriceCatalog.filter(p => p.active !== false && p.brand === lensDetails.lens_company && p.lens_type === lensDetails.type && p.series).map(p => p.series))].sort((a,b)=>a.localeCompare(b));
+  const selectedSeriesRows = lensPriceCatalog.filter(p =>
+    p.active !== false &&
+    p.brand === lensDetails.lens_company &&
+    p.lens_type === lensDetails.type &&
+    (lensDetails.series ? p.series === lensDetails.series : p.brand === 'Generic')
+  );
+  const availableLensIndexes = [...new Set(selectedSeriesRows.map(p => p.lens_index).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const availableLensCoatings = [...new Set(selectedSeriesRows.map(p => p.coating).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+
 
   const handleQRScan = (item) => {
     setShowScanner(false);
@@ -897,13 +906,20 @@ export default function NewOrder() {
                 <select value={lensDetails.lens_index}
                   onChange={e=>{ const ix=e.target.value; setLensDetails(l=>({...l,lens_index:ix})); lookupLens(lensDetails.type,lensDetails.coating,'',ix,lensDetails.lens_company,lensDetails.color,lensDetails.series); }}
                   style={SEL}>
-                  {LENS_INDEXES.map(i=><option key={i}>{i}</option>)}
+                  {(availableLensIndexes.length ? availableLensIndexes : LENS_INDEXES).map(i=><option key={i}>{i}</option>)}
                 </select>
               </Field>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, marginBottom:14 }}>
               <Field label="Lens Series / Design">
-                <select value={lensDetails.series} onChange={e=>{ const series=e.target.value; setLensDetails(l=>({...l,series})); lookupLens(lensDetails.type,lensDetails.coating,'',lensDetails.lens_index,lensDetails.lens_company,lensDetails.color,series); }} style={SEL}>
+                <select value={lensDetails.series} onChange={e=>{
+                  const series=e.target.value;
+                  const rows=lensPriceCatalog.filter(p=>p.active!==false && p.brand===lensDetails.lens_company && p.lens_type===lensDetails.type && (series ? p.series===series : p.brand==='Generic'));
+                  const nextIndex=rows.some(p=>p.lens_index===lensDetails.lens_index) ? lensDetails.lens_index : (rows[0]?.lens_index || lensDetails.lens_index);
+                  const nextCoating=rows.some(p=>p.coating===lensDetails.coating && p.lens_index===nextIndex) ? lensDetails.coating : (rows.find(p=>p.lens_index===nextIndex)?.coating || rows[0]?.coating || lensDetails.coating);
+                  setLensDetails(l=>({...l,series,lens_index:nextIndex,coating:nextCoating}));
+                  lookupLens(lensDetails.type,nextCoating,'',nextIndex,lensDetails.lens_company,lensDetails.color,series);
+                }} style={SEL}>
                   <option value="">Default Generic Price</option>
                   {availableLensSeries.map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
@@ -919,7 +935,7 @@ export default function NewOrder() {
                 <select value={lensDetails.coating}
                   onChange={e=>{ const co=e.target.value; lookupLens(lensDetails.type,co,'',lensDetails.lens_index,lensDetails.lens_company,lensDetails.color,lensDetails.series); }}
                   style={SEL}>
-                  {LENS_COATINGS.map(c=><option key={c}>{c}</option>)}
+                  {(availableLensCoatings.length ? availableLensCoatings : LENS_COATINGS).map(c=><option key={c}>{c}</option>)}
                 </select>
               </Field>
               {!(lensDetails.type && lensDetails.coating) && (
