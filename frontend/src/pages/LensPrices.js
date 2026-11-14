@@ -24,9 +24,9 @@ const C = {
 const fmtMoney = (n) => n != null && n !== '' ? 'Rs. ' + parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:0}) : '—';
 
 const LENS_TYPES  = ['Single Vision','Progressive','Bifocal','Office Lens','Reading (ready)'];
-const BRANDS      = ['Murano','Generic'];
-const INDEXES     = ['1.49','1.56','1.61','1.67','1.74'];
-const COLORS      = ['White','Photo-Gray','Polarize'];
+const BRANDS      = ['Murano','Generic','Negombo Optical'];
+const INDEXES     = ['CR39','1.49','1.498','1.56','1.59','1.6','1.61','1.67','1.74'];
+const COLORS      = ['White','Photo-Gray','Polarize','P-Blue','P-Gray','P-Green','P-Pink','P-Purple'];
 const UV_OPTIONS  = ['N/A','UV 400','UV 420/Blue Filter'];
 const POWER_RANGES= ['Below -12.00','Below -17.00','Up to -19.00','Over -19.00','Below -8.00','All powers'];
 
@@ -38,9 +38,11 @@ const INP = {
 const SEL = { ...INP, cursor:'pointer' };
 const LBL = { fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.8px', color:C.muted, marginBottom:4, display:'block' };
 
-const brandColor = (b) => b === 'Murano'
-  ? { bg:'#ede9fe', color:C.purple }
-  : { bg:'#f0fdf4', color:C.success };
+const brandColor = (b) => {
+  if (b === 'Murano') return { bg:'#ede9fe', color:C.purple };
+  if (b === 'Negombo Optical') return { bg:'#dbeafe', color:'#1d4ed8' };
+  return { bg:'#f0fdf4', color:C.success };
+};
 
 const seriesColor = (s) => {
   const map = {
@@ -329,7 +331,7 @@ export default function LensPrices() {
   const [activeTab,   setActiveTab]   = useState('Single Vision');
 
   const EMPTY_FORM = {
-    brand:'Murano', lens_type:'Single Vision', lens_index:'1.56', color:'White',
+    brand:'Negombo Optical', lens_type:'Single Vision', lens_index:'1.56', color:'White',
     coating:'HMC-Green', uv_cut:'UV 400', series:'Singola',
     buy_price:'', sell_price:'', power_range:'Below -12.00',
     fitting_cost:'', code:'', notes:'',
@@ -409,6 +411,7 @@ export default function LensPrices() {
   const totalEntries = prices.length;
   const murano  = prices.filter(p=>p.brand==='Murano').length;
   const generic = prices.filter(p=>p.brand==='Generic').length;
+  const negombo = prices.filter(p=>p.brand==='Negombo Optical').length;
   const avgMargin = prices.length
     ? Math.round(prices.reduce((s,p)=>s+((p.sell_price-p.buy_price)/p.sell_price*100),0)/prices.length) : 0;
 
@@ -475,7 +478,7 @@ export default function LensPrices() {
       {/* ── Main tab switcher ── */}
       <div style={{ display:'flex', gap:0, background:C.surface, borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden', marginBottom:18, width:'fit-content' }}>
         {[
-          { key:'my-prices',    label:'My Prices',          sub:'Murano & Generic'    },
+          { key:'my-prices',    label:'My Prices',          sub:'Murano · Generic · Negombo Optical'    },
           { key:'learned',      label:'Learned from Orders', sub:'Auto-saved from your orders' },
           { key:'supplier-ref', label:'Supplier Reference', sub:'Lanka Optic · MR · Neo Vision' },
         ].map(t => (
@@ -590,6 +593,7 @@ export default function LensPrices() {
               { l:'Total Prices', v:totalEntries,  dark:true  },
               { l:'Murano',       v:murano,         c:C.purple },
               { l:'Generic',      v:generic,        c:C.success},
+              { l:'Negombo Optical', v:negombo,     c:'#2563eb'},
               { l:'Avg Margin',   v:avgMargin+'%',  c:C.blue   },
             ].map(s=>(
               <div key={s.l} style={{ background:s.dark?C.navy:'white', border:`1px solid ${C.border}`, borderRadius:10, padding:'12px 14px', textAlign:'center' }}>
@@ -690,9 +694,9 @@ export default function LensPrices() {
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Search brand, coating, series, code..."
               style={{ ...INP, flex:1, minWidth:180 }} />
             {[
-              { val:filterBrand, set:setFilterBrand, opts:['','Murano','Generic'],               labels:['All Brands','Murano','Generic']  },
-              { val:filterIndex, set:setFilterIndex, opts:['','1.49','1.56','1.61','1.67','1.74'],labels:['All Index','1.49','1.56','1.61','1.67','1.74'] },
-              { val:filterColor, set:setFilterColor, opts:['','White','Photo-Gray','Polarize'],   labels:['All Colors','White','Photo-Gray','Polarize'] },
+              { val:filterBrand, set:setFilterBrand, opts:['',...BRANDS],               labels:['All Brands',...BRANDS]  },
+              { val:filterIndex, set:setFilterIndex, opts:['',...INDEXES],labels:['All Index',...INDEXES] },
+              { val:filterColor, set:setFilterColor, opts:['',...COLORS],   labels:['All Colors',...COLORS] },
             ].map(f=>(
               <select key={f.labels[0]} value={f.val} onChange={e=>f.set(e.target.value)}
                 style={{ ...SEL, width:'auto', minWidth:110, flex:'none' }}>
