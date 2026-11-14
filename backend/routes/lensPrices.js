@@ -37,7 +37,7 @@ router.get('/', auth, async (req, res) => {
 
 // GET /api/lens-prices/match — find best price match for an order
 router.get('/match', auth, async (req, res) => {
-  const { lens_type, lens_index, color, coating, series } = req.query;
+  const { lens_type, lens_index, color, coating, series, brand } = req.query;
   try {
     let query = `
       SELECT * FROM lens_prices
@@ -46,7 +46,8 @@ router.get('/match', auth, async (req, res) => {
     `;
     const params = [lens_type];
 
-    if (lens_index) { params.push(lens_index); query += ` AND lens_index = $${params.length}`; }
+    if (brand) { params.push(brand); query += ` AND brand = ${params.length}`; }
+    if (lens_index) { params.push(lens_index); query += ` AND lens_index = ${params.length}`; }
     if (color) { params.push(color); query += ` AND color ILIKE $${params.length}`; }
 
     // Try to match coating
