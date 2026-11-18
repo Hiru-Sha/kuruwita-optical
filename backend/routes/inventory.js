@@ -21,7 +21,7 @@ router.get('/', auth, async (req, res) => {
              frame_type, frame_color, frame_shape, frame_material, frame_size,
              sg_type, rg_lens_type, rg_material, rg_power, item_name,
              cost_price, sell_price, quantity, min_quantity,
-             ${imageCol}, display_number, stock_number, location, showroom_qty, missing_qty, target_for, created_at, updated_at
+             ${imageCol}, display_number, stock_number, location, showroom_qty, missing_qty, in_boxes_qty, target_for, created_at, updated_at
       FROM inventory
       WHERE 1=1
     `;
@@ -128,7 +128,7 @@ router.patch('/:id', auth, async (req, res) => {
     'frame_color', 'frame_type', 'frame_shape', 'frame_material', 'frame_size',
     'sg_type', 'rg_lens_type', 'rg_material', 'rg_power', 'item_name',
     'sell_price', 'cost_price', 'quantity', 'min_quantity', 'image_url',
-    'display_number', 'stock_number', 'location', 'showroom_qty', 'missing_qty', 'notes',
+    'display_number', 'stock_number', 'location', 'showroom_qty', 'missing_qty', 'in_boxes_qty', 'notes',
     'target_for',
   ];
 
@@ -142,7 +142,7 @@ router.patch('/:id', auth, async (req, res) => {
       // coerce numeric types, leave text as-is
       if (f === 'sell_price' || f === 'cost_price') {
         values.push(req.body[f] === null || req.body[f] === '' ? null : parseFloat(req.body[f]));
-      } else if (f === 'quantity' || f === 'min_quantity') {
+      } else if (f === 'quantity' || f === 'min_quantity' || f === 'showroom_qty' || f === 'missing_qty' || f === 'in_boxes_qty') {
         values.push(req.body[f] === null || req.body[f] === '' ? null : parseInt(req.body[f]));
       } else {
         values.push(req.body[f] === '' ? null : req.body[f]);
