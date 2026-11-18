@@ -112,7 +112,8 @@ export default function ShowroomTracker() {
   const setShowroomQty = (id, qty, item) => {
     const total   = parseInt(item.quantity||0);
     const missing = parseInt(item.missing_qty||0);
-    const maxSR   = Math.max(0, total - missing); // can't put more in showroom than available
+    const inBoxes = parseInt(item.in_boxes_qty||0);
+    const maxSR   = Math.max(0, total - missing - inBoxes); // can't put more in showroom than available
     const q = Math.max(0, Math.min(maxSR, qty));
     saveField(id, { showroom_qty: q });
     showToast(`🏪 Showroom: ${q}`);
@@ -121,23 +122,37 @@ export default function ShowroomTracker() {
   const setMissingQty = (id, qty, item) => {
     const total   = parseInt(item.quantity||0);
     const showroom= parseInt(item.showroom_qty||0);
-    const maxMs   = Math.max(0, total - showroom);
+    const inBoxes = parseInt(item.in_boxes_qty||0);
+    const maxMs   = Math.max(0, total - showroom - inBoxes);
     const q = Math.max(0, Math.min(maxMs, qty));
     saveField(id, { missing_qty: q });
     showToast(`⚠️ Missing: ${q}`);
   };
 
-  // Derived status for an item
+  const setInBoxesQty = (id, qty, item) => {
+    const total = parseInt(item.quantity||0);
+    const showroom = parseInt(item.showroom_qty||0);
+    const missing = parseInt(item.missing_qty||0);
+    const maxBoxes = Math.max(0, total - showroom - missing);
+    const q = Math.max(0, Math.min(maxBoxes, qty));
+    saveField(id, { in_boxes_qty: q });
+    showToast(`📦 In boxes: ${q}`);
+  };
+
+  // Derived status. Existing records start with in_boxes_qty=0, preserving
+  // their previous showroom / stock-room / missing allocation.
   const getStatus = (item) => {
     const qty     = parseInt(item.quantity||0);
     const sqty    = parseInt(item.showroom_qty||0);
     const mqty    = parseInt(item.missing_qty||0);
-    const inStock = Math.max(0, qty - sqty - mqty);
-    return { qty, sqty, mqty, inStock };
+    const bqty    = parseInt(item.in_boxes_qty||0);
+    const inStock = Math.max(0, qty - sqty - mqty - bqty);
+    return { qty, sqty, mqty, bqty, inStock };
   };
 
   // Summary counts
   const totalInShowroom  = items.reduce((s,i)=>s+Math.max(0,parseInt(i.showroom_qty||0)),0);
+  const totalInBoxes     = items.reduce((s,i)=>s+Math.max(0,parseInt(i.in_boxes_qty||0)),0);
   const totalMissing     = items.reduce((s,i)=>s+Math.max(0,parseInt(i.missing_qty||0)),0);
   const totalInStock     = items.reduce((s,i)=>{ const {qty,sqty,mqty}=getStatus(i); return s+Math.max(0,qty-sqty-mqty); },0);
   const totalOutOfStock  = items.filter(i=>parseInt(i.quantity||0)===0).length;
@@ -146,9 +161,10 @@ export default function ShowroomTracker() {
 
   // Filter
   const filtered = items.filter(i => {
-    const { qty, sqty, mqty, inStock } = getStatus(i);
+    const { qty, sqty, mqty, bqty, inStock } = getStatus(i);
     if (filterLoc==='showroom'   && sqty===0) return false;
     if (filterLoc==='stock'      && inStock===0) return false;
+    if (filterLoc==='boxes'      && bqty===0) return false;
     if (filterLoc==='missing'    && mqty===0) return false;
     if (filterLoc==='outofstock' && qty>0) return false;
     if (filterCat!=='All'        && i.category!==filterCat) return false;
@@ -213,10 +229,11 @@ export default function ShowroomTracker() {
       )}
 
       {/* Stats — 4 tiles */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(145px,1fr))', gap:8, marginBottom:14 }}>
         {[
           { label:'In Showroom', value:totalInShowroom, icon:'🏪', color:'#15803d', bg:'#f0fdf4', border:'#86efac', f:'showroom' },
           { label:'In Stock Room', value:totalInStock,  icon:'📦', color:'#1e40af', bg:'#eff6ff', border:'#93c5fd', f:'stock' },
+          { label:'In Boxes', value:totalInBoxes, icon:'🗃️', color:'#7c3aed', bg:'#f5f3ff', border:'#c4b5fd', f:'boxes' },
           { label:'Missing',     value:totalMissing,    icon:'⚠️', color:'#92400e', bg:'#fef9c3', border:'#fde68a', f:'missing' },
           { label:'Out of Stock',value:totalOutOfStock, icon:'❌', color:C.danger,  bg:'#fef2f2', border:'#fca5a5', f:'outofstock' },
         ].map(s=>(
@@ -267,7 +284,7 @@ export default function ShowroomTracker() {
       ) : (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:10 }}>
           {filtered.map(item => {
-            const { qty, sqty, mqty, inStock } = getStatus(item);
+            const { qty, sqty, mqty, bqty, inStock } = getStatus(item);
             const isSaving  = saving[item.id];
             const isChecked = checkedIds.has(item.id);
 
@@ -317,6 +334,13 @@ export default function ShowroomTracker() {
                         <span style={{ fontSize:13, fontWeight:800, color:'#1e40af' }}>{inStock}</span>
                       </div>
                     )}
+                    {/* In boxes */}
+                    {bqty > 0 && (
+                      <div style={{ display:'flex', alignItems:'center', gap:3, background:'#f5f3ff', borderRadius:6, padding:'3px 7px' }}>
+                        <span style={{ fontSize:9, color:'#7c3aed', fontWeight:600 }}>🗃️</span>
+                        <span style={{ fontSize:13, fontWeight:800, color:'#7c3aed' }}>{bqty}</span>
+                      </div>
+                    )}
                     {/* Missing */}
                     {mqty > 0 && (
                       <div style={{ display:'flex', alignItems:'center', gap:3, background:'#fef3c7', borderRadius:6, padding:'3px 7px' }}>
@@ -359,11 +383,26 @@ export default function ShowroomTracker() {
                           <span style={{ fontSize:10, color:'#15803d', fontWeight:700 }}>🏪 Showroom</span>
                           <Stepper
                             value={sqty}
-                            max={Math.max(0, qty - mqty)}
+                            max={Math.max(0, qty - mqty - bqty)}
                             min={0}
                             disabled={isSaving}
                             color='#15803d'
                             onChange={v=>setShowroomQty(item.id, v, item)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* In boxes qty stepper */}
+                      <div style={{ background:'#f5f3ff', border:'1px solid #c4b5fd', borderRadius:8, padding:'6px 8px', marginBottom:6 }}>
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                          <span style={{ fontSize:10, color:'#7c3aed', fontWeight:700 }}>🗃️ In Boxes</span>
+                          <Stepper
+                            value={bqty}
+                            max={Math.max(0, qty - sqty - mqty)}
+                            min={0}
+                            disabled={isSaving}
+                            color='#7c3aed'
+                            onChange={v=>setInBoxesQty(item.id, v, item)}
                           />
                         </div>
                       </div>
@@ -374,7 +413,7 @@ export default function ShowroomTracker() {
                           <span style={{ fontSize:10, color:'#92400e', fontWeight:700 }}>⚠️ Missing</span>
                           <Stepper
                             value={mqty}
-                            max={Math.max(0, qty - sqty)}
+                            max={Math.max(0, qty - sqty - bqty)}
                             min={0}
                             disabled={isSaving}
                             color='#92400e'
