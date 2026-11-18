@@ -577,3 +577,9 @@ CREATE TABLE IF NOT EXISTS promo_codes (
 ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS promo_code      VARCHAR(30);
 ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(10,2) DEFAULT 0;
 ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS wa_notified     BOOLEAN DEFAULT FALSE;
+
+
+-- Showroom Tracker: separate quantity stored in boxes.
+-- Existing quantities are preserved; legacy rows default to zero in boxes.
+ALTER TABLE inventory
+  ADD COLUMN IF NOT EXISTS in_boxes_qty INTEGER NOT NULL DEFAULT 0;
